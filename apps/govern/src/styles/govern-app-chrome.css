@@ -1,0 +1,56 @@
+/* Cert Studio internal page chrome (subset) — QRP Govern */
+
+.page-content {
+  flex: 1;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+.page-enter {
+  animation: govern-page-enter 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes govern-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-enter {
+    animation: none;
+  }
+}
+
+.dashboard-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
+}
+
+.dashboard-card--loading {
+  padding: var(--space-6);
+}
+
+.dashboard-card-title {
+  margin: 0 0 var(--space-4);
+  font-family: var(--font-display);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.govern-dashboard-stack > .qre-card,
+.govern-dashboard-stack .govern-review-grid .qre-card {
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}

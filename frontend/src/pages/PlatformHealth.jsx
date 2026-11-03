@@ -1,0 +1,256 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { QtECharts } from '../components/observability/QtECharts.jsx';
+import { api } from '../services/api';
+import { BoneyardSkeleton } from '../components/ui/Skeleton';
+import { RefreshButton } from '../components/ui/RefreshButton.jsx';
+import { useTheme } from '../components/ui/ThemeProvider';
+import { ChartPanel } from '../components/observability/ChartPanel.jsx';
+import { ErrorState } from '../components/observability/ErrorState.jsx';
+import { getChartTheme, baseTooltip, chartLabelStyle } from '../components/observability/chartTheme.js';
+import { formatISTTime } from '../utils/time';
+import { usePageActions } from '../context/PageActionsContext.jsx';
+import { DataPanelToolbar, SortableTh } from '../components/observability/DataViewToolbar.jsx';
+import './PlatformHealth.css';
+
+const STALE_MIN = 30;
+
+const ts = (s) => (s && !/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? `${s}Z` : s);
+const ageMin = (s) => (s ? (Date.now() - new Date(ts(s)).getTime()) / 6e4 : null);
+const ageText = (m) => {
+  if (m == null || !Number.isFinite(m)) return '—';
+  if (m < 1) return 'just now';
+  if (m < 90) return `${Math.round(m)} min ago`;
+  return m < 2880 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} d ago`;
+};
+
+function Tile({ title, tone, value, detail, to, onOpen }) {
+  const body = (
+    <>
+      <span className="ph-tile__title">{title}</span>
+      <span className={`ph-tile__value ph-tone--${tone}`}>{value}</span>
+      <span className="ph-tile__detail">{detail}</span>
+    </>
+  );
+  return to ? <button type="button" className="ph-tile ph-tile--link" onClick={() => onOpen(to)}>{body}</button> : <div className="ph-tile">{body}</div>;
+}
+
+export const PlatformHealth = () => {
+  const nav = useNavigate();
+  const { resolved } = useTheme();
+  const isDark = resolved === 'dark';
+  const [data, setData] = useState(null);
+  const [timeline, setTimeline] = useState([]);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState(null);
+  const [layout, setLayout] = useState('table');
+  const [sort, setSort] = useState({ key: 'provider', dir: 'asc' });
+  const { setActions, clearActions } = usePageActions();
+
+  const load = useCallback(() => {
+    setError(null);
+    Promise.all([
+      api.getPlatformHealth(),
+      api.getOpsTimeline(12).catch(() => []),
+    ])
+      .then(([r, tl]) => {
+        setData(r);
+        const events = Array.isArray(tl?.events) ? tl.events : (Array.isArray(tl) ? tl : []);
+        setTimeline(events.slice(0, 12));
+        setLastRefresh(new Date());
+      })
+      .catch((e) => setError(String(e.message || e)))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 20000);
+    return () => clearInterval(t);
+  }, [load]);
+  useEffect(() => {
+    setActions(<RefreshButton onClick={load} lastRefreshAt={lastRefresh} label="Refresh platform health" />);
+    return () => clearActions();
+  }, [load, lastRefresh, setActions, clearActions]);
+
+  const db = data?.database || {};
+  const coll = data?.collectors || {};
+  const providers = useMemo(() => coll.providers || [], [coll.providers]);
+  const sortedProviders = useMemo(() => {
+    const list = providers.slice();
+    const mul = sort.dir === 'asc' ? 1 : -1;
+    list.sort((a, b) => {
+      let c = 0;
+      if (sort.key === 'duration') c = (a.duration_ms || 0) - (b.duration_ms || 0);
+      else if (sort.key === 'backends') c = (a.backends_detected || 0) - (b.backends_detected || 0);
+      else c = String(a.provider_id).localeCompare(String(b.provider_id));
+      return c * mul;
+    });
+    return list;
+  }, [providers, sort]);
+  const telAge = ageMin(data?.latest_backend_telemetry_at);
+  const sse = data?.sse_stream || {};
+
+  const durationOption = useMemo(() => {
+    const t = getChartTheme(isDark);
+    const rows = [...providers].sort((a, b) => (a.duration_ms || 0) - (b.duration_ms || 0));
+    return {
+      grid: { left: 110, right: 24, top: 8, bottom: 28 },
+      tooltip: { ...baseTooltip(isDark), trigger: 'item', formatter: (p) => `${p.name}<br/>${p.value} ms (last run)` },
+      xAxis: { type: 'value', name: 'ms', nameTextStyle: chartLabelStyle(isDark, 10), axisLabel: chartLabelStyle(isDark, 10), splitLine: { lineStyle: { color: t.splitColor } } },
+      yAxis: { type: 'category', data: rows.map((p) => p.provider_id), axisLabel: chartLabelStyle(isDark, 11) },
+      series: [{ type: 'bar', barMaxWidth: 22, data: rows.map((p) => ({ value: p.duration_ms, itemStyle: { color: p.status === 'OK' ? '#38bdf8' : '#fb7185' } })) }],
+    };
+  }, [providers, isDark]);
+
+  const statusPieOption = useMemo(() => {
+    const ok = providers.filter((p) => p.status === 'OK').length;
+    const bad = providers.length - ok;
+    return {
+      tooltip: { ...baseTooltip(isDark), trigger: 'item' },
+      legend: { bottom: 0, textStyle: chartLabelStyle(isDark, 11) },
+      series: [{
+        type: 'pie', radius: ['42%', '68%'],
+        label: { color: getChartTheme(isDark).textColor, fontSize: chartLabelStyle(isDark, 11).fontSize },
+        data: [
+          { name: 'OK', value: ok || 0, itemStyle: { color: '#34d399' } },
+          { name: 'Attention', value: bad || 0, itemStyle: { color: '#fb7185' } },
+        ].filter((d) => d.value > 0),
+      }],
+    };
+  }, [providers, isDark]);
+
+  if (loading && !data) return <BoneyardSkeleton layout="grid" />;
+  if (error && !data) return <div className="page-stack"><ErrorState variant="panel" message={error} onRetry={load} /></div>;
+
+  const failed = coll.failed_count ?? 0;
+  const breakers = (coll.circuit_breakers_open || []).length;
+  const mode = data?.collection_scheduler?.mode;
+  const telTone = telAge == null ? 'bad' : telAge > STALE_MIN ? 'warn' : 'ok';
+  const overallTone = !db.reachable || failed ? 'bad' : telTone === 'warn' || mode === 'on_demand' ? 'warn' : 'ok';
+
+  return (
+    <div className="page-stack">
+      <section className="ph-summary card page-panel">
+        <div className="ph-summary__head">
+          <h2 className="ph-summary__title">Platform status</h2>
+          <span className={`badge ${overallTone === 'ok' ? 'badge-healthy' : overallTone === 'warn' ? 'badge-warning' : 'badge-critical'}`}>
+            {overallTone === 'ok' ? 'Operational' : overallTone === 'warn' ? 'Attention' : 'Degraded'}
+          </span>
+        </div>
+        <p className="ph-summary__meta">
+          Generated {data?.generated_at ? formatISTTime(data.generated_at) : '—'}
+          {' · '}
+          Data mode {data?.data_platform?.platform_data_mode || '—'}
+          {data?.data_platform?.enable_mock_data ? ' · demo telemetry enabled' : ''}
+        </p>
+      </section>
+
+      <section className="ph-tiles" aria-label="Platform status">
+        <Tile title="Database" tone={db.reachable ? 'ok' : 'bad'} value={db.reachable ? 'Reachable' : 'Unreachable'} detail={`${db.storage || '—'}${db.error ? ` · ${db.error}` : ''}`} />
+        <Tile title="Collectors" tone={failed ? 'bad' : 'ok'} value={failed ? `${failed} failing` : `${providers.length - failed} of ${providers.length} OK`} detail={`DLQ ${coll.dlq_recent_count ?? 0} · breakers open ${breakers}`} />
+        <Tile title="Telemetry store" tone={telTone} value={ageText(telAge)} detail={data?.latest_backend_telemetry_at ? formatISTTime(data.latest_backend_telemetry_at) : 'No samples stored'} />
+        <Tile title="Scheduler" tone={mode === 'on_demand' ? 'warn' : 'ok'} value={mode === 'on_demand' ? 'On demand' : (mode || '—')} detail={data?.collection_scheduler?.note || 'Collection cycle control'} to="/app/admin/collectors" onOpen={nav} />
+        <Tile title="Event stream" tone="ok" value="Database aggregate SSE" detail={sse.stream_kind || 'Platform refresh ticks'} />
+      </section>
+
+      <section className="ph-split">
+        <div className="card page-panel ph-providers dvt-panel">
+          <header className="chart-panel__head"><div className="chart-panel__titles">
+            <h3 className="chart-panel__title">Provider adapters</h3>
+            <p className="chart-panel__question">Last successful collection per vendor adapter.</p>
+          </div></header>
+          <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${sortedProviders.length} provider${sortedProviders.length === 1 ? '' : 's'}`} />
+          {layout === 'grid' ? (
+            <div className="dvt-grid">
+              {sortedProviders.length === 0 && <p className="page-hint" style={{ gridColumn: '1 / -1', padding: '0 14px 14px' }}>No collector runs recorded.</p>}
+              {sortedProviders.map((p) => {
+                const m = ageMin(p.last_success_at || p.last_run_at);
+                return (
+                  <article key={p.provider_id} className="dvt-card">
+                    <header className="dvt-card__head">
+                      <code className="dvt-card__title" style={{ fontSize: 13 }}>{p.provider_id}</code>
+                      <span className={`badge ${p.status === 'OK' ? 'badge-healthy' : 'badge-critical'}`}>{p.status || '—'}</span>
+                    </header>
+                    {p.error && <p className="dvt-card__body ph-err">{p.error}</p>}
+                    <dl className="dvt-card__stats">
+                      <div><dt>Backends</dt><dd>{p.backends_detected ?? '—'}</dd></div>
+                      <div><dt>Last success</dt><dd>{ageText(m)}</dd></div>
+                      <div><dt>Duration</dt><dd>{p.duration_ms != null ? `${p.duration_ms} ms` : '—'}</dd></div>
+                    </dl>
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="table-container" style={{ border: 'none' }}>
+              <table className="custom-table custom-table--dense">
+                <thead>
+                  <tr>
+                    <SortableTh sort={sort} sortKey="provider" onToggle={setSort} defaultDir="asc">Provider</SortableTh>
+                    <th>Status</th>
+                    <SortableTh sort={sort} sortKey="backends" onToggle={setSort} defaultDir="desc">Backends</SortableTh>
+                    <th>Last success</th>
+                    <SortableTh sort={sort} sortKey="duration" onToggle={setSort} defaultDir="desc">Duration</SortableTh>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedProviders.length === 0 && <tr><td colSpan={5} style={{ color: 'var(--text-muted)' }}>No collector runs recorded.</td></tr>}
+                  {sortedProviders.map((p) => {
+                    const m = ageMin(p.last_success_at || p.last_run_at);
+                    return (
+                      <tr key={p.provider_id}>
+                        <td><code>{p.provider_id}</code></td>
+                        <td><span className={`badge ${p.status === 'OK' ? 'badge-healthy' : 'badge-critical'}`}>{p.status || '—'}</span>{p.error && <div className="ph-err">{p.error}</div>}</td>
+                        <td title={(p.backend_names || []).join(', ')}>{p.backends_detected ?? '—'}</td>
+                        <td title={p.last_success_at ? formatISTTime(p.last_success_at) : ''}>{ageText(m)}</td>
+                        <td>{p.duration_ms != null ? `${p.duration_ms} ms` : '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div className="ph-charts-col">
+          <ChartPanel title="Last collection duration" question="Slowest adapter on the most recent run." sourceKind="derived"
+            state={providers.length ? 'ready' : 'empty'} emptyMessage="No collector runs yet." minHeight={220}
+            tableAlternative={(
+              <table className="custom-table custom-table--dense">
+                <thead><tr><th>Provider</th><th>Duration (ms)</th><th>Status</th></tr></thead>
+                <tbody>
+                  {providers.map((p) => (
+                    <tr key={p.provider_id}><td><code>{p.provider_id}</code></td><td>{p.duration_ms ?? '—'}</td><td>{p.status}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            )}>
+            <QtECharts option={durationOption} style={{ height: Math.max(200, providers.length * 42) }} notMerge />
+          </ChartPanel>
+          <ChartPanel title="Adapter health mix" question="OK versus attention required." sourceKind="derived"
+            state={providers.length ? 'ready' : 'empty'} minHeight={260}>
+            <QtECharts option={statusPieOption} style={{ height: 260 }} notMerge />
+          </ChartPanel>
+        </div>
+      </section>
+
+      {timeline.length > 0 && (
+        <section className="card page-panel ph-timeline">
+          <h3 className="chart-panel__title">Recent platform activity</h3>
+          <ul className="ph-timeline__list">
+            {timeline.map((ev) => (
+              <li key={`${ev.kind}-${ev.id}-${ev.at}`}>
+                <span className={`badge ${ev.severity === 'CRITICAL' ? 'badge-critical' : ev.severity === 'WARNING' ? 'badge-warning' : 'badge-info'}`}>{ev.kind}</span>
+                <span className="ph-timeline__title">{ev.title}</span>
+                <span className="ph-timeline__meta">{ev.backend_id ? `${ev.backend_id} · ` : ''}{ev.at ? formatISTTime(ev.at) : '—'}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+};

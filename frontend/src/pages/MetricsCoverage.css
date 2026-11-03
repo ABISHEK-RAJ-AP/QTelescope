@@ -1,0 +1,49 @@
+.mc-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.mc-kpi { padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); }
+.mc-kpi__label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+.mc-kpi__value { font-size: 26px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.mc-kpi__sub { font-size: 12px; color: var(--text-muted); }
+
+.mc-matrix-head { display: flex; flex-wrap: wrap; gap: 8px 16px; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.mc-legend { display: flex; flex-wrap: wrap; gap: 10px 14px; font-size: 12px; color: var(--text-muted); align-items: center; }
+.mc-legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.mc-legend .mc-cell { width: 22px; height: 22px; font-size: 11px; margin: 0; cursor: default; flex-shrink: 0; }
+
+.mc-state-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px 4px 6px; border-radius: 8px; font-size: 12px; font-weight: 700;
+  border: 1px solid var(--border-color); max-width: 100%;
+}
+.mc-state-pill__glyph {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 6px; flex-shrink: 0;
+}
+.mc-state-pill__label { white-space: nowrap; }
+.mc-state-pill--available .mc-state-pill__glyph { background: var(--accent-emerald); color: #0b1220; }
+.mc-state-pill--stale .mc-state-pill__glyph { background: var(--accent-amber); color: #0b1220; }
+.mc-state-pill--missing .mc-state-pill__glyph { border: 2px solid var(--accent-rose); color: var(--accent-rose); }
+.mc-state-pill--unsupported .mc-state-pill__glyph { background: repeating-linear-gradient(45deg, var(--border-color), var(--border-color) 3px, transparent 3px, transparent 6px); }
+
+.mc-scroll { overflow-x: auto; }
+.mc-matrix { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12px; }
+.mc-matrix th, .mc-matrix td { padding: 4px; text-align: center; border-bottom: 1px solid var(--border-color); }
+.mc-matrix thead th { vertical-align: bottom; font-weight: 500; color: var(--text-muted); }
+.mc-colhead { display: block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; max-height: 150px; overflow: hidden; text-overflow: ellipsis; margin: 0 auto; }
+.mc-sticky { position: sticky; left: 0; background: var(--bg-card); text-align: left !important; min-width: 190px; z-index: 1; }
+.mc-bname { font-weight: 600; font-size: 13px; color: var(--text-primary); }
+.mc-bmeta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 11px; color: var(--text-muted); text-transform: capitalize; margin-top: 2px; }
+.mc-pct { font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.mc-cell { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--border-color); font-size: 14px; font-weight: 700; background: transparent; color: var(--text-muted); padding: 0; cursor: pointer; font-style: normal; }
+button.mc-cell:hover { border-color: var(--border-highlight); }
+button.mc-cell:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; }
+.mc-cell--available { color: #0b1220; background: var(--accent-emerald); border-color: transparent; }
+.mc-cell--stale { color: #0b1220; background: var(--accent-amber); border-color: transparent; }
+.mc-cell--missing { color: var(--accent-rose); border: 2px solid var(--accent-rose); }
+.mc-cell--unsupported { background: repeating-linear-gradient(45deg, var(--border-color), var(--border-color) 3px, transparent 3px, transparent 6px); }
+.mc-cell--inline { vertical-align: middle; cursor: default; }
+
+.mc-drawer dl { display: grid; grid-template-columns: 120px 1fr; gap: 8px 12px; margin: 12px 0; font-size: 13px; }
+.mc-drawer dt { color: var(--text-muted); }
+.mc-drawer dd { margin: 0; overflow-wrap: anywhere; }
+.mc-actions { display: flex; flex-wrap: wrap; gap: 8px; }

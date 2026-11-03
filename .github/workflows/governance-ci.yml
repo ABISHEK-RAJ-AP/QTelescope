@@ -1,0 +1,44 @@
+name: Governance CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+
+jobs:
+  governance-tests:
+    runs-on: ubuntu-latest
+    env:
+      USE_ALEMBIC: "false"
+      ENFORCE_RBAC: "true"
+      DATABASE_URL: sqlite:///./data/ci_govern.db
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Pytest governance suite
+        run: |
+          pytest tests/test_govern_route_inventory.py \
+            tests/test_governance_od_qrp02.py \
+            tests/test_governance_g2.py \
+            tests/test_governance_s9.py \
+            tests/test_governance_s10.py \
+            tests/test_govern_pilot_smoke.py \
+            -q --tb=short
+
+  govern-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build Govern SPA
+        working-directory: apps/govern
+        run: |
+          npm ci
+          npm run build

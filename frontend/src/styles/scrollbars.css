@@ -1,0 +1,271 @@
+/**
+ * App-wide custom scrollbars (WebKit + Firefox).
+ * Targets every major scroll region — not browser defaults.
+ */
+
+:root {
+  --scrollbar-size: 8px;
+  --scrollbar-size-wide: 10px;
+  --scrollbar-track: color-mix(in srgb, var(--border-color) 35%, transparent);
+  --scrollbar-thumb: color-mix(in srgb, var(--text-muted) 55%, var(--border-color));
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--accent-cyan) 45%, var(--text-muted));
+  --scrollbar-thumb-active: color-mix(in srgb, var(--accent-cyan) 65%, var(--text-muted));
+  --scrollbar-radius: 999px;
+}
+
+.dark {
+  --scrollbar-track: color-mix(in srgb, var(--border-color) 25%, transparent);
+  --scrollbar-thumb: color-mix(in srgb, var(--text-muted) 70%, #0f172a);
+  --scrollbar-thumb-hover: color-mix(in srgb, var(--accent-cyan) 50%, var(--text-muted));
+  --scrollbar-thumb-active: var(--accent-cyan);
+}
+
+/* Firefox */
+html,
+body,
+.main-content,
+.sidebar-nav,
+.table-container,
+.tab-header,
+.page-stack,
+.admin-container,
+.mc-scroll,
+.qm-scroll,
+.tm-table-wrap,
+.tm-log,
+.telemetry-log-panel,
+.layout-popover__widgets,
+.health-qubit-table-wrap,
+.detail-drawer__body,
+.insight-modal__body,
+.admin-modal-body,
+.al-modal-backdrop .al-drawer,
+.alerts-container,
+.oc-list,
+.ot-list,
+.env-matrix-wrap,
+.bk-tablewrap,
+.qubit-table-wrapper,
+.rp-preview .table-container,
+.rp-pre,
+.ph-timeline,
+.bk-wizard__body,
+.dashboard-scroll,
+.fo-scroll,
+[data-qt-scroll] {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+/* WebKit / Blink (Chrome, Electron, Cursor embedded browser) */
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.main-content::-webkit-scrollbar,
+.sidebar-nav::-webkit-scrollbar,
+.table-container::-webkit-scrollbar,
+.tab-header::-webkit-scrollbar,
+.page-stack::-webkit-scrollbar,
+.admin-container::-webkit-scrollbar,
+.mc-scroll::-webkit-scrollbar,
+.qm-scroll::-webkit-scrollbar,
+.tm-table-wrap::-webkit-scrollbar,
+.tm-log::-webkit-scrollbar,
+.telemetry-log-panel::-webkit-scrollbar,
+.layout-popover__widgets::-webkit-scrollbar,
+.health-qubit-table-wrap::-webkit-scrollbar,
+.detail-drawer__body::-webkit-scrollbar,
+.insight-modal__body::-webkit-scrollbar,
+.alerts-container::-webkit-scrollbar,
+.oc-list::-webkit-scrollbar,
+.ot-list::-webkit-scrollbar,
+.env-matrix-wrap::-webkit-scrollbar,
+.bk-tablewrap::-webkit-scrollbar,
+.qubit-table-wrapper::-webkit-scrollbar,
+.rp-preview .table-container::-webkit-scrollbar,
+.rp-pre::-webkit-scrollbar,
+.ph-timeline::-webkit-scrollbar,
+.bk-wizard__body::-webkit-scrollbar,
+.dashboard-scroll::-webkit-scrollbar,
+.fo-scroll::-webkit-scrollbar,
+[data-qt-scroll]::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+html::-webkit-scrollbar-corner,
+body::-webkit-scrollbar-corner,
+.main-content::-webkit-scrollbar-corner,
+.table-container::-webkit-scrollbar-corner,
+[data-qt-scroll]::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+html::-webkit-scrollbar-button,
+body::-webkit-scrollbar-button,
+.main-content::-webkit-scrollbar-button,
+.table-container::-webkit-scrollbar-button,
+.sidebar-nav::-webkit-scrollbar-button,
+[data-qt-scroll]::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+html::-webkit-scrollbar-track,
+body::-webkit-scrollbar-track,
+.main-content::-webkit-scrollbar-track,
+.sidebar-nav::-webkit-scrollbar-track,
+.table-container::-webkit-scrollbar-track,
+.tab-header::-webkit-scrollbar-track,
+.page-stack::-webkit-scrollbar-track,
+.admin-container::-webkit-scrollbar-track,
+.mc-scroll::-webkit-scrollbar-track,
+.qm-scroll::-webkit-scrollbar-track,
+.tm-table-wrap::-webkit-scrollbar-track,
+.tm-log::-webkit-scrollbar-track,
+.telemetry-log-panel::-webkit-scrollbar-track,
+.layout-popover__widgets::-webkit-scrollbar-track,
+.health-qubit-table-wrap::-webkit-scrollbar-track,
+.detail-drawer__body::-webkit-scrollbar-track,
+.insight-modal__body::-webkit-scrollbar-track,
+.alerts-container::-webkit-scrollbar-track,
+.oc-list::-webkit-scrollbar-track,
+.ot-list::-webkit-scrollbar-track,
+.env-matrix-wrap::-webkit-scrollbar-track,
+.bk-tablewrap::-webkit-scrollbar-track,
+.qubit-table-wrapper::-webkit-scrollbar-track,
+.rp-preview .table-container::-webkit-scrollbar-track,
+.rp-pre::-webkit-scrollbar-track,
+.ph-timeline::-webkit-scrollbar-track,
+.bk-wizard__body::-webkit-scrollbar-track,
+.dashboard-scroll::-webkit-scrollbar-track,
+.fo-scroll::-webkit-scrollbar-track,
+[data-qt-scroll]::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: var(--scrollbar-radius);
+  margin: 2px;
+}
+
+html::-webkit-scrollbar-thumb,
+body::-webkit-scrollbar-thumb,
+.main-content::-webkit-scrollbar-thumb,
+.sidebar-nav::-webkit-scrollbar-thumb,
+.table-container::-webkit-scrollbar-thumb,
+.tab-header::-webkit-scrollbar-thumb,
+.page-stack::-webkit-scrollbar-thumb,
+.admin-container::-webkit-scrollbar-thumb,
+.mc-scroll::-webkit-scrollbar-thumb,
+.qm-scroll::-webkit-scrollbar-thumb,
+.tm-table-wrap::-webkit-scrollbar-thumb,
+.tm-log::-webkit-scrollbar-thumb,
+.telemetry-log-panel::-webkit-scrollbar-thumb,
+.layout-popover__widgets::-webkit-scrollbar-thumb,
+.health-qubit-table-wrap::-webkit-scrollbar-thumb,
+.detail-drawer__body::-webkit-scrollbar-thumb,
+.insight-modal__body::-webkit-scrollbar-thumb,
+.alerts-container::-webkit-scrollbar-thumb,
+.oc-list::-webkit-scrollbar-thumb,
+.ot-list::-webkit-scrollbar-thumb,
+.env-matrix-wrap::-webkit-scrollbar-thumb,
+.bk-tablewrap::-webkit-scrollbar-thumb,
+.qubit-table-wrapper::-webkit-scrollbar-thumb,
+.rp-preview .table-container::-webkit-scrollbar-thumb,
+.rp-pre::-webkit-scrollbar-thumb,
+.ph-timeline::-webkit-scrollbar-thumb,
+.bk-wizard__body::-webkit-scrollbar-thumb,
+.dashboard-scroll::-webkit-scrollbar-thumb,
+.fo-scroll::-webkit-scrollbar-thumb,
+[data-qt-scroll]::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--scrollbar-radius);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  min-height: 40px;
+}
+
+html::-webkit-scrollbar-thumb:hover,
+body::-webkit-scrollbar-thumb:hover,
+.main-content::-webkit-scrollbar-thumb:hover,
+.sidebar-nav::-webkit-scrollbar-thumb:hover,
+.table-container::-webkit-scrollbar-thumb:hover,
+.tab-header::-webkit-scrollbar-thumb:hover,
+.detail-drawer__body::-webkit-scrollbar-thumb:hover,
+.insight-modal__body::-webkit-scrollbar-thumb:hover,
+.mc-scroll::-webkit-scrollbar-thumb:hover,
+.qm-scroll::-webkit-scrollbar-thumb:hover,
+[data-qt-scroll]::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+html::-webkit-scrollbar-thumb:active,
+.main-content::-webkit-scrollbar-thumb:active,
+.table-container::-webkit-scrollbar-thumb:active,
+.detail-drawer__body::-webkit-scrollbar-thumb:active,
+[data-qt-scroll]::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-thumb-active);
+  background-clip: padding-box;
+}
+
+/* Horizontal strips (tables) — slightly taller thumb for easier grab */
+.table-container::-webkit-scrollbar,
+.tab-header::-webkit-scrollbar,
+.mc-scroll::-webkit-scrollbar,
+.qm-scroll::-webkit-scrollbar,
+.tm-table-wrap::-webkit-scrollbar,
+.env-matrix-wrap::-webkit-scrollbar,
+.bk-tablewrap::-webkit-scrollbar {
+  height: var(--scrollbar-size-wide);
+}
+
+html,
+.main-content,
+.sidebar-nav,
+.page-stack,
+.detail-drawer__body,
+.insight-modal__body {
+  scrollbar-gutter: stable;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+.admin-modal-body,
+.al-drawer,
+.admin-row-detail .admin-cred-form {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+.admin-modal-body::-webkit-scrollbar,
+.al-drawer::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+.admin-modal-body::-webkit-scrollbar-track,
+.al-drawer::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: var(--scrollbar-radius);
+}
+
+.admin-modal-body::-webkit-scrollbar-thumb,
+.al-drawer::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--scrollbar-radius);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.admin-modal-body::-webkit-scrollbar-thumb:hover,
+.al-drawer::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: padding-box;
+}

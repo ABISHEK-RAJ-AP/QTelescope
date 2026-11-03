@@ -1,0 +1,867 @@
+import React, { Suspense, useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import {
+  LayoutDashboard, Cpu, Activity, CheckCircle2,
+  FileText, Settings, LogOut, ShieldAlert, AlertTriangle, PlaySquare, Radar,
+  Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, Server, History,
+} from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { buildAppPath, parseAppPath, isLegacyAppPath } from './appNav.js';
+import {
+  TELEMETRY_NAV,
+  EXECUTION_NAV,
+  RESOURCES_NAV,
+  ALERTS_NAV,
+  ADMIN_NAV,
+  navBranchActive,
+  navChildActive,
+  goStateForNavChild,
+  defaultGoStateForBranch,
+} from './appSidebarNav.js';
+import { buildDriftInvestigationLocation } from './lib/investigationLinks.js';
+import { parseScopeSearch } from './lib/appScopeQuery.js';
+import cdacLogo from './assets/cdaclogo.png';
+import { IstClock } from './components/shell/IstClock.jsx';
+import { LoginPage } from './pages/LoginPage.jsx';
+import {
+  DashboardHome, BackendInventory, BackendDetails, LiveTelemetry,
+  CalibrationStatus, DriftAnalysis, HistoricalTrends, TopologyExplorer, CalibrationTimeline,
+  MetricsCoverage, BackendComparison, AnomalyMonitor, TemporalReplay, JobMonitoring,
+  QueueMonitoring, ResourceHealth, EnvironmentPage, AlertsEvents, ReportsPage,
+  AdministrationPage, OperationsCentre, PlatformHealth, OpsTimeline, OnboardingFlow, UserSettings,
+  IncidentDetailPage,
+  AlertDetailPage,
+} from './appLazyPages.js';
+import { BoneyardSkeleton } from './components/ui/Skeleton';
+import { api } from './services/api';
+import { useTheme } from './components/ui/ThemeProvider';
+import { PageHeader } from './components/observability/PageHeader.jsx';
+import { resolvePageContext } from './utils/pageContext.js';
+import { PageActionsProvider, usePageActions } from './context/PageActionsContext.jsx';
+import { A11yPreheader } from './components/shell/A11yPreheader.jsx';
+import { ProductTour } from './components/onboarding/ProductTour.jsx';
+import { QtQuickActionDock } from './components/quick-actions/QtQuickActionDock.jsx';
+import { readDensity } from './utils/uiPreferences.js';
+import { OnScreenKeyboard } from './components/shell/OnScreenKeyboard.jsx';
+import { ToastHost } from './components/ui/ToastHost.jsx';
+import { CONSOLE_TOUR_STEPS } from './lib/platformCapabilityMap.js';
+import { consumeConsoleTourPending, shouldRunOnboarding } from './lib/onboardingState.js';
+
+const SIDEBAR_COLLAPSE_KEY = 'qtelescope_sidebar_collapsed';
+
+function initialsFor(user) {
+  const n = user?.full_name || user?.username || '?';
+  const parts = String(n).trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return String(n).slice(0, 2).toUpperCase();
+}
+
+function AppShell({ currentUser, onLogout, onUserUpdate }) {
+  const { actions: pageActions } = usePageActions();
+  const { resolved, setTheme } = useTheme();
+
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const [hoverExpand, setHoverExpand] = useState(false);
+  const [density, setDensity] = useState(readDensity);
+
+  // Sidebar Head Topics
+  const [mainTopic, setMainTopic] = useState('home');
+
+  // Dynamic active alerts count for live sidebar badge increment
+  const [activeAlertsCount, setActiveAlertsCount] = useState(0);
+  const [criticalAlertsCount, setCriticalAlertsCount] = useState(0);
+  // Sub-view selectors for each Head Topic
+  const [backendSubTab, setBackendSubTab] = useState('inventory');
+  const [telemetrySubTab, setTelemetrySubTab] = useState('live');
+  const [executionSubTab, setExecutionSubTab] = useState('jobs');
+  const [resourceSubTab, setResourceSubTab] = useState('health');
+  const [alertsView, setAlertsView] = useState('alerts');
+  const [operationsSubTab, setOperationsSubTab] = useState('centre');
+  const [investigateSubTab, setInvestigateSubTab] = useState('timeline');
+  const [adminSubTab, setAdminSubTab] = useState('hub');
+  const [backendWorkspaceTab, setBackendWorkspaceTab] = useState('overview');
+
+  const [selectedBackendId, setSelectedBackendId] = useState('ibm_brisbane');
+  const [selectedIncidentId, setSelectedIncidentId] = useState('');
+  const [selectedAlertId, setSelectedAlertId] = useState('');
+
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [productTourOpen, setProductTourOpen] = useState(false);
+  const [expandedBranches, setExpandedBranches] = useState(
+    () => new Set(['telemetry', 'execution', 'resources', 'alerts', 'admin']),
+  );
+  const isAdmin = currentUser?.role === 'Admin';
+  const tourSteps = useMemo(
+    () => CONSOLE_TOUR_STEPS.filter((s) => s.target !== 'nav-admin' || isAdmin),
+    [isAdmin],
+  );
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('startTour') === '1') {
+      setProductTourOpen(true);
+      navigate({ pathname: location.pathname, search: '' }, { replace: true });
+    }
+  }, [location.search, location.pathname, navigate]);
+
+  useEffect(() => {
+    if (consumeConsoleTourPending(currentUser?.username)) {
+      setProductTourOpen(true);
+    }
+  }, [currentUser?.username]);
+
+  const navStateRef = useRef({
+    mainTopic,
+    backendSubTab,
+    telemetrySubTab,
+    executionSubTab,
+    resourceSubTab,
+    alertsView,
+    operationsSubTab,
+    investigateSubTab,
+    adminSubTab,
+    backendWorkspaceTab,
+    selectedBackendId,
+    selectedIncidentId,
+    selectedAlertId,
+  });
+  navStateRef.current = {
+    mainTopic,
+    backendSubTab,
+    telemetrySubTab,
+    executionSubTab,
+    resourceSubTab,
+    alertsView,
+    operationsSubTab,
+    investigateSubTab,
+    adminSubTab,
+    backendWorkspaceTab,
+    selectedBackendId,
+    selectedIncidentId,
+    selectedAlertId,
+  };
+
+  useEffect(() => {
+    const parsed = parseAppPath(location.pathname);
+    setMainTopic(parsed.mainTopic);
+    setBackendSubTab(parsed.backendSubTab);
+    setTelemetrySubTab(parsed.telemetrySubTab);
+    setExecutionSubTab(parsed.executionSubTab);
+    setResourceSubTab(parsed.resourceSubTab);
+    setAlertsView(parsed.alertsView);
+    setOperationsSubTab(parsed.operationsSubTab);
+    setInvestigateSubTab(parsed.investigateSubTab);
+    setAdminSubTab(parsed.adminSubTab);
+    setBackendWorkspaceTab(parsed.backendWorkspaceTab);
+    setSelectedBackendId(parsed.selectedBackendId);
+    setSelectedIncidentId(parsed.selectedIncidentId || '');
+    setSelectedAlertId(parsed.selectedAlertId || '');
+  }, [location.pathname]);
+
+  /** Legacy aliases only — do not rewrite URL on every nav state tick (caused redirect flicker). */
+  useEffect(() => {
+    if (!isLegacyAppPath(location.pathname)) return;
+    const canonical = buildAppPath(parseAppPath(location.pathname));
+    if (location.pathname !== canonical) {
+      navigate({ pathname: canonical, search: location.search }, { replace: true });
+    }
+  }, [location.pathname, location.search, navigate]);
+
+  const go = useCallback((patch) => {
+    const next = { ...navStateRef.current, ...patch };
+    const search = new URLSearchParams(location.search);
+    if (patch.mainTopic && patch.mainTopic !== 'alerts') {
+      search.delete('alert');
+    }
+    const onQueues = next.mainTopic === 'execution' && next.executionSubTab === 'queues';
+    if (!onQueues) search.delete('queue');
+    const q = search.toString();
+    navigate({
+      pathname: buildAppPath(next),
+      search: q ? `?${q}` : '',
+    });
+  }, [navigate, location.search]);
+
+  const onNavigateAlerts = useCallback(() => go({ mainTopic: 'alerts', alertsView: 'alerts' }), [go]);
+  const onNavigateJobs = useCallback(() => go({ mainTopic: 'execution', executionSubTab: 'jobs' }), [go]);
+  const onNavigateInventory = useCallback(() => go({ mainTopic: 'backends', backendSubTab: 'inventory' }), [go]);
+  const onNavigateBackend = useCallback(
+    (id) => go({ mainTopic: 'backends', backendSubTab: 'details', selectedBackendId: id }),
+    [go],
+  );
+  const onNavigateOperations = useCallback(() => go({ mainTopic: 'operations', operationsSubTab: 'centre' }), [go]);
+  const onNavigatePlatformHealth = useCallback(() => go({ mainTopic: 'platform' }), [go]);
+  const onNavigateTimeline = useCallback(() => go({ mainTopic: 'investigate', investigateSubTab: 'timeline' }), [go]);
+  const onNavigateCompare = useCallback(() => go({ mainTopic: 'telemetry', telemetrySubTab: 'compare' }), [go]);
+  const onNavigateResourceHealth = useCallback(() => go({ mainTopic: 'resources', resourceSubTab: 'health' }), [go]);
+
+  // Poll active alerts periodically so the sidebar badge reflects additions/resolutions in real time
+  useEffect(() => {
+    const pollAlerts = async () => {
+      try {
+        const summary = await api.getAlertsSummary();
+        setActiveAlertsCount(summary?.active ?? 0);
+        setCriticalAlertsCount(summary?.critical ?? 0);
+      } catch (err) {
+        console.error('Failed to poll alert count', err);
+      }
+    };
+    const interval = setInterval(() => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      pollAlerts();
+    }, 20000);
+    const kick = setTimeout(pollAlerts, 400);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(kick);
+    };
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSE_KEY, collapsed ? '1' : '0');
+    } catch {
+      /* ignore */
+    }
+  }, [collapsed]);
+
+  useEffect(() => {
+    if (!collapsed && hoverExpand) setHoverExpand(false);
+  }, [collapsed, hoverExpand]);
+
+  useEffect(() => {
+    if (['telemetry', 'execution', 'resources', 'alerts', 'admin'].includes(mainTopic)) {
+      setExpandedBranches((prev) => new Set(prev).add(mainTopic));
+    }
+  }, [mainTopic]);
+
+  const handleLogout = async () => {
+    try {
+      await api.logout();
+    } catch {
+      /* session may already be invalid */
+    }
+    localStorage.removeItem('quantum_user');
+    onLogout?.();
+  };
+
+  const effectiveCollapsed = collapsed && !hoverExpand;
+
+  const handleSelectBackend = (id) => {
+    go({
+      mainTopic: 'backends',
+      backendSubTab: 'details',
+      selectedBackendId: id,
+      backendWorkspaceTab: 'overview',
+    });
+  };
+
+  const openAlertInvestigation = (alert) => {
+    const backendId = alert?.backend_id || '';
+    const search = new URLSearchParams();
+    if (backendId) search.set('backend', backendId);
+    if (alert?.alert_id) search.set('alert', alert.alert_id);
+    const q = search.toString();
+    navigate({
+      pathname: '/app/investigate/timeline',
+      search: q ? `?${q}` : '',
+    });
+  };
+
+  const openAlertDrift = (alert) => {
+    const backendId = alert?.backend_id || '';
+    if (!backendId) return;
+    navigate(buildDriftInvestigationLocation({ backendId }));
+  };
+
+  const openBackendWorkspace = (backendId, tab = 'overview') => {
+    go({
+      mainTopic: 'backends',
+      backendSubTab: 'details',
+      selectedBackendId: backendId,
+      backendWorkspaceTab: tab,
+    });
+  };
+
+  // Render main topic view with internal sub-tabs
+  const renderContent = () => {
+    switch (mainTopic) {
+      case 'home':
+        return (
+          <DashboardHome
+            onNavigateAlerts={onNavigateAlerts}
+            onNavigateJobs={onNavigateJobs}
+            onNavigateInventory={onNavigateInventory}
+            onNavigateBackend={onNavigateBackend}
+            onNavigateOperations={onNavigateOperations}
+            onNavigatePlatformHealth={onNavigatePlatformHealth}
+            onNavigateTimeline={onNavigateTimeline}
+            onNavigateCompare={onNavigateCompare}
+            onNavigateResourceHealth={onNavigateResourceHealth}
+          />
+        );
+
+      case 'operations':
+        return (
+          <OperationsCentre
+            onOpenIncidents={() => go({ mainTopic: 'alerts', alertsView: 'incidents' })}
+            onOpenAlerts={() => go({ mainTopic: 'alerts', alertsView: 'alerts' })}
+            onOpenFleetInventory={() => go({ mainTopic: 'backends', backendSubTab: 'inventory' })}
+            onInvestigateAlert={openAlertInvestigation}
+          />
+        );
+
+      case 'platform':
+        return <PlatformHealth />;
+
+      case 'investigate':
+        return investigateSubTab === 'timeline' ? <OpsTimeline /> : <OpsTimeline />;
+
+      case 'backends':
+        if (backendSubTab === 'details') {
+          return (
+            <BackendDetails
+              backendId={selectedBackendId}
+              workspaceTab={backendWorkspaceTab}
+              onWorkspaceTabChange={(tab) => go({
+                mainTopic: 'backends',
+                backendSubTab: 'details',
+                selectedBackendId,
+                backendWorkspaceTab: tab,
+              })}
+              onBack={() => go({ mainTopic: 'backends', backendSubTab: 'inventory' })}
+            />
+          );
+        }
+        return (
+          <BackendInventory
+            onSelectBackend={handleSelectBackend}
+            isAdmin={isAdmin}
+          />
+        );
+
+      case 'telemetry':
+        return (
+          <>
+            {telemetrySubTab === 'live' && <LiveTelemetry />}
+            {telemetrySubTab === 'calibration' && <CalibrationStatus />}
+            {telemetrySubTab === 'drift' && <DriftAnalysis />}
+            {telemetrySubTab === 'trends' && <HistoricalTrends />}
+            {telemetrySubTab === 'topology' && <TopologyExplorer />}
+            {telemetrySubTab === 'cal-timeline' && <CalibrationTimeline />}
+            {telemetrySubTab === 'compare' && <BackendComparison />}
+            {telemetrySubTab === 'anomalies' && <AnomalyMonitor />}
+            {telemetrySubTab === 'replay' && <TemporalReplay />}
+            {telemetrySubTab === 'metrics' && <MetricsCoverage />}
+          </>
+        );
+
+      case 'alerts':
+        if (selectedAlertId) {
+          return (
+            <AlertDetailPage
+              alertId={selectedAlertId}
+              currentUser={currentUser}
+              onBack={() => go({ mainTopic: 'alerts', alertsView: 'alerts', selectedAlertId: '' })}
+              onOpenIncident={(id) => go({
+                mainTopic: 'alerts',
+                alertsView: 'incidents',
+                selectedIncidentId: id,
+                selectedAlertId: '',
+              })}
+              onInvestigateTimeline={openAlertInvestigation}
+              onInvestigateDrift={openAlertDrift}
+              onOpenBackend={(backendId) => openBackendWorkspace(backendId, 'qubits')}
+            />
+          );
+        }
+        if (selectedIncidentId) {
+          return (
+            <IncidentDetailPage
+              incidentId={selectedIncidentId}
+              currentUser={currentUser}
+              onBack={() => go({ mainTopic: 'alerts', alertsView: 'incidents', selectedIncidentId: '' })}
+              onOpenAlert={(id) => go({
+                mainTopic: 'alerts',
+                alertsView: 'alerts',
+                selectedAlertId: id,
+                selectedIncidentId: '',
+              })}
+            />
+          );
+        }
+        return (
+          <AlertsEvents
+            view={alertsView}
+            currentUser={currentUser}
+            onOpenAlert={(id) => go({ mainTopic: 'alerts', alertsView: 'alerts', selectedAlertId: id })}
+            onOpenIncident={(id) => go({ mainTopic: 'alerts', alertsView: 'incidents', selectedIncidentId: id })}
+            onViewChange={(view) => go({
+              mainTopic: 'alerts',
+              alertsView: view,
+              selectedIncidentId: '',
+              selectedAlertId: '',
+            })}
+            onInvestigateTimeline={openAlertInvestigation}
+            onInvestigateDrift={openAlertDrift}
+            onOpenBackend={(backendId) => openBackendWorkspace(backendId, 'qubits')}
+          />
+        );
+
+      case 'settings':
+        return (
+          <UserSettings
+            currentUser={currentUser}
+            onUserUpdate={(next) => {
+              try {
+                localStorage.setItem('quantum_user', JSON.stringify(next));
+              } catch { /* ignore */ }
+              onUserUpdate?.(next);
+            }}
+          />
+        );
+
+      case 'execution':
+        return executionSubTab === 'queues' ? (
+          <QueueMonitoring onSelectBackend={(id) => openBackendWorkspace(id, 'execution')} />
+        ) : (
+          <JobMonitoring onOpenBackendWorkspace={(id) => openBackendWorkspace(id, 'execution')} />
+        );
+
+      case 'resources':
+        return resourceSubTab === 'environment' ? <EnvironmentPage /> : <ResourceHealth />;
+
+      case 'reports':
+        return <ReportsPage />;
+
+      case 'admin':
+        if (!isAdmin) {
+          return (
+            <div className="card" style={{ padding: 40, textAlign: 'center' }}>
+              <ShieldAlert size={48} color="#e11d48" style={{ margin: '0 auto 16px' }} />
+              <h2 style={{ fontSize: 20, color: '#e11d48', fontWeight: 700, marginBottom: 8 }}>
+                Access Restricted
+              </h2>
+              <p style={{ color: '#64748b', fontSize: 14 }}>
+                The Administration Dashboard is restricted to <strong>Admin</strong> users only.
+              </p>
+            </div>
+          );
+        }
+        return (
+          <AdministrationPage
+            section={adminSubTab}
+            onNavigateSection={(adminSubTab) => go({ mainTopic: 'admin', adminSubTab })}
+          />
+        );
+
+      default:
+        return (
+          <DashboardHome
+            onNavigateAlerts={onNavigateAlerts}
+            onNavigateJobs={onNavigateJobs}
+            onNavigateInventory={onNavigateInventory}
+            onNavigateBackend={onNavigateBackend}
+            onNavigateOperations={onNavigateOperations}
+            onNavigatePlatformHealth={onNavigatePlatformHealth}
+            onNavigateTimeline={onNavigateTimeline}
+            onNavigateCompare={onNavigateCompare}
+            onNavigateResourceHealth={onNavigateResourceHealth}
+          />
+        );
+    }
+  };
+
+  const pageContext = resolvePageContext({
+    mainTopic,
+    backendSubTab,
+    telemetrySubTab,
+    executionSubTab,
+    resourceSubTab,
+    alertsView,
+    operationsSubTab,
+    investigateSubTab,
+    adminSubTab,
+    backendWorkspaceTab,
+    selectedBackendId,
+    selectedIncidentId,
+    selectedAlertId,
+  });
+
+  const headerBreadcrumbs = useMemo(() => {
+    if (mainTopic === 'alerts' && selectedAlertId) {
+      return [
+        ...pageContext.breadcrumbs.slice(0, -1),
+        { label: 'Active alerts', onClick: () => go({ mainTopic: 'alerts', alertsView: 'alerts', selectedAlertId: '' }) },
+        { label: selectedAlertId },
+      ];
+    }
+    if (mainTopic === 'alerts' && selectedIncidentId) {
+      return [
+        ...pageContext.breadcrumbs.slice(0, -1),
+        { label: 'Incidents', onClick: () => go({ mainTopic: 'alerts', alertsView: 'incidents', selectedIncidentId: '' }) },
+        { label: selectedIncidentId },
+      ];
+    }
+    if (mainTopic !== 'backends') return pageContext.breadcrumbs;
+    return pageContext.breadcrumbs.map((crumb) => {
+      if (crumb.label === 'Backend library') {
+        return { ...crumb, onClick: onNavigateInventory };
+      }
+      return crumb;
+    });
+  }, [mainTopic, pageContext.breadcrumbs, onNavigateInventory, selectedIncidentId, selectedAlertId, go]);
+
+  const shellNavState = {
+    mainTopic,
+    telemetrySubTab,
+    executionSubTab,
+    resourceSubTab,
+    alertsView,
+    adminSubTab,
+    selectedAlertId,
+    selectedIncidentId,
+  };
+
+  const navGroups = useMemo(() => [
+    {
+      label: 'Observe',
+      items: [
+        { id: 'home', label: 'Fleet overview', icon: LayoutDashboard },
+        { id: 'operations', label: 'Operator console', icon: Radar },
+        { id: 'backends', label: 'Backends', icon: Cpu },
+        { id: 'telemetry', label: 'Telemetry', icon: Activity, children: TELEMETRY_NAV },
+        { id: 'investigate', label: 'Timeline', icon: History },
+      ],
+    },
+    {
+      label: 'Platform',
+      items: [{ id: 'platform', label: 'Platform health', icon: Server }],
+    },
+    {
+      label: 'Execute',
+      items: [
+        { id: 'execution', label: 'Execution', icon: PlaySquare, children: EXECUTION_NAV },
+        { id: 'resources', label: 'Resources', icon: CheckCircle2, children: RESOURCES_NAV },
+      ],
+    },
+    {
+      label: 'Record',
+      items: [
+        { id: 'reports', label: 'Reports', icon: FileText },
+        {
+          id: 'alerts',
+          label: 'Alerts',
+          icon: AlertTriangle,
+          children: ALERTS_NAV,
+          badge: criticalAlertsCount > 0 ? criticalAlertsCount : (activeAlertsCount > 0 ? activeAlertsCount : 0),
+          badgeVariant: criticalAlertsCount > 0 ? 'critical' : 'total',
+          badgeTitle: criticalAlertsCount > 0
+            ? `${criticalAlertsCount} critical · ${activeAlertsCount} active`
+            : `${activeAlertsCount} active alerts`,
+        },
+      ],
+    },
+  ], [activeAlertsCount, criticalAlertsCount]);
+
+  const adminItem = isAdmin
+    ? { id: 'admin', label: 'Configure', icon: Settings, children: ADMIN_NAV }
+    : null;
+
+  const toggleBranch = (id) => {
+    setExpandedBranches((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const renderNavItem = (item) => {
+    const Icon = item.icon;
+    const hasChildren = !!item.children?.length;
+    const branchActive = hasChildren && navBranchActive(item, shellNavState);
+    const leafActive = !hasChildren && mainTopic === item.id;
+    const expanded = hasChildren && expandedBranches.has(item.id);
+
+    if (effectiveCollapsed && hasChildren) {
+      return (
+        <button
+          type="button"
+          key={item.id}
+          data-tour={`nav-${item.id}`}
+          className={`nav-item ${branchActive ? 'active' : ''}`}
+          title={item.label}
+          onClick={() => go(defaultGoStateForBranch(item))}
+        >
+          <span className="nav-icon">
+            <Icon size={18} color={item.id === 'alerts' && item.badge > 0 ? '#e11d48' : 'currentColor'} />
+          </span>
+        </button>
+      );
+    }
+
+    return (
+      <div key={item.id} className="nav-branch">
+        <button
+          type="button"
+          data-tour={`nav-${item.id}`}
+          className={`nav-item ${hasChildren ? 'nav-item--parent' : ''} ${leafActive || (hasChildren && branchActive && !expanded) ? 'active' : ''}`}
+          onClick={() => {
+            if (hasChildren) {
+              if (!expanded) {
+                setExpandedBranches((p) => new Set(p).add(item.id));
+                go(defaultGoStateForBranch(item));
+              } else {
+                toggleBranch(item.id);
+              }
+            } else {
+              go({ mainTopic: item.id });
+            }
+          }}
+          title={effectiveCollapsed ? item.label : undefined}
+        >
+          <span className="nav-icon">
+            <Icon size={18} color={item.id === 'alerts' && item.badge > 0 ? '#e11d48' : 'currentColor'} />
+          </span>
+          <span className={`nav-label${effectiveCollapsed ? ' nav-label--collapsed' : ''}`}>{item.label}</span>
+          {hasChildren && !effectiveCollapsed && (
+            <span className="nav-chevron" aria-hidden>
+              {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+            </span>
+          )}
+          {!effectiveCollapsed && item.badge > 0 && (
+            <span
+              className={`sidebar-alert-badge${item.badgeVariant === 'critical' ? ' sidebar-alert-badge--critical' : ''}`}
+              title={item.badgeTitle || `${item.badge} alerts`}
+            >
+              {item.badgeVariant === 'critical' ? `${item.badge} crit` : item.badge}
+            </span>
+          )}
+        </button>
+        {hasChildren && expanded && !effectiveCollapsed && (
+          <div className="nav-sub-list" role="group" aria-label={`${item.label} pages`}>
+            {item.children.map((child) => (
+              <button
+                type="button"
+                key={child.value}
+                className={`nav-sub-item ${navChildActive(item, child, shellNavState) ? 'active' : ''}`}
+                onClick={() => go(goStateForNavChild(item, child))}
+              >
+                {child.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const displayName = currentUser.full_name || currentUser.username;
+
+  return (
+    <>
+    <div className="app-shell">
+      <A11yPreheader />
+    <div className="app-container">
+      <aside
+        className={`sidebar${collapsed ? ' sidebar-collapsed' : ''}${hoverExpand && collapsed ? ' sidebar-hover-expanded' : ''}`}
+        onMouseEnter={() => { if (collapsed) setHoverExpand(true); }}
+        onMouseLeave={() => setHoverExpand(false)}
+        onFocusCapture={() => { if (collapsed) setHoverExpand(true); }}
+        onBlurCapture={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget)) setHoverExpand(false);
+        }}
+      >
+        <Link to="/" className="sidebar-header" title="Q-TeleScope home">
+          <img src={cdacLogo} alt="C-DAC" className="sidebar-logo-img" />
+          {!effectiveCollapsed && (
+            <div>
+              <div className="sidebar-title">Q-TeleScope</div>
+              <div className="sidebar-subtitle">Quantum Platform</div>
+            </div>
+          )}
+        </Link>
+
+        <nav className="sidebar-nav">
+          {navGroups.map((group) => (
+            <div key={group.label}>
+              {!effectiveCollapsed && <div className="nav-group-label">{group.label}</div>}
+              {group.items.map((item) => renderNavItem(item))}
+            </div>
+          ))}
+          {adminItem && (
+            <div key="admin">
+              {!effectiveCollapsed && <div className="nav-group-label">Configure</div>}
+              {renderNavItem(adminItem)}
+            </div>
+          )}
+        </nav>
+
+        <div className="sidebar-footer">
+          <button
+            type="button"
+            className="nav-item sidebar-collapse-toggle"
+            onClick={() => setCollapsed((v) => !v)}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <span className="nav-icon">
+              {collapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+            </span>
+            {!effectiveCollapsed && <span className="nav-label">Collapse</span>}
+          </button>
+
+          <button
+            type="button"
+            className="sidebar-footer__profile"
+            title={`${displayName} — account settings`}
+            onClick={() => go({ mainTopic: 'settings' })}
+          >
+            <div className="sidebar-footer__avatar">{initialsFor(currentUser)}</div>
+            {!effectiveCollapsed && (
+              <div className="sidebar-footer__meta">
+                <div className="sidebar-footer__name">{displayName}</div>
+                <div className="sidebar-footer__role">{currentUser.role_label || currentUser.role}</div>
+              </div>
+            )}
+            {!effectiveCollapsed && (
+              <span
+                role="button"
+                tabIndex={0}
+                className="sidebar-footer__logout"
+                onClick={(e) => { e.stopPropagation(); handleLogout(); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); handleLogout(); } }}
+                aria-label="Sign out"
+                title="Sign out"
+              >
+                <LogOut size={16} />
+              </span>
+            )}
+          </button>
+        </div>
+      </aside>
+
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={`main-content${collapsed ? ' main-content--collapsed' : ''}${hoverExpand && collapsed ? ' main-content--hover-expanded' : ''}`}
+      >
+        <header className="app-page-head">
+          <PageHeader
+            embedded
+            breadcrumbs={headerBreadcrumbs}
+            title={pageContext.title}
+            description={pageContext.description}
+            backendId={pageContext.backendId}
+            actions={(
+              <>
+                {pageActions}
+                <div className="app-page-head__global">
+                  <IstClock />
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
+                    title={resolved === 'dark' ? 'Switch to light' : 'Switch to dark'}
+                    aria-label="Toggle theme"
+                  >
+                    {resolved === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+                  </button>
+                </div>
+              </>
+            )}
+          />
+        </header>
+
+        <div id="page-content" tabIndex={-1} className={`page-container page-container--${density}`}>
+          <Suspense fallback={<BoneyardSkeleton layout="dashboard" />}>
+            {renderContent()}
+          </Suspense>
+        </div>
+      </main>
+    </div>
+    </div>
+    <ToastHost />
+    <OnScreenKeyboard />
+    <ProductTour
+      open={productTourOpen}
+      steps={tourSteps}
+      onClose={() => setProductTourOpen(false)}
+    />
+    <QtQuickActionDock
+      currentUser={currentUser}
+      onStartTour={() => setProductTourOpen(true)}
+      activeAlertsCount={activeAlertsCount}
+      criticalAlertsCount={criticalAlertsCount}
+      productTourOpen={productTourOpen}
+    />
+    </>
+  );
+}
+
+export const App = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('quantum_user');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const handleLoginSuccess = (userObj) => {
+    setCurrentUser(userObj);
+  };
+
+  useEffect(() => {
+    if (!currentUser) return;
+    if (
+      shouldRunOnboarding(currentUser)
+      && !location.pathname.startsWith('/app/onboarding')
+    ) {
+      navigate('/app/onboarding', { replace: true });
+    }
+  }, [currentUser, location.pathname, navigate]);
+
+  useEffect(() => {
+    if (!currentUser?.token) return;
+    api.getMe()
+      .then((me) => {
+        if (!me?.authenticated) return;
+        const merged = {
+          ...currentUser,
+          username: me.username ?? currentUser.username,
+          role: me.role ?? currentUser.role,
+          role_label: me.role_label,
+          permissions: me.permissions,
+          full_name: me.full_name ?? currentUser.full_name,
+          email: me.email ?? currentUser.email,
+          org: me.org ?? currentUser.org,
+        };
+        localStorage.setItem('quantum_user', JSON.stringify(merged));
+        setCurrentUser(merged);
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh permissions once per session token
+  }, [currentUser?.token]);
+
+  if (!currentUser) {
+    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  if (location.pathname.startsWith('/app/onboarding')) {
+    return <OnboardingFlow currentUser={currentUser} />;
+  }
+
+  return (
+    <PageActionsProvider>
+      <AppShell currentUser={currentUser} onLogout={() => setCurrentUser(null)} onUserUpdate={setCurrentUser} />
+    </PageActionsProvider>
+  );
+};
+
+export default App;

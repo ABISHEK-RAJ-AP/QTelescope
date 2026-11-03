@@ -1,0 +1,42 @@
+import os
+from typing import List, Dict, Any
+from app.providers.base import BaseProviderAdapter
+from app.core.mock_data import (
+    get_mock_backend,
+    get_mock_backend_status,
+    get_mock_backend_properties,
+    get_mock_connectivity,
+    get_mock_jobs
+)
+from app.core.config import settings
+
+class IonQProviderAdapter(BaseProviderAdapter):
+    """
+    IonQ Trapped-Ion Provider Adapter (REST API / AWS Braket).
+    Uses centralized mock data repository when live API keys are not configured.
+    """
+    def __init__(self, api_key: str = None):
+        self.api_key = api_key or settings.IONQ_API_KEY or os.getenv("IONQ_API_KEY", "")
+        self.is_authenticated = bool(self.api_key and len(self.api_key.strip()) > 10)
+
+    def authenticate(self) -> bool:
+        return True
+
+    def discover_backends(self) -> List[Dict[str, Any]]:
+        if not settings.ENABLE_MOCK_DATA:
+            return []
+
+        b = get_mock_backend("ionq_forte")
+        return [b] if b else []
+
+    def get_backend_status(self, backend_id: str) -> Dict[str, Any]:
+        return get_mock_backend_status(backend_id)
+
+    def get_backend_properties(self, backend_id: str) -> Dict[str, Any]:
+        return get_mock_backend_properties(backend_id)
+
+    def get_connectivity(self, backend_id: str) -> List[Dict[str, Any]]:
+        return get_mock_connectivity(backend_id)
+
+    def get_jobs(self, backend_id: str, limit: int = 15) -> List[Dict[str, Any]]:
+        return get_mock_jobs(backend_id, limit=limit)

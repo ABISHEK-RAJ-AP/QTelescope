@@ -1,0 +1,27 @@
+.bc-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin-bottom: 10px; }
+.bc-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.bc-chip { display: flex; gap: 10px; align-items: flex-start; text-align: left; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card); color: inherit; cursor: pointer; }
+.bc-chip:hover:not(:disabled) { background: var(--bg-card-hover); }
+.bc-chip:disabled { opacity: .45; cursor: not-allowed; }
+.bc-chip[aria-pressed='true'] { background: var(--bg-card-hover); border-color: var(--accent-cyan); box-shadow: inset 3px 0 0 var(--accent-cyan); }
+.bc-chip:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; }
+.bc-chip__check { flex: none; width: 16px; height: 16px; border: 1.5px solid var(--text-muted); border-radius: 4px; font-size: 12px; line-height: 13px; text-align: center; margin-top: 2px; }
+.bc-chip[aria-pressed='true'] .bc-chip__check { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.bc-chip__body { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; min-width: 0; }
+.bc-chip__name { font-weight: 600; font-size: 13px; }
+.bc-chip__meta { font-size: 11px; color: var(--text-muted); text-transform: capitalize; }
+.bc-chip__warn { font-size: 11px; color: var(--accent-amber); }
+.bc-chip__warn::before { content: '▲ '; }
+
+.bc-banner { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; border: 1px solid var(--accent-amber); border-left-width: 4px; border-radius: 8px; background: var(--bg-card-hover); font-size: 13px; line-height: 1.45; }
+.bc-banner svg { flex: none; margin-top: 2px; color: var(--accent-amber); }
+
+.bc-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; align-items: center; color: var(--text-secondary); }
+.bc-legend i, .bc-dot { display: inline-block; width: 12px; height: 10px; border: 2px solid; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+
+.bc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 16px; align-items: stretch; width: 100%; }
+.bc-note { margin: 6px 0 0; }
+.bc-missing { color: var(--text-muted); font-style: italic; }
+.bc-range { display: inline-flex; flex-direction: column; font-variant-numeric: tabular-nums; }
+.bc-range small { color: var(--text-muted); font-size: 11px; }
+.bc-warnmark { color: var(--accent-amber); font-size: 10px; }

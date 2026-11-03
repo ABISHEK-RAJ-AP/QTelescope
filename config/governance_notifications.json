@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "webhook_allowed_hosts": [],
+  "webhook_allowed_host_suffixes": [],
+  "channels": {
+    "email": { "enabled": false, "from": "qre-platform@local", "default_to": "governance@local" },
+    "webhook": { "enabled": false, "url": "" }
+  },
+  "events": [
+    "submission.entered_review",
+    "approval.decided",
+    "approval.changes_requested"
+  ]
+}

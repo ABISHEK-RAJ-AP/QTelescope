@@ -1,0 +1,116 @@
+# Environment & Secrets (NEVER COMMIT .env)
+.env
+.env.*
+!.env.example
+*.env
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Local infra (Miniforge Postgres / Redis)
+.pgdata/
+.redis-data/
+.backend.log
+.backend*.log
+
+# Local agent / IDE state
+.cursor/
+.planning/
+.agent/
+agent-transcripts/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+backend/venv/
+*/venv/
+
+# Testing & Coverage
+.pytest_cache/
+backend/.pytest_cache/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Node & Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+.npm
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+quantum_monitoring.db
+data/registered_users.json
+data/provider_credentials.json
+data/environment_telemetry.json
+data/*.tmp
+data/qtelescope.db
+data/collector_health.json
+data/collector_dlq.jsonl
+data/collector_circuit.json
+data/alert_comments.jsonl
+data/audit_events.jsonl
+data/federation_registry.json
+data/federation_snapshots/
+data/facility_inbox/
+data/evidence/*.zip
+data/evidence/
+!data/.gitkeep
+
+# Nested app build artifacts
+apps/**/dist/
+apps/**/node_modules/
+qniverse-module3/**/venv/
+qniverse-module3/**/node_modules/
+quantum-resource-portal/**/node_modules/
+quantum-resource-portal/**/dist/
+
+# OS & Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo

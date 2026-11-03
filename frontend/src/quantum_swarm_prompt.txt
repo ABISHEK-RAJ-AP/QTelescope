@@ -1,0 +1,925 @@
+<USER_REQUEST>
+first of all create a landiang page take reference from cert studio we have or fluxforge we have for the ui how it can be and all and for backgorund for landing in this You are given a task to integrate an existing React component in the codebase
+
+The codebase should support:
+- shadcn project structure  
+- Tailwind CSS
+- Typescript
+
+If it doesn't, provide instructions on how to setup project via shadcn CLI, install Tailwind or Typescript.
+
+Determine the default path for components and styles. 
+If default path for components is not /components/ui, provide instructions on why it's important to create this folder
+Copy-paste this component to /components/ui folder:
+```tsx
+quantum-swarm.tsx
+"use client";
+
+import React, { useEffect, useRef, useState, useCallback } from "react";
+import { Play, Pause, Zap } from "lucide-react";
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
+
+// --- Physics & Geometry Types ---
+interface SwarmParticle {
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    baseX: number;
+    baseY: number;
+    angle: number;       // Angle in the spiral
+    distance: number;    // Distance from center
+    size: number;
+    excitation: number;  // Used for glow/color pulsing
+}
+
+interface PointerState {
+    x: number;
+    y: number;
+    isDown: boolean;
+    radius: number;
+    shockwaves: Array<{ x: number; y: number; radius: number; maxRadius: number; strength: number }>;
+}
+
+export interface QuantumSwarmProps {
+    headline?: string;
+    tagline?: string;
+    className?: string;
+    particleCount?: number;
+}
+
+export function QuantumSwarm({
+    headline = "QUANTUM",
+    tagline = "SWARM DYNAMICS",
+    className = "",
+    particleCount = 280, // High enough for density, low enough to keep O(N^2) line drawing smooth
+}: QuantumSwarmProps) {
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+    const [isRunning, setIsRunning] = useState(true);
+
+    // Pointer state tracking
+    const pointerRef = useRef<PointerState>({
+        x: -2000,
+        y: -2000,
+        isDown: false,
+        radius: 150,
+        shockwaves: [],
+    });
+
+    const particlesRef = useRef<SwarmParticle[]>([]);
+    const dimensionsRef = useRef({ width: 0, height: 0, cx: 0, cy: 0 });
+
+    // --------------------------------------------------------
+    // MESH / SWARM INITIALIZATION
+    // --------------------------------------------------------
+    const buildSwarm = useCallback(() => {
+        const { width, height, cx, cy } = dimensionsRef.current;
+        if (width === 0 || height === 0) return;
+
+        const particles: SwarmParticle[] = [];
+
+        // Use the Golden Angle to create a beautiful, organic spiral distribution (like a sunflower)
+        const goldenRatio = (1 + Math.sqrt(5)) / 2;
+        const angleIncrement = Math.PI * 2 * goldenRatio;
+
+        // Scale the galaxy to fit the screen
+        const maxRadius = Math.max(width, height) * 0.45;
+
+        for (let i = 0; i < particleCount; i++) {
+            // Distribute particles with density focused slightly towards the center
+            const dst = Math.pow(i / (particleCount - 1), 0.6) * maxRadius;
+            const angle = i * angleIncrement;
+
+            particles.push({
+                x: cx + Math.cos(angle) * dst,
+                y: cy + Math.sin(angle) * dst,
+                vx: 0,
+                vy: 0,
+                baseX: 0, // Will be updated per frame to create rotation
+                baseY: 0,
+                angle: angle,
+                distance: dst,
+                size: Math.random() * 1.5 + 0.5,
+                excitation: 0,
+            });
+        }
+
+        particlesRef.current = particles;
+    }, [particleCount]);
+
+    // --------------------------------------------------------
+    // CANVAS SIZING & RESIZE OBSERVER
+    // --------------------------------------------------------
+    useEffect(() => {
+        const container = containerRef.current;
+        const canvas = canvasRef.current;
+        if (!container || !canvas) return;
+
+        const ctx = canvas.getContext("2d", { alpha: false });
+        if (!ctx) return;
+
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                const rect = entry.contentRect;
+                const dpr = Math.min(window.devicePixelRatio || 1, 2); // Cap DPR for performance
+
+                dimensionsRef.current = {
+                    width: rect.width,
+                    height: rect.height,
+                    cx: rect.width / 2,
+                    cy: rect.height / 2
+                };
+
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                canvas.style.width = `${rect.width}px`;
+                canvas.style.height = `${rect.height}px`;
+
+                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                ctx.scale(dpr, dpr);
+                buildSwarm();
+            }
+        });
+
+        resizeObserver.observe(container);
+        return () => resizeObserver.disconnect();
+    }, [buildSwarm]);
+
+    // --------------------------------------------------------
+    // PHYSICS & RENDER LOOP
+    // --------------------------------------------------------
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const ctx = canvas.getContext("2d", { alpha: false });
+        if (!ctx) return;
+
+        let animId = 0;
+        let time = 0;
+
+        const loop = () => {
+            if (!isRunning) {
+                animId = requestAnimationFrame(loop);
+                return;
+            }
+
+            time += 0.002; // Global rotation speed
+            const { width, height, cx, cy } = dimensionsRef.current;
+            const particles = particlesRef.current;
+            const pointer = pointerRef.current;
+
+            const isDark =
+                document.documentElement.classList.contains("dark") ||
+                (typeof document !== 'undefined' && document.body?.classList.contains("dark")) ||
+                (typeof window !== 'undefined' && window.matchMedia?.("(prefers-color-scheme: dark)").matches);
+            const bgColor = isDark ? "#09090b" : "#fafafa";
+            const strokeBase = isDark ? "255, 255, 255" : "0, 0, 0";
+            const particleBaseColor = isDark ? "#ffffff" : "#000000";
+
+            // 1. Draw Background
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, width, height);
+
+            // 2. Process Shockwaves (from clicks)
+            for (let s = pointer.shockwaves.length - 1; s >= 0; s--) {
+                const sw = pointer.shockwaves[s];
+                sw.radius += 15;
+                sw.strength *= 0.92;
+                if (sw.radius > sw.maxRadius || sw.strength < 0.01) {
+                    pointer.shockwaves.splice(s, 1);
+                }
+            }
+
+            // 3. Physics Pass: Update Positions and Velocities
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+
+                // Calculate current target position (slowly rotating the entire spiral)
+                const currentAngle = p.angle + time * (1 + 100 / (p.distance + 100)); // Inner particles rotate slightly faster
+                p.baseX = cx + Math.cos(currentAngle) * p.distance;
+                p.baseY = cy + Math.sin(currentAngle) * p.distance;
+
+                // --- Forces ---
+                // a. Spring force towards their orbital base position
+                const dxBase = p.baseX - p.x;
+                const dyBase = p.baseY - p.y;
+                p.vx += dxBase * 0.02; // Spring constant
+                p.vy += dyBase * 0.02;
+
+                // b. Pointer interaction (Repulsion / Mouse Magnet)
+                const dxPointer = p.x - pointer.x;
+                const dyPointer = p.y - pointer.y;
+                const distPointer = Math.sqrt(dxPointer * dxPointer + dyPointer * dyPointer);
+
+                if (distPointer < pointer.radius && distPointer > 0) {
+                    // Repulse away from pointer
+                    const force = (pointer.radius - distPointer) / pointer.radius;
+                    // If mouse is down, pull them in slightly instead, creating a tension effect
+                    const directionMultiplier = pointer.isDown ? -0.5 : 1.5;
+                    p.vx += (dxPointer / distPointer) * force * directionMultiplier;
+                    p.vy += (dyPointer / distPointer) * force * directionMultiplier;
+                    p.excitation = Math.max(p.excitation, force);
+                }
+
+                // c. Shockwave force
+                for (let s = 0; s < pointer.shockwaves.length; s++) {
+                    const sw = pointer.shockwaves[s];
+                    const dxSw = p.x - sw.x;
+                    const dySw = p.y - sw.y;
+                    const distSw = Math.sqrt(dxSw * dxSw + dySw * dySw);
+                    const ringDelta = Math.abs(distSw - sw.radius);
+
+                    if (ringDelta < 30) {
+                        const impulse = (1 - ringDelta / 30) * sw.strength * 15;
+                        p.vx += (dxSw / distSw) * impulse;
+                        p.vy += (dySw / distSw) * impulse;
+                        p.excitation = Math.max(p.excitation, 1.0);
+                    }
+                }
+
+                // d. Apply velocity and friction
+                p.vx *= 0.88; // Friction/damping
+                p.vy *= 0.88;
+                p.x += p.vx;
+                p.y += p.vy;
+
+                // e. Cool down excitation
+                p.excitation *= 0.95;
+            }
+
+            // 4. Render Pass: Connections (Constellation lines)
+            const connectionDistanceSq = 3600; // 60px * 60px
+            ctx.lineWidth = 0.6;
+
+            for (let i = 0; i < particles.length; i++) {
+                const p1 = particles[i];
+
+                // Draw lines to nearby particles
+                // Optimization: Only check a limited set ahead to save CPU on O(N^2)
+                const limit = Math.min(particles.length, i + 15);
+                for (let j = i + 1; j < limit; j++) {
+                    const p2 = particles[j];
+                    const dx = p1.x - p2.x;
+                    const dy = p1.y - p2.y;
+                    const distSq = dx * dx + dy * dy;
+
+                    if (distSq < connectionDistanceSq) {
+                        const dist = Math.sqrt(distSq);
+                        const opacity = 1 - (dist / 60);
+
+                        // If particles are excited, lines glow
+                        const combinedExcitation = Math.max(p1.excitation, p2.excitation);
+                        const dynamicAlpha = Math.min(1, (opacity * 0.2) + (combinedExcitation * 0.5));
+
+                        ctx.strokeStyle = `rgba(${strokeBase}, ${dynamicAlpha})`;
+                        ctx.beginPath();
+                        ctx.moveTo(p1.x, p1.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.stroke();
+                    }
+                }
+            }
+
+            // 5. Render Pass: Particles
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+
+                const radius = p.size + (p.excitation * 2.5);
+                ctx.fillStyle = particleBaseColor;
+
+                // For highly excited particles, add an outer glow
+                if (p.excitation > 0.3) {
+                    ctx.save();
+                    ctx.globalAlpha = p.excitation * 0.4;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, radius * 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            animId = requestAnimationFrame(loop);
+        };
+
+        animId = requestAnimationFrame(loop);
+        return () => cancelAnimationFrame(animId);
+    }, [isRunning]);
+
+    // --------------------------------------------------------
+    // EVENT HANDLERS
+    // --------------------------------------------------------
+    const handlePointerMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        const container = containerRef.current;
+        if (!container) return;
+        const rect = container.getBoundingClientRect();
+        pointerRef.current.x = e.clientX - rect.left;
+        pointerRef.current.y = e.clientY - rect.top;
+    };
+
+    const handlePointerDown = (e: React.MouseEvent<HTMLDivElement>) => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        pointerRef.current.isDown = true;
+        const rect = container.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        // Create a localized shockwave at pointer
+        pointerRef.current.shockwaves.push({
+            x, y,
+            radius: 10,
+            maxRadius: 200,
+            strength: 0.8,
+        });
+    };
+
+    const handlePointerUp = () => {
+        pointerRef.current.isDown = false;
+    };
+
+    const handlePointerLeave = () => {
+        // Move pointer far off screen so forces drop to zero
+        pointerRef.current.x = -2000;
+        pointerRef.current.y = -2000;
+        pointerRef.current.isDown = false;
+    };
+
+    // Central explosive pulse feature
+    const triggerSystemPulse = () => {
+        const { cx, cy, width, height } = dimensionsRef.current;
+        pointerRef.current.shockwaves.push({
+            x: cx,
+            y: cy,
+            radius: 10,
+            maxRadius: Math.max(width, height) * 0.8,
+            strength: 1.5, // Stronger than a click shockwave
+        });
+    };
+
+    return (
+        <div
+            ref={containerRef}
+            onMouseMove={handlePointerMove}
+            onMouseDown={handlePointerDown}
+            onMouseUp={handlePointerUp}
+            onMouseLeave={handlePointerLeave}
+            className={cn(
+                "group relative flex h-full w-full select-none flex-col justify-between overflow-hidden rounded-2xl border border-neutral-200 bg-neutral-50 shadow-sm transition-colors duration-700 dark:border-neutral-800 dark:bg-[#09090b]",
+                className
+            )}
+        >
+            {/* The active rendering canvas */}
+            <canvas
+                ref={canvasRef}
+                className="absolute inset-0 block h-full w-full cursor-crosshair"
+            />
+
+            {/* UI Overlay */}
+            <div className="relative z-20 flex h-full w-full flex-col justify-between p-5 md:p-8 pointer-events-none">
+
+                {/* Header Strip */}
+                <header className="flex w-full items-center justify-between font-mono text-[11px] text-neutral-600 dark:text-neutral-400 pointer-events-auto">
+                    <div className="flex items-center gap-3">
+                        <span className="relative flex size-2">
+                            {isRunning && (
+                                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-neutral-900 opacity-60 dark:bg-white" />
+                            )}
+                            <span className="relative inline-flex size-2 rounded-full bg-neutral-900 dark:bg-white" />
+                        </span>
+                        <span className="font-semibold tracking-wider text-neutral-900 uppercase dark:text-neutral-100">
+                            {tagline}
+                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={triggerSystemPulse}
+                            className="flex items-center gap-1 rounded-lg border border-neutral-300/80 bg-white/70 px-2.5 py-1.5 backdrop-blur-md transition-all hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900/70 dark:hover:bg-neutral-800"
+                            title="Trigger Shockwave"
+                        >
+                            <Zap className="size-3 text-neutral-800 dark:text-neutral-200" />
+                            <span className="hidden sm:inline font-mono text-[10px]">PULSE</span>
+                        </button>
+
+                        <button
+                            onClick={() => setIsRunning((prev) => !prev)}
+                            className="flex items-center gap-1.5 rounded-lg border border-neutral-300/80 bg-white/70 px-2.5 py-1.5 backdrop-blur-md transition-all hover:bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900/70 dark:hover:bg-neutral-800"
+                        >
+                            {isRunning ? <Pause className="size-3" /> : <Play className="size-3" />}
+                            <span className="font-mono text-[10px]">{isRunning ? "FREEZE" : "RUN"}</span>
+                        </button>
+                    </div>
+                </header>
+
+                {/* Minimalist Centered Typography */}
+                <main className="flex flex-col items-center justify-center text-center mix-blend-difference opacity-90 dark:mix-blend-normal">
+                    <h1 className="font-mono text-5xl font-black tracking-tighter uppercase sm:text-7xl md:text-9xl text-neutral-900 dark:text-white pointer-events-none">
+                        {headline}
+                    </h1>
+                </main>
+
+                {/* Layout Spacer */}
+                <div className="h-8 w-full" />
+            </div>
+        </div>
+    );
+}
+
+export default QuantumSwarm;
+
+demo.tsx
+import QuantumSwarm from "@/components/ui/quantum-swarm";
+
+export default function QuantumSwarmDemo() {
+  return (
+    <div className="flex min-h-[600px] w-full items-center justify-center bg-neutral-100 p-4 md:p-8 transition-colors duration-300 dark:bg-neutral-950">
+      <div className="h-[600px] w-full max-w-5xl overflow-hidden rounded-3xl border border-neutral-200 shadow-2xl dark:border-neutral-900">
+        <QuantumSwarm />
+      </div>
+    </div>
+  );
+}
+
+```
+
+Install NPM dependencies:
+```bash
+clsx, lucide-react, tailwind-merge
+```
+
+Implementation Guidelines
+ 1. Analyze the component structure and identify all required dependencies
+ 2. Review the component's argumens and state
+ 3. Identify any required context providers or hooks and install them
+ 4. Questions to Ask
+ - What data/props will be passed to this component?
+ - Are there any specific state management requirements?
+ - Are there any required assets (images, icons, etc.)?
+ - What is the expected responsive behavior?
+ - What is the best place to use this component in the app?
+
+Steps to integrate
+ 0. Copy paste all the code above in the correct directories
+ 1. Install external dependencies
+ 2. Fill image assets with Unsplash stock images you know exist
+ 3. Use lucide-react icons for svgs or logos if component requires them add thi saboev in landnag page in bakcgournd hero with a glass tile or maybe gradient tile with title name and all with subtext under and ti is hover reactive take cert studio frotnend for reference // and for login page take  //You are given a task to integrate an existing React component in the codebase
+
+The codebase should support:
+- shadcn project structure  
+- Tailwind CSS
+- Typescript
+
+If it doesn't, provide instructions on how to setup project via shadcn CLI, install Tailwind or Typescript.
+
+Determine the default path for components and styles. 
+If default path for components is not /components/ui, provide instructions on why it's important to create this folder
+Copy-paste this component to /components/ui folder:
+```tsx
+entropy.tsx
+'use client'
+import { useEffect, useRef } from 'react'
+
+interface EntropyProps {
+  className?: string
+  size?: number
+}
+
+export function Entropy({ className = "", size = 400 }: EntropyProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    // 基础设置
+    const dpr = window.devicePixelRatio || 1
+    canvas.width = size * dpr
+    canvas.height = size * dpr
+    canvas.style.width = `${size}px`
+    canvas.style.height = `${size}px`
+    ctx.scale(dpr, dpr)
+
+    // 使用黑色主题
+    const particleColor = '#ffffff'
+
+    class Particle {
+      x: number
+      y: number
+      size: number
+      order: boolean
+      velocity: { x: number; y: number }
+      originalX: number
+      originalY: number
+      influence: number
+      neighbors: Particle[]
+
+      constructor(x: number, y: number, order: boolean) {
+        this.x = x
+        this.y = y
+        this.originalX = x
+        this.originalY = y
+        this.size = 2
+        this.order = order
+        this.velocity = {
+          x: (Math.random() - 0.5) * 2,
+          y: (Math.random() - 0.5) * 2
+        }
+        this.influence = 0
+        this.neighbors = []
+      }
+
+      update() {
+        if (this.order) {
+          // 有序粒子受混沌影响的运动
+          const dx = this.originalX - this.x
+          const dy = this.originalY - this.y
+
+          // 计算来自混沌粒子的影响
+          const chaosInfluence = { x: 0, y: 0 }
+          this.neighbors.forEach(neighbor => {
+            if (!neighbor.order) {
+              const distance = Math.hypot(this.x - neighbor.x, this.y - neighbor.y)
+              const strength = Math.max(0, 1 - distance / 100)
+              chaosInfluence.x += (neighbor.velocity.x * strength)
+              chaosInfluence.y += (neighbor.velocity.y * strength)
+              this.influence = Math.max(this.influence, strength)
+            }
+          })
+
+          // 混合有序运动和混沌影响
+          this.x += dx * 0.05 * (1 - this.influence) + chaosInfluence.x * this.influence
+          this.y += dy * 0.05 * (1 - this.influence) + chaosInfluence.y * this.influence
+
+          // 影响逐渐减弱
+          this.influence *= 0.99
+        } else {
+          // 混沌运动
+          this.velocity.x += (Math.random() - 0.5) * 0.5
+          this.velocity.y += (Math.random() - 0.5) * 0.5
+          this.velocity.x *= 0.95
+          this.velocity.y *= 0.95
+          this.x += this.velocity.x
+          this.y += this.velocity.y
+
+          // 边界检查
+          if (this.x < size / 2 || this.x > size) this.velocity.x *= -1
+          if (this.y < 0 || this.y > size) this.velocity.y *= -1
+          this.x = Math.max(size / 2, Math.min(size, this.x))
+          this.y = Math.max(0, Math.min(size, this.y))
+        }
+      }
+
+      draw(ctx: CanvasRenderingContext2D) {
+        const alpha = this.order ?
+          0.8 - this.influence * 0.5 :
+          0.8
+        ctx.fillStyle = `${particleColor}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`
+        ctx.beginPath()
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
+        ctx.fill()
+      }
+    }
+
+    // 创建粒子网格
+    const particles: Particle[] = []
+    const gridSize = 25
+    const spacing = size / gridSize
+
+    for (let i = 0; i < gridSize; i++) {
+      for (let j = 0; j < gridSize; j++) {
+        const x = spacing * i + spacing / 2
+        const y = spacing * j + spacing / 2
+        const order = x < size / 2
+        particles.push(new Particle(x, y, order))
+      }
+    }
+
+    // 更新邻居关系
+    function updateNeighbors() {
+      particles.forEach(particle => {
+        particle.neighbors = particles.filter(other => {
+          if (other === particle) return false
+          const distance = Math.hypot(particle.x - other.x, particle.y - other.y)
+          return distance < 100
+        })
+      })
+    }
+
+    let time = 0
+    let animationId: number
+    
+    function animate() {
+      ctx.clearRect(0, 0, size, size)
+
+      // 更新邻居关系
+      if (time % 30 === 0) {
+        updateNeighbors()
+      }
+
+      // 更新和绘制所有粒子
+      particles.forEach(particle => {
+        particle.update()
+        particle.draw(ctx)
+
+        // 绘制连接线
+        particle.neighbors.forEach(neighbor => {
+          const distance = Math.hypot(particle.x - neighbor.x, particle.y - neighbor.y)
+          if (distance < 50) {
+            const alpha = 0.2 * (1 - distance / 50)
+            ctx.strokeStyle = `${particleColor}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`
+            ctx.beginPath()
+            ctx.moveTo(particle.x, particle.y)
+            ctx.lineTo(neighbor.x, neighbor.y)
+            ctx.stroke()
+          }
+        })
+      })
+
+      // 添加分隔线和文字
+      ctx.strokeStyle = `${particleColor}4D`
+      ctx.lineWidth = 0.5
+      ctx.beginPath()
+      ctx.moveTo(size / 2, 0)
+      ctx.lineTo(size / 2, size)
+      ctx.stroke()
+
+      ctx.font = '12px monospace'
+      ctx.fillStyle = '#ffffff'
+      ctx.textAlign = 'center'
+
+      time++
+      animationId = requestAnimationFrame(animate)
+    }
+
+    animate()
+
+    return () => {
+      if (animationId) {
+        cancelAnimationFrame(animationId)
+      }
+    }
+  }, [size])
+
+  return (
+    <div className={`relative bg-black ${className}`} style={{ width: size, height: size }}>
+      <canvas
+        ref={canvasRef}
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+      />
+    </div>
+  )
+}
+
+demo.tsx
+'use client'
+
+import * as React from "react"
+import { Entropy } from "@/components/ui/entropy"
+
+export function EntropyDemo() {
+  return (
+    <div className="flex flex-col items-center justify-center bg-black text-white min-h-screen w-full p-8">
+      <div className="flex flex-col items-center">
+        <Entropy className="rounded-lg" />
+        <div className="mt-6 text-center">
+          <div className="space-y-4 font-mono text-[14px] leading-relaxed">
+            <p className="italic text-gray-400/80 tracking-wide">
+              &ldquo;Order and chaos dance &mdash;
+              <span className="opacity-70">digital poetry in motion.&rdquo;</span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export { EntropyDemo }
+```
+
+Extend existing tailwind.config.js with this code:
+```js
+import type { Config } from "tailwindcss";
+
+export default {
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    extend: {
+      colors: {
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+        primary: "var(--text-primary)",
+        secondary: "var(--text-secondary)",
+      },
+      fontFamily: {
+        sans: ['var(--font-noto)'],
+      },
+    },
+  },
+  plugins: [],
+} satisfies Config;
+
+```
+
+Extend existing globals.css with this code:
+```css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes bounce-x {
+    0%, 100% {
+        transform: translateX(-4px);
+    }
+    50% {
+        transform: translateX(0px);
+    }
+}
+
+@keyframes glow {
+    0%, 100% {
+        opacity: 0.6;
+        filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.3));
+    }
+    50% {
+        opacity: 1;
+        filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));
+    }
+}
+
+@keyframes float-up {
+    0% {
+        opacity: 0;
+        transform: translateY(6px);
+        filter: blur(2px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
+}
+
+.lighting-button {
+    animation: bounce-x 1.5s ease-in-out infinite;
+}
+
+.lighting-button:hover {
+    animation: none;
+    transform: translateX(0);
+}
+
+.light-glow {
+    animation: glow 2s ease-in-out infinite;
+}
+
+.word-float {
+    animation: float-up 0.8s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+    will-change: transform, opacity, filter;
+    transform-style: preserve-3d;
+    backface-visibility: hidden;
+}
+
+:root {
+  --elegant-font: 'Great Vibes';
+}
+
+:root[data-theme="dark"] {
+  --background: #000000;
+  --foreground: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #888888;
+}
+
+:root[data-theme="light"] {
+  --background: #ffffff;
+  --foreground: #000000;
+  --text-primary: #000000;
+  --text-secondary: #666666;
+}
+
+/* 修复移动设备上的视口高度问题 */
+:root {
+  --vh: 1vh;
+  --app-height: 100%;
+}
+
+/* 全局字体设置 */
+html {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html,
+body {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  height: var(--app-height);
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  letter-spacing: -0.025em;
+  height: 100vh;
+  height: calc(var(--vh) * 100);
+  overflow: hidden;
+}
+
+::selection {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* 只保留opacity的过渡效果，移除颜色相关的过渡 */
+* {
+  transition-property: opacity;
+  transition-duration: 100ms;
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 12px;
+}
+
+/* 使用固定颜色 #A3A3A3 替代之前的主题相关颜色 */
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #A3A3A3;
+  border: 3px solid var(--background);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #8A8A8A;
+}
+
+@layer components {
+  .footer-link {
+    @apply hover: text-primary;
+  }
+
+  .footer-dot {
+    @apply mx-2 text-[#A3A3A3];
+  }
+}
+
+@layer utilities {
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+}
+```
+
+Implementation Guidelines
+ 1. Analyze the component structure and identify all required dependencies
+ 2. Review the component's argumens and state
+ 3. Identify any required context providers or hooks and install them
+ 4. Questions to Ask
+ - What data/props will be passed to this component?
+ - Are there any specific state management requirements?
+ - Are there any required assets (images, icons, etc.)?
+ - What is the expected responsive behavior?
+ - What is the best place to use this component in the app?
+
+Steps to integrate
+ 0. Copy paste all the code above in the correct directories
+ 1. Install external dependencies
+ 2. Fill image assets with Unsplash stock images you know exist
+ 3. Use lucide-react icons for svgs or logos if component requires them
+  it shoudl be login and registartion backgorund and tile with all in centre or what not clean good lookign modern make it such ensure nothing looks sloppy and also all loading withitn ght page shoudl eb boneyard skeleton loading clean and good lookign for the hero or jsut use one from the cert studio itslef all custom error pages all things correctly add implement ensure the ui is complete after that based on preivous audit what seems incorrect chekc and fix all all features as well 
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-10-29T13:04:09+05:30.
+</ADDITIONAL_METADATA>

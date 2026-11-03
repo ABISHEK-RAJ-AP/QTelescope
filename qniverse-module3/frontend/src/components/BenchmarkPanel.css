@@ -1,0 +1,685 @@
+.benchmark-window-full {
+    width: 100%;
+    height: 100%;
+    background: #caf9ff;
+    color: #24292e;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+/* Ensure close button is visible on light background */
+.benchmark-window-full .close-btn {
+    color: #586069;
+    font-size: 24px;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.benchmark-window-full .close-btn:hover {
+    color: #000;
+}
+
+/* Header: Light Theme */
+.result-header {
+    background: #f0f7ff;
+    /* Very light blue/gray */
+    color: #0366d6;
+    padding: 16px 24px;
+    border-bottom: 2px solid #e1e4e8;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-radius: 12px 12px 0 0;
+}
+
+.result-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.benchmark-dashboard {
+    display: flex;
+    flex: 1;
+    gap: 0;
+    /* Remove gap, handle spacing via padding */
+    overflow: hidden;
+    /* Contains the scrollable children */
+    min-height: 0;
+    /* Crucial for Firefox/Flexbox nested scrolling */
+}
+
+.benchmark-left {
+    flex: 0 0 35%;
+    /* Reduced width slightly */
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    /* Increased gap to prevent overlapping */
+    border-right: none;
+    /* Removed border */
+    padding: 20px;
+    overflow-y: auto;
+    height: 100%;
+    background: #fafbfc;
+    /* Slight contrast for side panel */
+}
+
+.benchmark-right {
+    flex: 1;
+    /* Take remaining space */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    overflow-y: auto;
+    padding: 20px;
+    height: 100%;
+    background: #ffffff;
+}
+
+/* Custom Scrollbars to ensure visibility - High Specificity Override */
+.benchmark-dashboard .benchmark-left::-webkit-scrollbar,
+.benchmark-dashboard .benchmark-right::-webkit-scrollbar,
+.benchmark-dashboard .table-container::-webkit-scrollbar,
+.benchmark-dashboard .counts-chart-small::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.benchmark-dashboard .benchmark-left::-webkit-scrollbar-track,
+.benchmark-dashboard .benchmark-right::-webkit-scrollbar-track,
+.benchmark-dashboard .table-container::-webkit-scrollbar-track,
+.benchmark-dashboard .counts-chart-small::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.benchmark-dashboard .benchmark-left::-webkit-scrollbar-thumb,
+.benchmark-dashboard .benchmark-right::-webkit-scrollbar-thumb,
+.benchmark-dashboard .table-container::-webkit-scrollbar-thumb,
+.benchmark-dashboard .counts-chart-small::-webkit-scrollbar-thumb {
+    background-color: #c1c1c1 !important;
+    border-radius: 6px;
+    border: 3px solid #ffffff;
+    /* Creates a clean floating effect */
+}
+
+.benchmark-dashboard .benchmark-left::-webkit-scrollbar-thumb:hover,
+.benchmark-dashboard .benchmark-right::-webkit-scrollbar-thumb:hover,
+.benchmark-dashboard .table-container::-webkit-scrollbar-thumb:hover,
+.benchmark-dashboard .counts-chart-small::-webkit-scrollbar-thumb:hover {
+    background-color: #a0a0a0 !important;
+}
+
+/* Ensure corner is transparent */
+.benchmark-dashboard .benchmark-left::-webkit-scrollbar-corner,
+.benchmark-dashboard .benchmark-right::-webkit-scrollbar-corner,
+.benchmark-dashboard .table-container::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
+/* Visualization Box */
+.viz-box {
+    background: #f6f8fa;
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid #e1e4e8;
+    flex-shrink: 0;
+    /* CRITICAL: Prevent flexbox from squashing this box */
+    height: auto;
+    /* CRITICAL: Allow it to grow */
+}
+
+.viz-box h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 1.1em;
+    color: #0366d6;
+}
+
+.circuit-ascii {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    white-space: pre;
+    color: #24292e;
+    background: #ffffff;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid #e1e4e8;
+    overflow-x: auto;
+    min-height: 80px;
+    /* Ensure visibility */
+    display: block;
+    /* Ensure it takes space */
+}
+
+.mini-metrics {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 13px;
+    color: #586069;
+}
+
+.bloch-image-small {
+    width: 100%;
+    object-fit: contain;
+    height: auto;
+    max-height: 400px;
+}
+
+/* TABLE STLYES */
+.benchmark-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.benchmark-table th {
+    background: #f6f8fa;
+    color: #24292e;
+    padding: 10px;
+    text-align: left;
+    border-bottom: 2px solid #e1e4e8;
+    font-weight: 600;
+}
+
+.benchmark-table td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #e1e4e8;
+    color: #24292e;
+}
+
+/* Row hover effect */
+.benchmark-table tr:hover td {
+    background: #869d8a;
+}
+
+/* Selected row effect */
+.benchmark-table tr.selected-row td {
+    background: #e6ffed;
+}
+
+/* Force expanded analysis cells to mathematically constrain width */
+.benchmark-table tr.detail-row td {
+    max-width: 0;
+    width: 100%;
+    background: #ffffff; /* Hide hover effect behind Detail View */
+}
+
+.backend-name-cell {
+    display: flex;
+    flex-direction: column;
+    font-weight: 500;
+}
+
+.badge {
+    margin-top: 4px;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    width: fit-content;
+}
+
+.badge.simulator {
+    background: #0366d6;
+    color: white;
+}
+
+.badge.noisy_simulator {
+    background: #d4a72c;
+    /* Ensure contrast on light bg */
+    color: white;
+}
+
+.bar-container-small {
+    width: 100px;
+    height: 6px;
+    background: #e1e4e8;
+    display: inline-block;
+    margin-right: 8px;
+    border-radius: 3px;
+    vertical-align: middle;
+}
+
+.bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+}
+
+.awards {
+    font-size: 10px;
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+}
+
+.award {
+    padding: 2px 5px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+
+.award.fidelity {
+    background: #dafbe1;
+    color: #1a7f37;
+    border: 1px solid #1a7f37;
+}
+
+.award.speed {
+    background: #fff8c5;
+    color: #9a6700;
+    border: 1px solid #9a6700;
+}
+
+.benchmark-dashboard .btn-small {
+    background: #02dbb7ce;
+    border: none;
+    color: rgb(80, 68, 68);
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.2s;
+    width: auto;
+    /* Override width: 100% from App.css if necessary */
+    text-align: center;
+    /* Override text-align: left from App.css */
+}
+
+.benchmark-dashboard .btn-small:hover {
+    background: #094f25;
+    color: white;
+}
+
+/* DETAILED VIEW */
+.backend-detail-view {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 16px;
+    border: 1px solid #e1e4e8;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    animation: fadeIn 0.3s ease;
+    width: 100%;
+    box-sizing: border-box;
+    overflow-x: hidden;
+}
+
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e1e4e8;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+
+.detail-header h4 {
+    margin: 0;
+    color: #24292e;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.detail-metric {
+    background: #f6f8fa;
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+    border: 1px solid #e1e4e8;
+}
+
+.detail-metric label {
+    display: block;
+    font-size: 11px;
+    color: #586069;
+    margin-bottom: 4px;
+}
+
+.detail-metric span {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #24292e;
+}
+
+.histogram-box h5 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #24292e;
+}
+
+.counts-chart-small {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    height: 140px;
+    /* Increased height */
+    padding-top: 20px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e1e4e8;
+    position: relative;
+    width: 100%;
+    overflow-x: auto;
+}
+
+.counts-chart-small::before {
+    /* Y-Axis Line */
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 20px;
+    bottom: 20px;
+    width: 1px;
+    background: #e1e4e8;
+    z-index: 1;
+}
+
+.hist-bar-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    /* Align bar to bottom of this container */
+    height: 100%;
+    /* Take full height */
+    flex: 0 0 40px;
+    /* Fixed width per bar group */
+    position: relative;
+}
+
+.hist-value {
+    font-size: 10px;
+    color: #586069;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.hist-bar {
+    width: 18px;
+    background: #0366d6;
+    border-radius: 4px 4px 0 0;
+    transition: height 0.5s ease-out;
+    min-height: 2px;
+    /* Ensure 0 counts have a tiny bar */
+}
+
+.hist-label {
+    margin-top: 6px;
+    font-size: 10px;
+    font-family: monospace;
+    color: #24292e;
+    font-weight: bold;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* LOADING / RUNNING ANIMATION */
+.benchmark-running-banner {
+    background: linear-gradient(90deg, #0366d6, #8a2be2);
+    color: white;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-weight: bold;
+    box-shadow: 0 0 15px rgba(3, 102, 214, 0.4);
+    animation: pulseGlow 2s infinite ease-in-out;
+}
+
+@keyframes pulseGlow {
+    0% {
+        box-shadow: 0 0 5px rgba(3, 102, 214, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 20px rgba(138, 43, 226, 0.6);
+    }
+
+    100% {
+        box-shadow: 0 0 5px rgba(3, 102, 214, 0.4);
+    }
+}
+
+.spinner-quantum {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top: 3px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+/* SCANNING LINE EFFECT FOR TABLE */
+.scanning-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: rgba(3, 102, 214, 0.5);
+    box-shadow: 0 0 8px rgba(3, 102, 214, 0.8);
+    opacity: 0.5;
+    pointer-events: none;
+    z-index: 10;
+    animation: scan 2s linear infinite;
+}
+
+@keyframes scan {
+    0% {
+        top: 0;
+        opacity: 0;
+    }
+
+    5% {
+        opacity: 1;
+    }
+
+    95% {
+        opacity: 1;
+    }
+
+    100% {
+        top: 100%;
+        opacity: 0;
+    }
+}
+
+.table-container {
+    position: relative;
+    overflow-x: auto;
+    /* Allow horizontal scroll if needed */
+    overflow-y: visible;
+    /* Ensure vertical scroll is handled by parent */
+    min-height: 200px;
+    /* Ensure at least some height */
+}
+
+
+.gate-analysis {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px dashed #e1e4e8;
+}
+
+.gate-total {
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: #24292e;
+    display: flex;
+    justify-content: space-between;
+}
+
+.gate-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.gate-tag {
+    display: flex;
+    align-items: center;
+    font-size: 11px;
+    border: 1px solid #d1d5da;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.gate-name {
+    background: #f1f8ff;
+    padding: 3px 6px;
+    font-weight: 600;
+    color: #0366d6;
+    border-right: 1px solid #d1d5da;
+    font-family: monospace;
+}
+
+.gate-count {
+    padding: 3px 8px;
+    font-weight: 600;
+    color: #24292e;
+}
+
+/* Gate Metrics Table Styles */
+.gate-metrics-container {
+    margin-top: 15px;
+    border-top: 1px solid #e1e4e8;
+    padding-top: 15px;
+    background: #fff;
+    border-radius: 6px;
+    padding: 15px;
+    border: 1px solid #e1e4e8;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    /* Prevent shrinking/overlap */
+    margin-bottom: 20px;
+    /* Extra spacing */
+}
+
+.gate-metrics-container h4 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: #24292e;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    border-bottom: 2px solid #0366d6;
+    padding-bottom: 6px;
+    display: inline-block;
+}
+
+.gate-metrics-table {
+    width: 100%;
+    font-size: 13px;
+    border-collapse: separate;
+    border-spacing: 0 4px;
+}
+
+.gate-metrics-table th {
+    text-align: left;
+    color: #586069;
+    font-weight: 600;
+    padding: 0 8px 6px 8px;
+    border-bottom: 1px solid #e1e4e8;
+    font-size: 11px;
+}
+
+.gate-metrics-table td {
+    padding: 6px 8px;
+    color: #24292e;
+    vertical-align: middle;
+}
+
+/* Zebra Striping for readability */
+.gate-metrics-table tbody tr:nth-child(odd) {
+    background: #fcfcfc;
+}
+
+.gate-metrics-table tbody tr:hover {
+    background: #f6f8fa;
+}
+
+.gate-token {
+    display: inline-block;
+    padding: 3px 8px;
+    background: #e1f0ff;
+    color: #0366d6;
+    border: 1px solid #c8e1ff;
+    border-radius: 12px;
+    font-size: 11px;
+    font-family: 'Consolas', monospace;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Total Row Styling */
+.gate-total-row td {
+    border-top: 2px solid #e1e4e8;
+    margin-top: 4px;
+    padding-top: 12px;
+    color: #000;
+    background: transparent !important;
+    /* No stripe */
+    font-size: 14px;
+}
+
+/* --- PDF EXPORT RENDERING OVERRIDES --- */
+.pdf-rendering {
+    overflow: visible !important;
+    height: auto !important;
+    min-height: max-content !important;
+    display: flex !important;
+    align-items: stretch !important;
+}
+
+.pdf-rendering .benchmark-left,
+.pdf-rendering .benchmark-right {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    flex-shrink: 0 !important;
+}
+
+.pdf-rendering .table-container,
+.pdf-rendering .circuit-ascii,
+.pdf-rendering .counts-chart-small {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+}

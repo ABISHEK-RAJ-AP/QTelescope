@@ -1,0 +1,14 @@
+.oc-lanes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+@media (max-width: 1000px) { .oc-lanes { grid-template-columns: 1fr; } }
+.oc-lane { padding: 14px 16px; min-width: 0; }
+.oc-count { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-left: 6px; }
+.oc-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; max-height: 520px; overflow: auto; }
+.oc-item { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 12px; padding: 10px 0; border-top: 1px solid var(--border-color); }
+.oc-item__main { display: flex; gap: 10px; align-items: flex-start; flex: 1 1 220px; min-width: 0; }
+.oc-item__main .badge { flex: none; }
+.oc-item__body { min-width: 0; }
+.oc-item__title { font-size: 0.8125rem; font-weight: 600; overflow-wrap: anywhere; }
+.oc-item__meta { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: 0.6875rem; color: var(--text-muted); margin-top: 3px; }
+.oc-item__actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; flex: 0 1 auto; margin-left: auto; }
+.oc-lane-empty { margin: 10px 0 0; font-size: 0.8125rem; color: var(--text-muted); line-height: 1.45; }
+.oc-footer-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }

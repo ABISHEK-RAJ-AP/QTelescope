@@ -1,0 +1,113 @@
+/* Subset of Anatomy kit iso.css + hairline elevation (surface-hairline skill) */
+.iso-qc {
+  --anatomy-page: #0b0b0b;
+  --anatomy-card: #131313;
+  --anatomy-text: #a3a3a3;
+  --anatomy-strong: #e6e6e6;
+  --anatomy-muted: #6e6e6e;
+  --anatomy-paper: #131313;
+  --anatomy-face: #1b1b1b;
+  --anatomy-top: #1c1c1c;
+  --anatomy-shade-0: #0f0f0f;
+  --anatomy-shade-1: #121212;
+  --anatomy-shade-2: #151515;
+  --anatomy-shade-3: #181818;
+  --anatomy-lit-top: #262626;
+  --anatomy-lit-shade: #1d1d1d;
+  --anatomy-hi: #d4d4d4;
+  --anatomy-mid: #6a6a6a;
+  --anatomy-lo: #3e3e3e;
+  --anatomy-faint: #2a2a2a;
+  --anatomy-lit: #ffffff;
+  --anatomy-blue: #22d3ee;
+  --anatomy-green: #6be0a0;
+  --anatomy-weight: 0.6px;
+  --anatomy-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --anatomy-lift:
+    inset 0 1px 0 0 #ffffff0a,
+    inset 0 0 0 1px #ffffff06,
+    0 0 0 1px #00000026,
+    0 12px 40px -12px #00000040;
+}
+
+.iso-qc[data-theme="light"] {
+  --anatomy-page: #f2f2ef;
+  --anatomy-card: #fbfbfa;
+  --anatomy-text: #57575a;
+  --anatomy-strong: #18181a;
+  --anatomy-muted: #8c8c90;
+  --anatomy-paper: #fbfbfa;
+  --anatomy-face: #ffffff;
+  --anatomy-top: #ffffff;
+  --anatomy-shade-0: #dcdcd9;
+  --anatomy-shade-1: #e5e5e2;
+  --anatomy-shade-2: #ededea;
+  --anatomy-shade-3: #f4f4f1;
+  --anatomy-lit-top: #ffffff;
+  --anatomy-lit-shade: #eeeeeb;
+  --anatomy-hi: #26262a;
+  --anatomy-mid: #8a8a8f;
+  --anatomy-lo: #b4b4b8;
+  --anatomy-faint: #d4d4d6;
+  --anatomy-lit: #0891b2;
+  --anatomy-blue: #0891b2;
+  --anatomy-lift:
+    inset 0 1px 0 0 #ffffff,
+    0 0 0 1px #0000000f,
+    0 12px 32px -10px #00000014;
+}
+
+.iso-qc .iso-plate {
+  position: relative;
+  padding: 48px 20px 56px;
+  border-radius: 12px;
+  background: var(--anatomy-card);
+  box-shadow: var(--anatomy-lift);
+}
+
+.iso-qc .iso-plate-corners {
+  position: absolute;
+  inset: 14px 16px;
+  pointer-events: none;
+}
+
+.iso-qc .iso-plate-corner {
+  position: absolute;
+  color: var(--anatomy-muted);
+  font-family: var(--anatomy-mono);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+}
+
+.iso-qc .iso-plate-corner[data-corner="fig"] { top: 0; left: 0; color: var(--anatomy-text); }
+.iso-qc .iso-plate-corner[data-corner="title"] { top: 0; right: 0; text-transform: uppercase; letter-spacing: 0.1em; color: var(--anatomy-strong); }
+.iso-qc .iso-plate-corner[data-corner="hint"] { bottom: 0; left: 0; text-transform: uppercase; letter-spacing: 0.08em; max-width: 55%; }
+.iso-qc .iso-plate-corner[data-corner="readout"] { right: 0; bottom: 0; color: var(--anatomy-blue); font-variant-numeric: tabular-nums; }
+
+.iso-qc .iso-svg { display: block; width: 100%; max-width: 420px; margin: 0 auto; height: auto; overflow: visible; }
+.iso-qc .iso-svg path, .iso-qc .iso-svg circle { vector-effect: non-scaling-stroke; }
+
+.iso-qc .iso-fill { fill: var(--anatomy-paper); stroke: none; }
+.iso-qc .iso-shade[data-shade="0"] { fill: var(--anatomy-shade-0); stroke: none; }
+.iso-qc .iso-shade[data-shade="1"] { fill: var(--anatomy-shade-1); stroke: none; }
+.iso-qc .iso-shade[data-shade="2"] { fill: var(--anatomy-shade-2); stroke: none; }
+.iso-qc .iso-top { fill: var(--anatomy-top); stroke: none; }
+.iso-qc .iso-solid[data-lit] .iso-fill { fill: var(--anatomy-face); }
+.iso-qc .iso-solid[data-lit] .iso-top { fill: var(--anatomy-lit-top); }
+.iso-qc .iso-line { fill: none; stroke: var(--anatomy-lo); stroke-width: var(--anatomy-weight); stroke-linecap: round; stroke-linejoin: round; }
+.iso-qc .iso-line[data-tone="hi"] { stroke: var(--anatomy-hi); }
+.iso-qc .iso-line[data-tone="blue"] { stroke: var(--anatomy-blue); }
+.iso-qc .iso-line[data-tone="green"] { stroke: var(--anatomy-green); }
+.iso-qc .iso-line[data-tone="faint"] { stroke: var(--anatomy-faint); }
+.iso-qc .iso-line[data-tone="mid"] { stroke: var(--anatomy-mid); }
+.iso-qc .iso-line[data-flow] { stroke-dasharray: 3 7; animation: iso-qc-flow 1400ms linear infinite; }
+.iso-qc .iso-pulse-ring { fill: none; stroke: var(--anatomy-blue); stroke-width: 1; opacity: 0.35; animation: iso-qc-pulse 2.4s ease-in-out infinite; }
+.iso-qc .iso-caption { margin-top: 10px; font-size: 11px; color: var(--anatomy-muted); text-align: center; line-height: 1.45; }
+
+@keyframes iso-qc-flow { to { stroke-dashoffset: -40; } }
+@keyframes iso-qc-pulse { 0%, 100% { opacity: 0.15; r: 6; } 50% { opacity: 0.85; r: 9; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .iso-qc .iso-line[data-flow], .iso-qc .iso-pulse-ring { animation: none; }
+}

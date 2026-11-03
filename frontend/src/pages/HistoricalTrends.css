@@ -1,0 +1,41 @@
+.trends-header-bar {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.trends-filter-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.trends-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.trends-chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+@media (max-width: 900px) {
+  .trends-chart-grid { grid-template-columns: 1fr; }
+}
+
+.trends-queue-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--accent-emerald);
+}
+
+.trends-wait-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--accent-cyan);
+}

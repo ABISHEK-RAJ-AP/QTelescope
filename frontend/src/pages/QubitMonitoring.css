@@ -1,0 +1,8 @@
+.qubit-layout-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 1100px) { .qubit-layout-grid { grid-template-columns: 1fr; } }
+.qubit-table-wrapper { max-height: 560px; overflow-y: auto; }
+.qubit-table-wrapper thead th { position: sticky; top: 0; background: var(--bg-card); z-index: 1; }
+.bk-table tr[data-selected='true'] { background: var(--bg-card-hover); box-shadow: inset 3px 0 0 var(--accent-cyan); }
+.qm-links { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+.qm-links a.btn { text-decoration: none; }
+.qm-pager { display: flex; gap: 8px; justify-content: flex-end; padding: 10px 14px; }

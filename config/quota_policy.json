@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "policy_id": "default_tenant_shots",
+  "defaults": {
+    "daily_shots_cap": 1000000,
+    "warn_threshold_pct": 80
+  },
+  "tenants": {}
+}

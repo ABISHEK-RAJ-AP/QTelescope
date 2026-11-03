@@ -1,0 +1,130 @@
+/* Calibration status — KPI strip + table */
+.cs-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+@media (max-width: 1100px) {
+  .cs-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .cs-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 420px) {
+  .cs-kpis { grid-template-columns: 1fr; }
+}
+
+.cs-kpi {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 96px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  box-shadow: inset 3px 0 0 var(--cs-accent, var(--border-color));
+}
+.cs-kpi--fresh { --cs-accent: #34d399; }
+.cs-kpi--recent { --cs-accent: #38bdf8; }
+.cs-kpi--aging { --cs-accent: #fbbf24; }
+.cs-kpi--stale { --cs-accent: #fb7185; }
+.cs-kpi--none { --cs-accent: #64748b; }
+
+.cs-kpi__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.cs-kpi__label::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cs-accent);
+  flex-shrink: 0;
+}
+.cs-kpi__value {
+  margin-top: 8px;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+.cs-kpi--fresh .cs-kpi__value { color: var(--accent-emerald, #34d399); }
+.cs-kpi--recent .cs-kpi__value { color: var(--accent-cyan, #38bdf8); }
+.cs-kpi--aging .cs-kpi__value { color: var(--accent-amber, #fbbf24); }
+.cs-kpi--stale .cs-kpi__value { color: var(--accent-rose, #fb7185); }
+.cs-kpi__sub {
+  margin-top: auto;
+  padding-top: 6px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text-muted);
+}
+
+.cs-name { font-weight: 600; font-size: 13px; }
+.cs-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+.cs-num { font-variant-numeric: tabular-nums; }
+.cs-missing { color: var(--text-muted); font-style: italic; }
+.cs-action { font-size: 12px; max-width: 280px; line-height: 1.4; }
+.cs-links { display: flex; flex-wrap: wrap; gap: 6px; }
+.cs-note { margin-top: 8px; }
+
+.calibration-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.calibration-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--accent-cyan);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.calibration-card-subtitle {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.calibration-stat-box {
+  background: var(--bg-card-hover);
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.calibration-stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.calibration-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.calibration-stat-fresh {
+  color: var(--accent-emerald);
+}
+
+.calibration-stat-cyan {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-cyan);
+  margin-top: 8px;
+}

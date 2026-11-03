@@ -1,0 +1,23 @@
+# On-prem / lab air-gap overlay (no Redis sidecar; persisted data volume).
+# Usage:
+#   cp deployment/airgap/.env.airgap.example .env
+#   docker compose -f docker-compose.yml -f docker-compose.airgap.yml up -d --build
+services:
+  backend:
+    environment:
+      AIRGAP_MODE: "true"
+      ENABLE_MOCK_DATA: ${ENABLE_MOCK_DATA:-false}
+      USE_ALEMBIC: ${USE_ALEMBIC:-true}
+      DATABASE_URL: ${DATABASE_URL:-sqlite:///./data/qtelescope.db}
+      ONPREM_QPU_URL: ${ONPREM_QPU_URL:-http://host.docker.internal:8080}
+    volumes:
+      - qtelescope_data:/app/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    depends_on:
+      - backend
+
+volumes:
+  qtelescope_data:

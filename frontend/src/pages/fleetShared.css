@@ -1,0 +1,66 @@
+.fs-muted { color: var(--text-muted); font-size: 12px; }
+.fs-lineage { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+  padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border-color); color: var(--text-muted); white-space: nowrap; }
+.fs-lineage--live { color: var(--accent-emerald); border-color: var(--accent-emerald); }
+.fs-lineage--simulated { border-style: dashed; }
+
+.fs-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--border-color); }
+.fs-seg { display: block; height: 100%; }
+.fs-seg--green { background: var(--accent-emerald); }
+.fs-seg--yellow { background: var(--accent-amber); }
+.fs-seg--red { background: var(--accent-rose); }
+.fs-seg--unknown { background: repeating-linear-gradient(45deg, var(--text-muted), var(--text-muted) 3px, transparent 3px, transparent 6px); }
+.fs-bar__nums { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 5px; font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.fs-num { display: inline-flex; align-items: center; gap: 4px; }
+.fs-num i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.fs-num--green i { background: var(--accent-emerald); }
+.fs-num--yellow i { background: var(--accent-amber); border-radius: 50%; }
+.fs-num--red i { background: var(--accent-rose); transform: rotate(45deg); }
+.fs-num--unknown i { background: var(--text-muted); opacity: .6; }
+
+.fs-link { color: var(--accent-cyan); font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.fs-link:hover { text-decoration: underline; }
+.fs-link:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; border-radius: 3px; }
+.fs-links { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; align-items: center; }
+
+/* Cert Studio–style pill actions (fleet tables, operator console) */
+.qts-bean {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.16s ease, color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+.qts-bean:hover {
+  border-color: color-mix(in srgb, var(--accent-cyan) 45%, var(--border-color));
+  color: var(--accent-cyan);
+  background: color-mix(in srgb, var(--accent-cyan) 8%, var(--bg-card));
+  box-shadow: 0 4px 12px -6px rgba(2, 132, 199, 0.35);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+.qts-bean:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
+.qts-bean--emphasis {
+  border-color: color-mix(in srgb, var(--accent-cyan) 35%, var(--border-color));
+  color: var(--accent-cyan);
+  background: color-mix(in srgb, var(--accent-cyan) 6%, var(--bg-card));
+}
+.fs-stale { color: var(--accent-amber); font-weight: 700; }
+.fs-banner { display: flex; gap: 10px; align-items: flex-start; padding: 10px 14px; font-size: 12.5px; line-height: 1.45;
+  border: 1px solid var(--border-color); border-left: 3px solid var(--accent-amber); border-radius: 8px; background: var(--bg-card); }
+.fs-banner--err { border-left-color: var(--accent-rose); }
+.fs-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

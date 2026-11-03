@@ -1,0 +1,29 @@
+.live-sse-label {
+  margin: 0;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  border-left: 3px solid var(--accent-cyan);
+  background: var(--bg-card);
+  border-radius: 0 6px 6px 0;
+}
+
+.live-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+@media (max-width: 1100px) {
+  .live-layout { grid-template-columns: 1fr; }
+}
+
+.live-log {
+  max-height: 320px;
+  overflow: auto;
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

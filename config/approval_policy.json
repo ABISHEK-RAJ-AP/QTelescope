@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "policy_id": "default-two-stage",
+  "stages": [
+    {
+      "id": "technical_review",
+      "label": "Technical review",
+      "required_permission": "approvals:decide"
+    },
+    {
+      "id": "operations_review",
+      "label": "Operations review",
+      "required_permission": "approvals:decide"
+    }
+  ]
+}

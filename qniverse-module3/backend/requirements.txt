@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+websockets
+python-multipart
+pydantic
+qiskit>=1.0.0
+qiskit-aer
+cirq
+seaborn
+ply
+qsimcirq
+numpy
+scipy
+matplotlib
+python-dotenv
+aiofiles
+qulacs

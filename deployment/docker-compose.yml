@@ -1,0 +1,51 @@
+services:
+  frontend:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.frontend
+    container_name: quantum_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+  backend:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.backend
+    container_name: quantum_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite:///./quantum_monitoring.db
+      - IBM_QUANTUM_TOKEN=${IBM_QUANTUM_TOKEN:-}
+      - RIGETTI_API_KEY=${RIGETTI_API_KEY:-}
+      - IONQ_API_KEY=${IONQ_API_KEY:-}
+      - ONPREM_QPU_URL=${ONPREM_QPU_URL:-http://localhost:8080}
+    restart: always
+
+  # Optional Time-Series Database for High-Frequency Industrial Telemetry
+  db:
+    image: timescale/timescaledb:latest-pg16
+    container_name: quantum_timescaledb
+    environment:
+      POSTGRES_DB: quantum_telemetry
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # Optional Fast In-Memory Queue Broker for Real-Time Event Dispatch
+  redis:
+    image: redis:7-alpine
+    container_name: quantum_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+volumes:
+  timescaledb_data:
