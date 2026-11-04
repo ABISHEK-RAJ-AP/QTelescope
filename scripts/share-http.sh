@@ -4,8 +4,9 @@
 # Usage: ./scripts/share-http.sh
 set -euo pipefail
 
-echo "Checking local nginx..."
-curl -fsS http://127.0.0.1/healthz >/dev/null
+PORT="${NGINX_PORT:-4173}"
+echo "Checking local nginx on :$PORT ..."
+curl -fsS "http://127.0.0.1:${PORT}/healthz" >/dev/null
 
 if ! command -v cloudflared >/dev/null 2>&1; then
   echo "==> Installing cloudflared (user local)..."
@@ -23,4 +24,4 @@ echo ""
 echo "Starting quick tunnel. Copy the https://….trycloudflare.com URL"
 echo "and open it on the other laptop. Ctrl+C to stop."
 echo ""
-cloudflared tunnel --url http://127.0.0.1:80
+cloudflared tunnel --url "http://127.0.0.1:${PORT}"
