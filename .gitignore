@@ -22,8 +22,9 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Root-only Python build dirs (never ignore frontend/src/lib/)
+/lib/
+/lib64/
 parts/
 sdist/
 var/
