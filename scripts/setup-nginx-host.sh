@@ -10,7 +10,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SERVER_NAME="${SERVER_NAME:-_}"
-DIST="$ROOT/frontend/dist"
+BUILD_DIST="$ROOT/frontend/dist"
+# nginx (www-data) cannot read most home dirs → copy out of $HOME
+WWW_ROOT=/var/www/qtelescope
 SITE=/etc/nginx/sites-available/qtelescope
 ENABLED=/etc/nginx/sites-enabled/qtelescope
 TEMPLATE="$ROOT/deployment/nginx-host.conf"
@@ -39,12 +41,19 @@ if [[ ! -d node_modules ]]; then
   npm install
 fi
 npm run build
-test -f "$DIST/index.html" || { echo "Build failed: missing $DIST/index.html"; exit 1; }
+test -f "$BUILD_DIST/index.html" || { echo "Build failed: missing $BUILD_DIST/index.html"; exit 1; }
+
+echo "==> Installing static files to $WWW_ROOT (nginx-readable)"
+sudo mkdir -p "$WWW_ROOT"
+sudo rsync -a --delete "$BUILD_DIST"/ "$WWW_ROOT"/
+sudo chown -R root:root "$WWW_ROOT"
+sudo find "$WWW_ROOT" -type d -exec chmod 755 {} \;
+sudo find "$WWW_ROOT" -type f -exec chmod 644 {} \;
 
 echo "==> Writing nginx site"
 TMP="$(mktemp)"
 sed -e "s|__SERVER_NAME__|${SERVER_NAME}|g" \
-    -e "s|__DIST_ROOT__|${DIST}|g" \
+    -e "s|__DIST_ROOT__|${WWW_ROOT}|g" \
     "$TEMPLATE" > "$TMP"
 sudo cp "$TMP" "$SITE"
 rm -f "$TMP"
