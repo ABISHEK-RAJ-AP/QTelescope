@@ -7,11 +7,9 @@ KNOWN_DEFAULT_PASSWORD = "quantum2026"
 
 
 def block_default_bootstrap_enabled() -> bool:
-    return os.getenv("BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS", "false").lower().strip() in (
-        "1",
-        "true",
-        "yes",
-    )
+    from app.core.env_profile import env_flag_prod_default_true
+
+    return env_flag_prod_default_true("BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS")
 
 
 def is_reserved_bootstrap_user(username: str, admin_username: str, user_username: str) -> bool:

@@ -1,7 +1,7 @@
 /** Dashboard grid columns + widget visibility (localStorage). */
 
 export const DASHBOARD_GRID_KEY = 'qtelescope_dashboard_grid';
-export const DASHBOARD_WIDGETS_KEY = 'qtelescope_dashboard_widgets';
+export const DASHBOARD_WIDGETS_KEY = 'qtelescope_dashboard_widgets_v2';
 
 export const DASHBOARD_GRID_OPTIONS = [
   { id: '2', label: '2 columns' },
@@ -16,10 +16,11 @@ export const WIDGET_LABELS = {
   calChart: 'Calibration age chart',
   coherenceChart: 'Coherence chart',
   modalityStrip: 'Modality strip',
-  fleetSummary: 'Fleet summary',
+  fleetSummary: 'Fleet backends',
   platformPanel: 'Platform health',
   jobFailures: 'Job failures',
   opsTimeline: 'Ops timeline',
+  fleetTrend: 'Alert pressure',
 };
 
 export const WIDGET_IDS = {
@@ -44,10 +45,10 @@ const DEFAULT_WIDGETS = {
   [WIDGET_IDS.coherenceChart]: true,
   [WIDGET_IDS.fleetSummary]: true,
   [WIDGET_IDS.opsTimeline]: true,
-  [WIDGET_IDS.modalityStrip]: false,
-  [WIDGET_IDS.platformPanel]: false,
+  [WIDGET_IDS.modalityStrip]: true,
+  [WIDGET_IDS.platformPanel]: true,
   [WIDGET_IDS.jobFailures]: false,
-  [WIDGET_IDS.fleetTrend]: false,
+  [WIDGET_IDS.fleetTrend]: true,
 };
 
 /** @deprecated use readDashboardGrid */

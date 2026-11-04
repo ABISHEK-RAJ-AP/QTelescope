@@ -9,6 +9,8 @@ _startup_log = logging.getLogger("app.startup")
 
 from app.core.config import settings
 from app.core.api_auth import ApiAuthMiddleware
+from app.core.security_headers import SecurityHeadersMiddleware
+from app.core.env_profile import is_production_profile
 from app.core.database import Base, engine, SessionLocal
 import app.models.entities  # Ensure all models are registered on Base.metadata
 import app.models.development  # noqa: F401 — Build workspace tables
@@ -22,6 +24,7 @@ from app.api import (
     replay,
     research,
     users,
+    device_capabilities,
 )
 from app.api.development.router import router as development_router
 from app.api.governance.approvals import router as governance_approvals_router
@@ -50,19 +53,27 @@ seed_initial_telemetry = execute_startup_hardware_discovery
 
 
 def _log_prod_security_warnings() -> None:
-    profile = (os.getenv("QRE_PROFILE") or os.getenv("ENVIRONMENT") or "").lower()
-    if profile not in ("prod", "production"):
+    if not is_production_profile():
         return
     from app.core.rbac import rbac_enforced
     from app.core.sessions import require_api_auth
+    from app.core.bootstrap_security import block_default_bootstrap_enabled
 
     if not rbac_enforced():
         _startup_log.warning(
-            "QRE_PROFILE/ENVIRONMENT indicates production but ENFORCE_RBAC is not enabled — deny-by-default RBAC required"
+            "Production profile but ENFORCE_RBAC=false — set ENFORCE_RBAC=true for VAPT."
         )
     if not require_api_auth():
         _startup_log.warning(
-            "QRE_PROFILE/ENVIRONMENT indicates production but REQUIRE_API_AUTH is not enabled"
+            "Production profile but REQUIRE_API_AUTH=false — set REQUIRE_API_AUTH=true for VAPT."
+        )
+    if not block_default_bootstrap_enabled():
+        _startup_log.warning(
+            "Production profile but BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS=false — disable default passwords."
+        )
+    if settings.SECRET_KEY in ("cdac_quantum_telemetry_secret_key_2026", "your_secret_key_here", ""):
+        _startup_log.error(
+            "Production profile using insecure default SECRET_KEY — rotate before VAPT/go-live."
         )
 
 
@@ -90,14 +101,22 @@ async def lifespan(app: FastAPI):
     if sched_task is not None:
         await sched_task
 
+_docs_url = None if is_production_profile() else "/docs"
+_redoc_url = None if is_production_profile() else "/redoc"
+_openapi_url = None if is_production_profile() else f"{settings.API_V1_STR}/openapi.json"
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    openapi_url=_openapi_url,
+    docs_url=_docs_url,
+    redoc_url=_redoc_url,
     description="Quantum Runtime Telemetry, Multi-Hardware Auto-Discovery, and Monitoring Platform",
     lifespan=lifespan
 )
 
+# Outermost → innermost: SecurityHeaders wraps responses after CORS/Auth.
+app.add_middleware(SecurityHeadersMiddleware)
 # Auth runs inside CORS so 401/preflight responses still get Access-Control-* headers.
 app.add_middleware(ApiAuthMiddleware)
 
@@ -107,10 +126,22 @@ _dev_cors_default = (
     "http://localhost:5175,http://127.0.0.1:5175,"
     "http://localhost:4173,http://127.0.0.1:4173"
 )
-_cors_raw = os.getenv("CORS_ORIGINS", _dev_cors_default).strip()
+# Production must set CORS_ORIGINS explicitly — never default to *
+if is_production_profile():
+    _cors_raw = os.getenv("CORS_ORIGINS", "").strip()
+    if not _cors_raw or _cors_raw == "*":
+        _startup_log.warning(
+            "Production CORS_ORIGINS empty or '*' — set explicit UI origin(s) for VAPT."
+        )
+        _cors_raw = _cors_raw if _cors_raw and _cors_raw != "*" else ""
+else:
+    _cors_raw = os.getenv("CORS_ORIGINS", _dev_cors_default).strip()
 if _cors_raw == "*":
     _cors_origins = ["*"]
     _cors_credentials = False
+elif not _cors_raw:
+    _cors_origins = _dev_cors_default.split(",") if not is_production_profile() else []
+    _cors_credentials = bool(_cors_origins)
 else:
     _cors_origins = [o.strip() for o in _cors_raw.split(",") if o.strip()]
     _cors_credentials = True
@@ -119,12 +150,13 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
     allow_credentials=_cors_credentials,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-User-Role", "X-User-Name", "X-QRE-Dev-Ack", "Accept"],
 )
 
 # Include API Routers
 app.include_router(backends.router, prefix=settings.API_V1_STR)
+app.include_router(device_capabilities.router, prefix=settings.API_V1_STR)
 app.include_router(topology.router, prefix=settings.API_V1_STR)
 app.include_router(qubits.router, prefix=settings.API_V1_STR)
 app.include_router(calibration.router, prefix=settings.API_V1_STR)
@@ -164,6 +196,51 @@ def root():
         "docs_url": "/docs",
         "api_v1": settings.API_V1_STR
     }
+
+
+# QRP portal Settings → Health probes (Vite proxies /healthz and /readyz to this API).
+@app.get("/healthz")
+def healthz():
+    from datetime import datetime, timezone
+
+    return {
+        "status": "ok",
+        "version": settings.VERSION,
+        "time": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+@app.get("/readyz")
+def readyz():
+    from datetime import datetime, timezone
+
+    from fastapi.responses import JSONResponse
+
+    checks: dict = {
+        "configuration": {"ok": True, "detail": "valid"},
+        "database": {"ok": True, "detail": "reachable"},
+        "migrations": {"ok": True, "detail": "n/a"},
+    }
+    try:
+        from sqlalchemy import text
+
+        db = SessionLocal()
+        try:
+            db.execute(text("SELECT 1"))
+        finally:
+            db.close()
+    except Exception as exc:  # pragma: no cover — surface real DB failure to portal
+        checks["database"] = {"ok": False, "detail": str(exc)[:200]}
+
+    ready = all(c["ok"] for c in checks.values())
+    body = {
+        "status": "ready" if ready else "not_ready",
+        "version": settings.VERSION,
+        "environment": getattr(settings, "ENVIRONMENT", "development"),
+        "time": datetime.now(timezone.utc).isoformat(),
+        "checks": checks,
+    }
+    return JSONResponse(body, status_code=200 if ready else 503)
 
 if __name__ == "__main__":
     import uvicorn

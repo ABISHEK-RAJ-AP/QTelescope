@@ -17,8 +17,6 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { QuantumBackground } from '@/components/ui/quantum-background'
-import KineticMatrix from '@/components/ui/kinetic-matrix'
-import PathDrawingPortfolioHero from '@/components/ui/path-drawing-portfolio-hero'
 import { PublicMarketingHeader } from '@/components/marketing/PublicMarketingHeader'
 import { PublicMarketingFooter } from '@/components/marketing/PublicMarketingFooter'
 import { cn } from '@/lib/utils'
@@ -140,44 +138,39 @@ export function LandingPage() {
 
       <PublicMarketingHeader />
 
-      <section className="relative z-10 scroll-mt-28 px-6 py-16 sm:px-10 sm:py-20">
-        <div className="mx-auto flex max-w-6xl flex-col gap-8">
-          <div className="relative h-[min(72vh,640px)] w-full overflow-hidden rounded-3xl border border-neutral-200/90 shadow-2xl shadow-cyan-500/10 dark:border-neutral-800 dark:shadow-cyan-400/5">
-            <KineticMatrix title="0x10" className="h-full w-full rounded-3xl" />
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-[#f8fafc] via-[#f8fafc]/80 to-transparent p-8 pt-24 dark:from-[#070a0f] dark:via-[#070a0f]/85">
-              <div className="pointer-events-auto mx-auto flex max-w-3xl flex-col items-center text-center">
-                <p className="landing-hero__eyebrow mb-3">Q-TeleScope</p>
-                <p className="text-pretty text-sm text-neutral-600 dark:text-neutral-400 sm:text-base">
-                  Quantum observability for superconducting QPUs — live telemetry, calibration drift, and fleet health.
-                </p>
-                <div className="mt-6 flex w-full max-w-lg flex-col gap-3 sm:flex-row sm:justify-center">
-                  <Link to="/login" className="sm:min-w-[160px]">
-                    <Button size="lg" className="w-full gap-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold shadow-lg shadow-cyan-600/25">
-                      Sign in <ArrowRight className="size-4" aria-hidden />
-                    </Button>
-                  </Link>
-                  <Link to="/register" className="sm:min-w-[160px]">
-                    <Button size="lg" variant="outline" className="w-full font-semibold backdrop-blur-sm bg-white/80 dark:bg-neutral-950/50 border-neutral-300 dark:border-neutral-700">
-                      Sign up
-                    </Button>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div
-            id="works"
-            className="relative overflow-hidden rounded-3xl border border-neutral-200/90 bg-white/60 backdrop-blur-md dark:border-neutral-800 dark:bg-neutral-950/50"
-          >
-            <PathDrawingPortfolioHero
-              compact
-              brand="Q-TeleScope"
-              tagline="Cert Studio–grade shell · light & dark aware"
-              eyebrow="Path-drawn identity"
-            />
-          </div>
+      <section className="landing-hero landing-hero--static relative z-10 flex w-full scroll-mt-28 flex-col items-center justify-center px-6 py-20 sm:px-10 sm:py-28 lg:py-32 text-center min-h-[min(90vh,920px)]">
+        <p className="landing-hero__eyebrow">Q-TeleScope</p>
+        <h1 className="landing-hero__title text-balance max-w-6xl">
+          Quantum observability for{' '}
+          <span className="landing-hero__accent">superconducting QPUs</span>
+        </h1>
+        <p className="landing-hero__lead mt-10 max-w-3xl text-pretty">
+          Monitor T1 and T2 coherence, gate fidelity, calibration drift, and incidents in one place — built for multi-backend quantum fleets.
+        </p>
+        <div className="mt-14 flex w-full max-w-lg flex-col items-stretch gap-4 sm:max-w-none sm:flex-row sm:items-center sm:justify-center sm:gap-5">
+          <Link to="/login" className="sm:min-w-[188px]">
+            <Button size="lg" className="w-full min-h-[3.25rem] gap-2.5 bg-cyan-600 px-10 py-7 text-lg font-semibold text-white shadow-lg shadow-cyan-600/25 hover:bg-cyan-500">
+              Sign in <ArrowRight className="size-5" aria-hidden />
+            </Button>
+          </Link>
+          <Link to="/register" className="sm:min-w-[188px]">
+            <Button size="lg" variant="outline" className="w-full min-h-[3.25rem] border-neutral-300 bg-white/75 px-10 py-7 text-lg font-semibold backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-950/45">
+              Sign up
+            </Button>
+          </Link>
         </div>
+        <p className="mt-8 text-sm text-neutral-500 dark:text-neutral-400">
+          Already have access?{' '}
+          <Link to="/login" className="font-semibold text-cyan-700 hover:text-cyan-600 dark:text-cyan-400 dark:hover:text-cyan-300">
+            Sign in
+          </Link>
+          {' · '}
+          New here?{' '}
+          <Link to="/register" className="font-semibold text-cyan-700 hover:text-cyan-600 dark:text-cyan-400 dark:hover:text-cyan-300">
+            Create an account
+          </Link>
+        </p>
+        <div className="landing-hero__fade pointer-events-none absolute inset-x-0 bottom-0 h-32" aria-hidden />
       </section>
 
       <main className="relative z-20 mx-auto max-w-7xl space-y-28 px-6 pb-24 pt-4 sm:px-8">

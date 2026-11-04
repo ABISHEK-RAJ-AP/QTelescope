@@ -11,7 +11,9 @@
 .dash-bento__item {
   position: relative;
   min-width: 0;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   align-self: start;
 }
 
@@ -39,16 +41,39 @@
   }
 }
 
-.dash-bento__item > * {
+.dash-bento__body {
   min-width: 0;
   width: 100%;
   height: auto;
 }
 
+.dash-bento__body > * {
+  min-width: 0;
+  width: 100%;
+}
+
+/* Dedicated strip ABOVE panel content — never overlays titles / expand */
+.dash-bento__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  margin: 0 0 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 35%, var(--border-color));
+  background: var(--bg-card);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+  z-index: 2;
+  flex-shrink: 0;
+}
+
 .dash-bento__item--customizing {
   outline: 2px dashed color-mix(in srgb, var(--accent-cyan) 45%, transparent);
-  outline-offset: 3px;
+  outline-offset: 4px;
   border-radius: 12px;
+  padding: 6px;
+  background: color-mix(in srgb, var(--bg-dark) 92%, var(--accent-cyan));
 }
 
 .dash-bento__item--dragging {
@@ -57,28 +82,28 @@
   box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
 }
 
-.dash-bento__controls {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  z-index: 3;
-  display: flex;
-  gap: 6px;
-}
-
 .dash-bento__handle,
 .dash-bento__resize {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 10px;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background: var(--bg-card);
   color: var(--text-secondary);
   cursor: pointer;
   touch-action: none;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.dash-bento__btn-label {
+  line-height: 1;
 }
 
 .dash-bento__handle {
@@ -89,12 +114,23 @@
   cursor: grabbing;
 }
 
+.dash-bento__handle:hover,
+.dash-bento__resize:hover {
+  border-color: var(--accent-cyan);
+  color: var(--accent-cyan);
+}
+
 .dash-bento--customizing .card,
 .dash-bento--customizing .chart-panel {
   pointer-events: none;
 }
 
-.dash-bento--customizing .dash-bento__controls,
+/* Hide in-panel expand while customizing — avoids pile-up on title row */
+.dash-bento--customizing .chart-panel__expand {
+  display: none;
+}
+
+.dash-bento--customizing .dash-bento__toolbar,
 .dash-bento--customizing .dash-bento__handle,
 .dash-bento--customizing .dash-bento__resize {
   pointer-events: auto;
@@ -138,4 +174,16 @@
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+@media (max-width: 640px) {
+  .dash-bento__btn-label {
+    display: none;
+  }
+
+  .dash-bento__handle,
+  .dash-bento__resize {
+    width: 36px;
+    padding: 0;
+  }
 }

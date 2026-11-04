@@ -9,37 +9,29 @@ const FOOTER_SECTIONS = [
     links: [
       { name: 'Overview', href: '/landing' },
       { name: 'Features', href: '/landing#capabilities' },
-      { name: 'Sign in', href: '/login' },
+      { name: 'How it works', href: '/landing#guide' },
     ],
   },
   {
     title: 'Workspace',
     links: [
-      { name: 'How it works', href: '/landing#guide' },
+      { name: 'Sign in', href: '/login' },
       { name: 'Register', href: '/register' },
       { name: 'Projects home', href: '/' },
     ],
   },
   {
-    title: 'Platform',
+    title: 'Help',
     links: [
       { name: 'FAQ', href: '/landing#faq' },
-      { name: 'QRP · Govern', href: '/govern/', external: true },
-      { name: 'Q-TeleScope', href: '/', external: true },
+      { name: 'Create account', href: '/register' },
+      { name: 'Open studio', href: '/login' },
     ],
   },
 ];
 
 function FooterLink({ link }) {
   const className = 'cert-public-footer__link notranslate';
-  if (link.external) {
-    const href = link.href.startsWith('http') ? link.href : `${window.location.origin}${link.href}`;
-    return (
-      <a href={href} className={className} target="_blank" rel="noopener noreferrer">
-        {link.name}
-      </a>
-    );
-  }
   if (link.href.includes('#')) {
     const [pathname, hash] = link.href.split('#');
     return (
@@ -67,7 +59,10 @@ export default function CertPublicFooter({ className = '' }) {
   }, []);
 
   return (
-    <footer className={`cert-public-footer cert-public-footer--${variant} notranslate${className ? ` ${className}` : ''}`} aria-label="Site footer">
+    <footer
+      className={`cert-public-footer cert-public-footer--${variant} notranslate${className ? ` ${className}` : ''}`}
+      aria-label="Site footer"
+    >
       <div className="cert-public-footer__container">
         <div className="cert-public-footer__main">
           <div className="cert-public-footer__brand">
@@ -77,7 +72,8 @@ export default function CertPublicFooter({ className = '' }) {
               </Link>
             </h2>
             <p className="cert-public-footer__desc">
-              {QFORGE_TAGLINE}. Design quantum circuits, run simulation and preflight, and submit governed workload packages to QRP · Govern.
+              {QFORGE_TAGLINE}. Design circuits, simulate with shot quotas, compile with preflight checks, and package
+              governed submissions from one development studio.
             </p>
           </div>
           <div className="cert-public-footer__columns">
@@ -96,7 +92,9 @@ export default function CertPublicFooter({ className = '' }) {
           </div>
         </div>
         <div className="cert-public-footer__bar">
-          <p className="cert-public-footer__copy">© {year} Centre for Development of Advanced Computing (C-DAC). All rights reserved.</p>
+          <p className="cert-public-footer__copy">
+            © {year} Centre for Development of Advanced Computing (C-DAC). All rights reserved.
+          </p>
           <div className="cert-public-footer__bar-end">
             <nav className="cert-public-footer__gov-logos" aria-label="Government partners">
               <a

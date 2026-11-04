@@ -122,7 +122,10 @@ def get_configured_credentials():
     return payload
 
 def _env_credential_write_allowed() -> bool:
-    return os.getenv("ALLOW_ENV_CREDENTIAL_WRITE", "true").lower().strip() in ("1", "true", "yes")
+    from app.core.env_profile import env_flag, is_production_profile
+
+    # Prod defaults OFF; lab defaults ON for convenience unless explicitly set.
+    return env_flag("ALLOW_ENV_CREDENTIAL_WRITE", default=not is_production_profile())
 
 
 def _update_env_file(key: str, value: str):

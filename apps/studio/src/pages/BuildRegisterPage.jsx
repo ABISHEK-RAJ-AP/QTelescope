@@ -12,7 +12,7 @@ export default function BuildRegisterPage() {
   return (
     <CertAuthShell
       title="Create account"
-      subtitle="Register for the Q-Forge Build workspace."
+      subtitle="Register to create projects and use the Q-Forge circuit IDE."
       maxWidth={520}
       footer={
         <div className="cert-auth-footer">

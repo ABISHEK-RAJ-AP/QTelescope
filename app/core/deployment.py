@@ -4,7 +4,9 @@ from __future__ import annotations
 import os
 from typing import Any, Dict
 
+from app.core.bootstrap_security import block_default_bootstrap_enabled
 from app.core.config import settings
+from app.core.env_profile import env_flag, is_production_profile
 from app.core.provenance import database_storage_mode
 from app.core.sessions import require_api_auth
 from app.core.rbac import rbac_enforced
@@ -35,18 +37,18 @@ def deployment_profile() -> Dict[str, Any]:
         "security": {
             "require_api_auth": require_api_auth(),
             "enforce_rbac": rbac_enforced(),
-            "allow_env_credential_write": os.getenv("ALLOW_ENV_CREDENTIAL_WRITE", "true").lower()
-            in ("1", "true", "yes"),
+            "allow_env_credential_write": env_flag(
+                "ALLOW_ENV_CREDENTIAL_WRITE", default=not is_production_profile()
+            ),
             "recommended_prod": {
+                "ENVIRONMENT": "production",
                 "REQUIRE_API_AUTH": "true",
                 "ENFORCE_RBAC": "true",
                 "ALLOW_ENV_CREDENTIAL_WRITE": "false",
                 "BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS": "true",
+                "CORS_ORIGINS": "<exact UI origin>",
             },
-            "block_default_bootstrap_credentials": os.getenv(
-                "BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS", "false"
-            ).lower()
-            in ("1", "true", "yes"),
+            "block_default_bootstrap_credentials": block_default_bootstrap_enabled(),
         },
         "operator_notes": (
             "Air-gap: use on-prem adapter + snapshot/federation import; no cloud token egress required."

@@ -21,6 +21,7 @@ export const EXECUTION_NAV = [
 export const RESOURCES_NAV = [
   { value: 'health', label: 'Health vector' },
   { value: 'environment', label: 'Environment' },
+  { value: 'capabilities', label: 'Device capabilities' },
 ];
 
 export const ALERTS_NAV = [

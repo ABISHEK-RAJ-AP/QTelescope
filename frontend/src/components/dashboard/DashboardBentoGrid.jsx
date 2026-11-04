@@ -25,7 +25,7 @@ function nextSpan(current) {
 function BentoItem({ id, span, children }) {
   return (
     <div className={`dash-bento__item dash-bento__item--${span}`} data-widget-id={id}>
-      {children}
+      <div className="dash-bento__body">{children}</div>
     </div>
   );
 }
@@ -43,6 +43,8 @@ function SortableDashboardItem({
     transition,
   };
 
+  const spanLabel = span === 'full' ? 'Full' : span === 'compact' ? '⅓' : '½';
+
   return (
     <div
       ref={setNodeRef}
@@ -51,28 +53,31 @@ function SortableDashboardItem({
       data-widget-id={id}
     >
       {customizing && (
-        <div className="dash-bento__controls">
+        <div className="dash-bento__toolbar" role="toolbar" aria-label={`Layout controls for ${id}`}>
           <button
             type="button"
             className="dash-bento__handle"
             aria-label={`Drag to reorder ${id}`}
+            title="Drag to reorder"
             {...attributes}
             {...listeners}
           >
-            <GripVertical size={16} aria-hidden />
+            <GripVertical size={15} aria-hidden />
+            <span className="dash-bento__btn-label">Drag</span>
           </button>
           <button
             type="button"
             className="dash-bento__resize"
-            aria-label={`Resize ${id} panel`}
-            title="Cycle panel width (compact / half / full row)"
+            aria-label={`Cycle width for ${id}, currently ${span}`}
+            title="Cycle width: compact → half → full"
             onClick={() => onSpanChange?.(id, nextSpan(span))}
           >
             {span === 'full' ? <Minimize2 size={14} aria-hidden /> : <Maximize2 size={14} aria-hidden />}
+            <span className="dash-bento__btn-label">Width {spanLabel}</span>
           </button>
         </div>
       )}
-      {children}
+      <div className="dash-bento__body">{children}</div>
     </div>
   );
 }

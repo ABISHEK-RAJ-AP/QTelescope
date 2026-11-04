@@ -107,6 +107,14 @@ qniverse-module3/**/node_modules/
 quantum-resource-portal/**/node_modules/
 quantum-resource-portal/**/dist/
 
+# Third-party research clones / offline README dumps (not product runtime)
+QDMI-develop/
+QRM-and-CI-develop/
+qrmi-main/
+vendor/
+*.tgz
+Quantum_Monitoring.tgz
+
 # OS & Editor
 .DS_Store
 Thumbs.db

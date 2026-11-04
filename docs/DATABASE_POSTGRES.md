@@ -44,3 +44,23 @@ curl -s http://localhost:8000/api/v1/admin/deployment/profile | jq .database_sto
 ```
 
 See also [DATABASE_BACKUP.md](./DATABASE_BACKUP.md).
+
+## TimescaleDB (optional)
+
+`deployment/docker-compose.yml` already ships `timescale/timescaledb:latest-pg16` as the
+`db` service. The app talks plain SQLAlchemy Postgres — **no hypertables yet**.
+
+**When to enable Timescale**
+
+- High write rate: qubit × gate telemetry every poll across many backends
+- Long retention with compression + continuous aggregates (fleet T1/queue rollups)
+- Native drop_chunks retention instead of bulk `DELETE`
+
+**When not to**
+
+- SQLite / lab demo / low tick rate — current `TELEMETRY_RETENTION_DAYS` purge is enough
+- Before write pain shows up in ops (disk, slow history queries)
+
+**Recommended path:** stay on Postgres URL; when volume hurts, convert
+`qubit_telemetry`, `gate_telemetry`, `backend_telemetry` to hypertables on `timestamp`
+and keep the same ORM models (Timescale is Postgres-compatible).

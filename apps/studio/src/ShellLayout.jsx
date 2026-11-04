@@ -17,14 +17,14 @@ export default function ShellLayout({ title, children, breadcrumbs = null, conte
   const navItems = [
     {
       key: 'landing',
-      label: 'Product tour',
+      label: 'Tour',
       to: '/landing',
       icon: Sparkles,
       active: loc.pathname === '/landing',
     },
     {
       key: 'projects',
-      label: 'Projects',
+      label: 'Studio home',
       to: '/',
       icon: Home,
       active: loc.pathname === '/' || loc.pathname === '',

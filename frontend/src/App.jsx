@@ -26,7 +26,7 @@ import {
   DashboardHome, BackendInventory, BackendDetails, LiveTelemetry,
   CalibrationStatus, DriftAnalysis, HistoricalTrends, TopologyExplorer, CalibrationTimeline,
   MetricsCoverage, BackendComparison, AnomalyMonitor, TemporalReplay, JobMonitoring,
-  QueueMonitoring, ResourceHealth, EnvironmentPage, AlertsEvents, ReportsPage,
+  QueueMonitoring, ResourceHealth, EnvironmentPage, DeviceCapabilities, AlertsEvents, ReportsPage,
   AdministrationPage, OperationsCentre, PlatformHealth, OpsTimeline, OnboardingFlow, UserSettings,
   IncidentDetailPage,
   AlertDetailPage,
@@ -435,7 +435,9 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
         );
 
       case 'resources':
-        return resourceSubTab === 'environment' ? <EnvironmentPage /> : <ResourceHealth />;
+        if (resourceSubTab === 'environment') return <EnvironmentPage />;
+        if (resourceSubTab === 'capabilities' || resourceSubTab === 'qdmi') return <DeviceCapabilities />;
+        return <ResourceHealth />;
 
       case 'reports':
         return <ReportsPage />;

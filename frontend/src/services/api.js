@@ -89,6 +89,24 @@ export const api = {
   updateAlertRule: (ruleId, data) => fetchApi(`/admin/alert-rules/${ruleId}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteAlertRule: (ruleId) => fetchApi(`/admin/alert-rules/${ruleId}`, { method: 'DELETE' }),
 
+  // Device capability sheets
+  getDeviceCapabilityCoverage: () => fetchApi('/device-capabilities/coverage'),
+  getDeviceCapabilities: ({
+    backend_id,
+    include_qubits = true,
+    include_gates = true,
+    include_jobs = false,
+  } = {}) => {
+    const q = new URLSearchParams();
+    if (backend_id) q.set('backend_id', backend_id);
+    q.set('include_qubits', String(include_qubits));
+    q.set('include_gates', String(include_gates));
+    q.set('include_jobs', String(include_jobs));
+    return fetchApi(`/device-capabilities/devices?${q}`);
+  },
+  getDeviceCapability: (backendId, include_jobs = true) =>
+    fetchApi(`/device-capabilities/devices/${encodeURIComponent(backendId)}?include_jobs=${include_jobs}`),
+
   // Backends
   getBackends: () => fetchApi('/backends'),
   getBackendsStatusAll: () => fetchApi('/backends/status-all'),

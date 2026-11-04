@@ -7,18 +7,29 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 QRP_FE="$ROOT/quantum-resource-portal/frontend"
 cd "$ROOT"
 
+# shellcheck source=/dev/null
+source "$ROOT/scripts/lib/ensure-dev-path.sh"
+
 log() { printf '\033[1;36m[qrp]\033[0m %s\n' "$*"; }
 pause_fail() {
   printf '\033[1;31m[qrp]\033[0m %s\n' "$*" >&2
   read -r -p "Press Enter to close… " _
   exit 1
 }
+pause_ok() {
+  if [[ "${QTELESCOPE_LAUNCHER_NO_PAUSE:-}${LAUNCHER_NO_PAUSE:-}" == *"1"* ]]; then
+    log "$* (no-pause)"
+    return 0
+  fi
+  read -r -p "$*" _
+}
 
 spawn_term() {
   local title="$1"
   shift
   local cmd="$*"
-  local wrapped="cd $(printf %q "$ROOT"); $cmd; ec=\$?; echo; echo \"[exit \$ec]\"; read -r -p 'Press Enter to close this terminal… ' _"
+  local path_boot="source $(printf %q "$ROOT/scripts/lib/ensure-dev-path.sh")"
+  local wrapped="cd $(printf %q "$ROOT"); $path_boot; $cmd; ec=\$?; echo; echo \"[exit \$ec]\"; read -r -p 'Press Enter to close this terminal… ' _"
   if command -v gnome-terminal >/dev/null 2>&1; then
     gnome-terminal --title="$title" -- bash -lc "$wrapped" &
     return 0
@@ -36,19 +47,22 @@ spawn_term() {
     return 0
   fi
   log "No GUI terminal — running inline: $title"
-  bash -lc "$cmd"
+  bash -lc "$wrapped"
 }
 
 [[ -d "$QRP_FE" ]] || pause_fail "Missing $QRP_FE"
-command -v npm >/dev/null || pause_fail "npm not found"
+command -v npm >/dev/null || pause_fail "npm not found (install Node.js / nvm). PATH=$PATH"
 
 export PATH="${MINIFORGE_BIN:-$HOME/miniforge3/bin}:${PATH:-}"
+PY=""
 if [[ -x "${MINIFORGE_BIN:-$HOME/miniforge3/bin}/python" ]]; then
   PY="${MINIFORGE_BIN:-$HOME/miniforge3/bin}/python"
-elif [[ -d "$ROOT/.venv" ]]; then
+elif [[ -x "$ROOT/.venv/bin/python" && -f "$ROOT/.venv/bin/activate" ]]; then
   # shellcheck source=/dev/null
   source "$ROOT/.venv/bin/activate"
   PY=python
+elif [[ -x "$ROOT/.venv/bin/python" ]]; then
+  PY="$ROOT/.venv/bin/python"
 else
   log "Creating monorepo .venv for API…"
   python3 -m venv .venv || pause_fail "python3-venv missing"
@@ -60,7 +74,7 @@ fi
 
 if ! "$PY" -c "import uvicorn" 2>/dev/null; then
   log "Installing API Python deps…"
-  "$PY" -m pip install -q -r backend/requirements.txt
+  "$PY" -m pip install -q -r backend/requirements.txt || pause_fail "pip install failed"
 fi
 
 [[ -f .env ]] || { cp backend/.env.example .env && log "Created .env from backend/.env.example"; }
@@ -70,9 +84,20 @@ export PYTHONPATH="$ROOT"
 
 if [[ -x "$ROOT/scripts/start-local-infra.sh" ]]; then
   log "Ensuring PostgreSQL + Redis…"
-  "$ROOT/scripts/start-local-infra.sh" || pause_fail "Infra failed. Run scripts/setup-local-infra.sh once."
+  if ! "$ROOT/scripts/start-local-infra.sh"; then
+    log "Infra failed — SQLite fallback."
+    export DATABASE_URL="sqlite:///./data/quantum_telemetry.db"
+    export USE_ALEMBIC=false
+  fi
 else
-  pause_fail "Missing scripts/start-local-infra.sh"
+  export DATABASE_URL="${DATABASE_URL:-sqlite:///./data/quantum_telemetry.db}"
+  export USE_ALEMBIC=false
+fi
+
+if [[ "${DATABASE_URL:-}" == postgresql* ]] && ! "$PY" -c "import psycopg2" 2>/dev/null; then
+  log "psycopg2 missing — SQLite fallback."
+  export DATABASE_URL="sqlite:///./data/quantum_telemetry.db"
+  export USE_ALEMBIC=false
 fi
 
 if [[ ! -d "$QRP_FE/node_modules" ]]; then
@@ -92,13 +117,15 @@ if curl -sf -m 1 -o /dev/null http://127.0.0.1:5176/ 2>/dev/null; then
   UI_UP=1
 fi
 
+ENV_EXPORT="export PATH=$(printf %q "${PATH}"); export PYTHONPATH=$(printf %q "$ROOT"); set -a; [[ -f .env ]] && source .env; set +a; export COLLECTION_SCHEDULER_ENABLED=false; export DATABASE_URL=$(printf %q "${DATABASE_URL}"); export USE_ALEMBIC=$(printf %q "${USE_ALEMBIC:-false}")"
+
 if [[ "$API_UP" -eq 0 ]]; then
   if command -v ss >/dev/null && ss -ltn | grep -q ':8000 '; then
     pause_fail "Port 8000 in use but API not responding. Stop the other process."
   fi
   log "Opening terminal: QRE/Q-TeleScope API :8000"
   spawn_term "QRP API :8000" \
-    "export PATH=$(printf %q "${PATH}"); export PYTHONPATH=$(printf %q "$ROOT"); export COLLECTION_SCHEDULER_ENABLED=false; set -a; [[ -f .env ]] && source .env; set +a; $(printf %q "$PY") -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
+    "$ENV_EXPORT; $(printf %q "$PY") -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000"
 fi
 
 if [[ "$UI_UP" -eq 0 ]]; then
@@ -117,4 +144,4 @@ log "Infra ready. API + QRP UI in their own terminals."
 log "  API      http://127.0.0.1:8000"
 log "  Portal   http://127.0.0.1:5176/qrp"
 echo
-read -r -p "Launcher OK — Press Enter to close this window (servers keep running)… " _
+pause_ok "Launcher OK — Press Enter to close this window (servers keep running)… "

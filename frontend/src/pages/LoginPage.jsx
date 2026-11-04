@@ -17,12 +17,13 @@ export function LoginPage({ onLoginSuccess }) {
   const [captchaId, setCaptchaId] = useState('')
   const [captchaCode, setCaptchaCode] = useState('')
   const [captchaKey, setCaptchaKey] = useState(0)
-  const [showDevPresets, setShowDevPresets] = useState(true)
+  /* Default hidden — only show when API explicitly allows (dev). Safer for VAPT/VM. */
+  const [showDevPresets, setShowDevPresets] = useState(false)
 
   useEffect(() => {
     api.getConfigStatus()
-      .then((s) => setShowDevPresets(s?.bootstrap?.show_dev_login_presets !== false))
-      .catch(() => setShowDevPresets(true))
+      .then((s) => setShowDevPresets(Boolean(s?.bootstrap?.show_dev_login_presets)))
+      .catch(() => setShowDevPresets(false))
   }, [])
 
   const handleSubmit = async (e) => {

@@ -25,16 +25,24 @@ export function LoginPage() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
-  async function loadCaptcha() {
+  async function loadCaptcha(attempt = 0) {
     setCaptchaLoading(true)
     try {
       const next = await authFetch<Captcha>('/auth/captcha')
+      if (!next?.captcha_id || !next?.captcha_image) {
+        throw new Error('Captcha response incomplete')
+      }
       setCaptcha(next)
       setCaptchaInput('')
       setError('')
     } catch (err) {
       setCaptcha(null)
-      setError(err instanceof Error ? err.message : 'Could not load captcha')
+      const msg = err instanceof Error ? err.message : 'Could not load captcha'
+      if (attempt < 1) {
+        await new Promise((r) => setTimeout(r, 600))
+        return loadCaptcha(attempt + 1)
+      }
+      setError(msg)
     } finally {
       setCaptchaLoading(false)
     }

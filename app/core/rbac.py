@@ -14,7 +14,9 @@ EVIDENCE_READER_ROLES: FrozenSet[str] = frozenset({"Admin", "Operator", "Researc
 
 
 def rbac_enforced() -> bool:
-    return os.getenv("ENFORCE_RBAC", "false").lower().strip() in ("1", "true", "yes")
+    from app.core.env_profile import env_flag_prod_default_true
+
+    return env_flag_prod_default_true("ENFORCE_RBAC")
 
 
 def _role_from_bearer(authorization: Optional[str]) -> Optional[str]:

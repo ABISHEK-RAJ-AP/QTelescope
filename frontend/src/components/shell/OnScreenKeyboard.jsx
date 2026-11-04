@@ -31,6 +31,16 @@ function isTextTarget(el) {
   return el.isContentEditable;
 }
 
+/** React controlled inputs ignore plain .value= — use native setter + input event. */
+function setNativeValue(el, value) {
+  const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  const desc = Object.getOwnPropertyDescriptor(proto, 'value');
+  if (desc?.set) desc.set.call(el, value);
+  else el.value = value;
+  el.dispatchEvent(new Event('input', { bubbles: true }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
 function dismissKeyboard() {
   const s = loadA11yPrefs();
   const next = { ...s, onScreenKeyboard: false };
@@ -62,14 +72,17 @@ export function OnScreenKeyboard() {
       if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
         const start = el.selectionStart ?? el.value.length;
         const end = el.selectionEnd ?? start;
+        let next = el.value;
+        let caret = start;
         if (start === end && start > 0) {
-          el.value = el.value.slice(0, start - 1) + el.value.slice(end);
-          el.selectionStart = el.selectionEnd = start - 1;
+          next = el.value.slice(0, start - 1) + el.value.slice(end);
+          caret = start - 1;
         } else if (start !== end) {
-          el.value = el.value.slice(0, start) + el.value.slice(end);
-          el.selectionStart = el.selectionEnd = start;
+          next = el.value.slice(0, start) + el.value.slice(end);
+          caret = start;
         }
-        el.dispatchEvent(new Event('input', { bubbles: true }));
+        setNativeValue(el, next);
+        el.selectionStart = el.selectionEnd = caret;
       }
       return;
     }
@@ -78,9 +91,10 @@ export function OnScreenKeyboard() {
       el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
       if (el.tagName === 'TEXTAREA') {
         const start = el.selectionStart ?? el.value.length;
-        el.value = `${el.value.slice(0, start)}\n${el.value.slice(start)}`;
+        setNativeValue(el, `${el.value.slice(0, start)}\n${el.value.slice(start)}`);
         el.selectionStart = el.selectionEnd = start + 1;
-        el.dispatchEvent(new Event('input', { bubbles: true }));
+      } else {
+        el.form?.requestSubmit?.();
       }
       return;
     }
@@ -99,9 +113,8 @@ export function OnScreenKeyboard() {
     if (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') {
       const start = el.selectionStart ?? el.value.length;
       const end = el.selectionEnd ?? start;
-      el.value = el.value.slice(0, start) + ch + el.value.slice(end);
+      setNativeValue(el, el.value.slice(0, start) + ch + el.value.slice(end));
       el.selectionStart = el.selectionEnd = start + ch.length;
-      el.dispatchEvent(new Event('input', { bubbles: true }));
     } else if (el.isContentEditable) {
       document.execCommand('insertText', false, ch);
     }

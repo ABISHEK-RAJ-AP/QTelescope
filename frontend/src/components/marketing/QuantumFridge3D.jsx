@@ -142,15 +142,16 @@ function SupportRods({ progress }) {
   );
 }
 
-function CoaxCables({ progress }) {
+function CoaxCables({ progress, variant = 'scroll' }) {
   const group = useRef(null);
+  const auth = variant === 'auth';
   const curves = useMemo(() => {
-    return Array.from({ length: 52 }, (_, i) => {
+    return Array.from({ length: auth ? 56 : 52 }, (_, i) => {
       const lane = (i % 14) - 6.5;
       const bank = Math.floor(i / 12);
       return { lane, bank, seed: i * 0.17 };
     });
-  }, []);
+  }, [auth]);
 
   const tubeGeo = useMemo(() => new THREE.TubeGeometry(new THREE.LineCurve3(new THREE.Vector3(), new THREE.Vector3(0, 1, 0)), 2, 0.004, 6, false), []);
 
@@ -158,14 +159,20 @@ function CoaxCables({ progress }) {
     if (!group.current) return;
     const p = progress.current;
     const ys = FRIDGE_STAGES.map((_, i) => stageWorldY(p, i) + 0.04);
+    const fan = auth ? 1.35 : 1;
     group.current.children.forEach((mesh, i) => {
       const { lane, bank, seed } = curves[i];
       const points = ys.map((y, stageIndex) => {
-        const bow = Math.sin(stageIndex * 1.2 + seed) * 0.06;
-        return new THREE.Vector3(lane * 0.07 + bow, y, lane * 0.04 + bank * 0.02);
+        const bow = Math.sin(stageIndex * 1.2 + seed) * (auth ? 0.09 : 0.06);
+        return new THREE.Vector3(
+          (lane * 0.07 + bow) * fan,
+          y,
+          (lane * 0.04 + bank * 0.02) * fan,
+        );
       });
       const curve = new THREE.CatmullRomCurve3(points);
-      const geo = new THREE.TubeGeometry(curve, 28, 0.0028 + (bank % 3) * 0.0008, 5, false);
+      const radius = (auth ? 0.0042 : 0.0028) + (bank % 3) * 0.0009;
+      const geo = new THREE.TubeGeometry(curve, 28, radius, 5, false);
       mesh.geometry.dispose();
       mesh.geometry = geo;
     });
@@ -173,15 +180,21 @@ function CoaxCables({ progress }) {
 
   return (
     <group ref={group}>
-      {curves.map((c) => (
-        <mesh key={c.seed} geometry={tubeGeo} castShadow>
-          <meshStandardMaterial
-            color={c.bank % 2 ? '#c9a227' : '#b8c4cc'}
-            metalness={0.85}
-            roughness={0.38}
-          />
-        </mesh>
-      ))}
+      {curves.map((c, i) => {
+        const tone = i % 3;
+        const color = tone === 0 ? '#f0c14a' : tone === 1 ? '#7dd3fc' : '#d5dde6';
+        return (
+          <mesh key={c.seed} geometry={tubeGeo} castShadow>
+            <meshStandardMaterial
+              color={color}
+              metalness={0.88}
+              roughness={0.32}
+              emissive={tone === 1 ? '#0e7490' : '#000000'}
+              emissiveIntensity={tone === 1 ? 0.18 : 0}
+            />
+          </mesh>
+        );
+      })}
     </group>
   );
 }
@@ -336,7 +349,9 @@ function Chandelier({ progress, hoveredIndex, reduced, variant }) {
     const p = progress.current;
     if (!rig.current) return;
     if (variant === 'auth' && !reduced) {
-      rig.current.rotation.y = Math.sin(clock.elapsedTime * 0.22) * 0.14;
+      // Slow orbit + tiny bob so auth loop reads even when plates are mid-explode
+      rig.current.rotation.y = Math.sin(clock.elapsedTime * 0.35) * 0.22;
+      rig.current.position.y = Math.sin(clock.elapsedTime * 0.55) * 0.04;
       return;
     }
     if (p < 0.12 && !reduced) {
@@ -347,12 +362,12 @@ function Chandelier({ progress, hoveredIndex, reduced, variant }) {
   });
 
   return (
-    <group ref={rig} scale={1.08}>
+    <group ref={rig} scale={variant === 'auth' ? 0.86 : 1.08}>
       <VacuumGlass />
       <TopFlange progress={progress} />
       <ThermalPosts progress={progress} />
       <SupportRods progress={progress} />
-      <CoaxCables progress={progress} />
+      <CoaxCables progress={progress} variant={variant} />
       <Attenuators progress={progress} />
       {FRIDGE_STAGES.map((_, index) => (
         <StagePlate key={FRIDGE_STAGES[index].id} index={index} progress={progress} hoveredIndex={hoveredIndex} />
@@ -366,10 +381,11 @@ function CameraRig({ progress, reduced, variant }) {
   useFrame(({ camera }, delta) => {
     const p = progress.current;
     if (variant === 'auth') {
-      camera.position.x = THREE.MathUtils.damp(camera.position.x, 0.45, 3.5, delta);
-      camera.position.y = THREE.MathUtils.damp(camera.position.y, 0.72 - p * 0.55, 3.5, delta);
-      camera.position.z = THREE.MathUtils.damp(camera.position.z, 5.15, 3.5, delta);
-      camera.lookAt(0, 0.05 - p * 0.35, 0);
+      // Pull back + slight side angle so full stack + coax fan stay in frame
+      camera.position.x = THREE.MathUtils.damp(camera.position.x, 0.55, 3.5, delta);
+      camera.position.y = THREE.MathUtils.damp(camera.position.y, 0.95 - p * 0.25, 3.5, delta);
+      camera.position.z = THREE.MathUtils.damp(camera.position.z, 6.6, 3.5, delta);
+      camera.lookAt(0, 0.55 - p * 0.2, 0);
       return;
     }
     const targetY = 0.9 - p * 1.6;
@@ -383,24 +399,37 @@ function CameraRig({ progress, reduced, variant }) {
   return null;
 }
 
+function SoftEnv({ auth }) {
+  // Auth: skip HDR file — load failures blanked the canvas on some machines.
+  if (auth) {
+    return (
+      <>
+        <hemisphereLight args={['#cfe8ff', '#1a1f28', 0.55]} />
+        <ambientLight intensity={0.42} />
+      </>
+    );
+  }
+  return <Environment files="/hdr/studio.hdr" background={false} />;
+}
+
 function Scene({ progress, hoveredIndex, reduced, onPerfDecline, variant }) {
   const auth = variant === 'auth';
   return (
     <>
       {!auth ? <PerformanceMonitor onDecline={onPerfDecline} flipflops={3} ms={1000} /> : null}
-      <Environment files="/hdr/studio.hdr" background={false} />
-      <ambientLight intensity={auth ? 0.34 : 0.28} />
-      <directionalLight position={[4, 6, 3]} intensity={auth ? 1.65 : 1.5} />
-      <directionalLight position={[-3, 2, -2]} intensity={0.6} color="#88ccff" />
-      <pointLight position={[0, 1.8, 2]} intensity={auth ? 0.45 : 0.2} color="#ffffff" />
-      <pointLight position={[0, -1.2, 1.5]} intensity={0.4} color="#22d3ee" />
+      <SoftEnv auth={auth} />
+      {!auth ? <ambientLight intensity={0.28} /> : null}
+      <directionalLight position={[4, 6, 3]} intensity={auth ? 1.85 : 1.5} />
+      <directionalLight position={[-3, 2, -2]} intensity={auth ? 0.75 : 0.6} color="#88ccff" />
+      <pointLight position={[0, 1.8, 2]} intensity={auth ? 0.55 : 0.2} color="#ffffff" />
+      <pointLight position={[0, -1.2, 1.5]} intensity={0.45} color="#22d3ee" />
       <Chandelier progress={progress} hoveredIndex={hoveredIndex} reduced={reduced} variant={variant} />
       <CameraRig progress={progress} reduced={reduced} variant={variant} />
       <EffectComposer multisampling={0}>
         <Bloom
-          luminanceThreshold={auth ? 0.82 : 0.72}
+          luminanceThreshold={auth ? 0.78 : 0.72}
           luminanceSmoothing={0.35}
-          intensity={auth ? 0.35 : 0.55}
+          intensity={auth ? 0.42 : 0.55}
           mipmapBlur
         />
       </EffectComposer>
@@ -420,7 +449,7 @@ export default function QuantumFridge3D({
   return (
     <Canvas
       dpr={auth ? [1, 1.25] : [1, 1.5]}
-      camera={{ fov: auth ? 30 : 28, position: auth ? [0.45, 0.72, 5.15] : [0, 0.85, 5.4], near: 0.1, far: 40 }}
+      camera={{ fov: auth ? 32 : 28, position: auth ? [0.55, 0.95, 6.6] : [0, 0.85, 5.4], near: 0.1, far: 40 }}
       gl={{
         alpha: true,
         antialias: false,

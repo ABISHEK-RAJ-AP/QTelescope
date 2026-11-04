@@ -24,7 +24,7 @@ const WHAT_YOU_CAN_DO = [
     icon: <Send size={ICON} strokeWidth={1.75} />,
     accent: 'var(--warning)',
     title: 'Submit for governance',
-    description: 'Package hash, compile/preflight evidence, and handoff to QRP · Govern with a single workload ID.',
+    description: 'Package hash, compile/preflight evidence, and a single workload ID ready for institutional review.',
   },
 ];
 
@@ -51,7 +51,7 @@ const PLATFORM_FEATURES = [
     icon: <FolderGit2 size={ICON} strokeWidth={1.75} />,
     accent: 'var(--accent)',
     title: 'Cross-app project scope',
-    description: 'The same project context flows into Govern filters so reviewers see what you built.',
+    description: 'Project scope and submission artifacts stay consistent from design through review packaging.',
   },
 ];
 
@@ -74,26 +74,26 @@ const STEPS = [
   {
     n: '04',
     title: 'Submit for review',
-    desc: 'Send the workload package to QRP · Govern and track approval state.',
+    desc: 'Package the workload for institutional review and track approval state from the submit trail.',
   },
 ];
 
 const FAQ = [
   {
     q: 'What is Q-Forge?',
-    a: 'Q-Forge is the QRE Build workspace — design quantum circuits, simulate workloads, and submit governed packages for institutional approval.',
+    a: 'Q-Forge is the development studio for quantum circuit projects — source/visual editors, local simulation, compile/preflight, and submission packaging.',
   },
   {
-    q: 'How does Forge connect to Govern?',
-    a: 'Submit for review creates a workload package with compile and preflight evidence. QRP · Govern picks up the same project scope for queue and review.',
+    q: 'What is in a project workspace?',
+    a: 'Each project is an IDE with Source, Circuit, Simulate, and Submit tabs, plus an activity console, metrics panel, and settings rail.',
   },
   {
-    q: 'Do I need a separate account for Build?',
-    a: 'No. Sign in uses the same platform identity as Govern and Observe (`quantum_user` session).',
+    q: 'Do I need a separate account?',
+    a: 'Sign in or register with a Q-Forge account. Lab environments may offer a temporary developer continue option.',
   },
   {
-    q: 'Can I use dev headers in the lab?',
-    a: 'In development, optional dev session headers let you explore the workspace without credentials — production requires real sign-in.',
+    q: 'How do simulation results work?',
+    a: 'Runs produce job status, histograms, manifests, and a results drawer with execution metrics adapted from the studio IDE.',
   },
 ];
 
@@ -138,8 +138,8 @@ export default function BuildLandingPage() {
                 <span className="landing-hero__title-accent">Governed Quantum Workloads</span>
               </h1>
               <p className="landing-hero__lead landing-hero__lead--glass">
-                Q-Forge is the development studio on the Quantum Resource Engine — circuits, simulation, compile/preflight, and
-                institutional handoff without leaving the Build surface.
+                Q-Forge is a modern quantum development studio — OpenQASM source, visual composer, simulation with metrics,
+                and compile/preflight packaging in one IDE.
               </p>
               <div className="landing-hero__ctas">
                 <Link to="/register" className="qre-btn qre-btn--primary landing-cta-primary">

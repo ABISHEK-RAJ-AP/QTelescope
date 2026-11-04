@@ -1,14 +1,23 @@
 # Security configuration (Q-TeleScope)
 
+Copy `.env.production.example` → `.env` on the VM before VAPT / UAT.
+
+When `ENVIRONMENT=production` or `QRE_PROFILE=production`:
+- `REQUIRE_API_AUTH`, `ENFORCE_RBAC`, and `BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS` default **ON**
+- Interactive `/docs` + OpenAPI are disabled
+- Dev login presets are hidden
+- API responses include baseline security headers (`X-Content-Type-Options`, `X-Frame-Options`, …)
+
 ## Production-oriented environment variables
 
 | Variable | Recommended prod | Purpose |
 |----------|------------------|---------|
+| `ENVIRONMENT` / `QRE_PROFILE` | `production` | Enables prod defaults above |
 | `REQUIRE_API_AUTH` | `true` | All `/api/v1/*` routes require `Authorization: Bearer <qtok_*>` (except public auth routes). SSE: `?access_token=` |
 | `ENFORCE_RBAC` | `true` | Mutating routes require Operator or Admin role from validated session |
 | `BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS` | `true` | Rejects login with default password on reserved `admin` / `user_researcher` accounts |
 | `ALLOW_ENV_CREDENTIAL_WRITE` | `false` | Do not write provider tokens into `.env` from Admin UI |
-| `CORS_ORIGINS` | your UI origin(s) | Comma-separated; default `*` is dev-only |
+| `CORS_ORIGINS` | your UI origin(s) | Comma-separated; never `*` in production |
 | `ADMIN_PASSWORD` / `USER_PASSWORD` | strong unique values | Replace default bootstrap passwords |
 | `SECRET_KEY` | random 32+ bytes | Session/password hashing salt source |
 

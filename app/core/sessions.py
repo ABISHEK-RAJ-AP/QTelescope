@@ -147,4 +147,6 @@ def revoke_other_sessions(username: str, current_token: str) -> int:
 
 
 def require_api_auth() -> bool:
-    return os.getenv("REQUIRE_API_AUTH", "false").lower().strip() in ("1", "true", "yes")
+    from app.core.env_profile import env_flag_prod_default_true
+
+    return env_flag_prod_default_true("REQUIRE_API_AUTH")

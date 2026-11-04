@@ -27,6 +27,7 @@ const EXECUTION_LABELS = {
 const RESOURCE_LABELS = {
   health: 'Health vector',
   environment: 'Environment',
+  capabilities: 'Device capabilities',
   metrics: 'Metrics coverage',
 };
 

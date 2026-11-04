@@ -15,7 +15,7 @@ export default function BuildLoginPage() {
   return (
     <CertAuthShell
       title="Sign in"
-      subtitle="Sign in to the Q-Forge Build workspace."
+      subtitle="Access your Q-Forge projects, circuit IDE, and simulation workspace."
       footer={
         <div className="cert-auth-footer">
           <p>

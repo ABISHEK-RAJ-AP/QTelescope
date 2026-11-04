@@ -21,6 +21,7 @@ export const JobMonitoring = lazyNamed(() => import('./pages/JobMonitoring.jsx')
 export const QueueMonitoring = lazyNamed(() => import('./pages/QueueMonitoring.jsx'), 'QueueMonitoring');
 export const ResourceHealth = lazyNamed(() => import('./pages/ResourceHealth.jsx'), 'ResourceHealth');
 export const EnvironmentPage = lazyNamed(() => import('./pages/EnvironmentPage.jsx'), 'EnvironmentPage');
+export const DeviceCapabilities = lazyNamed(() => import('./pages/DeviceCapabilities.jsx'), 'DeviceCapabilities');
 export const AlertsEvents = lazyNamed(() => import('./pages/AlertsEvents.jsx'), 'AlertsEvents');
 export const ReportsPage = lazyNamed(() => import('./pages/ReportsPage.jsx'), 'ReportsPage');
 export const AdministrationPage = lazyNamed(() => import('./pages/AdministrationPage.jsx'), 'AdministrationPage');

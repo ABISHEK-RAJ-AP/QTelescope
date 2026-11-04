@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import {
   Accessibility, CircleDot, Eye, Keyboard, Link2, Minus, Moon, Plus, RotateCcw, Sun, X,
 } from 'lucide-react';
@@ -27,7 +27,7 @@ function A11yBtn({ label, icon, onClick, active, title: tip }) {
 export function A11yPanel({ settings, onChange, onClose }) {
   const {
     contrast, fontSize, textSpacing, lineHeight, dyslexia, focusMode, pauseAnim,
-    bigCursor, adhdMode, highlightLinks, hideImages, textToSpeech, disableWebGLBackground, onScreenKeyboard,
+    bigCursor, adhdMode, highlightLinks, hideImages, textToSpeech, onScreenKeyboard,
   } = settings;
 
   const set = (key, val) => {
@@ -39,43 +39,6 @@ export function A11yPanel({ settings, onChange, onClose }) {
     saveA11yPrefs(next);
     onChange(next);
   };
-
-  useEffect(() => {
-    if (!adhdMode) return undefined;
-    const onMove = (e) => {
-      document.documentElement.style.setProperty('--mouse-y', `${e.clientY}px`);
-    };
-    window.addEventListener('mousemove', onMove);
-    return () => window.removeEventListener('mousemove', onMove);
-  }, [adhdMode]);
-
-  useEffect(() => {
-    if (!textToSpeech) {
-      window.speechSynthesis?.cancel();
-      return undefined;
-    }
-    let ttsTimeout;
-    const onMouseOver = (e) => {
-      const t = e.target;
-      if (!(t instanceof HTMLElement)) return;
-      const text = t.innerText?.trim();
-      if (!text || text.length < 2) return;
-      clearTimeout(ttsTimeout);
-      ttsTimeout = setTimeout(() => {
-        window.speechSynthesis?.cancel();
-        const u = new SpeechSynthesisUtterance(text.slice(0, 200));
-        u.lang = 'en-IN';
-        u.rate = 0.95;
-        window.speechSynthesis?.speak(u);
-      }, 400);
-    };
-    document.addEventListener('mouseover', onMouseOver);
-    return () => {
-      document.removeEventListener('mouseover', onMouseOver);
-      clearTimeout(ttsTimeout);
-      window.speechSynthesis?.cancel();
-    };
-  }, [textToSpeech]);
 
   const resetAll = () => {
     const next = { ...A11Y_DEFAULTS };

@@ -42,8 +42,10 @@ const ACTIVE = [
 ];
 const PLACEMENT = {
   [WIDGET_IDS.exceptions]: 'top',
-  [WIDGET_IDS.fleetSummary]: 'top',
+  /* Full-width platform band — avoids orphan empty column in 2-col grid */
+  [WIDGET_IDS.platformPanel]: 'mid',
   [WIDGET_IDS.opsTimeline]: 'bottom',
+  [WIDGET_IDS.fleetSummary]: 'bottom',
 };
 const SOURCES = ['backends', 'alertsSummary', 'queues', 'calibrations', 'coherence', 'platform', 'health', 'centre', 'timeline'];
 const PRIMARY_SOURCES = ['backends', 'alertsSummary', 'health', 'centre'];
@@ -269,16 +271,54 @@ function DashboardHomeInner() {
     return t;
   }, [rows]);
   const STATE_COLORS = { GREEN: '#34d399', YELLOW: '#fbbf24', RED: '#fb7185', UNKNOWN: '#64748b' };
-  const fleetPieOption = useMemo(() => ({
+  const qubitTotal = fleetStateTotals.GREEN + fleetStateTotals.YELLOW + fleetStateTotals.RED + fleetStateTotals.UNKNOWN;
+  const greenPct = qubitTotal ? Math.round((100 * fleetStateTotals.GREEN) / qubitTotal) : null;
+  const totalPending = useMemo(
+    () => rows.reduce((sum, r) => sum + (Number(r.pending) || 0), 0),
+    [rows],
+  );
+
+  /** Actionable: where alert load concentrates (replaces weak state-mix pie). */
+  const alertPressureRows = useMemo(
+    () => rows
+      .map((r) => ({ id: r.backend_id, name: shortName(r.backend_name || r.backend_id), crit: r.crit, warn: r.warn, total: r.crit + r.warn }))
+      .filter((r) => r.total > 0)
+      .sort((a, b) => b.total - a.total || b.crit - a.crit)
+      .slice(0, 8),
+    [rows],
+  );
+  const alertPressureOption = useMemo(() => ({
     backgroundColor: 'transparent',
-    tooltip: { trigger: 'item', ...baseTooltip(resolved === 'dark') },
-    legend: { bottom: 0, textStyle: { color: theme.textColor, fontSize: 11 } },
-    series: [{
-      type: 'pie', radius: ['40%', '62%'], center: ['50%', '44%'],
-      label: { color: theme.textColor, formatter: '{b}: {c}', fontSize: 10 },
-      data: ['GREEN', 'YELLOW', 'RED', 'UNKNOWN'].filter((s) => fleetStateTotals[s] > 0).map((s) => ({ name: s, value: fleetStateTotals[s], itemStyle: { color: STATE_COLORS[s] } })),
-    }],
-  }), [fleetStateTotals, theme, resolved]);
+    tooltip: baseTooltip(resolved === 'dark'),
+    legend: { top: 0, textStyle: { color: theme.textColor, fontSize: 11 } },
+    grid: { top: 28, left: 8, right: 16, bottom: 8, containLabel: true },
+    yAxis: {
+      type: 'category',
+      data: alertPressureRows.map((r) => r.name).reverse(),
+      axisLabel: { color: theme.textColor, fontSize: 11 },
+      axisLine: { show: false },
+      axisTick: { show: false },
+    },
+    xAxis: {
+      type: 'value',
+      name: 'active',
+      nameTextStyle: { color: theme.textColor, fontSize: 10 },
+      axisLabel: { color: theme.textColor },
+      splitLine: { lineStyle: { color: theme.splitColor, type: 'dashed' } },
+    },
+    series: [
+      {
+        name: 'Critical', type: 'bar', stack: 'a', barMaxWidth: 16,
+        data: alertPressureRows.map((r) => r.crit).reverse(),
+        itemStyle: { color: '#e11d48', borderRadius: [0, 0, 0, 0] },
+      },
+      {
+        name: 'Warning', type: 'bar', stack: 'a', barMaxWidth: 16,
+        data: alertPressureRows.map((r) => r.warn).reverse(),
+        itemStyle: { color: '#d97706', borderRadius: [0, 3, 3, 0] },
+      },
+    ],
+  }), [alertPressureRows, theme, resolved]);
 
   const workloadScatter = useMemo(() => rows.map((r) => {
     const qs = r.qubits || [];
@@ -331,67 +371,90 @@ function DashboardHomeInner() {
       return <div className="card fo-panel" style={{ minHeight: 280 }} aria-hidden><BoneyardSkeleton layout="grid" /></div>;
     }
     switch (id) {
-      case WIDGET_IDS.exceptions:
+      case WIDGET_IDS.exceptions: {
+        const openInc = d.centre?.operations?.open_incidents;
         return (
           <ExceptionStrip
             ariaLabel="Fleet exceptions"
             items={[
-              { id: 'crit', label: 'Critical alerts', value: crit, emphasis: crit ? 'critical' : undefined, onClick: go('/app/alerts'), help: 'Active alerts at CRITICAL severity (fleet-wide summary).' },
-              { id: 'inc', label: 'Open incidents', value: d.centre?.operations?.open_incidents ?? '—', onClick: go('/app/alerts/incidents'), help: 'Incidents in Open, Acknowledged, or Investigating state.' },
-              { id: 'red', label: 'Advisory RED', value: d.health ? redBackends : '—', onClick: go(HEALTH_PATH), help: 'Backends whose routing recommendation is RED.' },
-              { id: 'off', label: 'Not ONLINE', value: rows.length ? offline : '—', onClick: go('/app/backends/inventory'), help: 'Backends whose operational status is not ONLINE.' },
-              { id: 'col', label: 'Collectors stale', value: providers.length ? collectorBad : '—', onClick: go('/app/platform/health'), help: `Collector not OK, or last success older than ${STALE_MIN} minutes.` },
+              {
+                id: 'crit', label: 'Critical alerts', value: crit,
+                sub: warn ? `${warn} warnings active` : 'No warnings',
+                tone: crit > 0 ? 'critical' : warn > 0 ? 'warn' : 'ok',
+                onClick: go('/app/alerts'),
+                help: 'Active CRITICAL alerts fleet-wide. Subline shows active WARNING count.',
+              },
+              {
+                id: 'inc', label: 'Open incidents', value: openInc ?? '—',
+                sub: openInc ? 'Needs triage' : 'Queue clear',
+                tone: openInc > 0 ? 'warn' : 'ok',
+                onClick: go('/app/alerts/incidents'),
+                help: 'Incidents in Open, Acknowledged, or Investigating state.',
+              },
+              {
+                id: 'red', label: 'Advisory RED', value: d.health ? redBackends : '—',
+                sub: rows.length ? `${rows.length} backends scored` : 'Awaiting health',
+                tone: redBackends > 0 ? 'critical' : 'ok',
+                onClick: go(HEALTH_PATH),
+                help: 'Backends whose routing recommendation is RED (do not schedule).',
+              },
+              {
+                id: 'off', label: 'Not ONLINE', value: rows.length ? offline : '—',
+                sub: rows.length ? `${rows.length - offline} online` : '—',
+                tone: offline > 0 ? 'warn' : 'ok',
+                onClick: go('/app/backends/inventory'),
+                help: 'Backends whose operational status is not ONLINE.',
+              },
+              {
+                id: 'col', label: 'Collectors stale', value: providers.length ? collectorBad : '—',
+                sub: providers.length ? `${providers.length - collectorBad}/${providers.length} healthy` : '—',
+                tone: collectorBad > 0 ? 'critical' : providers.length ? 'ok' : 'neutral',
+                onClick: go('/app/platform/health'),
+                help: `Collector not OK, or last success older than ${STALE_MIN} minutes.`,
+              },
             ]}
           />
         );
+      }
       case WIDGET_IDS.fleetSummary:
         return (
-          <section className="card fo-panel" aria-labelledby="fo-health-h">
+          <section className="card fo-panel fo-panel--fleet" aria-labelledby="fo-health-h">
             <div className="fo-panel__head">
               <div>
-                <h2 id="fo-health-h" className="fo-panel__title">Backend health</h2>
-                <p className="fo-panel__sub">Ranked by qubit severity (RED and YELLOW counts).</p>
+                <h2 id="fo-health-h" className="fo-panel__title">Fleet backends</h2>
+                <p className="fo-panel__sub">Severity-ranked summary — open Health for qubit detail.</p>
               </div>
               <Link className="fs-link" to={HEALTH_PATH}>Qubit-level health <ChevronRight size={12} aria-hidden /></Link>
             </div>
             {rows.length === 0 ? (
               <EmptyState compact variant="panel" title="No backends" message="The registry and health vector returned no rows." />
             ) : (
-              <div className="fo-table" role="table" aria-label="Per-backend health">
-                <div className="fo-row fo-row--head" role="row">
+              <div className="fo-table fo-table--compact" role="table" aria-label="Per-backend health">
+                <div className="fo-row fo-row--compact fo-row--head" role="row">
                   <span role="columnheader">Backend</span>
-                  <span role="columnheader">Qubit states</span>
+                  <span role="columnheader">States</span>
                   <span role="columnheader">Advisory</span>
                   <span role="columnheader">Alerts</span>
-                  <span role="columnheader">Queue · calibration</span>
-                  <span role="columnheader"><span className="fs-sr">Links</span></span>
+                  <span role="columnheader"><span className="fs-sr">Open</span></span>
                 </div>
                 {rows.map((r) => (
-                  <div key={r.backend_id} className="fo-row" role="row">
+                  <div key={r.backend_id} className="fo-row fo-row--compact" role="row">
                     <div role="cell" className="fo-cell-name">
                       <Link className="fo-name" to={buildBackendDetailsPath(r.backend_id)}>{r.backend_name || r.backend_id}</Link>
-                      <div className="fo-meta">
-                        {r.qpu_modality || '—'}
-                        {r.operational_status && r.operational_status !== 'ONLINE' && <strong> · {r.operational_status}</strong>}
-                      </div>
+                      <div className="fo-meta">{r.qpu_modality || '—'} · cal {r.calFresh || '—'} · {r.pending ?? '—'} queued</div>
                     </div>
                     <div role="cell"><StateBar counts={r.counts} /></div>
                     <div role="cell" className="fo-adv">
                       <strong>{r.router || 'UNKNOWN'}</strong>
-                      <span className="fs-muted" style={{ overflowWrap: 'anywhere' }}>{(r.recommended_action || '—').replace(/_/g, ' ')}</span>
+                      <span className="fs-muted">{(r.recommended_action || '—').replace(/_/g, ' ')}</span>
                     </div>
                     <div role="cell" className="fo-alerts">
-                      <span>{r.crit} critical</span>
-                      <span className="fs-muted">{r.warn} warning</span>
-                    </div>
-                    <div role="cell" className="fo-adv">
-                      <span>{r.pending ?? '—'} pending</span>
-                      <span className="fs-muted">cal: {r.calFresh || '—'}</span>
+                      <span>{r.crit} crit</span>
+                      <span className="fs-muted">{r.warn} warn</span>
                     </div>
                     <div role="cell" className="fo-actions">
                       <Link className="qts-bean qts-bean--emphasis" to={`${HEALTH_PATH}?backend=${encodeURIComponent(r.backend_id)}`}>Health</Link>
                       <Link className="qts-bean" to={buildBackendDetailsLocation(r.backend_id)}>Details</Link>
-                      <Link className="qts-bean" to={`/app/telemetry/compare?backends=${encodeURIComponent(r.backend_id)}`}>Compare</Link>
                     </div>
                   </div>
                 ))}
@@ -475,15 +538,24 @@ function DashboardHomeInner() {
       case WIDGET_IDS.fleetTrend:
         return (
           <ChartPanel
-            title="Fleet qubit state mix"
-            question="Advisory router state totals across the fleet."
+            title="Alert pressure by backend"
+            question="Where active critical/warning load concentrates — click a bar to open that backend."
             sourceKind="derived"
-            state={Object.values(fleetStateTotals).some((n) => n > 0) ? 'ready' : 'empty'}
-            emptyMessage="Health vector returned no qubit state counts."
+            state={alertPressureRows.length ? 'ready' : 'empty'}
+            emptyMessage="No backends currently carrying active alerts."
             minHeight={300}
-            actions={<Link className="fs-link" to={HEALTH_PATH}>Health vector</Link>}
+            actions={<Link className="fs-link" to="/app/alerts">All alerts</Link>}
           >
-            <QtECharts option={fleetPieOption} style={{ height: 300, width: '100%' }} onEvents={{ click: () => navigate(HEALTH_PATH) }} />
+            <QtECharts
+              option={alertPressureOption}
+              style={{ height: Math.max(260, alertPressureRows.length * 36 + 60), width: '100%' }}
+              onEvents={{
+                click: (p) => {
+                  const row = [...alertPressureRows].reverse()[p.dataIndex];
+                  if (row?.id) navigate(buildBackendDetailsPath(row.id));
+                },
+              }}
+            />
           </ChartPanel>
         );
       case WIDGET_IDS.modalityStrip:
@@ -515,7 +587,7 @@ function DashboardHomeInner() {
               <Link className="fs-link" to="/app/platform/health">Platform health <ChevronRight size={12} aria-hidden /></Link>
             </div>
             <div className="fo-platform-kpis">
-              <button type="button" className="fo-platform-kpi" onClick={() => navigate('/app/platform/health')}>
+              <button type="button" className={`fo-platform-kpi${collectorBad ? ' fo-platform-kpi--bad' : ' fo-platform-kpi--ok'}`} onClick={() => navigate('/app/platform/health')}>
                 <span className="fo-platform-kpi__val">{collectorBad}/{providers.length || '—'}</span>
                 <span className="fo-platform-kpi__lbl">Collectors bad</span>
               </button>
@@ -523,9 +595,13 @@ function DashboardHomeInner() {
                 <span className="fo-platform-kpi__val">{latestTelemetry ? formatISTTime(latestTelemetry, false) : '—'}</span>
                 <span className="fo-platform-kpi__lbl">Latest telemetry</span>
               </button>
-              <button type="button" className="fo-platform-kpi" onClick={() => navigate('/app/resources/environment')}>
-                <span className="fo-platform-kpi__val">Environment</span>
-                <span className="fo-platform-kpi__lbl">Facility data</span>
+              <button type="button" className="fo-platform-kpi" onClick={() => navigate('/app/execution/queues')}>
+                <span className="fo-platform-kpi__val">{totalPending}</span>
+                <span className="fo-platform-kpi__lbl">Fleet pending jobs</span>
+              </button>
+              <button type="button" className={`fo-platform-kpi${greenPct != null && greenPct < 50 ? ' fo-platform-kpi--warn' : ' fo-platform-kpi--ok'}`} onClick={() => navigate(HEALTH_PATH)}>
+                <span className="fo-platform-kpi__val">{greenPct != null ? `${greenPct}%` : '—'}</span>
+                <span className="fo-platform-kpi__lbl">Qubits GREEN</span>
               </button>
             </div>
             <ChartPanel
@@ -599,7 +675,8 @@ function DashboardHomeInner() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [d, rows, alertSummary, crit, warn, other, total, redBackends, offline, collectorBad, providers.length,
-    cohRows, cohOption, queueRows, queueOption, calRows, calOption, fleetStateTotals, fleetPieOption, workloadScatter, workloadOption, routerStackOption,
+    cohRows, cohOption, queueRows, queueOption, calRows, calOption, fleetStateTotals, greenPct, totalPending,
+    alertPressureRows, alertPressureOption, workloadScatter, workloadOption, routerStackOption,
     events, failed, latestTelemetry, loadData, navigate, chartsReady]);
 
   const widgets = useMemo(
@@ -635,6 +712,7 @@ function DashboardHomeInner() {
         <>
           {nodes('top')}
           {zone('grid').length > 0 && <div className="fo-grid2">{nodes('grid')}</div>}
+          {zone('mid').length > 0 && <div className="fo-mid">{nodes('mid')}</div>}
           {nodes('bottom')}
         </>
       )}

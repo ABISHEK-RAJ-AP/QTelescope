@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, ChevronRight } from 'lucide-react';
 import { api } from '../services/api';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
@@ -30,11 +30,19 @@ const LANE_EMPTY = {
   info: 'No informational items in the queue.',
 };
 
+const LANE_TONE = {
+  ack: 'warn',
+  inv: 'neutral',
+  fix: 'critical',
+  info: 'ok',
+};
+
 function Row({ item }) {
+  const sev = item.severity || 'INFO';
   return (
-    <li className="oc-item">
+    <li className={`oc-item oc-item--${sev}`}>
       <div className="oc-item__main">
-        <span className={`badge ${sevBadge(item.severity)}`}>{item.severity || 'INFO'}</span>
+        <span className={`badge ${sevBadge(sev)}`}>{sev}</span>
         <div className="oc-item__body">
           <div className="oc-item__title">{item.title}</div>
           <div className="oc-item__meta">
@@ -51,6 +59,18 @@ function Row({ item }) {
       </div>
     </li>
   );
+}
+
+function pickTopItem(lanes) {
+  const order = ['ack', 'inv', 'fix', 'info'];
+  for (const id of order) {
+    const crit = lanes[id].find((i) => i.severity === 'CRITICAL');
+    if (crit) return { lane: id, item: crit };
+  }
+  for (const id of order) {
+    if (lanes[id][0]) return { lane: id, item: lanes[id][0] };
+  }
+  return null;
 }
 
 export const OperationsCentre = () => {
@@ -171,10 +191,28 @@ export const OperationsCentre = () => {
     return out;
   }, [d, providers]);
 
+  const top = useMemo(() => pickTopItem(lanes), [lanes]);
+  const critCount = useMemo(
+    () => Object.values(lanes).flat().filter((i) => i.severity === 'CRITICAL').length,
+    [lanes],
+  );
+  const warnCount = useMemo(
+    () => Object.values(lanes).flat().filter((i) => i.severity === 'WARNING').length,
+    [lanes],
+  );
+
+  const scrollLane = (id) => () => {
+    document.getElementById(`oc-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   if (loading) return <BoneyardSkeleton layout="dashboard" />;
 
   const noData = failed.length === SOURCES.length;
   const actionable = lanes.ack.length + lanes.inv.length + lanes.fix.length;
+  const staleCollectors = (providers || []).filter((p) => {
+    const age = ageMinutes(p.last_success_at);
+    return p.status !== 'OK' || (age != null && age > STALE_MIN);
+  }).length;
 
   return (
     <div className="ops-page page-stack">
@@ -191,12 +229,89 @@ export const OperationsCentre = () => {
       <ExceptionStrip
         ariaLabel="Action queue summary"
         items={[
-          { id: 'ack', label: 'Acknowledgement', value: lanes.ack.length, emphasis: lanes.ack.some((i) => i.severity === 'CRITICAL') ? 'critical' : undefined },
-          { id: 'inv', label: 'Investigation', value: lanes.inv.length },
-          { id: 'fix', label: 'Remediation', value: lanes.fix.length },
-          { id: 'info', label: 'Informational', value: lanes.info.length },
+          {
+            id: 'ack', label: 'Acknowledgement', value: lanes.ack.length,
+            sub: lanes.ack.length ? 'Needs owner' : 'Queue clear',
+            tone: lanes.ack.length ? (lanes.ack.some((i) => i.severity === 'CRITICAL') ? 'critical' : 'warn') : 'ok',
+            onClick: scrollLane('ack'),
+            help: 'Open incidents and unowned alert groups waiting for acknowledgement.',
+          },
+          {
+            id: 'inv', label: 'Investigation', value: lanes.inv.length,
+            sub: staleCollectors ? `${staleCollectors} collectors stale` : 'Collectors OK',
+            tone: lanes.inv.length ? 'warn' : 'ok',
+            onClick: scrollLane('inv'),
+            help: 'Degraded backends, stale collectors, or unknown health.',
+          },
+          {
+            id: 'fix', label: 'Remediation', value: lanes.fix.length,
+            sub: lanes.fix.length ? 'Routing advisories' : 'No quarantine',
+            tone: lanes.fix.some((i) => i.severity === 'CRITICAL') ? 'critical' : lanes.fix.length ? 'warn' : 'ok',
+            onClick: scrollLane('fix'),
+            help: 'Health-engine routing recommendations (recalibrate / quarantine).',
+          },
+          {
+            id: 'info', label: 'Informational', value: lanes.info.length,
+            sub: 'Lower priority',
+            tone: 'ok',
+            onClick: scrollLane('info'),
+            help: 'Acknowledged alerts and lower-priority context.',
+          },
         ]}
       />
+
+      <div className="oc-focus">
+        <section className={`oc-focus__card oc-focus__card--priority${top?.item?.severity === 'CRITICAL' ? ' is-critical' : ''}`} aria-labelledby="oc-next-h">
+          <p className="oc-focus__eyebrow" id="oc-next-h">Next up</p>
+          {top ? (
+            <>
+              <h2 className="oc-focus__title">{top.item.title}</h2>
+              <div className="oc-focus__meta">
+                <span className={`badge ${sevBadge(top.item.severity)}`}>{top.item.severity || 'INFO'}</span>
+                {top.item.backend && <code>{top.item.backend}</code>}
+                {top.item.meta && <span>{top.item.meta}</span>}
+                <span>{LANES.find((l) => l[0] === top.lane)?.[1]}</span>
+              </div>
+              <div className="oc-focus__actions">
+                {top.item.links.map((l) => (
+                  <Link key={l.label} className="qts-bean qts-bean--emphasis" to={l.to}>{l.label}</Link>
+                ))}
+                <button type="button" className="qts-bean" onClick={scrollLane(top.lane)}>
+                  View lane <ChevronRight size={12} aria-hidden />
+                </button>
+              </div>
+            </>
+          ) : (
+            <EmptyState compact variant="inline" title="Queue clear" message="Nothing waiting in acknowledgement, investigation, or remediation." />
+          )}
+        </section>
+
+        <section className="oc-focus__card oc-quick" aria-label="Operator shortcuts">
+          <p className="oc-focus__eyebrow">Fleet pulse</p>
+          <div className="oc-pulse">
+            <div className={`oc-pulse__cell${critCount ? ' oc-pulse__cell--crit' : ' oc-pulse__cell--ok'}`}>
+              <span className="oc-pulse__n">{critCount}</span>
+              <span className="oc-pulse__l">Critical in queue</span>
+            </div>
+            <div className={`oc-pulse__cell${warnCount ? ' oc-pulse__cell--warn' : ' oc-pulse__cell--ok'}`}>
+              <span className="oc-pulse__n">{warnCount}</span>
+              <span className="oc-pulse__l">Warnings in queue</span>
+            </div>
+            <div className={`oc-pulse__cell${actionable ? ' oc-pulse__cell--warn' : ' oc-pulse__cell--ok'}`}>
+              <span className="oc-pulse__n">{actionable}</span>
+              <span className="oc-pulse__l">Actionable total</span>
+            </div>
+          </div>
+          <div className="oc-quick__links">
+            <Link className="qts-bean" to="/app/alerts">Active alerts</Link>
+            <Link className="qts-bean" to="/app/alerts/incidents">Incidents</Link>
+            <Link className="qts-bean" to="/app/platform/health">Platform health</Link>
+            <Link className="qts-bean" to={HEALTH_PATH}>Health vector</Link>
+            <Link className="qts-bean" to="/app/execution/queues">Queues</Link>
+            <Link className="qts-bean" to="/app/investigate/timeline">Timeline</Link>
+          </div>
+        </section>
+      </div>
 
       {!noData && actionable === 0 && (
         <EmptyState compact variant="panel" title="Action queue empty" message="No items pending acknowledgement, investigation, or remediation." />
@@ -204,14 +319,21 @@ export const OperationsCentre = () => {
 
       <div className="oc-lanes">
         {LANES.map(([id, title, sub]) => (
-          <section key={id} className="card oc-lane" aria-labelledby={`oc-${id}`}>
-            <h2 id={`oc-${id}`} className="ops-panel__title">{title} <span className="oc-count">{lanes[id].length}</span></h2>
-            <p className="ops-panel__sub">{sub}</p>
-            {lanes[id].length === 0 ? (
-              <p className="oc-lane-empty">{LANE_EMPTY[id]}</p>
-            ) : (
-              <ul className="oc-list">{lanes[id].map((it) => <Row key={it.key} item={it} />)}</ul>
-            )}
+          <section key={id} className={`card oc-lane oc-lane--${id}`} aria-labelledby={`oc-${id}`}>
+            <header className="oc-lane__head">
+              <div className="oc-lane__head-row">
+                <h2 id={`oc-${id}`} className="ops-panel__title">{title}</h2>
+                <span className="oc-count" data-tone={LANE_TONE[id]}>{lanes[id].length}</span>
+              </div>
+              <p className="ops-panel__sub">{sub}</p>
+            </header>
+            <div className="oc-lane__body">
+              {lanes[id].length === 0 ? (
+                <p className="oc-lane-empty">{LANE_EMPTY[id]}</p>
+              ) : (
+                <ul className="oc-list">{lanes[id].map((it) => <Row key={it.key} item={it} />)}</ul>
+              )}
+            </div>
           </section>
         ))}
       </div>

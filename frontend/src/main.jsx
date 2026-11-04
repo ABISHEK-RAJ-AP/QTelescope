@@ -7,6 +7,7 @@ import { LoginPage } from './pages/LoginPage.jsx';
 import { RegisterPage } from './pages/RegisterPage.jsx';
 import App from './App.jsx';
 import { initA11yFromStorage } from './lib/accessibilityPrefs.js';
+import { A11yRuntimeEffects } from './components/shell/A11yRuntimeEffects.jsx';
 import './index.css';
 
 initA11yFromStorage();
@@ -14,6 +15,7 @@ initA11yFromStorage();
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ThemeProvider defaultTheme="light">
+      <A11yRuntimeEffects />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LandingPage />} />

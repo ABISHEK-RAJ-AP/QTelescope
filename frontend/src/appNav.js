@@ -197,8 +197,9 @@ export function parseAppPath(pathname) {
       return out;
     }
     out.mainTopic = 'resources';
-    if (sub === 'environment' || sub === 'health') {
-      out.resourceSubTab = sub;
+    if (sub === 'environment' || sub === 'health' || sub === 'capabilities' || sub === 'qdmi') {
+      // legacy /qdmi path → capabilities
+      out.resourceSubTab = sub === 'qdmi' ? 'capabilities' : sub;
     }
     if (sub === 'alerts') {
       out.mainTopic = 'alerts';

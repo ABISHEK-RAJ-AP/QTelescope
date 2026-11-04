@@ -39,6 +39,10 @@ import QuotaBanner from './components/QuotaBanner.jsx';
 import StudioConsole, { nextConsoleLine } from './components/StudioConsole.jsx';
 import StudioPageHero from './components/StudioPageHero.jsx';
 import BuildContextBar from './components/BuildContextBar.jsx';
+import WorkspaceIdeRail from './components/WorkspaceIdeRail.jsx';
+import SimMetricsPanel from './components/SimMetricsPanel.jsx';
+import SimResultDrawer from './components/SimResultDrawer.jsx';
+import EmptyState from './components/EmptyState.jsx';
 import { writeContextProjectId } from '@qre-theme/contextScope.js';
 import useStudioHotkeys from './hooks/useStudioHotkeys.js';
 import useDragHeight from './hooks/useDragHeight.js';
@@ -88,9 +92,9 @@ function Home() {
       <div className="qre-studio-page">
         <div className="qre-studio-landing-in">
         <StudioPageHero
-          eyebrow="Build workspace"
+          eyebrow="Q-Forge workspace"
           title={config?.display_name ?? 'Q-Forge'}
-          subtitle="Create projects, run simulation, and submit packages for institutional review in QRP · Govern."
+          subtitle="Create circuit projects, simulate locally, compile with preflight, and package submissions from one studio."
           actions={
             <>
               <Link to="/landing" className="qre-btn qre-btn--ghost">
@@ -109,11 +113,46 @@ function Home() {
         <HomeRecentActivity items={summary?.recent_activity} />
         </div>
 
+        <section className="qf-home-section">
+          <div className="qf-home-section__head">
+            <h2>Your projects</h2>
+            <button type="button" onClick={onNew} className="qre-btn qre-btn--ghost">
+              New
+            </button>
+          </div>
+          {projects.length === 0 ? (
+            <EmptyState
+              title="No projects yet"
+              body="Create a blank circuit workspace to open the IDE — source editor, visual composer, simulate, and submit."
+              action={
+                <button type="button" onClick={onNew} className="qre-btn qre-btn--primary">
+                  Create first project
+                </button>
+              }
+            />
+          ) : (
+            <div className="qf-project-grid">
+              {projects.map((p) => (
+                <Link key={p.project_id} to={`/project/${p.project_id}`} className="qf-project-card">
+                  <div className="qf-project-card__top">
+                    <span className="qf-project-card__type">{p.project_type}</span>
+                    {p.submission_lock ? <span className="qf-project-card__lock">Locked</span> : null}
+                  </div>
+                  <h3 className="qf-project-card__title">{p.name}</h3>
+                  <p className="qf-project-card__meta">{p.slug}</p>
+                  <span className="qf-project-card__cta">Open workspace →</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+
         {config && (
-          <section>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', marginBottom: 'var(--space-4)' }}>
-              Platform capabilities ({config.features.length})
-            </h2>
+          <section className="qf-home-section">
+            <div className="qf-home-section__head">
+              <h2>Studio capabilities</h2>
+              <span className="qf-home-section__count">{config.features.length}</span>
+            </div>
             <div className="qre-feature-grid">
               {config.features.map((f) => (
                 <div key={f.id} className="qre-feature-card">
@@ -129,33 +168,6 @@ function Home() {
             </div>
           </section>
         )}
-
-        <section className="qre-card">
-          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', marginTop: 0 }}>Projects</h2>
-          <ul className="qre-project-list">
-            {projects.map((p) => (
-              <li key={p.project_id} className="qre-project-list__item">
-                <div>
-                  <Link to={`/project/${p.project_id}`} className="qre-project-list__link">
-                    {p.name}
-                  </Link>
-                  <p className="qre-project-list__meta">
-                    {p.project_type} · {p.slug}
-                    {p.submission_lock ? ' · governed lock' : ''}
-                  </p>
-                </div>
-                <Link to={`/project/${p.project_id}`} className="qre-btn qre-btn--ghost">
-                  Open
-                </Link>
-              </li>
-            ))}
-            {projects.length === 0 && (
-              <li className="qre-project-list__item" style={{ justifyContent: 'center', border: 'none' }}>
-                <p style={{ color: 'var(--text-muted)', margin: 0 }}>No projects yet — create one to start editing circuits.</p>
-              </li>
-            )}
-          </ul>
-        </section>
       </div>
     </ShellLayout>
   );
@@ -180,6 +192,7 @@ function ProjectView() {
   const [timelineFilter, setTimelineFilter] = useState('all');
   const [consoleLines, setConsoleLines] = useState([]);
   const [consoleExpanded, setConsoleExpanded] = useState(true);
+  const [resultOpen, setResultOpen] = useState(false);
   const [splitConsole, setSplitConsole] = useState(() => {
     try {
       return localStorage.getItem('qre_studio_split_console') === '1';
@@ -308,6 +321,7 @@ function ProjectView() {
         appendLog(`Simulation failed: ${finalJob.error || finalJob.status}`, 'error');
       } else {
         appendLog(`Simulation completed · job ${finalJob.job_id?.slice(0, 8) ?? '—'}`, 'success');
+        setResultOpen(true);
       }
       if (finalJob.workload_id) {
         const tl = await getWorkloadTimeline(finalJob.workload_id);
@@ -441,15 +455,20 @@ function ProjectView() {
       <div className={`qre-studio-page${splitConsole ? ' qre-studio-page--split' : ''}`}>
         <BackLink />
         <StudioPageHero
-          eyebrow="Project workspace"
+          eyebrow="Project IDE"
           title={project.name}
-          subtitle="Edit source or circuit, run local simulation, then compile and submit for QRP governance."
+          subtitle="Source · visual circuit · simulate · compile & submit — one Q-Forge workspace."
           chips={heroChips}
           actions={
             <>
               <button type="button" onClick={toggleSplitConsole} className="qre-btn qre-btn--ghost">
                 {splitConsole ? 'Stack console' : 'Dock console'}
               </button>
+              {simResult && (
+                <button type="button" onClick={() => setResultOpen(true)} className="qre-btn qre-btn--ghost">
+                  Last results
+                </button>
+              )}
               {!locked && (
                 <button type="button" onClick={onSaveSource} className="qre-btn qre-btn--primary">
                   Save circuit
@@ -460,8 +479,15 @@ function ProjectView() {
         />
 
         {locked && (
-          <p className="qre-alert">Governed lock active — edits disabled ({locked.governance_state}).</p>
+          <p className="qre-alert">Submission lock active — edits disabled ({locked.governance_state}).</p>
         )}
+
+        <SimResultDrawer
+          open={resultOpen}
+          onClose={() => setResultOpen(false)}
+          simResult={simResult}
+          defaultShots={defaultShots}
+        />
 
         <div className="qre-studio-workstack">
           <div className="qre-studio-workstack__primary">
@@ -479,7 +505,16 @@ function ProjectView() {
           ))}
         </nav>
 
-        <div className="qre-studio-layout">
+        <div className="qre-studio-layout qre-studio-layout--ide">
+          <WorkspaceIdeRail
+            tab={tab}
+            circuitId={circuitId}
+            projectName={project.name}
+            gatePalette={gatePalette}
+            locked={!!locked}
+            onFocusSource={() => setTab('source')}
+            onFocusVisual={() => setTab('visual')}
+          />
           <div className="qre-studio-main">
             {tab === 'source' && (
               <section className="qre-studio-panel">
@@ -564,28 +599,35 @@ function ProjectView() {
                     </button>
                   </div>
                 </div>
-                <div className="qre-studio-panel__body">
-                  <QuotaBanner shots={defaultShots} blockLabel onBlockedChange={setSimQuotaBlocked} />
-                  {simResult?.result?.counts && (
-                    <div style={{ marginTop: 'var(--space-4)' }}>
-                      <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, margin: '0 0 var(--space-3)' }}>
-                        Results · {simResult.manifest?.execution_class ?? 'simulated'}
+                <div className="qre-studio-panel__body qf-sim-layout">
+                  <div className="qf-sim-layout__main">
+                    <QuotaBanner shots={defaultShots} blockLabel onBlockedChange={setSimQuotaBlocked} />
+                    {simResult?.result?.counts ? (
+                      <div style={{ marginTop: 'var(--space-4)' }}>
+                        <div className="qf-sim-layout__result-head">
+                          <h3 style={{ fontSize: 'var(--text-sm)', fontWeight: 600, margin: 0 }}>
+                            Results · {simResult.manifest?.execution_class ?? 'simulated'}
+                          </h3>
+                          <button type="button" className="qre-btn qre-btn--ghost" onClick={() => setResultOpen(true)}>
+                            Expand results
+                          </button>
+                        </div>
+                        <SimHistogram counts={simResult.result.counts} />
+                      </div>
+                    ) : (
+                      <EmptyState
+                        title="No simulation yet"
+                        body="Save your circuit, then run simulation to populate histogram and metrics."
+                      />
+                    )}
+                    <div style={{ marginTop: 'var(--space-5)' }}>
+                      <h3 className="qre-studio-panel__title" style={{ marginBottom: 'var(--space-3)' }}>
+                        Workload timeline
                       </h3>
-                      <SimHistogram counts={simResult.result.counts} />
+                      <WorkloadTimeline timeline={workloadTimeline} filter={timelineFilter} filterSlot={timelineFilters} />
                     </div>
-                  )}
-                  {simResult?.manifest && (
-                    <details style={{ marginTop: 'var(--space-4)' }}>
-                      <summary style={{ fontSize: 'var(--text-sm)', cursor: 'pointer', color: 'var(--text-muted)' }}>Job manifest</summary>
-                      <pre className="qre-timeline__payload">{JSON.stringify(simResult.manifest, null, 2)}</pre>
-                    </details>
-                  )}
-                  <div style={{ marginTop: 'var(--space-5)' }}>
-                    <h3 className="qre-studio-panel__title" style={{ marginBottom: 'var(--space-3)' }}>
-                      Workload timeline
-                    </h3>
-                    <WorkloadTimeline timeline={workloadTimeline} filter={timelineFilter} filterSlot={timelineFilters} />
                   </div>
+                  <SimMetricsPanel simResult={simResult} defaultShots={defaultShots} />
                 </div>
               </section>
             )}
