@@ -66,6 +66,17 @@ sudo nginx -t
 sudo systemctl enable nginx
 sudo systemctl reload nginx
 
+# LAN access: open firewall port 80 if ufw is active
+if command -v ufw >/dev/null 2>&1; then
+  if sudo ufw status 2>/dev/null | grep -qi 'Status: active'; then
+    echo "==> Opening UFW TCP 80 for LAN"
+    sudo ufw allow 80/tcp comment 'qtelescope-nginx' || true
+    sudo ufw reload || true
+  else
+    echo "==> UFW inactive (OK). If still blocked, check cloud/security groups."
+  fi
+fi
+
 # Quick local check
 if curl -fsS -o /dev/null -w '' http://127.0.0.1/healthz 2>/dev/null; then
   echo "==> healthz OK"
@@ -73,24 +84,28 @@ else
   echo "==> Warning: healthz not reachable yet (nginx up?)"
 fi
 
+LAN_IPS="$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9.]+$' | grep -v '^127\.' || true)"
+
 echo ""
 echo "Done. Keep uvicorn on :8000 in another terminal."
 echo ""
-if [[ "$SERVER_NAME" == "_" ]]; then
-  echo "Open in Guacamole browser:"
-  echo "  http://127.0.0.1"
-  echo "  http://localhost"
-  echo ""
-  echo "To use a hostname next time:"
-  echo "  SERVER_NAME=myname.local $0"
+echo "THIS machine only:  http://127.0.0.1   http://localhost"
+echo ""
+echo "OTHER PCs on same LAN — use THIS VM IP (not localhost):"
+if [[ -n "$LAN_IPS" ]]; then
+  while read -r ip; do
+    [[ -z "$ip" ]] && continue
+    echo "  http://${ip}"
+  done <<< "$LAN_IPS"
 else
-  echo "Open (if DNS /hosts points here):"
-  echo "  http://${SERVER_NAME}"
-  echo ""
-  echo "On THIS VM only, also works:"
-  echo "  http://127.0.0.1"
-  echo "  http://localhost"
-  echo ""
-  echo "Optional /etc/hosts on this VM:"
-  echo "  echo '127.0.0.1 ${SERVER_NAME}' | sudo tee -a /etc/hosts"
+  echo "  (run: hostname -I) then open http://THAT_IP"
 fi
+echo ""
+if [[ "$SERVER_NAME" != "_" ]]; then
+  echo "Hostname (needs DNS or /etc/hosts on each client):"
+  echo "  http://${SERVER_NAME}"
+  echo "  On each other PC:  <VM_IP>  ${SERVER_NAME}   →  /etc/hosts or Windows hosts"
+  echo ""
+fi
+echo "If other PCs still fail: Guacamole guest may be NAT'd — its IP is not"
+echo "on the office LAN. Then you need host port-forward or run on a real LAN host."
