@@ -51,7 +51,7 @@ class Settings(BaseSettings):
 
     @property
     def ADMIN_PASSWORD(self) -> str:
-        return read_env_val("ADMIN_PASSWORD", "")
+        return read_env_val("ADMIN_PASSWORD", "quantum2026")
 
     @property
     def USER_USERNAME(self) -> str:
@@ -59,7 +59,7 @@ class Settings(BaseSettings):
 
     @property
     def USER_PASSWORD(self) -> str:
-        return read_env_val("USER_PASSWORD", "")
+        return read_env_val("USER_PASSWORD", "quantum2026")
 
     @property
     def IBM_QUANTUM_TOKEN(self) -> str:

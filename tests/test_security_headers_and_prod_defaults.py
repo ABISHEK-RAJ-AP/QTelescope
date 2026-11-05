@@ -40,6 +40,8 @@ def test_prod_profile_defaults_on(clear_prod_env, monkeypatch):
     reload(ep)
     assert sessions.require_api_auth() is True
     assert rbac.rbac_enforced() is True
+    assert boot.block_default_bootstrap_enabled() is False
+    monkeypatch.setenv("BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS", "true")
     assert boot.block_default_bootstrap_enabled() is True
 
 

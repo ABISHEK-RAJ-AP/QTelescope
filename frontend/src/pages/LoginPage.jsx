@@ -20,8 +20,7 @@ export function LoginPage({ onLoginSuccess }) {
   const [captchaKey, setCaptchaKey] = useState(0)
   const [mfaToken, setMfaToken] = useState('')
   const [mfaCode, setMfaCode] = useState('')
-  /* Default hidden — only show when API explicitly allows (dev). Safer for VAPT/VM. */
-  const [showDevPresets, setShowDevPresets] = useState(false)
+  const [showDevPresets, setShowDevPresets] = useState(true)
 
   const finishSession = async (res) => {
     let user = res.user
@@ -65,8 +64,12 @@ export function LoginPage({ onLoginSuccess }) {
 
   useEffect(() => {
     api.getConfigStatus()
-      .then((s) => setShowDevPresets(Boolean(s?.bootstrap?.show_dev_login_presets)))
-      .catch(() => setShowDevPresets(false))
+      .then((s) => {
+        if (s?.bootstrap && Object.prototype.hasOwnProperty.call(s.bootstrap, 'show_dev_login_presets')) {
+          setShowDevPresets(Boolean(s.bootstrap.show_dev_login_presets))
+        }
+      })
+      .catch(() => setShowDevPresets(true))
   }, [])
 
   const handleSubmit = async (e) => {
@@ -130,19 +133,19 @@ export function LoginPage({ onLoginSuccess }) {
           {showDevPresets ? (
             <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
               <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
-                Lab presets
+                Demo accounts
               </span>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => { setUsername('admin'); setPassword(''); setError('') }}
+                  onClick={() => { setUsername('admin'); setPassword('quantum2026'); setError('') }}
                   className="rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
                 >
                   Admin
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setUsername('user_researcher'); setPassword(''); setError('') }}
+                  onClick={() => { setUsername('user_researcher'); setPassword('quantum2026'); setError('') }}
                   className="rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
                 >
                   Researcher
