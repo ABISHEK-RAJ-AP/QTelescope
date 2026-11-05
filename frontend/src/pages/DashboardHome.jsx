@@ -728,14 +728,11 @@ function DashboardHomeInner() {
     [layout.widgets, customizing, widgetVisibility],
   );
 
-  if (loading) return <BoneyardSkeleton layout="dashboard" />;
-
-  const zone = (z) => widgets.filter((w) => (PLACEMENT[w.id] || 'grid') === z);
-  const nodes = (z) => zone(z).map((w) => <React.Fragment key={w.id}>{renderWidget(w.id)}</React.Fragment>);
   const noData = failed.length === SOURCES.length;
   const stale = lastRefresh && (Date.now() - lastRefresh.getTime()) / 60000 > 2;
 
   useEffect(() => {
+    if (loading) return;
     if (!failed.length && !stale) return;
     const when = lastRefresh ? ` Last good load ${formatISTTime(lastRefresh)}.` : '';
     const msg = noData
@@ -745,7 +742,12 @@ function DashboardHomeInner() {
         : `Telemetry is stale.${when}`;
     if (noData) notifyError(msg, { toastId: 'fleet-load' });
     else notifyWarn(msg, { toastId: 'fleet-load' });
-  }, [failed, noData, stale, lastRefresh]);
+  }, [loading, failed, noData, stale, lastRefresh]);
+
+  if (loading) return <BoneyardSkeleton layout="dashboard" />;
+
+  const zone = (z) => widgets.filter((w) => (PLACEMENT[w.id] || 'grid') === z);
+  const nodes = (z) => zone(z).map((w) => <React.Fragment key={w.id}>{renderWidget(w.id)}</React.Fragment>);
 
   return (
     <div className="dashboard-home">

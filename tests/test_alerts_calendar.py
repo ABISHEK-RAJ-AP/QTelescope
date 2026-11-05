@@ -20,6 +20,7 @@ def test_load_errors_go_to_toast_not_page_banner():
     assert "Backend unreachable" in home
     assert 'role={noData ? \'alert\' : \'status\'}' not in home
     assert "fs-banner--err" not in home
+    assert home.find("toastId: 'fleet-load'") < home.find('if (loading) return <BoneyardSkeleton')
     assert "DiscussionModal" in inc
     assert "ALERT_PAGE" in inc
     assert "CollapsibleSection" in inc

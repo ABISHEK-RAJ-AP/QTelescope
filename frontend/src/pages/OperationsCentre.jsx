@@ -206,20 +206,21 @@ export const OperationsCentre = () => {
     document.getElementById(`oc-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  if (loading) return <BoneyardSkeleton layout="dashboard" />;
-
   const noData = failed.length === SOURCES.length;
-  const actionable = lanes.ack.length + lanes.inv.length + lanes.fix.length;
 
   useEffect(() => {
-    if (!failed.length) return;
+    if (loading || !failed.length) return;
     const when = lastRefresh ? ` Last good load ${formatISTTime(lastRefresh)}.` : '';
     const msg = noData
       ? `Backend unreachable.${when}`
       : `Partial load: ${failed.join(', ')} failed — some queue items may be missing.${when}`;
     if (noData) notifyError(msg, { toastId: 'ops-load' });
     else notifyWarn(msg, { toastId: 'ops-load' });
-  }, [failed, noData, lastRefresh]);
+  }, [loading, failed, noData, lastRefresh]);
+
+  if (loading) return <BoneyardSkeleton layout="dashboard" />;
+
+  const actionable = lanes.ack.length + lanes.inv.length + lanes.fix.length;
   const staleCollectors = (providers || []).filter((p) => {
     const age = ageMinutes(p.last_success_at);
     return p.status !== 'OK' || (age != null && age > STALE_MIN);
