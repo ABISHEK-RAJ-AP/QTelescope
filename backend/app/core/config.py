@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Quantum Telemetry, Monitoring & Resource Management Platform"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = "cdac_quantum_telemetry_secret_key_2026"
+    SECRET_KEY: str = ""
     
     # Database (In-Memory SQLite by default)
     DATABASE_URL: str = "sqlite:///:memory:"
@@ -48,7 +48,7 @@ class Settings(BaseSettings):
 
     @property
     def ADMIN_PASSWORD(self) -> str:
-        return read_env_val("ADMIN_PASSWORD", "quantum2026")
+        return read_env_val("ADMIN_PASSWORD", "")
 
     @property
     def USER_USERNAME(self) -> str:
@@ -56,7 +56,7 @@ class Settings(BaseSettings):
 
     @property
     def USER_PASSWORD(self) -> str:
-        return read_env_val("USER_PASSWORD", "quantum2026")
+        return read_env_val("USER_PASSWORD", "")
 
     @property
     def IBM_QUANTUM_TOKEN(self) -> str:
@@ -76,6 +76,6 @@ class Settings(BaseSettings):
 
     @property
     def ONPREM_QPU_URL(self) -> str:
-        return read_env_val("ONPREM_QPU_URL", "http://localhost:8080")
+        return read_env_val("ONPREM_QPU_URL", "")
 
 settings = Settings()

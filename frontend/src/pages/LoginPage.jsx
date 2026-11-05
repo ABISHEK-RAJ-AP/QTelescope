@@ -135,14 +135,14 @@ export function LoginPage({ onLoginSuccess }) {
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  onClick={() => { setUsername('admin'); setPassword('quantum2026'); setError('') }}
+                  onClick={() => { setUsername('admin'); setPassword(''); setError('') }}
                   className="rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
                 >
                   Admin
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setUsername('user_researcher'); setPassword('quantum2026'); setError('') }}
+                  onClick={() => { setUsername('user_researcher'); setPassword(''); setError('') }}
                   className="rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
                 >
                   Researcher

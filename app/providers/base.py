@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any
 
+ADAPTER_USER_AGENT = "Q-TeleScope/1.0 (quantum-operations-console)"
+
+
 class BaseProviderAdapter(ABC):
     
     @abstractmethod

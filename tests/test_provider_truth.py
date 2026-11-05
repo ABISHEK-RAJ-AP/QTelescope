@@ -1,5 +1,12 @@
 from app.providers.catalog import BY_ID
-from app.providers.truth import MOCK_ONLY, STUB, provider_truth_label, ionq_live_enabled
+from app.providers.truth import (
+    LIVE_NOT_CONFIGURED,
+    LIVE_UNVERIFIED,
+    MOCK_ONLY,
+    STUB,
+    ionq_live_enabled,
+    provider_truth_label,
+)
 from app.providers.live_harness import run_live_verification
 from app.facility.mqtt_boundary import NotBuiltFacilityMqtt, mqtt_ingest_status
 from app.services.circuit_breaker import is_open, record_outcome
@@ -12,8 +19,16 @@ def test_stub_vendor_truth():
     assert provider_truth_label(item, configured=True) == STUB
 
 
-def test_ionq_mock_only_default(monkeypatch):
+def test_ionq_live_when_configured(monkeypatch):
     monkeypatch.delenv("IONQ_LIVE_ENABLED", raising=False)
+    item = BY_ID["ionq_quantum"]
+    assert provider_truth_label(item, configured=True) == LIVE_UNVERIFIED
+    assert provider_truth_label(item, configured=False) == LIVE_NOT_CONFIGURED
+    assert ionq_live_enabled()
+
+
+def test_ionq_kill_switch_mock_only(monkeypatch):
+    monkeypatch.setenv("IONQ_LIVE_ENABLED", "false")
     item = BY_ID["ionq_quantum"]
     assert provider_truth_label(item, configured=True) == MOCK_ONLY
     assert not ionq_live_enabled()

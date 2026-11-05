@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 STUB = "STUB"
 MOCK_ONLY = "MOCK_ONLY"
@@ -10,12 +10,10 @@ LIVE_NOT_CONFIGURED = "LIVE_NOT_CONFIGURED"
 LIVE_UNVERIFIED = "LIVE_UNVERIFIED"
 LIVE_VERIFIED = "LIVE_VERIFIED"
 
-# Live adapter code paths that still use mock catalog until vendor API wired
-MOCK_ONLY_LIVE_SLOTS = frozenset({"ionq_quantum"})
-
 
 def ionq_live_enabled() -> bool:
-    return os.getenv("IONQ_LIVE_ENABLED", "false").lower().strip() in ("1", "true", "yes")
+    raw = os.getenv("IONQ_LIVE_ENABLED", "true").lower().strip()
+    return raw in ("1", "true", "yes")
 
 
 def provider_truth_label(
@@ -27,7 +25,7 @@ def provider_truth_label(
     if catalog_item.get("adapter") == "stub":
         return STUB
     pid = catalog_item.get("id") or ""
-    if pid in MOCK_ONLY_LIVE_SLOTS and not ionq_live_enabled():
+    if pid == "ionq_quantum" and not ionq_live_enabled():
         return MOCK_ONLY
     if not configured:
         return LIVE_NOT_CONFIGURED
@@ -39,7 +37,7 @@ def provider_truth_label(
 def truth_help(label: str) -> str:
     return {
         STUB: "Credential slot only — no collector adapter",
-        MOCK_ONLY: "Live slot but mock catalog only (no vendor API poll)",
+        MOCK_ONLY: "IonQ live poll disabled (IONQ_LIVE_ENABLED=false)",
         LIVE_NOT_CONFIGURED: "Adapter wired — credentials not set (Rigetti public ISA needs none)",
         LIVE_UNVERIFIED: "Configured; live poll not verified in this environment",
         LIVE_VERIFIED: "Live contract check passed with credentials",

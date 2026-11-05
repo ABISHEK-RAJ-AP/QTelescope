@@ -66,6 +66,16 @@ export function AddBackendWizard({ open, onClose, onComplete, isAdmin }) {
   }, [open, onClose, busy]);
 
   const provider = providers.find((p) => p.id === selected);
+  const tokenField = (provider?.fields || []).find((f) => f.in === 'token');
+  const urlField = (provider?.fields || []).find((f) => f.in === 'endpoint_url');
+  const tokenRequired = Boolean(tokenField && tokenField.required !== false && !provider?.is_configured && !token.trim());
+  const urlRequired = Boolean(
+    urlField
+    && urlField.required !== false
+    && !provider?.is_configured
+    && !endpoint.trim()
+    && !(provider?.endpoint_url || '').trim(),
+  );
 
   const filteredProviders = useMemo(() => {
     const q = filter.trim().toLowerCase();
@@ -194,35 +204,46 @@ export function AddBackendWizard({ open, onClose, onComplete, isAdmin }) {
                 Credentials for <strong>{provider.name || provider.display_name || provider.id}</strong>.
                 Values are sent once over HTTPS and are not shown again in the UI.
               </p>
-              <div className="bk-wizard__field">
-                <label htmlFor="bk-wizard-token">
-                  Provider token
-                  <input
-                    id="bk-wizard-token"
-                    type="password"
-                    autoComplete="off"
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
-                    placeholder={provider.is_configured ? 'Leave blank to keep existing secret' : 'Paste provider token'}
-                  />
-                  <span className="bk-wizard__field-hint">
-                    {provider.is_configured ? 'Optional when updating endpoint only.' : 'Required for first-time setup.'}
-                  </span>
-                </label>
-              </div>
-              <div className="bk-wizard__field">
-                <label htmlFor="bk-wizard-endpoint">
-                  Endpoint URL
-                  <input
-                    id="bk-wizard-endpoint"
-                    type="url"
-                    value={endpoint}
-                    onChange={(e) => setEndpoint(e.target.value)}
-                    placeholder={provider.endpoint_url || 'https://…'}
-                  />
-                  <span className="bk-wizard__field-hint">Optional. Used for on-prem or custom gateway URLs.</span>
-                </label>
-              </div>
+              {tokenField && (
+                <div className="bk-wizard__field">
+                  <label htmlFor="bk-wizard-token">
+                    {tokenField.label || 'Provider token'}
+                    <input
+                      id="bk-wizard-token"
+                      type="password"
+                      autoComplete="off"
+                      value={token}
+                      onChange={(e) => setToken(e.target.value)}
+                      placeholder={provider.is_configured ? 'Leave blank to keep existing secret' : 'Paste provider token'}
+                    />
+                    <span className="bk-wizard__field-hint">
+                      {tokenField.required === false || provider.is_configured
+                        ? 'Optional. Leave blank to keep a saved secret or skip if the catalog is public.'
+                        : 'Required for first-time setup. Sent once; never shown again.'}
+                    </span>
+                  </label>
+                </div>
+              )}
+              {urlField && (
+                <div className="bk-wizard__field">
+                  <label htmlFor="bk-wizard-endpoint">
+                    {urlField.label || 'Endpoint URL'}
+                    <input
+                      id="bk-wizard-endpoint"
+                      type="url"
+                      value={endpoint}
+                      onChange={(e) => setEndpoint(e.target.value)}
+                      placeholder={provider.endpoint_url || 'https://…'}
+                    />
+                    <span className="bk-wizard__field-hint">
+                      {urlField.required === false ? 'Optional custom gateway URL.' : 'Controller URL for on-prem discovery.'}
+                    </span>
+                  </label>
+                </div>
+              )}
+              {!tokenField && !urlField && (
+                <p className="bk-wizard__intro">This provider has no credential fields in the catalog.</p>
+              )}
             </div>
           )}
 
@@ -232,7 +253,7 @@ export function AddBackendWizard({ open, onClose, onComplete, isAdmin }) {
                 <dt>Provider</dt>
                 <dd>{provider.name || provider.display_name || provider.id}</dd>
                 <dt>Credential</dt>
-                <dd>{provider.is_configured || token.trim() ? 'Will be saved' : 'Using existing secret'}</dd>
+                <dd>{token.trim() || endpoint.trim() ? 'Will be saved' : (provider.is_configured ? 'Using existing secret' : 'None (public / optional)')}</dd>
                 <dt>Discovery</dt>
                 <dd>Registers QPUs from all configured providers into Backend library.</dd>
               </dl>
@@ -260,7 +281,7 @@ export function AddBackendWizard({ open, onClose, onComplete, isAdmin }) {
             <button
               type="button"
               className="btn btn-primary"
-              disabled={!isAdmin || (step === 0 && !selected) || (step === 1 && !provider?.is_configured && !token.trim())}
+              disabled={!isAdmin || (step === 0 && !selected) || (step === 1 && (tokenRequired || urlRequired))}
               onClick={() => setStep((s) => s + 1)}
             >
               Continue

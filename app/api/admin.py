@@ -1,3 +1,4 @@
+import logging
 import os
 import uuid
 from fastapi import APIRouter, Depends, HTTPException
@@ -8,8 +9,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.entities import (
     ProviderModel, CollectionScheduleModel, AlertRuleModel, BackendModel,
-    QubitModel, ConnectivityEdgeModel, BackendTelemetryModel, QubitTelemetryModel,
-    GateTelemetryModel, CalibrationSnapshotModel, JobRecordModel, AlertModel
+    BackendTelemetryModel, CalibrationSnapshotModel, JobRecordModel, AlertModel,
 )
 from app.schemas.schemas import (
     ProviderResponse, ScheduleUpdateSchema, AlertRuleSchema,
@@ -40,6 +40,10 @@ from app.services.collector_dlq import list_failures as list_collector_dlq
 from app.services.circuit_breaker import snapshot as circuit_snapshot
 from app.facility.mqtt_boundary import mqtt_ingest_status
 from app.core.deployment import deployment_profile
+from app.core.env_profile import env_flag, is_production_profile
+from app.core.safe_url import assert_safe_http_url
+
+logger = logging.getLogger("admin")
 
 router = APIRouter(prefix="/admin", tags=["Administration"])
 
@@ -123,8 +127,6 @@ def get_configured_credentials():
     return payload
 
 def _env_credential_write_allowed() -> bool:
-    from app.core.env_profile import env_flag, is_production_profile
-
     # Prod defaults OFF; lab defaults ON for convenience unless explicitly set.
     return env_flag("ALLOW_ENV_CREDENTIAL_WRITE", default=not is_production_profile())
 
@@ -151,7 +153,7 @@ def _update_env_file(key: str, value: str):
         with open(env_path, "w", encoding="utf-8") as f:
             f.writelines(lines)
     except Exception as e:
-        print(f"Failed to update .env: {e}")
+        logger.warning("Failed to update .env: %s", e)
 
 @router.get("/rbac-audit")
 def get_rbac_audit():
@@ -198,10 +200,15 @@ def save_ibm_token(
     collector.run_full_collection_cycle()
 
     backends = adapter.discover_backends()
-    b_names = ", ".join([b["backend_name"] for b in backends])
+    names = ", ".join(b.get("backend_name") or b.get("backend_id", "") for b in backends)
     return {
         "status": "SUCCESS",
-        "message": f"IBM Quantum authenticated! Discovered {len(backends)} live QPUs ({b_names}). Telemetry synchronized."
+        "discovered": len(backends),
+        "message": (
+            f"IBM Quantum authenticated. Discovered {len(backends)} QPU(s){f' ({names})' if names else ''}."
+            if backends
+            else "IBM Quantum authenticated. Discovery returned 0 backends for this account."
+        ),
     }
 
 @router.post("/credentials")
@@ -235,9 +242,12 @@ def save_provider_credentials(
         os.environ["IONQ_API_KEY"] = token
         _update_env_file("IONQ_API_KEY", token)
         adapter = IonQProviderAdapter(api_key=token)
+        if not adapter.is_authenticated:
+            raise HTTPException(status_code=400, detail="IonQ API key was rejected or api.ionq.co did not respond.")
     elif prov in ["cdac", "cdac_quantum", "onprem"]:
         if not url:
             raise HTTPException(status_code=400, detail="On-premise / C-DAC endpoint URL cannot be empty.")
+        url = assert_safe_http_url(url, allow_loopback=not is_production_profile())
         os.environ["ONPREM_QPU_URL"] = url
         _update_env_file("ONPREM_QPU_URL", url)
         adapter = OnPremiseProviderAdapter(endpoint_url=url)
@@ -253,6 +263,8 @@ def save_provider_credentials(
             raise HTTPException(status_code=400, detail=f"{spec['name']} token cannot be empty.")
         if needs_url and not url and not stored_configured(prov):
             raise HTTPException(status_code=400, detail=f"{spec['name']} endpoint URL cannot be empty.")
+        if url:
+            url = assert_safe_http_url(url, allow_loopback=not is_production_profile())
         upsert_stored(prov, token, url, data.extra)
         return {
             "status": "STUB",
@@ -265,11 +277,16 @@ def save_provider_credentials(
     collector.run_full_collection_cycle()
 
     backends = adapter.discover_backends()
-    b_names = ", ".join([b["backend_name"] for b in backends]) if backends else "Synchronized"
+    names = ", ".join(b.get("backend_name") or b.get("backend_id", "") for b in backends) if backends else ""
+    if backends:
+        msg = f"Credentials saved. Discovered {len(backends)} backend(s){f' ({names})' if names else ''}."
+    else:
+        msg = "Credentials saved. Discovery returned 0 backends from the vendor (empty catalog or controller unreachable)."
     return {
         "status": "SUCCESS",
         "provider_id": prov,
-        "message": f"Credentials saved and verified! Discovered {len(backends)} backends ({b_names})."
+        "discovered": len(backends),
+        "message": msg,
     }
 
 @router.get("/data-sources", response_model=List[ProviderResponse])

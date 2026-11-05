@@ -23,13 +23,13 @@ from app.core.mock_data import (
     get_mock_connectivity,
     get_mock_jobs,
 )
-from app.providers.base import BaseProviderAdapter
+from app.providers.base import ADAPTER_USER_AGENT, BaseProviderAdapter
 
 logger = logging.getLogger("RigettiProviderAdapter")
 
 QCS_API_BASE = os.getenv("RIGETTI_QCS_API_BASE", "https://api.qcs.rigetti.com/v1").rstrip("/")
 DEFAULT_PROCESSOR = "Cepheus-1-108Q"
-UA = "Q-TeleScope/1.0 (quantum-operations-console)"
+UA = ADAPTER_USER_AGENT
 
 
 def _backend_id_for(proc_id: str) -> str:
