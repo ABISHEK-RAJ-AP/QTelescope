@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
-import { AlertTriangle, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
+import { notifyError, notifyWarn } from '../lib/toast.js';
 import { api } from '../services/api';
 import { formatISTTime } from '../utils/time';
 import { useTheme } from '../components/ui/ThemeProvider';
@@ -516,7 +517,7 @@ function DashboardHomeInner() {
               <Link className="fs-link" to="/app/alerts">All alerts <ChevronRight size={12} aria-hidden /></Link>
             </div>
             {d.alertsSummary == null && failed.includes('alertsSummary') ? (
-              <p className="fs-banner fs-banner--err" role="alert">Alerts failed to load.</p>
+              <EmptyState compact variant="panel" title="Alerts unavailable" message="Counts will appear after the next successful load." />
             ) : total === 0 ? (
               <EmptyState compact variant="panel" title="No active alerts" message="No alerts in Active status." />
             ) : (
@@ -734,17 +735,20 @@ function DashboardHomeInner() {
   const noData = failed.length === SOURCES.length;
   const stale = lastRefresh && (Date.now() - lastRefresh.getTime()) / 60000 > 2;
 
+  useEffect(() => {
+    if (!failed.length && !stale) return;
+    const when = lastRefresh ? ` Last good load ${formatISTTime(lastRefresh)}.` : '';
+    const msg = noData
+      ? `Backend unreachable — no current data.${when}`
+      : failed.length
+        ? `Partial load: ${failed.join(', ')} failed; affected panels may be empty or stale.${when}`
+        : `Telemetry is stale.${when}`;
+    if (noData) notifyError(msg, { toastId: 'fleet-load' });
+    else notifyWarn(msg, { toastId: 'fleet-load' });
+  }, [failed, noData, stale, lastRefresh]);
+
   return (
     <div className="dashboard-home">
-      {(failed.length > 0 || stale) && (
-        <div className={`fs-banner${noData ? ' fs-banner--err' : ''}`} role={noData ? 'alert' : 'status'}>
-          <AlertTriangle size={16} aria-hidden />
-          <span>
-            {noData ? 'Backend unreachable — no current data.' : `Partial load: ${failed.join(', ')} failed; affected panels may be empty or stale.`}
-            {lastRefresh && <> Last good load {formatISTTime(lastRefresh)}.</>}
-          </span>
-        </div>
-      )}
 
       {customizing && (
         <p className="dashboard-customize-hint">Drag panels to reorder. Resize cycles compact / half row / full row. Layout saves in this browser.</p>

@@ -7,10 +7,13 @@ import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { usePermissions } from '../hooks/usePermissions.js';
 import { formatIST } from '../utils/time';
-import { SevBadge, StatusBadge, RoleBadge } from './opsShared.jsx';
+import { SevBadge, StatusBadge } from './opsShared.jsx';
 import { sevRank, qubitOf } from './opsHelpers.js';
 import { notifyError, notifySuccess } from '../lib/toast.js';
 import { ConfirmDialog } from '../components/observability/ConfirmDialog.jsx';
+import { CollapsibleSection } from '../components/observability/CollapsibleSection.jsx';
+import { DiscussionModal } from '../components/observability/DiscussionModal.jsx';
+import { ListPager } from '../components/observability/ListPager.jsx';
 import {
   parseIncidentTitle,
   formatDurationMs,
@@ -21,6 +24,7 @@ import { timelineTo } from './opsHelpers.js';
 import './IncidentDetailPage.css';
 
 const num = (v) => (v == null || !Number.isFinite(Number(v)) ? '—' : Number(v).toFixed(1));
+const ALERT_PAGE = 15;
 
 export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAlert }) {
   const nav = useNavigate();
@@ -28,9 +32,10 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
   const [inc, setInc] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
   const [dlg, setDlg] = useState(null);
+  const [discOpen, setDiscOpen] = useState(false);
+  const [alertPage, setAlertPage] = useState(1);
   const actorName = currentUser?.username || currentUser?.full_name || 'operator';
 
   const load = useCallback(async () => {
@@ -53,6 +58,13 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
   const timeline = useMemo(() => buildIncidentTimeline(inc), [inc]);
   const alerts = inc?.alerts || [];
   const activeAlerts = alerts.filter((a) => a.status === 'ACTIVE').length;
+  const sortedAlerts = useMemo(
+    () => [...alerts].sort((a, b) => sevRank(a.severity) - sevRank(b.severity)),
+    [alerts],
+  );
+  const alertPages = Math.max(1, Math.ceil(sortedAlerts.length / ALERT_PAGE));
+  const aPage = Math.min(alertPage, alertPages);
+  const shownAlerts = sortedAlerts.slice((aPage - 1) * ALERT_PAGE, aPage * ALERT_PAGE);
 
   const sevChart = useMemo(() => {
     const counts = { CRITICAL: 0, WARNING: 0, INFO: 0 };
@@ -169,12 +181,14 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
           )}
           <button type="button" className="btn btn-secondary" onClick={() => nav(timelineTo({ backendId: inc.backend_id, at: inc.last_detected_at }))}>Timeline</button>
           <button type="button" className="btn btn-secondary" onClick={() => nav(buildBackendDetailsPath(inc.backend_id, 'qubits'))}>Backend qubits</button>
+          <button type="button" className="btn btn-primary" onClick={() => setDiscOpen(true)}>
+            Discussion ({(inc.comments || []).length})
+          </button>
         </div>
       </header>
 
       <div className="inc-detail__grid">
-        <section className="card inc-detail__panel" aria-labelledby="inc-tl-h">
-          <h3 id="inc-tl-h" className="al-h">Investigation timeline</h3>
+        <CollapsibleSection id="inc-tl-h" title="Investigation timeline" className="card inc-detail__panel" defaultOpen={timeline.length <= 4}>
           <ol className="inc-timeline">
             {timeline.length === 0 ? (
               <li className="page-hint">No timeline events yet.</li>
@@ -186,16 +200,14 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
               </li>
             ))}
           </ol>
-        </section>
+        </CollapsibleSection>
 
-        <section className="card inc-detail__panel" aria-labelledby="inc-sev-h">
-          <h3 id="inc-sev-h" className="al-h">Related alerts by severity</h3>
+        <CollapsibleSection id="inc-sev-h" title="Related alerts by severity" className="card inc-detail__panel" defaultOpen={false}>
           {sevChart ? <QtECharts option={sevChart} style={{ height: 200, width: '100%' }} /> : <p className="page-hint">No linked alerts loaded.</p>}
-        </section>
+        </CollapsibleSection>
       </div>
 
-      <section className="card inc-detail__panel" aria-labelledby="inc-al-h">
-        <h3 id="inc-al-h" className="al-h">Related alerts ({alerts.length})</h3>
+      <CollapsibleSection id="inc-al-h" title={`Related alerts (${alerts.length})`} className="card inc-detail__panel">
         <div className="table-container">
           <table className="custom-table">
             <thead>
@@ -210,7 +222,7 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
             <tbody>
               {alerts.length === 0 ? (
                 <tr><td colSpan={5} className="page-hint">No alert rows linked in database.</td></tr>
-              ) : [...alerts].sort((a, b) => sevRank(a.severity) - sevRank(b.severity)).map((a) => (
+              ) : shownAlerts.map((a) => (
                 <tr
                   key={a.alert_id}
                   className={onOpenAlert ? 'al-row-clickable' : undefined}
@@ -229,44 +241,20 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
             </tbody>
           </table>
         </div>
-      </section>
+        <ListPager page={aPage} pages={alertPages} onPage={setAlertPage} />
+      </CollapsibleSection>
 
-      <section className="card inc-detail__panel" aria-labelledby="inc-disc-h">
-        <h3 id="inc-disc-h" className="al-h">Discussion ({(inc.comments || []).length})</h3>
-        {(inc.comments || []).length === 0 ? <p className="page-hint">No comments yet.</p> : (
-          <ul className="inc-comments">
-            {(inc.comments || []).map((c, i) => (
-              <li key={c.comment_id || i}>
-                <div className="inc-comments__head">
-                  <b>{c.author || 'operator'}</b>
-                  <RoleBadge role={c.role} />
-                </div>
-                <time>{c.created_at ? formatIST(c.created_at) : ''}</time>
-                <p>{c.text}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-        {perms.canComment ? (
-          <form
-            className="inc-comment-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const text = comment.trim();
-              if (!text || busy) return;
-              run(() => api.addIncidentComment(inc.incident_id, text).then(() => setComment('')), 'Comment posted.');
-            }}
-          >
-            <label className="al-field">Add comment
-              <textarea className="input-control" rows={3} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Findings, hypothesis, next steps…" />
-            </label>
-            <p className="page-hint">Posted as <b>{actorName}</b> · role <RoleBadge role={currentUser?.role} /></p>
-            <button type="submit" className="btn btn-primary" disabled={busy || !comment.trim()}>Post comment</button>
-          </form>
-        ) : (
-          <p className="page-hint">Read-only — no comment permission.</p>
-        )}
-      </section>
+      <DiscussionModal
+        open={discOpen}
+        onClose={() => setDiscOpen(false)}
+        title={`Discussion (${(inc.comments || []).length})`}
+        comments={inc.comments || []}
+        canComment={perms.canComment}
+        actorName={actorName}
+        role={currentUser?.role}
+        busy={busy}
+        onPost={(text) => run(() => api.addIncidentComment(inc.incident_id, text), 'Comment posted.')}
+      />
 
       {dlg && (
         <ConfirmDialog

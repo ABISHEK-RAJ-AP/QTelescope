@@ -1,0 +1,6 @@
+.discussion-modal {
+  width: min(560px, 100%);
+  max-height: min(80vh, 720px);
+  overflow: auto;
+}
+.discussion-modal__list { max-height: 320px; overflow: auto; }

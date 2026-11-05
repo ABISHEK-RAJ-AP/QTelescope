@@ -1,0 +1,21 @@
+.collapsible-section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.collapsible-section__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+.collapsible-section__title { margin: 0; }
+.collapsible-section__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.collapsible-section__body { margin-top: 12px; }

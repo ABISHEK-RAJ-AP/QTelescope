@@ -7,10 +7,12 @@ import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { usePermissions } from '../hooks/usePermissions.js';
 import { formatIST } from '../utils/time';
-import { SevBadge, StatusBadge, RoleBadge } from './opsShared.jsx';
+import { SevBadge, StatusBadge } from './opsShared.jsx';
 import { qubitOf, timelineTo } from './opsHelpers.js';
 import { notifyError, notifySuccess } from '../lib/toast.js';
 import { ConfirmDialog } from '../components/observability/ConfirmDialog.jsx';
+import { CollapsibleSection } from '../components/observability/CollapsibleSection.jsx';
+import { DiscussionModal } from '../components/observability/DiscussionModal.jsx';
 import { buildBackendDetailsPath, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
 import './IncidentDetailPage.css';
 
@@ -67,8 +69,8 @@ export function AlertDetailPage({
   const [alert, setAlert] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
+  const [discOpen, setDiscOpen] = useState(false);
   const [dlg, setDlg] = useState(null);
   const actorName = currentUser?.username || currentUser?.full_name || 'operator';
 
@@ -239,12 +241,14 @@ export function AlertDetailPage({
           >
             Backend qubits
           </button>
+          <button type="button" className="btn btn-primary" onClick={() => setDiscOpen(true)}>
+            Discussion ({comments.length})
+          </button>
         </div>
       </header>
 
       <div className="inc-detail__grid">
-        <section className="card inc-detail__panel" aria-labelledby="al-tl-h">
-          <h3 id="al-tl-h" className="al-h">Activity timeline</h3>
+        <CollapsibleSection id="al-tl-h" title="Activity timeline" className="card inc-detail__panel" defaultOpen={timeline.length <= 4}>
           <ol className="inc-timeline">
             {timeline.length === 0 ? (
               <li className="page-hint">No timeline events yet.</li>
@@ -256,10 +260,9 @@ export function AlertDetailPage({
               </li>
             ))}
           </ol>
-        </section>
+        </CollapsibleSection>
 
-        <section className="card inc-detail__panel" aria-labelledby="al-chart-h">
-          <h3 id="al-chart-h" className="al-h">Threshold vs observed</h3>
+        <CollapsibleSection id="al-chart-h" title="Threshold vs observed" className="card inc-detail__panel" defaultOpen>
           {thresholdChart ? (
             <QtECharts option={thresholdChart} style={{ height: 220, width: '100%' }} />
           ) : (
@@ -271,45 +274,21 @@ export function AlertDetailPage({
               <span className="al-meter__tick" style={{ left: `${(1 / 1.5) * 100}%` }} aria-hidden />
             </div>
           )}
-        </section>
+        </CollapsibleSection>
       </div>
 
-      <section className="card inc-detail__panel" aria-labelledby="al-disc-h">
-        <h3 id="al-disc-h" className="al-h">Discussion ({comments.length})</h3>
-        {comments.length === 0 ? <p className="page-hint">No comments yet. Operators with comment permission can thread findings here.</p> : (
-          <ul className="inc-comments">
-            {comments.map((c, i) => (
-              <li key={c.comment_id || i}>
-                <div className="inc-comments__head">
-                  <b>{c.author || 'operator'}</b>
-                  <RoleBadge role={c.role} />
-                </div>
-                <time>{c.created_at ? formatIST(c.created_at) : ''}</time>
-                <p>{c.text}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-        {perms.canComment ? (
-          <form
-            className="inc-comment-form"
-            onSubmit={(e) => {
-              e.preventDefault();
-              const text = comment.trim();
-              if (!text || busy) return;
-              run(() => api.addAlertComment(alert.alert_id, text).then(() => setComment('')), 'Comment posted.');
-            }}
-          >
-            <label className="al-field">Add comment
-              <textarea className="input-control" rows={3} value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Triage notes, owner handoff, mitigation…" />
-            </label>
-            <p className="page-hint">Posted as <b>{actorName}</b> · role <RoleBadge role={currentUser?.role} /></p>
-            <button type="submit" className="btn btn-primary" disabled={busy || !comment.trim()}>Post comment</button>
-          </form>
-        ) : (
-          <p className="page-hint">Read-only — your role cannot post alert comments (<code>alerts:comment</code>).</p>
-        )}
-      </section>
+      <DiscussionModal
+        open={discOpen}
+        onClose={() => setDiscOpen(false)}
+        title={`Discussion (${comments.length})`}
+        comments={comments}
+        canComment={perms.canComment}
+        actorName={actorName}
+        role={currentUser?.role}
+        placeholder="Triage notes, owner handoff, mitigation…"
+        busy={busy}
+        onPost={(text) => run(() => api.addAlertComment(alert.alert_id, text), 'Comment posted.')}
+      />
 
       {dlg && (
         <ConfirmDialog dlg={dlg} busy={busy} onCancel={() => !busy && setDlg(null)} onConfirm={dlg.onConfirm} />

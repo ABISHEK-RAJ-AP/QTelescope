@@ -30,6 +30,8 @@ import { parseIncidentTitle, formatDurationMs } from '../lib/incidentUi.js';
 import { ViewModeToggle } from '../components/observability/DataViewToolbar.jsx';
 import { OpsMonthCalendar } from '../components/observability/OpsMonthCalendar.jsx';
 import { ListPager } from '../components/observability/ListPager.jsx';
+import { CollapsibleSection } from '../components/observability/CollapsibleSection.jsx';
+import { DiscussionModal } from '../components/observability/DiscussionModal.jsx';
 import './AlertsEvents.css';
 
 const FETCH_LIMIT = 500; // API max for /alerts
@@ -113,13 +115,13 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   }, [onOpenIncident]);
   const [dlg, setDlg] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [incComment, setIncComment] = useState('');
   const [incCommentBusy, setIncCommentBusy] = useState(false);
   const [listLayout, setListLayout] = useState('table');
   const [incLayout, setIncLayout] = useState('grid');
   const [alertDetail, setAlertDetail] = useState(null);
-  const [alertComment, setAlertComment] = useState('');
   const [alertCommentBusy, setAlertCommentBusy] = useState(false);
+  const [alertDiscOpen, setAlertDiscOpen] = useState(false);
+  const [incDiscOpen, setIncDiscOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -154,7 +156,11 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
       else setDrawerId(scopeAlert);
     }
   }, [scopeAlert, onOpenAlert, view]);
-  useEffect(() => { setIncComment(''); }, [incDrawerId]);
+  useEffect(() => {
+    if (error && (alerts.length || incidents.length)) {
+      notifyError(`Last refresh failed: ${error}`, { toastId: 'alerts-load' });
+    }
+  }, [error, alerts.length, incidents.length]);
 
   const backends = useMemo(() => [...new Set(alerts.map((a) => a.backend_id).filter(Boolean))].sort(), [alerts]);
 
@@ -236,7 +242,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   useEffect(() => {
     if (!drawerId) {
       setAlertDetail(null);
-      setAlertComment('');
+      setAlertDiscOpen(false);
       return undefined;
     }
     let cancelled = false;
@@ -450,8 +456,6 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
         </button>
       </section>
 
-      {error && <p className="al-banner al-banner--err" role="alert">Last refresh failed: {error}. Showing previous data.</p>}
-
       {alerts.length >= FETCH_LIMIT && <p className="al-banner al-banner--warn" role="note">Showing the newest {FETCH_LIMIT} alerts; older records are not loaded in this view.</p>}
 
       {view === 'incidents' ? (
@@ -558,15 +562,13 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
         </section>
       ) : (
         <>
-          <section className="card al-card al-pad al-chart-card" aria-label="Alert activity">
-            <h3 className="al-h">Alert detections · last 24 hours (IST buckets)</h3>
+          <CollapsibleSection id="al-chart-h" title="Alert detections · last 24 hours" className="card al-card al-pad al-chart-card" defaultOpen={false}>
             <p className="page-hint al-chart-hint">New detections per hour by severity — not the same as currently active count.</p>
             <QtECharts option={trendOption} style={{ height: 220, width: '100%' }} />
-          </section>
+          </CollapsibleSection>
 
           <section className="al-summary" aria-label="Alert summary">
-            <div className="card al-card al-pad">
-              <h3 className="al-h">Severity × status</h3>
+            <CollapsibleSection id="al-matrix-h" title="Severity × status" className="card al-card al-pad">
               <table className="al-matrix">
                 <thead><tr><th scope="col"><span className="sr-only">Severity</span></th>{STATUSES.map((s) => <th key={s} scope="col">{s.toLowerCase()}</th>)}</tr></thead>
                 <tbody>
@@ -586,9 +588,8 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                   ))}
                 </tbody>
               </table>
-            </div>
-            <div className="card al-card al-pad">
-              <h3 className="al-h">Active alerts by backend</h3>
+            </CollapsibleSection>
+            <CollapsibleSection id="al-backend-h" title="Active alerts by backend" className="card al-card al-pad">
               {stats.byBackend.length === 0 ? <p className="page-hint">No active alerts.</p> : (
                 <ul className="al-rank">
                   {stats.byBackend.map((b) => (
@@ -605,7 +606,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                   ))}
                 </ul>
               )}
-            </div>
+            </CollapsibleSection>
           </section>
 
           <section className="card al-card" aria-label="Alert list">
@@ -875,6 +876,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                 <button type="button" className="btn btn-secondary" onClick={() => openBackend(a.backend_id)}>Backend qubits</button>
                 <button type="button" className="btn btn-secondary" onClick={() => nav(buildDriftInvestigationLocation({ backendId: a.backend_id }))}>Drift</button>
                 {onOpenAlert && <button type="button" className="btn btn-primary" onClick={() => { closeDrawer(); onOpenAlert(a.alert_id); }}>Open full workspace</button>}
+                <button type="button" className="btn btn-secondary" onClick={() => setAlertDiscOpen(true)}>Discussion ({(alertDetail?.comments || []).length})</button>
               </DetailModalRelated>
               <DetailModalSection title="Respond">
                 <div className="al-actions">
@@ -889,43 +891,6 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                     <span className="page-hint">Read-only. No respond permission.</span>
                   ) : null}
                 </div>
-              </DetailModalSection>
-              <DetailModalSection title={`Discussion (${(alertDetail?.comments || []).length})`}>
-                {(alertDetail?.comments || []).length === 0 ? <p className="page-hint">No comments yet.</p> : (
-                  <ul className="al-comments">
-                    {(alertDetail.comments || []).map((c, i) => (
-                      <li key={c.comment_id || i}><b>{c.author || 'operator'}</b>{c.role ? ` (${c.role})` : ''}: {c.text}</li>
-                    ))}
-                  </ul>
-                )}
-                {perms.canComment ? (
-                  <form
-                    className="al-comment-form"
-                    onSubmit={async (e) => {
-                      e.preventDefault();
-                      const t = alertComment.trim();
-                      if (!t) return;
-                      setAlertCommentBusy(true);
-                      try {
-                        await api.addAlertComment(a.alert_id, t);
-                        setAlertComment('');
-                        const d = await api.getAlert(a.alert_id);
-                        setAlertDetail(d);
-                      } catch (err) {
-                        notifyError(err?.message || String(err));
-                      } finally {
-                        setAlertCommentBusy(false);
-                      }
-                    }}
-                  >
-                    <label className="al-field">Add comment
-                      <textarea className="input-control" rows={2} value={alertComment} onChange={(e) => setAlertComment(e.target.value)} />
-                    </label>
-                    <button type="submit" className="btn btn-primary btn--xs" disabled={alertCommentBusy}>{alertCommentBusy ? 'Posting' : 'Post comment'}</button>
-                  </form>
-                ) : (
-                  <p className="page-hint">Comments need alerts:comment permission.</p>
-                )}
               </DetailModalSection>
             </DetailModalBody>
           );
@@ -965,48 +930,64 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                   <DetailModalRow label="Resolution">{inc.resolution_notes || '—'}</DetailModalRow>
                 </DetailModalDl>
               </DetailModalSection>
-              <DetailModalSection title={`Discussion (${(inc.comments || []).length})`}>
-                {(inc.comments || []).length === 0 ? <p className="page-hint">No comments yet.</p> : (
-                  <ul className="al-comments">{inc.comments.map((c, i) => <li key={c.comment_id || i}><b>{c.author || 'operator'}</b>{c.role ? ` (${c.role})` : ''}: {c.text}</li>)}</ul>
-                )}
-                {perms.canComment ? (
-                  <form
-                    className="al-comment-form"
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      const text = incComment.trim();
-                      if (!text || incCommentBusy) return;
-                      setIncCommentBusy(true);
-                      api.addIncidentComment(inc.incident_id, text)
-                        .then(() => {
-                          notifySuccess('Comment added.');
-                          setIncComment('');
-                          return load();
-                        })
-                        .catch((err) => notifyError(err?.message || String(err)))
-                        .finally(() => setIncCommentBusy(false));
-                    }}
-                  >
-                    <label className="al-field">Add comment
-                      <textarea className="input-control" rows={3} value={incComment} onChange={(e) => setIncComment(e.target.value)} placeholder="Note for the response team…" />
-                    </label>
-                    <button type="submit" className="btn btn-primary" disabled={incCommentBusy || !incComment.trim()}>
-                      {incCommentBusy ? 'Posting…' : 'Post comment'}
-                    </button>
-                  </form>
-                ) : (
-                  <p className="page-hint">Comments require incidents:comment permission.</p>
-                )}
-              </DetailModalSection>
               <DetailModalRelated>
                 {onOpenIncident && <button type="button" className="btn btn-primary" onClick={() => { setIncDrawerId(null); onOpenIncident(inc.incident_id); }}>Open full workspace</button>}
                 <button type="button" className="btn btn-secondary" onClick={() => nav(timelineTo({ backendId: inc.backend_id, at: inc.last_detected_at }))}>Timeline</button>
                 <button type="button" className="btn btn-secondary" onClick={() => { setIncDrawerId(null); setBackend(inc.backend_id); onViewChange?.('alerts'); }}>View its alerts</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setIncDiscOpen(true)}>Discussion ({(inc.comments || []).length})</button>
               </DetailModalRelated>
             </DetailModalBody>
           );
         })()}
       </DetailDrawer>
+
+      <DiscussionModal
+        open={alertDiscOpen && !!drawerAlert}
+        onClose={() => setAlertDiscOpen(false)}
+        title={`Discussion (${(alertDetail?.comments || []).length})`}
+        comments={alertDetail?.comments || []}
+        canComment={perms.canComment}
+        actorName={actorName}
+        role={currentUser?.role}
+        busy={alertCommentBusy}
+        onPost={async (text) => {
+          if (!drawerAlert) return;
+          setAlertCommentBusy(true);
+          try {
+            await api.addAlertComment(drawerAlert.alert_id, text);
+            const d = await api.getAlert(drawerAlert.alert_id);
+            setAlertDetail(d);
+            notifySuccess('Comment posted.');
+          } catch (err) {
+            notifyError(err?.message || String(err));
+          } finally {
+            setAlertCommentBusy(false);
+          }
+        }}
+      />
+      <DiscussionModal
+        open={incDiscOpen && !!incDrawerId}
+        onClose={() => setIncDiscOpen(false)}
+        title={`Discussion (${(incidents.find((i) => i.incident_id === incDrawerId)?.comments || []).length})`}
+        comments={incidents.find((i) => i.incident_id === incDrawerId)?.comments || []}
+        canComment={perms.canComment}
+        actorName={actorName}
+        role={currentUser?.role}
+        busy={incCommentBusy}
+        onPost={async (text) => {
+          if (!incDrawerId) return;
+          setIncCommentBusy(true);
+          try {
+            await api.addIncidentComment(incDrawerId, text);
+            notifySuccess('Comment added.');
+            await load();
+          } catch (err) {
+            notifyError(err?.message || String(err));
+          } finally {
+            setIncCommentBusy(false);
+          }
+        }}
+      />
 
       {dlg && <ConfirmDialog dlg={dlg} busy={busy} onCancel={() => setDlg(null)} onConfirm={dlg.onConfirm} />}
     </div>

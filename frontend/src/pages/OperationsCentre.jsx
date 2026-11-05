@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertTriangle, ChevronRight } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
+import { notifyError, notifyWarn } from '../lib/toast.js';
 import { api } from '../services/api';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
@@ -209,6 +210,16 @@ export const OperationsCentre = () => {
 
   const noData = failed.length === SOURCES.length;
   const actionable = lanes.ack.length + lanes.inv.length + lanes.fix.length;
+
+  useEffect(() => {
+    if (!failed.length) return;
+    const when = lastRefresh ? ` Last good load ${formatISTTime(lastRefresh)}.` : '';
+    const msg = noData
+      ? `Backend unreachable.${when}`
+      : `Partial load: ${failed.join(', ')} failed — some queue items may be missing.${when}`;
+    if (noData) notifyError(msg, { toastId: 'ops-load' });
+    else notifyWarn(msg, { toastId: 'ops-load' });
+  }, [failed, noData, lastRefresh]);
   const staleCollectors = (providers || []).filter((p) => {
     const age = ageMinutes(p.last_success_at);
     return p.status !== 'OK' || (age != null && age > STALE_MIN);
@@ -216,16 +227,6 @@ export const OperationsCentre = () => {
 
   return (
     <div className="ops-page page-stack">
-      {failed.length > 0 && (
-        <div className={`fs-banner${noData ? ' fs-banner--err' : ''}`} role={noData ? 'alert' : 'status'}>
-          <AlertTriangle size={16} aria-hidden />
-          <span>
-            {noData ? 'Backend unreachable.' : `Partial load: ${failed.join(', ')} failed — some queue items may be missing.`}
-            {lastRefresh && <> Last good load {formatISTTime(lastRefresh)}.</>}
-          </span>
-        </div>
-      )}
-
       <ExceptionStrip
         ariaLabel="Action queue summary"
         items={[
