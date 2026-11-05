@@ -15,6 +15,7 @@ import { ConfirmDialog } from '../components/observability/ConfirmDialog.jsx';
 import { Toggle } from '../components/ui/Toggle.jsx';
 import { RoleMatrix } from '../components/admin/RoleMatrix.jsx';
 import { roleLabel } from '../lib/permissions.js';
+import { ListPager } from '../components/observability/ListPager.jsx';
 import './AdministrationPage.css';
 
 const ADMIN_SECTIONS = [
@@ -638,6 +639,8 @@ function UsersDirectory({ canEdit }) {
   const [busy, setBusy] = useState(null);
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState('username');
+  const [page, setPage] = useState(1);
+  const USER_PAGE = 20;
 
   const load = useCallback(async () => {
     try {
@@ -690,6 +693,10 @@ function UsersDirectory({ canEdit }) {
     });
     return sorted;
   }, [rows, search, sortKey]);
+  useEffect(() => { setPage(1); }, [search, sortKey]);
+  const userPages = Math.max(1, Math.ceil(visible.length / USER_PAGE));
+  const userPage = Math.min(page, userPages);
+  const pageUsers = visible.slice((userPage - 1) * USER_PAGE, userPage * USER_PAGE);
 
   return (
     <>
@@ -732,7 +739,7 @@ function UsersDirectory({ canEdit }) {
                 <TableEmpty colSpan={4} title="No users" message="Registered accounts appear here." />
               ) : visible.length === 0 ? (
                 <TableEmpty colSpan={4} title="No matches" message="Try a different search term." />
-              ) : visible.map((u) => (
+              ) : pageUsers.map((u) => (
                 <tr key={u.username}>
                   <td>
                     <div>{u.full_name || u.username}</div>
@@ -760,6 +767,7 @@ function UsersDirectory({ canEdit }) {
             </tbody>
           </table>
         </div>
+        <ListPager page={userPage} pages={userPages} onPage={setPage} />
       </div>
     </>
   );

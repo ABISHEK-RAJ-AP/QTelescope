@@ -29,10 +29,12 @@ import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { parseIncidentTitle, formatDurationMs } from '../lib/incidentUi.js';
 import { ViewModeToggle } from '../components/observability/DataViewToolbar.jsx';
 import { OpsMonthCalendar } from '../components/observability/OpsMonthCalendar.jsx';
+import { ListPager } from '../components/observability/ListPager.jsx';
 import './AlertsEvents.css';
 
 const FETCH_LIMIT = 500; // API max for /alerts
 const PAGE_SIZE = 20;
+const CHILD_PAGE = 12;
 const SEVERITIES = ['CRITICAL', 'WARNING', 'INFO'];
 const STATUSES = ['ACTIVE', 'ACKNOWLEDGED', 'RESOLVED'];
 const num = (v) => (v == null || !Number.isFinite(Number(v)) ? '—' : Number(v).toFixed(1));
@@ -96,6 +98,8 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   const [sort, setSort] = useState({ key: 'severity', dir: 'asc' });
   const [expanded, setExpanded] = useState(() => new Set());
   const [page, setPage] = useState(1);
+  const [childPage, setChildPage] = useState({});
+  const [incPage, setIncPage] = useState(1);
   const [drawerId, setDrawerId] = useState(null);
   const [incDrawerId, setIncDrawerId] = useState(null);
   const stopRow = (e) => e.stopPropagation();
@@ -139,7 +143,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
     setActions(<RefreshButton onClick={load} lastRefreshAt={lastRefresh} label="Refresh alerts" />);
     return () => clearActions();
   }, [load, lastRefresh, setActions, clearActions]);
-  useEffect(() => setPage(1), [sevF, statusF, query, scopeBackend, grouped]);
+  useEffect(() => { setPage(1); setChildPage({}); }, [sevF, statusF, query, scopeBackend, grouped]);
   useEffect(() => {
     if (view !== 'alerts') {
       setDrawerId(null);
@@ -243,10 +247,12 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   }, [drawerId]);
 
   const calEvents = useMemo(() => {
-    const alertEv = alerts.map((a) => ({
+    const alertEv = filtered.map((a) => ({
       id: a.alert_id,
       at: a.detected_at,
       title: `${a.backend_id} ${a.alert_type}`,
+      subtitle: qubitOf(a) || a.alert_id,
+      groupKey: `alert|${a.backend_id}|${a.alert_type}`,
       kind: 'Alert',
       severity: a.severity,
       status: a.status,
@@ -256,13 +262,15 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
       id: inc.incident_id,
       at: inc.first_detected_at || inc.created_at,
       title: inc.title || inc.incident_id,
+      subtitle: inc.incident_id,
+      groupKey: `incident|${inc.incident_id}`,
       kind: 'Incident',
       severity: inc.severity,
       status: inc.status,
       open: () => openIncident(inc.incident_id),
     }));
     return view === 'incidents' ? incEv : [...alertEv, ...incEv];
-  }, [alerts, incidents, view, openAlert, openIncident]);
+  }, [filtered, incidents, view, openAlert, openIncident]);
   const relatedIncident = (a) => incidents.find((i) => i.backend_id === a.backend_id && String(i.title).endsWith(a.alert_type));
 
   const toggleSort = (key) => setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'count' || key === 'latest' ? 'desc' : 'asc' }));
@@ -351,7 +359,15 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
 
   const openBackend = (id) => nav(buildBackendDetailsPath(id, 'qubits'));
   const clearFilters = () => { setSevF('ALL'); setStatusF('ALL'); setQuery(''); setBackend(''); };
-  const toggleExpand = (k) => setExpanded((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; });
+  const toggleExpand = (k) => setExpanded((s) => {
+    const n = new Set(s);
+    if (n.has(k)) n.delete(k);
+    else n.add(k);
+    return n;
+  });
+  const incPages = Math.max(1, Math.ceil(incidents.length / PAGE_SIZE));
+  const incCur = Math.min(incPage, incPages);
+  const incRows = incidents.slice((incCur - 1) * PAGE_SIZE, incCur * PAGE_SIZE);
   const closeDrawer = useCallback(() => { setDrawerId(null); if (scopeAlert) setAlertId(''); }, [scopeAlert, setAlertId]);
 
   if (loading) return <BoneyardSkeleton layout="table" />;
@@ -465,7 +481,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                     <tr><th>Backend</th><th>Rule</th><th>Severity</th><th>Status</th><th>Alerts</th><th>Owner</th><th>Detected</th><th>Actions</th></tr>
                   </thead>
                   <tbody>
-                    {incidents.map((inc) => {
+                    {incRows.map((inc) => {
                       const { backendLabel, rule } = parseIncidentTitle(inc.title);
                       const activeNow = alerts.filter(
                         (a) => a.backend_id === inc.backend_id && String(inc.title).endsWith(a.alert_type) && a.status === 'ACTIVE',
@@ -496,7 +512,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
             </div>
           ) : (
             <div className="al-inc-grid">
-              {incidents.map((inc) => {
+              {incRows.map((inc) => {
                 const { backendLabel, rule } = parseIncidentTitle(inc.title);
                 const activeNow = alerts.filter(
                   (a) => a.backend_id === inc.backend_id && String(inc.title).endsWith(a.alert_type) && a.status === 'ACTIVE',
@@ -538,6 +554,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
               })}
             </div>
           )}
+          <ListPager page={incCur} pages={incPages} onPage={setIncPage} />
         </section>
       ) : (
         <>
@@ -764,27 +781,46 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                             </div>
                           </td>
                         </tr>
-                        {multi && open && g.items
-                          .slice().sort((x, y) => sevRank(x.severity) - sevRank(y.severity) || String(x.resource_id).localeCompare(String(y.resource_id), undefined, { numeric: true }))
-                          .map((c) => (
-                            <tr
-                              key={c.alert_id}
-                              className="al-child-row al-row-clickable"
-                              tabIndex={0}
-                              role="button"
-                              onClick={() => openAlert(c.alert_id)}
-                              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAlert(c.alert_id); } }}
-                            >
-                              <td />
-                              <td><SevBadge severity={c.severity} /></td>
-                              <td>{qubitOf(c) || c.resource_type}</td>
-                              <td className="al-sub">{c.alert_id}</td>
-                              <td><StatusBadge status={c.status} /></td>
-                              <td className="al-nowrap">{num(c.current_value)} µs <span className="al-sub al-inline">vs {num(c.threshold_value)}</span></td>
-                              <td className="al-nowrap">{formatIST(c.detected_at, false)}</td>
-                              <td><div className="dvt-actions al-actions" onClick={stopRow} onKeyDown={stopRow}><button type="button" className="btn btn-secondary btn--xs" onClick={() => openAlert(c.alert_id)}>Open workspace</button>{rowActions(c)}</div></td>
-                            </tr>
-                          ))}
+                        {multi && open && (() => {
+                          const kids = g.items.slice().sort((x, y) => sevRank(x.severity) - sevRank(y.severity) || String(x.resource_id).localeCompare(String(y.resource_id), undefined, { numeric: true }));
+                          const cpages = Math.max(1, Math.ceil(kids.length / CHILD_PAGE));
+                          const cp = Math.min(childPage[g.key] || 1, cpages);
+                          const shown = kids.slice((cp - 1) * CHILD_PAGE, cp * CHILD_PAGE);
+                          return (
+                            <>
+                              {shown.map((c) => (
+                                <tr
+                                  key={c.alert_id}
+                                  className="al-child-row al-row-clickable"
+                                  tabIndex={0}
+                                  role="button"
+                                  onClick={() => openAlert(c.alert_id)}
+                                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openAlert(c.alert_id); } }}
+                                >
+                                  <td />
+                                  <td><SevBadge severity={c.severity} /></td>
+                                  <td>{qubitOf(c) || c.resource_type}</td>
+                                  <td className="al-sub">{c.alert_id}</td>
+                                  <td><StatusBadge status={c.status} /></td>
+                                  <td className="al-nowrap">{num(c.current_value)} µs <span className="al-sub al-inline">vs {num(c.threshold_value)}</span></td>
+                                  <td className="al-nowrap">{formatIST(c.detected_at, false)}</td>
+                                  <td><div className="dvt-actions al-actions" onClick={stopRow} onKeyDown={stopRow}><button type="button" className="btn btn-secondary btn--xs" onClick={() => openAlert(c.alert_id)}>Open workspace</button>{rowActions(c)}</div></td>
+                                </tr>
+                              ))}
+                              {cpages > 1 && (
+                                <tr className="al-child-row">
+                                  <td colSpan={8}>
+                                    <ListPager
+                                      page={cp}
+                                      pages={cpages}
+                                      onPage={(n) => setChildPage((p) => ({ ...p, [g.key]: n }))}
+                                    />
+                                  </td>
+                                </tr>
+                              )}
+                            </>
+                          );
+                        })()}
                       </React.Fragment>
                     );
                   })}
@@ -792,13 +828,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
               </table>
             </div>
             )}
-            {rows.length > PAGE_SIZE && (
-              <div className="al-pager">
-                <button type="button" className="btn btn-secondary btn--xs" disabled={curPage === 1} onClick={() => setPage(curPage - 1)}>Previous</button>
-                <span>Page {curPage} of {pages}</span>
-                <button type="button" className="btn btn-secondary btn--xs" disabled={curPage === pages} onClick={() => setPage(curPage + 1)}>Next</button>
-              </div>
-            )}
+            <ListPager page={curPage} pages={pages} onPage={setPage} />
           </section>
         </>
       )}

@@ -69,6 +69,8 @@
   padding: 14px;
   background: var(--bg-card);
   min-height: 200px;
+  max-height: 640px;
+  overflow: auto;
 }
 .ops-cal__side-title { margin: 0; font-size: 14px; font-weight: 700; }
 .ops-cal__side-hint { margin: 4px 0 12px; font-size: 12px; color: var(--text-muted); }
@@ -89,3 +91,7 @@
 .ops-cal__item-kind { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent-cyan); }
 .ops-cal__item-title { font-size: 13px; font-weight: 600; }
 .ops-cal__item-meta { font-size: 11px; color: var(--text-muted); }
+.ops-cal__item.is-open { border-color: var(--accent-cyan); }
+.ops-cal__item--sub { padding: 6px 8px; }
+.ops-cal__members { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-color); }
+.ops-cal__members-h { margin: 0 0 8px; font-size: 12px; font-weight: 700; }
