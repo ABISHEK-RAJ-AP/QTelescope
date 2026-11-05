@@ -13,7 +13,7 @@
 | `01-dashboard-light-1440x900.png` | `/app` | Default light |
 | `01-dashboard-dark-1440x900.png` | `/app` | After theme toggle |
 | `01-dashboard-tablet-768.png` | `/app` | 768×1024 |
-| `01-dashboard-light-viewport.png` | `/app` | Cursor browser MCP (partial) |
+| `01-dashboard-light-viewport.png` | `/app` | Viewport capture (partial) |
 | `04-operations-centre-1440x900.png` | `/app/operations` | Centre tab |
 | `05-platform-health-1440x900.png` | `/app/operations/health` | |
 | `06-ops-timeline-1440x900.png` | `/app/operations/timeline` | |

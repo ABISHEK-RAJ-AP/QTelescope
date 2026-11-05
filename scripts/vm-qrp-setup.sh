@@ -49,8 +49,15 @@ if [[ -x "$ROOT/scripts/start-local-infra.sh" ]]; then
 fi
 
 command -v npm >/dev/null || die "npm missing. Install Node via nvm, then rerun."
-QRP_FE="$ROOT/quantum-resource-portal/frontend"
-[[ -d "$QRP_FE" ]] || die "Missing $QRP_FE"
+if [[ -n "${QRP_ROOT:-}" && -d "${QRP_ROOT}/frontend" ]]; then
+  QRP_FE="$(cd "$QRP_ROOT/frontend" && pwd)"
+elif [[ -d "$ROOT/../QuantumResourcePortal/frontend" ]]; then
+  QRP_FE="$(cd "$ROOT/../QuantumResourcePortal/frontend" && pwd)"
+elif [[ -d "$ROOT/quantum-resource-portal/frontend" ]]; then
+  QRP_FE="$(cd "$ROOT/quantum-resource-portal/frontend" && pwd)"
+else
+  die "QRP frontend missing. Clone QuantumResourcePortal or set QRP_ROOT."
+fi
 if [[ ! -d "$QRP_FE/node_modules" ]]; then
   log "npm install (QRP)"
   (cd "$QRP_FE" && npm install)
@@ -88,4 +95,4 @@ echo
 echo "Manual equivalent:"
 echo "  source scripts/lib/ensure-dev-path.sh"
 echo "  python -m uvicorn app.main:app --host 0.0.0.0 --port 8000"
-echo "  cd quantum-resource-portal/frontend && npm install && npm run dev -- --host 0.0.0.0 --port 5176"
+echo "  cd \"\$QRP_FE\" && npm install && npm run dev -- --host 0.0.0.0 --port 5176"

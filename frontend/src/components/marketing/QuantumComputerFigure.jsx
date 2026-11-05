@@ -4,8 +4,7 @@ import './quantum-figure-anatomy.css';
 
 /**
  * Isometric superconducting QPU stack (Anatomy-style figure).
- * Illustrative motion only — not live fleet telemetry.
- * Skills: ~/.cursor/skills/{anatomy-agent,impeccable,hallmark-ui,surface-hairline}
+ * Illustrative motion only, not live fleet telemetry.
  */
 export function QuantumComputerFigure({ className = '' }) {
   const { resolved } = useTheme();

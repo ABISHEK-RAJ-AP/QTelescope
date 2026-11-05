@@ -1,11 +1,20 @@
 #!/usr/bin/env bash
 # Launch Quantum Resource Portal (QRP): shared Postgres/Redis + API (:8000) + QRP Vite (:5176).
-# Portal UI lives in quantum-resource-portal/frontend and proxies /api → :8000.
+# Portal UI is QuantumResourcePortal; this script starts TeleScope API and that Vite app.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-QRP_FE="$ROOT/quantum-resource-portal/frontend"
 cd "$ROOT"
+# Portal UI lives in QuantumResourcePortal. Local nested copy is optional.
+if [[ -n "${QRP_ROOT:-}" && -d "${QRP_ROOT}/frontend" ]]; then
+  QRP_FE="$(cd "$QRP_ROOT/frontend" && pwd)"
+elif [[ -d "$ROOT/../QuantumResourcePortal/frontend" ]]; then
+  QRP_FE="$(cd "$ROOT/../QuantumResourcePortal/frontend" && pwd)"
+elif [[ -d "$ROOT/quantum-resource-portal/frontend" ]]; then
+  QRP_FE="$(cd "$ROOT/quantum-resource-portal/frontend" && pwd)"
+else
+  QRP_FE=""
+fi
 
 # shellcheck source=/dev/null
 source "$ROOT/scripts/lib/ensure-dev-path.sh"
@@ -50,7 +59,7 @@ spawn_term() {
   bash -lc "$wrapped"
 }
 
-[[ -d "$QRP_FE" ]] || pause_fail "Missing $QRP_FE"
+[[ -n "$QRP_FE" && -d "$QRP_FE" ]] || pause_fail "QRP frontend missing. Clone QuantumResourcePortal next to this repo, or set QRP_ROOT, or keep a local quantum-resource-portal/frontend."
 command -v npm >/dev/null || pause_fail "npm not found (install Node.js / nvm). PATH=$PATH"
 
 export PATH="${MINIFORGE_BIN:-$HOME/miniforge3/bin}:${PATH:-}"

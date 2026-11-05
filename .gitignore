@@ -42,11 +42,14 @@ MANIFEST
 .backend.log
 .backend*.log
 
-# Local agent / IDE state
+# Local IDE / agent state
 .cursor/
 .planning/
 .agent/
 agent-transcripts/
+
+# QRP is a separate repository (QuantumResourcePortal)
+/quantum-resource-portal/
 
 # Virtual Environments
 venv/
