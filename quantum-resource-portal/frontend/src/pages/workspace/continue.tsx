@@ -31,7 +31,9 @@ import {
   stateLabel,
   stateTone,
 } from '@/components/layout/Page'
+import { InfoTip } from '@/components/ui/InfoTip'
 import { Modal } from '@/components/ui/Modal'
+import { AccountSecurity } from '@/pages/workspace/AccountSecurity'
 import type { WorkflowStep } from '@/components/workflow/WorkflowSteps'
 import { RecordWorkspace } from '@/components/workflow/RecordWorkspace'
 import { StatusPage } from '@/pages/system/StatusPage'
@@ -2593,21 +2595,35 @@ export function DispatchPage() {
   )
 }
 
+type CatalogRole = { id: string; label: string; builtin?: boolean; permissions?: number; permission_ids?: string[] }
+
 export function UsersPage() {
   const client = useQueryClient()
+  const session = getSessionUser()
+  const canManage = ['Admin', 'SuperAdmin', 'PlatformAdmin'].includes(session?.role || '')
   const [roleFilter, setRoleFilter] = useState('all')
   const [search, setSearch] = useState('')
   const [assignOpen, setAssignOpen] = useState(false)
+  const [roleOpen, setRoleOpen] = useState(false)
   const query = useQuery({
     queryKey: ['users'],
     queryFn: () => qre<unknown>('/users'),
   })
   const catalog = useQuery({
     queryKey: ['role-catalog'],
-    queryFn: () => qre<{ roles?: { id: string; label: string }[] }>('/users/roles/catalog'),
+    queryFn: () => qre<{ roles?: CatalogRole[] }>('/users/roles/catalog'),
+  })
+  const permCatalog = useQuery({
+    queryKey: ['role-permissions'],
+    queryFn: () => qre<{ permissions?: string[] }>('/users/roles/permissions'),
+    enabled: canManage && roleOpen,
   })
   const [username, setUsername] = useState('')
   const [role, setRole] = useState('Operator')
+  const [newRoleId, setNewRoleId] = useState('')
+  const [newRoleLabel, setNewRoleLabel] = useState('')
+  const [cloneFrom, setCloneFrom] = useState('Viewer')
+  const [picked, setPicked] = useState<string[]>([])
   const save = useMutation({
     mutationFn: () =>
       qre(`/users/${encodeURIComponent(username)}/role`, {
@@ -2619,6 +2635,29 @@ export function UsersPage() {
       setAssignOpen(false)
       void client.invalidateQueries({ queryKey: ['users'] })
     },
+  })
+  const createRole = useMutation({
+    mutationFn: () =>
+      qre('/users/roles', {
+        method: 'POST',
+        body: JSON.stringify({
+          id: newRoleId,
+          label: newRoleLabel || newRoleId,
+          clone_from: cloneFrom || undefined,
+          permissions: picked,
+        }),
+      }),
+    onSuccess: () => {
+      setRoleOpen(false)
+      setNewRoleId('')
+      setNewRoleLabel('')
+      setPicked([])
+      void client.invalidateQueries({ queryKey: ['role-catalog'] })
+    },
+  })
+  const deleteRole = useMutation({
+    mutationFn: (id: string) => qre(`/users/roles/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    onSuccess: () => void client.invalidateQueries({ queryKey: ['role-catalog'] }),
   })
   const roles = catalog.data?.roles ?? []
   const all = asList(query.data)
@@ -2653,9 +2692,16 @@ export function UsersPage() {
       crumbs={[{ label: 'Admin', to: '/qrp/settings' }, { label: 'Users & Roles' }]}
       title="Users & Roles"
       actions={
-        <button type="button" className="btn-primary" onClick={() => setAssignOpen(true)}>
-          Assign role
-        </button>
+        <div className="flex flex-wrap justify-end gap-2">
+          {canManage ? (
+            <button type="button" className="btn-secondary" onClick={() => setRoleOpen(true)} title="Create a catalog role from a clone">
+              New role
+            </button>
+          ) : null}
+          <button type="button" className="btn-primary" onClick={() => setAssignOpen(true)} title="Assign an existing catalog role">
+            Assign role
+          </button>
+        </div>
       }
       updatedAt={query.dataUpdatedAt}
     >
@@ -2690,6 +2736,58 @@ export function UsersPage() {
             </button>
             <button type="submit" className={buttonClass} disabled={save.isPending}>
               {save.isPending ? 'Saving…' : 'Assign'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+      <Modal open={roleOpen} title="New role" onClose={() => setRoleOpen(false)}>
+        <form
+          className="flex flex-col gap-3"
+          onSubmit={(event) => {
+            event.preventDefault()
+            createRole.mutate()
+          }}
+        >
+          <label className="text-xs">
+            Id
+            <input required className={fieldClass} value={newRoleId} onChange={(e) => setNewRoleId(e.target.value)} placeholder="LabOps" />
+          </label>
+          <label className="text-xs">
+            Label
+            <input className={fieldClass} value={newRoleLabel} onChange={(e) => setNewRoleLabel(e.target.value)} placeholder="Lab operations" />
+          </label>
+          <label className="text-xs">
+            Clone from
+            <select className={fieldClass} value={cloneFrom} onChange={(e) => setCloneFrom(e.target.value)}>
+              {roles.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="max-h-40 overflow-auto rounded-lg border border-border p-2">
+            <p className="mb-1 text-[11px] text-muted-foreground">Extra permissions</p>
+            {(permCatalog.data?.permissions ?? []).map((perm) => (
+              <label key={perm} className="flex items-center gap-2 py-0.5 text-xs">
+                <input
+                  type="checkbox"
+                  checked={picked.includes(perm)}
+                  onChange={(e) =>
+                    setPicked((prev) => (e.target.checked ? [...prev, perm] : prev.filter((p) => p !== perm)))
+                  }
+                />
+                {perm}
+              </label>
+            ))}
+          </div>
+          {createRole.error ? <p className="text-sm text-critical">{message(createRole.error)}</p> : null}
+          <div className="flex justify-end gap-2">
+            <button type="button" className="btn-ghost" onClick={() => setRoleOpen(false)}>
+              Cancel
+            </button>
+            <button type="submit" className={buttonClass} disabled={createRole.isPending}>
+              {createRole.isPending ? 'Saving…' : 'Create'}
             </button>
           </div>
         </form>
@@ -2753,6 +2851,52 @@ export function UsersPage() {
             ]}
           />
         </QueryBody>
+      </Card>
+      <Card>
+        <PanelHeader
+          title="Role catalog"
+          action={
+            <InfoTip label="Role catalog">
+              SuperAdmin, PlatformAdmin, and Admin share full platform permissions. Custom roles persist in data/custom_roles.json.
+            </InfoTip>
+          }
+        />
+        <QueryBody query={catalog}>
+          <Table
+            rows={roles as unknown as Row[]}
+            emptyTitle="No roles"
+            emptyBody="Catalog unavailable."
+            columns={[
+              { key: 'id', label: 'Id' },
+              { key: 'label', label: 'Label' },
+              {
+                key: 'builtin',
+                label: 'Kind',
+                render: (row) => (row.builtin ? 'Built-in' : 'Custom'),
+              },
+              { key: 'permissions', label: 'Perms' },
+              {
+                key: 'actions',
+                label: '',
+                render: (row) =>
+                  canManage && !row.builtin ? (
+                    <button
+                      type="button"
+                      className="btn-ghost text-xs"
+                      title="Delete custom role"
+                      onClick={() => {
+                        if (!window.confirm(`Delete role ${String(row.id)}?`)) return
+                        deleteRole.mutate(String(row.id))
+                      }}
+                    >
+                      Delete
+                    </button>
+                  ) : null,
+              },
+            ]}
+          />
+        </QueryBody>
+        {deleteRole.error ? <p className="mt-2 text-sm text-critical">{message(deleteRole.error)}</p> : null}
       </Card>
     </Page>
   )
@@ -4531,6 +4675,7 @@ export function SettingsPage() {
           <p className="text-muted-foreground">No session.</p>
         )}
       </Card>
+      <AccountSecurity />
       <Card className="space-y-2 text-sm">
         <PanelHeader title="Institution" />
         {boundary.data ? (

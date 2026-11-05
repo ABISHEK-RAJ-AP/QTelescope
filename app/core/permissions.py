@@ -87,6 +87,7 @@ ROLE_PERMISSIONS: Dict[str, FrozenSet[str]] = {
     "Operator": OPS | DEV_STUDIO,
     "Researcher": READ_ONLY | DEV_STUDIO | frozenset({"reports:export", "alerts:comment", "incidents:comment"}),
     # Extended enterprise roles
+    "SuperAdmin": PLATFORM_ADMIN,
     "PlatformAdmin": PLATFORM_ADMIN,
     "SecurityAdmin": SECURITY_ADMIN,
     "QuantumOpsAdmin": OPS_ADMIN,
@@ -99,9 +100,10 @@ ROLE_PERMISSIONS: Dict[str, FrozenSet[str]] = {
 }
 
 ROLE_LABELS: Dict[str, str] = {
-    "Admin": "Platform administrator",
+    "Admin": "Administrator",
     "Operator": "Operations engineer",
     "Researcher": "Research analyst",
+    "SuperAdmin": "Super administrator",
     "PlatformAdmin": "Platform administrator",
     "SecurityAdmin": "Security administrator",
     "QuantumOpsAdmin": "Quantum operations administrator",
@@ -113,8 +115,23 @@ ROLE_LABELS: Dict[str, str] = {
 }
 
 
+def builtin_role_ids() -> FrozenSet[str]:
+    return frozenset(ROLE_PERMISSIONS.keys())
+
+
 def permissions_for_role(role: str) -> FrozenSet[str]:
-    return ROLE_PERMISSIONS.get(role or "Anonymous", ROLE_PERMISSIONS["Viewer"])
+    key = role or "Anonymous"
+    if key in ROLE_PERMISSIONS:
+        return ROLE_PERMISSIONS[key]
+    try:
+        from app.core.custom_roles import as_permission_map
+
+        extra = as_permission_map()
+        if key in extra:
+            return extra[key]
+    except Exception:
+        pass
+    return ROLE_PERMISSIONS["Viewer"]
 
 
 def role_has(role: str, permission: str) -> bool:
@@ -127,7 +144,7 @@ role_has_permission = role_has
 def list_assignable_roles() -> List[dict]:
     keys = [
         "Viewer", "ResearchAnalyst", "OpsEngineer", "IncidentCommander",
-        "QuantumOpsAdmin", "SecurityAdmin", "PlatformAdmin",
+        "QuantumOpsAdmin", "SecurityAdmin", "PlatformAdmin", "SuperAdmin",
         "Admin", "Operator", "Researcher",
     ]
     seen = set()
@@ -136,5 +153,26 @@ def list_assignable_roles() -> List[dict]:
         if k in seen:
             continue
         seen.add(k)
-        out.append({"id": k, "label": ROLE_LABELS.get(k, k), "permissions": len(permissions_for_role(k))})
+        out.append({
+            "id": k,
+            "label": ROLE_LABELS.get(k, k),
+            "permissions": len(permissions_for_role(k)),
+            "builtin": True,
+        })
+    try:
+        from app.core.custom_roles import labels as custom_labels, load_raw
+
+        for row in load_raw():
+            rid = str(row.get("id") or "")
+            if not rid or rid in seen:
+                continue
+            seen.add(rid)
+            out.append({
+                "id": rid,
+                "label": custom_labels().get(rid, rid),
+                "permissions": len(permissions_for_role(rid)),
+                "builtin": False,
+            })
+    except Exception:
+        pass
     return out

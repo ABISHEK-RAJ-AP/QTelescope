@@ -870,7 +870,7 @@ export function ApprovalDetailPage() {
     govState === 'submitted_for_review' || govState === 'in_review'
       ? `Decide · ${text(stage, 'label')}`
       : govState === 'approved'
-        ? 'Approved — request hold next.'
+        ? 'Approved. Request hold next.'
         : govState === 'rejected' || govState === 'withdrawn'
           ? 'Closed.'
           : text(stage, 'label')
@@ -1113,7 +1113,7 @@ export function ApprovalDetailPage() {
                 <Card>
                   <PanelHeader title="Stage / decision history" />
                   {history.length === 0 && (
-                    <p className="text-sm text-muted-foreground">No decisions yet — first review creates the trail.</p>
+                    <p className="text-sm text-muted-foreground">No decisions yet. First review creates the trail.</p>
                   )}
                   <ul className="divide-y divide-border/70">
                     {history.map((record) => (

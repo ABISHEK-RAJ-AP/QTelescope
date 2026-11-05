@@ -75,9 +75,9 @@ export async function authFetch<T>(path: string, init: RequestInit = {}): Promis
   } catch (err) {
     clearTimeout(timer)
     if (err instanceof DOMException && err.name === 'AbortError') {
-      throw new QreError(0, 'API timeout — start backend (port 8000) and retry')
+      throw new QreError(0, 'API timeout. Start backend on port 8000 and retry.')
     }
-    throw new QreError(0, 'API unreachable — start backend (port 8000) and retry')
+    throw new QreError(0, 'API unreachable. Start backend on port 8000 and retry.')
   } finally {
     clearTimeout(timer)
   }
@@ -93,7 +93,7 @@ export async function authFetch<T>(path: string, init: RequestInit = {}): Promis
       body && typeof body === 'object' && 'detail' in body && typeof (body as { detail: unknown }).detail === 'string'
         ? (body as { detail: string }).detail
         : response.status === 502 || response.status === 503
-          ? 'API down (proxy) — start TeleScope on :8000'
+          ? 'API down (proxy). Start TeleScope on port 8000.'
           : response.statusText
     throw new QreError(response.status, detail || `Request failed (${response.status})`)
   }

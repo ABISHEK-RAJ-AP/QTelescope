@@ -51,6 +51,13 @@ class RolePatch(BaseModel):
     role: str = Field(..., min_length=2, max_length=40)
 
 
+class CustomRoleBody(BaseModel):
+    id: Optional[str] = Field(None, min_length=2, max_length=40)
+    label: str = Field("", max_length=80)
+    permissions: List[str] = Field(default_factory=list)
+    clone_from: Optional[str] = None
+
+
 class TotpConfirmBody(BaseModel):
     code: str
 
@@ -131,7 +138,100 @@ def patch_me_preferences(body: PreferencesPatch, username: str = Depends(get_cur
 
 @router.get("/roles/catalog")
 def roles_catalog():
-    return {"roles": list_assignable_roles()}
+    from app.core.custom_roles import load_raw
+
+    roles = list_assignable_roles()
+    extra = {str(r.get("id")): r for r in load_raw() if r.get("id")}
+    for item in roles:
+        if not item.get("builtin"):
+            item["permission_ids"] = extra.get(item["id"], {}).get("permissions") or []
+        else:
+            item["permission_ids"] = sorted(permissions_for_role(item["id"]))
+    return {"roles": roles}
+
+
+@router.get("/roles/permissions")
+def permission_catalog(_: str = Depends(require_admin)):
+    from app.core.permissions import PERMS
+
+    return {"permissions": sorted(PERMS)}
+
+
+def _persist_custom_role(body: CustomRoleBody, role_id: str, actor: str, actor_role: str) -> dict:
+    from app.core.custom_roles import upsert
+
+    perms = list(body.permissions)
+    if body.clone_from:
+        perms = list(permissions_for_role(body.clone_from)) + perms
+    try:
+        row = upsert(role_id, body.label, perms)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    record_audit(
+        "role.upsert",
+        actor=actor,
+        role=actor_role,
+        resource_type="role",
+        resource_id=role_id,
+        detail={"permissions": row.get("permissions")},
+    )
+    return row
+
+
+@router.post("/roles")
+def create_custom_role(
+    body: CustomRoleBody,
+    actor: str = Depends(get_current_username),
+    role: str = Depends(require_admin),
+):
+    rid = (body.id or "").strip()
+    if not rid:
+        raise HTTPException(status_code=400, detail="Role id is required.")
+    return _persist_custom_role(body, rid, actor, role)
+
+
+@router.patch("/roles/{role_id}")
+def patch_custom_role(
+    role_id: str,
+    body: CustomRoleBody,
+    actor: str = Depends(get_current_username),
+    role: str = Depends(require_admin),
+):
+    return _persist_custom_role(body, role_id, actor, role)
+
+
+@router.delete("/roles/{role_id}")
+def delete_custom_role(
+    role_id: str,
+    actor: str = Depends(get_current_username),
+    role: str = Depends(require_admin),
+):
+    from app.core.custom_roles import delete as delete_role
+
+    holders = [
+        uname
+        for uname, rec in load_all_users().items()
+        if (rec.get("role") or "") == role_id
+    ]
+    if holders:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Reassign {len(holders)} user(s) before deleting this role.",
+        )
+    try:
+        ok = delete_role(role_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if not ok:
+        raise HTTPException(status_code=404, detail="Role not found.")
+    record_audit(
+        "role.delete",
+        actor=actor,
+        role=role,
+        resource_type="role",
+        resource_id=role_id,
+    )
+    return {"deleted": True, "id": role_id}
 
 
 @router.get("", response_model=List[dict])
@@ -160,12 +260,16 @@ def assign_role(
     actor: str = Depends(get_current_username),
     role: str = Depends(require_admin),
 ):
-    from app.core.permissions import ROLE_PERMISSIONS
+    from app.core.custom_roles import as_permission_map
+    from app.core.permissions import builtin_role_ids
 
     new_role = body.role.strip()
-    if new_role not in ROLE_PERMISSIONS:
+    known = set(builtin_role_ids()) | set(as_permission_map())
+    if new_role not in known:
         raise HTTPException(status_code=400, detail=f"Unknown role: {new_role}")
-    if target_username == actor and new_role not in ("Admin", "PlatformAdmin"):
+    if new_role == "SuperAdmin" and role not in ("SuperAdmin", "PlatformAdmin"):
+        raise HTTPException(status_code=403, detail="Only SuperAdmin or PlatformAdmin can assign SuperAdmin.")
+    if target_username == actor and new_role not in ("Admin", "PlatformAdmin", "SuperAdmin"):
         raise HTTPException(status_code=400, detail="Cannot demote your own admin access here.")
     users = load_all_users()
     if target_username not in users:

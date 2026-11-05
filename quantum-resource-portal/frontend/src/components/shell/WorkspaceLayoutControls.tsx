@@ -43,6 +43,7 @@ export function WorkspaceLayoutControls() {
         )}
         aria-expanded={open}
         aria-haspopup="dialog"
+        title="Density, chart height, KPI strip"
         onClick={() => setOpen((v) => !v)}
       >
         {open ? <Check className="size-3.5" /> : <LayoutGrid className="size-3.5" />}
@@ -135,20 +136,21 @@ function Seg({
   onChange: (id: string) => void
 }) {
   return (
-    <div className="flex gap-1 rounded-lg border border-border p-0.5" role="group">
+    <div className="flex min-w-0 flex-wrap gap-1 rounded-lg border border-border p-0.5" role="group">
       {options.map((o) => (
         <button
           key={o.id}
           type="button"
+          title={o.label}
           className={cn(
-            'flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium transition',
+            'inline-flex min-w-0 flex-1 items-center justify-center gap-1 overflow-hidden rounded-md px-2 py-1.5 text-xs font-medium whitespace-nowrap transition',
             value === o.id ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
           )}
           aria-pressed={value === o.id}
           onClick={() => onChange(o.id)}
         >
-          {o.icon}
-          {o.label}
+          {o.icon ? <span className="shrink-0">{o.icon}</span> : null}
+          <span className="truncate">{o.label}</span>
         </button>
       ))}
     </div>

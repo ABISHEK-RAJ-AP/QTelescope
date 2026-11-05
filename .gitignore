@@ -85,6 +85,7 @@ pnpm-debug.log*
 *.sqlite3
 quantum_monitoring.db
 data/registered_users.json
+data/custom_roles.json
 data/provider_credentials.json
 data/environment_telemetry.json
 data/*.tmp

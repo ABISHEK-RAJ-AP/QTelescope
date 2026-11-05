@@ -228,6 +228,7 @@ function ShellInner() {
                   <button
                     type="button"
                     className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-muted-foreground uppercase hover:bg-accent"
+                    title={group.label}
                     aria-expanded={expanded}
                     onClick={() => setOpen((prev) => ({ ...prev, [group.label]: !expanded }))}
                   >
@@ -249,7 +250,7 @@ function ShellInner() {
                           <NavLink
                             to={item.to}
                             end={item.end}
-                            title={collapsed ? item.label : undefined}
+                            title={item.label}
                             className={({ isActive }) =>
                               cn(
                                 'relative flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors',
@@ -361,9 +362,9 @@ function ShellInner() {
                 <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{chrome.description}</p>
               ) : null}
             </div>
-            <div className="flex shrink-0 flex-col items-end gap-2 sm:flex-row sm:items-center">
+            <div className="flex min-w-0 max-w-full shrink-0 flex-col items-end gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <DataFreshness updatedAt={chrome.updatedAt} />
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-end gap-2">
                 <WorkspaceLayoutControls />
                 <button
                   type="button"
