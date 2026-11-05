@@ -11,7 +11,6 @@ import {
   EXECUTION_NAV,
   RESOURCES_NAV,
   ALERTS_NAV,
-  ADMIN_NAV,
   navBranchActive,
   navChildActive,
   goStateForNavChild,
@@ -45,6 +44,7 @@ import { OnScreenKeyboard } from './components/shell/OnScreenKeyboard.jsx';
 import { ToastHost } from './components/ui/ToastHost.jsx';
 import { CONSOLE_TOUR_STEPS } from './lib/platformCapabilityMap.js';
 import { consumeConsoleTourPending, shouldRunOnboarding } from './lib/onboardingState.js';
+import { canManageFleet, canSeeNavItem, visibleAdminNav } from './lib/permissions.js';
 
 const SIDEBAR_COLLAPSE_KEY = 'qtelescope_sidebar_collapsed';
 
@@ -96,10 +96,10 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
   const [expandedBranches, setExpandedBranches] = useState(
     () => new Set(['telemetry', 'execution', 'resources', 'alerts', 'admin']),
   );
-  const isAdmin = currentUser?.role === 'Admin';
+  const canConfigure = canManageFleet(currentUser);
   const tourSteps = useMemo(
-    () => CONSOLE_TOUR_STEPS.filter((s) => s.target !== 'nav-admin' || isAdmin),
-    [isAdmin],
+    () => CONSOLE_TOUR_STEPS.filter((s) => s.target !== 'nav-admin' || canSeeNavItem(currentUser, 'admin')),
+    [currentUser],
   );
 
   useEffect(() => {
@@ -291,6 +291,17 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
 
   // Render main topic view with internal sub-tabs
   const renderContent = () => {
+    if (mainTopic !== 'settings' && mainTopic !== 'onboarding' && !canSeeNavItem(currentUser, mainTopic)) {
+      return (
+        <div className="card" style={{ padding: 40, textAlign: 'center' }}>
+          <ShieldAlert size={48} color="#e11d48" style={{ margin: '0 auto 16px' }} />
+          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Access restricted</h2>
+          <p style={{ color: '#64748b', fontSize: 14 }}>
+            Role <strong>{currentUser?.role_label || currentUser?.role}</strong> cannot open this page.
+          </p>
+        </div>
+      );
+    }
     switch (mainTopic) {
       case 'home':
         return (
@@ -342,7 +353,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
         return (
           <BackendInventory
             onSelectBackend={handleSelectBackend}
-            isAdmin={isAdmin}
+            isAdmin={canConfigure}
           />
         );
 
@@ -442,8 +453,9 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
       case 'reports':
         return <ReportsPage />;
 
-      case 'admin':
-        if (!isAdmin) {
+      case 'admin': {
+        const adminChildren = visibleAdminNav(currentUser);
+        if (!adminChildren.length || !adminChildren.some((c) => c.value === adminSubTab || adminSubTab === 'hub')) {
           return (
             <div className="card" style={{ padding: 40, textAlign: 'center' }}>
               <ShieldAlert size={48} color="#e11d48" style={{ margin: '0 auto 16px' }} />
@@ -451,17 +463,19 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
                 Access Restricted
               </h2>
               <p style={{ color: '#64748b', fontSize: 14 }}>
-                The Administration Dashboard is restricted to <strong>Admin</strong> users only.
+                This configuration page is not available for role <strong>{currentUser?.role_label || currentUser?.role}</strong>.
               </p>
             </div>
           );
         }
+        const section = adminChildren.some((c) => c.value === adminSubTab) ? adminSubTab : adminChildren[0].value;
         return (
           <AdministrationPage
-            section={adminSubTab}
-            onNavigateSection={(adminSubTab) => go({ mainTopic: 'admin', adminSubTab })}
+            section={section}
+            onNavigateSection={(next) => go({ mainTopic: 'admin', adminSubTab: next })}
           />
         );
+      }
 
       default:
         return (
@@ -540,18 +554,18 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
         { id: 'backends', label: 'Backends', icon: Cpu },
         { id: 'telemetry', label: 'Telemetry', icon: Activity, children: TELEMETRY_NAV },
         { id: 'investigate', label: 'Timeline', icon: History },
-      ],
+      ].filter((item) => canSeeNavItem(currentUser, item.id)),
     },
     {
       label: 'Platform',
-      items: [{ id: 'platform', label: 'Platform health', icon: Server }],
+      items: [{ id: 'platform', label: 'Platform health', icon: Server }].filter((item) => canSeeNavItem(currentUser, item.id)),
     },
     {
       label: 'Execute',
       items: [
         { id: 'execution', label: 'Execution', icon: PlaySquare, children: EXECUTION_NAV },
         { id: 'resources', label: 'Resources', icon: CheckCircle2, children: RESOURCES_NAV },
-      ],
+      ].filter((item) => canSeeNavItem(currentUser, item.id)),
     },
     {
       label: 'Record',
@@ -568,12 +582,13 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
             ? `${criticalAlertsCount} critical · ${activeAlertsCount} active`
             : `${activeAlertsCount} active alerts`,
         },
-      ],
+      ].filter((item) => canSeeNavItem(currentUser, item.id)),
     },
-  ], [activeAlertsCount, criticalAlertsCount]);
+  ].filter((g) => g.items.length > 0), [activeAlertsCount, criticalAlertsCount, currentUser]);
 
-  const adminItem = isAdmin
-    ? { id: 'admin', label: 'Configure', icon: Settings, children: ADMIN_NAV }
+  const adminNav = visibleAdminNav(currentUser);
+  const adminItem = adminNav.length
+    ? { id: 'admin', label: 'Configure', icon: Settings, children: adminNav }
     : null;
 
   const toggleBranch = (id) => {

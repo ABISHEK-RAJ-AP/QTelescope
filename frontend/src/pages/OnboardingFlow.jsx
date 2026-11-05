@@ -68,7 +68,7 @@ function WizardFooter({ hint, left, right }) {
 export function OnboardingFlow({ currentUser }) {
   const navigate = useNavigate();
   const username = currentUser?.username;
-  const isAdmin = currentUser?.role === 'Admin';
+  const isAdmin = currentUser?.role === 'Admin' || currentUser?.role === 'PlatformAdmin' || currentUser?.role === 'QuantumOpsAdmin';
 
   const [step, setStep] = useState('welcome');
   const [maxReachable, setMaxReachable] = useState(0);

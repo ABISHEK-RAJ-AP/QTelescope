@@ -54,7 +54,7 @@ export function QtQuickActionDock({
   const [tourPanelOpen, setTourPanelOpen] = useState(false);
   const [discoverBusy, setDiscoverBusy] = useState(false);
 
-  const isAdmin = currentUser?.role === 'Admin';
+  const isAdmin = currentUser?.role === 'Admin' || currentUser?.role === 'PlatformAdmin' || currentUser?.role === 'QuantumOpsAdmin';
   const username = currentUser?.username;
   const onboardingRec = getOnboardingRecord(username);
   const tourSpotlight = onboardingRec?.status === 'completed' && !sessionStorage.getItem('qts_tour_dock_nudge');

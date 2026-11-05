@@ -36,7 +36,10 @@ const EMPTY_RULE = { rule_id: '', metric_name: 'T1', operator: '<', threshold_va
 const FRESH_MS = 6 * 3600 * 1000; // telemetry "flowing" = last success within 6h
 
 const isAdminRole = () => {
-  try { return JSON.parse(localStorage.getItem('quantum_user') || 'null')?.role === 'Admin'; } catch { return false; }
+  try {
+    const u = JSON.parse(localStorage.getItem('quantum_user') || 'null');
+    return ['Admin', 'PlatformAdmin', 'QuantumOpsAdmin', 'SecurityAdmin'].includes(u?.role);
+  } catch { return false; }
 };
 const fmtTime = (t) => (t ? new Date(t).toLocaleString() : '—');
 const errText = (e) => String(e?.message || e).replace(/^Error:\s*/, '');

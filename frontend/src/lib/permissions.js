@@ -131,3 +131,44 @@ export function can(user, permission) {
     : permissionsForRole(user.role);
   return perms.has(permission);
 }
+
+export function isPlatformAdmin(user) {
+  return FULL_ACCESS_ROLES.has(user?.role);
+}
+
+export function canManageFleet(user) {
+  return can(user, 'platform:manage') || can(user, 'providers:manage') || can(user, 'backends:manage');
+}
+
+export function canSeeNavItem(user, id) {
+  if (id === 'settings' || id === 'onboarding') return Boolean(user);
+  if (id === 'admin') {
+    return canManageFleet(user) || can(user, 'alert_rules:read') || can(user, 'users:read');
+  }
+  if (id === 'home' || id === 'backends' || id === 'telemetry' || id === 'investigate' || id === 'resources') {
+    return can(user, 'telemetry:read') || can(user, 'backends:read');
+  }
+  if (id === 'operations') return can(user, 'incidents:read') || can(user, 'alerts:read');
+  if (id === 'platform') return can(user, 'platform:read');
+  if (id === 'execution') return can(user, 'executions:read') || can(user, 'telemetry:read');
+  if (id === 'reports') return can(user, 'reports:read');
+  if (id === 'alerts') return can(user, 'alerts:read');
+  return false;
+}
+
+export function visibleAdminNav(user) {
+  return [
+    (canManageFleet(user) ? { value: 'integrations', label: 'Integrations' } : null),
+    (canManageFleet(user) ? { value: 'collectors', label: 'Collectors' } : null),
+    ((can(user, 'alert_rules:read') || can(user, 'alert_rules:manage')) ? { value: 'rules', label: 'Alert rules' } : null),
+    (can(user, 'users:read') ? { value: 'users', label: 'Users & roles' } : null),
+  ].filter(Boolean);
+}
+
+export function landingPathForRole(role) {
+  if (FULL_ACCESS_ROLES.has(role) || role === 'QuantumOpsAdmin') return '/app/overview';
+  if (role === 'SecurityAdmin') return '/app/admin/users';
+  if (role === 'Auditor') return '/app/reports';
+  if (role === 'Operator' || role === 'OpsEngineer' || role === 'IncidentCommander') return '/app/operate';
+  return '/app/overview';
+}

@@ -1,7 +1,19 @@
 /** Route-level code splitting — keeps /app shell small on first paint. */
 import { lazy } from 'react';
 
-const lazyNamed = (loader, name) => lazy(() => loader().then((m) => ({ default: m[name] })));
+const CHUNK_RELOAD_KEY = 'qts_chunk_reload';
+
+function lazyNamed(loader, name) {
+  return lazy(() => loader().then((m) => ({ default: m[name] })).catch((err) => {
+    const stale = /Failed to fetch dynamically imported module|Loading chunk/i.test(String(err?.message || err));
+    if (stale && typeof window !== 'undefined' && !sessionStorage.getItem(CHUNK_RELOAD_KEY)) {
+      sessionStorage.setItem(CHUNK_RELOAD_KEY, '1');
+      window.location.reload();
+      return new Promise(() => {});
+    }
+    throw err;
+  }));
+}
 
 export const DashboardHome = lazyNamed(() => import('./pages/DashboardHome.jsx'), 'DashboardHome');
 export const BackendInventory = lazyNamed(() => import('./pages/BackendInventory.jsx'), 'BackendInventory');

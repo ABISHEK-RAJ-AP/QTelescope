@@ -6,6 +6,7 @@ import { CaptchaField } from '@/components/CaptchaField'
 import { Button } from '@/components/ui/Button'
 import { api } from '@/services/api'
 import { shouldRunOnboarding } from '@/lib/onboardingState'
+import { landingPathForRole } from '@/lib/permissions.js'
 import { safePostLoginRedirect } from '@/lib/safePostLoginRedirect'
 
 export function LoginPage({ onLoginSuccess }) {
@@ -50,14 +51,14 @@ export function LoginPage({ onLoginSuccess }) {
       navigate('/app/onboarding')
       return
     }
-    let landing = '/app/overview'
-    if (res.user?.role === 'Operator') {
+    let landing = landingPathForRole(res.user?.role)
+    if (res.user?.role === 'Operator' && landing === '/app/operate') {
       try {
         const profile = await api.getDeploymentProfile()
-        if (profile?.ux?.operator_landing === 'operations') landing = '/app/operate'
-      } catch {
-        landing = '/app/operate'
-      }
+        if (profile?.ux?.operator_landing && profile.ux.operator_landing !== 'operations') {
+          landing = '/app/overview'
+        }
+      } catch { /* keep operate */ }
     }
     navigate(landing)
   }
@@ -80,7 +81,7 @@ export function LoginPage({ onLoginSuccess }) {
       setError('Enter username and password.')
       return
     }
-    if (!captchaCode.trim()) {
+    if (!showDevPresets && !captchaCode.trim()) {
       setError('Enter the characters shown in the image.')
       return
     }
@@ -90,8 +91,7 @@ export function LoginPage({ onLoginSuccess }) {
       const res = await api.login({
         username: username.trim(),
         password: password.trim(),
-        captcha_id: captchaId,
-        captcha_code: captchaCode.trim(),
+        ...(showDevPresets ? {} : { captcha_id: captchaId, captcha_code: captchaCode.trim() }),
       })
 
       if (res?.status === 'MFA_REQUIRED' && res.mfa_token) {
@@ -246,12 +246,14 @@ export function LoginPage({ onLoginSuccess }) {
           </div>
         </Field>
 
+        {showDevPresets ? null : (
         <CaptchaField
           key={captchaKey}
           value={captchaCode}
           onChange={setCaptchaCode}
           onChallenge={setCaptchaId}
         />
+        )}
 
         {error && (
           <div className="rounded-md border border-rose-300 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400">

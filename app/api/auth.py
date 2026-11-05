@@ -16,7 +16,11 @@ from pydantic import BaseModel, Field
 from app.core.config import settings
 from app.core.sessions import create_session, get_session, revoke_session
 from app.core.rate_limit import check_auth_rate_limit
-from app.core.bootstrap_security import bootstrap_security_report, reject_if_default_bootstrap_password
+from app.core.bootstrap_security import (
+    block_default_bootstrap_enabled,
+    bootstrap_security_report,
+    reject_if_default_bootstrap_password,
+)
 from app.core import user_store
 
 router = APIRouter(prefix="/auth", tags=["Authentication & Security"])
@@ -179,8 +183,8 @@ class VerifyCaptchaRequest(BaseModel):
 class LoginRequest(BaseModel):
     username: str
     password: str
-    captcha_id: str
-    captcha_code: str
+    captcha_id: str = ""
+    captcha_code: str = ""
     role: Optional[str] = None
 
 
@@ -346,7 +350,8 @@ def authenticate_user(req: LoginRequest, request: Request):
         raise HTTPException(status_code=400, detail="Username and password are required.")
 
     check_auth_rate_limit(request, "login")
-    _consume_captcha(req.captcha_id, req.captcha_code)
+    if block_default_bootstrap_enabled():
+        _consume_captcha(req.captcha_id, req.captcha_code)
     reject_if_default_bootstrap_password(
         username, password, settings.ADMIN_USERNAME, settings.USER_USERNAME
     )

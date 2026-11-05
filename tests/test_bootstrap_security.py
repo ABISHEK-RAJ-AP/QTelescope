@@ -34,3 +34,27 @@ def test_config_status_bootstrap_flags(monkeypatch):
     client = _client(monkeypatch)
     body = client.get("/api/v1/auth/config-status").json()
     assert body["bootstrap"]["show_dev_login_presets"] is False
+
+
+def test_demo_login_skips_captcha(monkeypatch):
+    monkeypatch.setenv("BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS", "false")
+    client = _client(monkeypatch)
+    resp = client.post(
+        "/api/v1/auth/login",
+        json={"username": settings.ADMIN_USERNAME, "password": settings.ADMIN_PASSWORD},
+    )
+    assert resp.status_code == 200
+    assert resp.json().get("status") in ("SUCCESS", "MFA_REQUIRED")
+
+
+def test_vapt_login_requires_captcha(monkeypatch):
+    monkeypatch.setenv("BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS", "true")
+    from fastapi import FastAPI
+    app = FastAPI()
+    app.include_router(auth_router, prefix=settings.API_V1_STR)
+    raw = TestClient(app)
+    resp = raw.post(
+        "/api/v1/auth/login",
+        json={"username": settings.ADMIN_USERNAME, "password": "not-the-default"},
+    )
+    assert resp.status_code == 400
