@@ -81,7 +81,7 @@ export function LoginPage({ onLoginSuccess }) {
       setError('Enter username and password.')
       return
     }
-    if (!showDevPresets && !captchaCode.trim()) {
+    if (!captchaCode.trim()) {
       setError('Enter the characters shown in the image.')
       return
     }
@@ -91,7 +91,8 @@ export function LoginPage({ onLoginSuccess }) {
       const res = await api.login({
         username: username.trim(),
         password: password.trim(),
-        ...(showDevPresets ? {} : { captcha_id: captchaId, captcha_code: captchaCode.trim() }),
+        captcha_id: captchaId,
+        captcha_code: captchaCode.trim(),
       })
 
       if (res?.status === 'MFA_REQUIRED' && res.mfa_token) {
@@ -246,14 +247,12 @@ export function LoginPage({ onLoginSuccess }) {
           </div>
         </Field>
 
-        {showDevPresets ? null : (
         <CaptchaField
           key={captchaKey}
           value={captchaCode}
           onChange={setCaptchaCode}
           onChallenge={setCaptchaId}
         />
-        )}
 
         {error && (
           <div className="rounded-md border border-rose-300 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400">
