@@ -229,6 +229,7 @@ export const OperationsCentre = () => {
   return (
     <div className="ops-page page-stack">
       <ExceptionStrip
+        data-tour="page-ops-kpis"
         ariaLabel="Action queue summary"
         items={[
           {
@@ -263,7 +264,7 @@ export const OperationsCentre = () => {
       />
 
       <div className="oc-focus">
-        <section className={`oc-focus__card oc-focus__card--priority${top?.item?.severity === 'CRITICAL' ? ' is-critical' : ''}`} aria-labelledby="oc-next-h">
+        <section data-tour="page-ops-focus" className={`oc-focus__card oc-focus__card--priority${top?.item?.severity === 'CRITICAL' ? ' is-critical' : ''}`} aria-labelledby="oc-next-h">
           <p className="oc-focus__eyebrow" id="oc-next-h">Next up</p>
           {top ? (
             <>

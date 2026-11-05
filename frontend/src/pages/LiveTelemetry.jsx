@@ -343,7 +343,7 @@ export const LiveTelemetry = () => {
         </ChartPanel>
       </div>
 
-      <div className="live-charts-row">
+      <div className="live-charts-row" data-tour="page-live-chart">
         <ChartPanel
           title="T1 by modality"
           question="Mean T1 over time per modality (log scale — ion vs superconducting differ by orders of magnitude)."

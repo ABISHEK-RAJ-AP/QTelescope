@@ -208,7 +208,7 @@ function Integrations({ providers, health, verification, setVerification, canEdi
         )}
       </div>
 
-      <div className="card" style={{ padding: 0 }}>
+      <div className="card" style={{ padding: 0 }} data-tour="page-admin-providers">
         <div className="table-container" style={{ border: 'none' }}>
           <table className="custom-table admin-table">
             <thead>

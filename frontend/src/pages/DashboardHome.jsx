@@ -428,8 +428,8 @@ function DashboardHomeInner() {
         ];
         return (
           <section className="card fo-shift" aria-label="Shift snapshot">
-            <ExceptionStrip ariaLabel="Shift exceptions" className="fo-shift__kpis" items={kpis} />
-            <div className="fo-shift__charts">
+            <ExceptionStrip data-tour="page-kpis" ariaLabel="Shift exceptions" className="fo-shift__kpis" items={kpis} />
+            <div className="fo-shift__charts" data-tour="page-charts">
               <ChartPanel
                 title="Qubit router mix"
                 question="GREEN / YELLOW / RED counts across scored backends."

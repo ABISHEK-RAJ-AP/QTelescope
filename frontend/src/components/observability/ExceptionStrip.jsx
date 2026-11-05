@@ -5,12 +5,13 @@ import { InfoTooltip } from './InfoTooltip.jsx';
  * Severity-first exception metrics — shared by Fleet Overview and Operator Console.
  * Supports tone (critical/warn/ok/neutral) + optional sub line (delta / context).
  */
-export function ExceptionStrip({ items, ariaLabel = 'Operational exceptions', className = '' }) {
+export function ExceptionStrip({ items, ariaLabel = 'Operational exceptions', className = '', ...rest }) {
   return (
     <div
       className={`dashboard-exceptions card ${className}`.trim()}
       role="region"
       aria-label={ariaLabel}
+      {...rest}
     >
       {items.map((item) => {
         const tone = item.tone || (item.emphasis === 'critical' ? 'critical' : 'neutral');

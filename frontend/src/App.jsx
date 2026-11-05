@@ -43,7 +43,7 @@ import { QtQuickActionDock } from './components/quick-actions/QtQuickActionDock.
 import { readDensity } from './utils/uiPreferences.js';
 import { OnScreenKeyboard } from './components/shell/OnScreenKeyboard.jsx';
 import { ToastHost } from './components/ui/ToastHost.jsx';
-import { CONSOLE_TOUR_STEPS } from './lib/platformCapabilityMap.js';
+import { filterConsoleTourSteps } from './lib/consoleTour.js';
 import { consumeConsoleTourPending, shouldRunOnboarding } from './lib/onboardingState.js';
 import { canManageFleet, canSeeNavItem, visibleAdminNav } from './lib/permissions.js';
 
@@ -99,9 +99,24 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
   );
   const canConfigure = canManageFleet(currentUser);
   const tourSteps = useMemo(
-    () => CONSOLE_TOUR_STEPS.filter((s) => s.target !== 'nav-admin' || canSeeNavItem(currentUser, 'admin')),
+    () => filterConsoleTourSteps(currentUser, canSeeNavItem),
     [currentUser],
   );
+
+  const handleTourStep = useCallback((step) => {
+    if (!step) return;
+    if (step.branch) {
+      setExpandedBranches((prev) => {
+        if (prev.has(step.branch)) return prev;
+        const next = new Set(prev);
+        next.add(step.branch);
+        return next;
+      });
+    }
+    if (step.path && location.pathname !== step.path) {
+      navigate(step.path);
+    }
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -252,7 +267,8 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
     onLogout?.();
   };
 
-  const effectiveCollapsed = collapsed && !hoverExpand;
+  const tourSidebarOpen = productTourOpen;
+  const effectiveCollapsed = collapsed && !hoverExpand && !tourSidebarOpen;
 
   const handleSelectBackend = (id) => {
     go({
@@ -689,7 +705,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
       <A11yPreheader />
     <div className="app-container">
       <aside
-        className={`sidebar${collapsed ? ' sidebar-collapsed' : ''}${hoverExpand && collapsed ? ' sidebar-hover-expanded' : ''}`}
+        className={`sidebar${collapsed && !tourSidebarOpen ? ' sidebar-collapsed' : ''}${hoverExpand && collapsed && !tourSidebarOpen ? ' sidebar-hover-expanded' : ''}`}
         onMouseEnter={() => { if (collapsed) setHoverExpand(true); }}
         onMouseLeave={() => setHoverExpand(false)}
         onFocusCapture={() => { if (collapsed) setHoverExpand(true); }}
@@ -707,7 +723,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
           )}
         </Link>
 
-        <nav className="sidebar-nav">
+        <nav className="sidebar-nav" data-tour="sidebar-nav">
           {navGroups.map((group) => (
             <div key={group.label}>
               {!effectiveCollapsed && <div className="nav-group-label">{group.label}</div>}
@@ -810,6 +826,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
     <ProductTour
       open={productTourOpen}
       steps={tourSteps}
+      onStep={handleTourStep}
       onClose={() => setProductTourOpen(false)}
     />
     <QtQuickActionDock
@@ -817,7 +834,6 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
       onStartTour={() => setProductTourOpen(true)}
       activeAlertsCount={activeAlertsCount}
       criticalAlertsCount={criticalAlertsCount}
-      productTourOpen={productTourOpen}
     />
     </>
   );

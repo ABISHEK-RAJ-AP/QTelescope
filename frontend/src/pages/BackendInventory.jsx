@@ -158,7 +158,7 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
 
   return (
     <div className="page-stack">
-      <section className="bk-summary card" aria-label="Fleet summary">
+      <section className="bk-summary card" aria-label="Fleet summary" data-tour="page-inventory">
         <div className="bk-summary__stats">
           <div className="bk-stat">
             <span className="bk-stat__label">Backends</span>

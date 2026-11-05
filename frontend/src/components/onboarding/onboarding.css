@@ -1101,14 +1101,14 @@
 .product-tour-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(2, 6, 23, 0.55);
+  background: transparent;
   pointer-events: auto;
 }
 
 .product-tour-spotlight {
   position: absolute;
   border-radius: 10px;
-  box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.55);
+  box-shadow: 0 0 0 9999px rgba(2, 6, 23, 0.38);
   pointer-events: none;
   transition: top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease;
   border: 2px solid rgba(34, 211, 238, 0.85);
@@ -1131,10 +1131,26 @@
 }
 
 .product-tour-popover p {
-  margin: 0 0 14px;
+  margin: 0 0 10px;
   font-size: 12px;
   line-height: 1.5;
   color: var(--text-secondary);
+}
+
+.product-tour-popover__lesson {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated, var(--bg-muted, rgba(148, 163, 184, 0.12)));
+  color: var(--text-primary);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.product-tour-popover__wait {
+  color: var(--text-muted);
+  font-size: 11px;
 }
 
 .product-tour-popover__foot {

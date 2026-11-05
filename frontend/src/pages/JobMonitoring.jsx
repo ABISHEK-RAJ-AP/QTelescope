@@ -316,7 +316,7 @@ export const JobMonitoring = () => {
         </ChartPanel>
       </section>
 
-      <section className="card jm-table-card dvt-panel">
+      <section className="card jm-table-card dvt-panel" data-tour="page-jobs">
         <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${filtered.length} job${filtered.length === 1 ? '' : 's'} · page ${cur} of ${pages}`}>
           <span className="jm-chips" role="group" aria-label="Filter by status">
             {['ALL', ...STATUS_ORDER].map((s) => (

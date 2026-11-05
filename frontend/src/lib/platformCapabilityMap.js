@@ -182,43 +182,7 @@ export const PRODUCT_FEATURES = [
   },
 ];
 
-export const CONSOLE_TOUR_STEPS = [
-  {
-    target: 'nav-home',
-    title: 'Fleet overview',
-    body: 'Fleet health, stale calibrations, and the ops timeline.',
-  },
-  {
-    target: 'nav-operations',
-    title: 'Operator console',
-    body: 'Alerts, incidents, and collector faults on one page.',
-  },
-  {
-    target: 'nav-backends',
-    title: 'Backends',
-    body: 'Inventory QPUs and simulators. Open a backend for qubit detail.',
-  },
-  {
-    target: 'nav-telemetry',
-    title: 'Telemetry',
-    body: 'Live SSE, calibration, drift, topology, metrics coverage.',
-  },
-  {
-    target: 'nav-alerts',
-    title: 'Alerts',
-    body: 'Active and critical counts in the sidebar. Resolve or promote to incidents.',
-  },
-  {
-    target: 'nav-platform',
-    title: 'Platform health',
-    body: 'Adapter runs, database mode, collector DLQ. Platform services, not QPU calibration.',
-  },
-  {
-    target: 'quick-actions-dock',
-    title: 'Shortcuts',
-    body: 'Tour, platform setup, telemetry, alerts, admin.',
-  },
-];
+export { CONSOLE_TOUR_STEPS, filterConsoleTourSteps } from './consoleTour.js';
 
 export const ANALYSIS_PHASES = [
   { id: 'registry', label: 'Reading provider registry' },

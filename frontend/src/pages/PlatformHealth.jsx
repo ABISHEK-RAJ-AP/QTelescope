@@ -147,7 +147,7 @@ export const PlatformHealth = () => {
         </p>
       </section>
 
-      <section className="ph-tiles" aria-label="Platform status">
+      <section className="ph-tiles" aria-label="Platform status" data-tour="page-platform">
         <Tile title="Database" tone={db.reachable ? 'ok' : 'bad'} value={db.reachable ? 'Reachable' : 'Unreachable'} detail={`${db.storage || '—'}${db.error ? ` · ${db.error}` : ''}`} />
         <Tile title="Collectors" tone={failed ? 'bad' : 'ok'} value={failed ? `${failed} failing` : `${providers.length - failed} of ${providers.length} OK`} detail={`DLQ ${coll.dlq_recent_count ?? 0} · breakers open ${breakers}`} />
         <Tile title="Telemetry store" tone={telTone} value={ageText(telAge)} detail={data?.latest_backend_telemetry_at ? formatISTTime(data.latest_backend_telemetry_at) : 'No samples stored'} />

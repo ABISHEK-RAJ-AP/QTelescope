@@ -46,7 +46,6 @@ export function QtQuickActionDock({
   onStartTour,
   activeAlertsCount = 0,
   criticalAlertsCount = 0,
-  productTourOpen = false,
 }) {
   const navigate = useNavigate();
   const rootRef = useRef(null);
@@ -72,14 +71,7 @@ export function QtQuickActionDock({
     return () => document.removeEventListener('mousedown', onDoc);
   }, [tourPanelOpen]);
 
-  useEffect(() => {
-    if (productTourOpen) {
-      setTourPanelOpen(false);
-      setExpanded(false);
-    }
-  }, [productTourOpen]);
-
-  const forceCollapsed = tourPanelOpen || productTourOpen;
+  const forceCollapsed = tourPanelOpen;
   const showActions = expanded && !forceCollapsed;
 
   const toggleExpanded = () => {

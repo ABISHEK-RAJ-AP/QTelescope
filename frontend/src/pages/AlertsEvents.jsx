@@ -433,7 +433,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
         </p>
       </div>
 
-      <section className="al-kpi-row" aria-label="Operational summary">
+      <section className="al-kpi-row" aria-label="Operational summary" data-tour="page-alert-kpis">
         <button type="button" className="al-kpi card" onClick={() => { onViewChange?.('alerts'); setStatusF('ACTIVE'); setSevF('ALL'); }}>
           <span className="al-kpi__label">Active alerts</span>
           <span className="al-kpi__value">{stats.active}</span>
@@ -609,7 +609,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
             </CollapsibleSection>
           </section>
 
-          <section className="card al-card" aria-label="Alert list">
+          <section className="card al-card" aria-label="Alert list" data-tour="page-alert-filters">
             <div className="al-toolbar">
               <label className="al-search">
                 <Search size={14} aria-hidden />

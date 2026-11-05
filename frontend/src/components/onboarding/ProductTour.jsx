@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { CONSOLE_TOUR_STEPS } from '@/lib/platformCapabilityMap';
+import { CONSOLE_TOUR_STEPS } from '@/lib/consoleTour';
 import './onboarding.css';
 
 function findTourTarget(targetId) {
@@ -12,17 +12,42 @@ function measureTarget(el) {
   return {
     top: Math.max(8, rect.top - pad),
     left: Math.max(8, rect.left - pad),
-    width: rect.width + pad * 2,
-    height: rect.height + pad * 2,
+    width: Math.min(rect.width + pad * 2, window.innerWidth - 16),
+    height: Math.min(rect.height + pad * 2, Math.round(window.innerHeight * 0.58), window.innerHeight - 16),
   };
 }
 
-export function ProductTour({ open, steps = CONSOLE_TOUR_STEPS, onClose, initialStep = 0 }) {
+function placePopover(box) {
+  const w = Math.min(340, window.innerWidth - 24);
+  const h = 220;
+  const sidebarHit = box.left < 280 && box.width < 320;
+  if (sidebarHit) {
+    return {
+      top: Math.min(box.top, window.innerHeight - h - 16),
+      left: Math.min(box.left + box.width + 12, window.innerWidth - w - 12),
+    };
+  }
+  let top = box.top + box.height + 12;
+  let left = Math.min(Math.max(16, box.left), window.innerWidth - w - 12);
+  if (top + h > window.innerHeight) {
+    top = Math.max(16, box.top - h - 12);
+  }
+  return { top, left };
+}
+
+export function ProductTour({
+  open,
+  steps = CONSOLE_TOUR_STEPS,
+  onClose,
+  onStep,
+  initialStep = 0,
+}) {
   const [index, setIndex] = useState(initialStep);
   const [spot, setSpot] = useState(null);
   const [popover, setPopover] = useState({ top: 80, left: 24 });
   const scrolledStepRef = useRef('');
   const rafRef = useRef(0);
+  const notifiedRef = useRef('');
 
   const step = steps[index];
 
@@ -32,35 +57,45 @@ export function ProductTour({ open, steps = CONSOLE_TOUR_STEPS, onClose, initial
     const el = findTourTarget(step.target);
     if (!el || !el.isConnected) {
       setSpot(null);
-      setPopover({ top: 80, left: 24 });
+      setPopover({ top: 88, left: 288 });
       return;
     }
     const stepKey = `${index}:${step.target}`;
     if (scroll && scrolledStepRef.current !== stepKey) {
       scrolledStepRef.current = stepKey;
       try {
-        el.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+        el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
       } catch {
         /* ignore */
       }
     }
     const box = measureTarget(el);
     setSpot(box);
-    const popTop = box.top + box.height + 12;
-    const popLeft = Math.min(Math.max(16, box.left), window.innerWidth - 336);
-    if (popTop + 180 > window.innerHeight) {
-      setPopover({ top: Math.max(16, box.top - 168), left: popLeft });
-    } else {
-      setPopover({ top: popTop, left: popLeft });
-    }
+    setPopover(placePopover(box));
   }, [open, step, index]);
 
   useEffect(() => {
     if (!open) return undefined;
     setIndex(initialStep);
     scrolledStepRef.current = '';
+    notifiedRef.current = '';
+    setSpot(null);
     return undefined;
   }, [open, initialStep]);
+
+  useEffect(() => {
+    setSpot(null);
+    scrolledStepRef.current = '';
+  }, [index]);
+
+  useEffect(() => {
+    if (!open || !step) return undefined;
+    const key = `${index}:${step.target}`;
+    if (notifiedRef.current === key) return undefined;
+    notifiedRef.current = key;
+    onStep?.(step);
+    return undefined;
+  }, [open, step, index, onStep]);
 
   useLayoutEffect(() => {
     if (!open || !step) return undefined;
@@ -69,11 +104,11 @@ export function ProductTour({ open, steps = CONSOLE_TOUR_STEPS, onClose, initial
     const retry = window.setInterval(() => {
       tries += 1;
       const el = findTourTarget(step.target);
-      if (el?.isConnected || tries > 8) {
+      if (el?.isConnected || tries > 20) {
         window.clearInterval(retry);
-        if (el?.isConnected) reposition({ scroll: false });
+        if (el?.isConnected) reposition({ scroll: true });
       }
-    }, 150);
+    }, 120);
     return () => window.clearInterval(retry);
   }, [reposition, index, open, step]);
 
@@ -96,15 +131,16 @@ export function ProductTour({ open, steps = CONSOLE_TOUR_STEPS, onClose, initial
     if (!open) return undefined;
     const onKey = (e) => {
       if (e.key === 'Escape') onClose?.();
+      if (e.key === 'ArrowRight') setIndex((i) => Math.min(i + 1, steps.length - 1));
+      if (e.key === 'ArrowLeft') setIndex((i) => Math.max(i - 1, 0));
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
+  }, [open, onClose, steps.length]);
 
   if (!open || !step) return null;
 
   const atEnd = index >= steps.length - 1;
-  const missingTarget = !findTourTarget(step.target)?.isConnected;
 
   const goNext = () => {
     if (atEnd) {
@@ -134,20 +170,22 @@ export function ProductTour({ open, steps = CONSOLE_TOUR_STEPS, onClose, initial
       >
         <h3>{step.title}</h3>
         <p>{step.body}</p>
-        {missingTarget ? (
-          <p style={{ margin: '0 0 12px', fontSize: 11, color: 'var(--text-muted)' }}>
-            This control is not visible on the current layout — use Next to continue.
-          </p>
+        {step.lesson ? <p className="product-tour-popover__lesson">{step.lesson}</p> : null}
+        {!spot ? (
+          <p className="product-tour-popover__wait">Waiting for this region to render. Next skips it.</p>
         ) : null}
         <div className="product-tour-popover__foot">
           <span className="product-tour-popover__progress">
             {index + 1} / {steps.length}
           </span>
           <div className="product-tour-popover__actions">
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => onClose?.()}>
+            <button type="button" className="btn btn-secondary btn--xs" onClick={() => onClose?.()}>
               Skip
             </button>
-            <button type="button" className="btn btn-primary btn-sm" onClick={goNext}>
+            <button type="button" className="btn btn-secondary btn--xs" disabled={index === 0} onClick={() => setIndex((i) => Math.max(0, i - 1))}>
+              Back
+            </button>
+            <button type="button" className="btn btn-primary btn--xs" onClick={goNext}>
               {atEnd ? 'Done' : 'Next'}
             </button>
           </div>
