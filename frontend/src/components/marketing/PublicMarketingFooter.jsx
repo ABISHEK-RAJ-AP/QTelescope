@@ -85,7 +85,7 @@ export function PublicMarketingFooter({ className = '', compact = false }) {
             </Link>
 
             <p className="max-w-sm text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
-              High-resolution observability, real-time coherence telemetry (T1/T2), gate fidelity drift tracking, and fail-safe calibration snapshots for superconducting quantum processor fleets.
+              T1/T2 coherence, gate fidelity, calibration snapshots, and alerts for QPU fleets.
             </p>
 
             <div className="pt-2 text-xs text-neutral-500 dark:text-neutral-400">

@@ -24,93 +24,93 @@ import { cn } from '@/lib/utils'
 const CAPABILITIES = [
   {
     icon: Activity,
-    title: 'Live Telemetry & Ingestion',
-    body: 'Continuous streaming of multi-qubit error rates, readout fidelity, and dynamic status through resilient SSE streams.',
+    title: 'Live telemetry',
+    body: 'SSE streams of error rates, readout fidelity, and backend status.',
   },
   {
     icon: Cpu,
-    title: 'Physical Qubit Topologies',
-    body: 'Inspect 2D layout couplings, coherence drift (T1/T2), single-qubit and two-qubit gate fidelities on actual QPU hardware.',
+    title: 'Qubit topology',
+    body: 'Coupling maps, T1/T2 drift, one-qubit and two-qubit gate fidelities.',
   },
   {
     icon: Layers,
-    title: 'Multi-Backend Inventory',
-    body: 'Centralized registry across IBM Quantum Eagle/Heron processors, C-DAC testbeds, and local offline simulators.',
+    title: 'Backend inventory',
+    body: 'IBM, Rigetti, IonQ, C-DAC/on-prem, and local simulators in one registry.',
   },
 ]
 
 const FEATURES = [
   {
     icon: LineChart,
-    title: 'Calibration Drift Analysis',
-    body: 'Statistical tracking of frequency shifts and relaxation decay against golden baseline thresholds.',
+    title: 'Calibration drift',
+    body: 'Frequency and relaxation vs the last accepted snapshot.',
   },
   {
     icon: Radio,
-    title: 'Real-time Queue & Job Ops',
-    body: 'Track job queues, pending execution cycles, error-state jobs, and backend availability per workload.',
+    title: 'Queues and jobs',
+    body: 'Pending work, failed jobs, and backend availability.',
   },
   {
     icon: BellRing,
-    title: 'Adaptive Incident Alarming',
-    body: 'Automatic triggering of warning and critical operational alerts when qubits degrade past SLA limits.',
+    title: 'Alerts',
+    body: 'Warning and critical alerts when qubits pass configured limits.',
   },
   {
     icon: Server,
-    title: 'Offline Resilient Cache',
-    body: 'High-availability architecture capable of local playback and snapshot preservation during network disconnects.',
+    title: 'Local cache',
+    body: 'Playback of last snapshots when a vendor API is unreachable.',
   },
   {
     icon: ShieldAlert,
-    title: 'Fail-safe Calibration Snapshots',
-    body: 'Versioned calibration captures with freshness clocks (Fresh / Aging / Stale) so jobs never ride a drifted QPU silently.',
+    title: 'Calibration snapshots',
+    body: 'Timestamped captures scored Fresh, Aging, or Stale.',
   },
   {
     icon: Zap,
-    title: 'Automated Health Scoring',
-    body: 'Composite hardware health score computed dynamically from live error metrics, queue wait times, and calibration freshness.',
+    title: 'Health score',
+    body: 'Errors, queue wait, and calibration age on one score.',
   },
 ]
 
 const WORKFLOW_STEPS = [
   {
     n: '01',
-    title: 'Connect Fleet Backends',
-    body: 'Auto-discover or configure quantum hardware endpoints, C-DAC nodes, and local simulation engines.',
+    title: 'Connect backends',
+    body: 'API keys or on-prem URLs. Simulators need none.',
   },
   {
     n: '02',
-    title: 'Stream Continuous Telemetry',
-    body: 'Ingest live hardware snapshots, gate errors, and execution metrics into the telemetry engine.',
+    title: 'Collect telemetry',
+    body: 'Snapshots, gate errors, and job metrics into the store.',
   },
   {
     n: '03',
-    title: 'Detect Drift & Incidents',
-    body: 'Evaluate qubit stability against calibration models to identify anomalies before job submission.',
+    title: 'Watch drift',
+    body: 'Compare live qubits against the last calibration.',
   },
   {
     n: '04',
-    title: 'Execute & Optimize Workloads',
-    body: 'Route quantum circuits to the healthiest backends and generate audit-ready telemetry reports.',
+    title: 'Operate',
+    body: 'Alerts, incidents, and reports from the same catalog.',
   },
 ]
 
 const FAQ = [
   {
     q: 'What is Q-TeleScope?',
-    a: 'Q-TeleScope is an enterprise-grade quantum runtime observability and operations platform developed for superconducting QPU fleets, testbeds, and simulators.',
+    a: 'Operations console for superconducting QPU fleets, lab controllers, and simulators: telemetry, calibration, queues, and alerts.',
   },
   {
-    q: 'How does it monitor physical qubits in real time?',
-    a: 'Q-TeleScope streams calibration snapshots and telemetry via Server-Sent Events (SSE), calculating T1 relaxation, T2 dephasing, and gate fidelities continuously.',
+    q: 'How does live monitoring work?',
+    a: 'Collectors poll vendor APIs and lab controllers. The UI streams updates over SSE (T1, T2, gate fidelity).',
   },
   {
-    q: 'Can it run offline or in air-gapped laboratory environments?',
-    a: 'Yes. Q-TeleScope incorporates resilient local caching and synthetic hardware telemetry generators so operations proceed seamlessly even without public internet connectivity.',
+    q: 'Does it work without internet?',
+    a: 'Yes for on-prem URLs and cached snapshots. Cloud IBM/IonQ need network and keys.',
   },
   {
-    q: 'How is calibration freshness used before job routing?',
-    a: 'Each backend stores timestamped calibration snapshots. The console scores them Fresh, Recent, Aging, or Stale, and the health engine folds that age into the composite QPU score used for workload routing.',
+    q: 'How is calibration freshness used?',
+    a: 'Each backend stores timestamped snapshots. The console marks them Fresh, Aging, or Stale and folds age into the health score.',
   },
 ]
 
@@ -145,7 +145,7 @@ export function LandingPage() {
           <span className="landing-hero__accent">superconducting QPUs</span>
         </h1>
         <p className="landing-hero__lead mt-10 max-w-3xl text-pretty">
-          Monitor T1 and T2 coherence, gate fidelity, calibration drift, and incidents in one place — built for multi-backend quantum fleets.
+          Monitor T1 and T2 coherence, gate fidelity, calibration drift, and incidents for multi-backend fleets.
         </p>
         <div className="mt-14 flex w-full max-w-lg flex-col items-stretch gap-4 sm:max-w-none sm:flex-row sm:items-center sm:justify-center sm:gap-5">
           <Link to="/login" className="sm:min-w-[188px]">
@@ -160,12 +160,10 @@ export function LandingPage() {
           </Link>
         </div>
         <p className="mt-8 text-sm text-neutral-500 dark:text-neutral-400">
-          Already have access?{' '}
           <Link to="/login" className="font-semibold text-cyan-700 hover:text-cyan-600 dark:text-cyan-400 dark:hover:text-cyan-300">
             Sign in
           </Link>
           {' · '}
-          New here?{' '}
           <Link to="/register" className="font-semibold text-cyan-700 hover:text-cyan-600 dark:text-cyan-400 dark:hover:text-cyan-300">
             Create an account
           </Link>
@@ -178,13 +176,13 @@ export function LandingPage() {
         <section id="capabilities" className="scroll-mt-28">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-neutral-200/80 dark:border-neutral-800/80">
             <div>
-              <span className="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Core Telemetry Architecture</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Console</span>
               <h2 className="mt-1 text-3xl font-extrabold tracking-tight text-neutral-950 dark:text-white">
-                Observability Beyond Traditional Monitoring
+                What you get
               </h2>
             </div>
             <p className="max-w-md text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
-              Capture hardware reality at microwave scale. Reconstruct operational provenance when quantum circuits fail or physical backends drift.
+              Live hardware metrics, calibration age, and inventory in one place.
             </p>
           </div>
 
@@ -198,12 +196,12 @@ export function LandingPage() {
         {/* Modules Grid */}
         <section id="features" className="scroll-mt-28">
           <div className="text-center max-w-3xl mx-auto space-y-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Comprehensive Modules</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Modules</span>
             <h2 className="text-3xl font-extrabold tracking-tight text-neutral-950 dark:text-white">
-              End-to-End Quantum System Governance
+              Calibration, queues, alerts
             </h2>
             <p className="text-base text-neutral-600 dark:text-neutral-400">
-              Equipped with deep analytics for calibration drift, QPU topologies, job queues, and hardware safety.
+              Drift, topology, jobs, and collector health.
             </p>
           </div>
 
@@ -217,12 +215,12 @@ export function LandingPage() {
         {/* Workflow Steps */}
         <section id="workflow" className="scroll-mt-28 rounded-3xl border border-neutral-200/80 bg-white/70 p-8 sm:p-12 backdrop-blur-md dark:border-neutral-800/80 dark:bg-neutral-900/40">
           <div className="max-w-2xl">
-            <span className="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Lifecycle Operations</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Workflow</span>
             <h2 className="mt-1 text-3xl font-extrabold tracking-tight text-neutral-950 dark:text-white">
-              Operational Workflow
+              From connect to operate
             </h2>
             <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-              Continuous validation pipeline from hardware discovery to circuit execution.
+              Discover backends, collect telemetry, then work alerts.
             </p>
           </div>
 
@@ -247,9 +245,9 @@ export function LandingPage() {
         {/* Interactive FAQ Accordion */}
         <section id="faq" className="scroll-mt-28 max-w-3xl mx-auto">
           <div className="text-center space-y-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Technical FAQ</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">FAQ</span>
             <h2 className="text-3xl font-extrabold tracking-tight text-neutral-950 dark:text-white">
-              Frequently Asked Questions
+              Questions
             </h2>
           </div>
 
@@ -287,10 +285,10 @@ export function LandingPage() {
         <section className="rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-cyan-900/15 via-sky-900/10 to-purple-900/15 p-10 sm:p-14 text-center backdrop-blur-md">
           <div className="mx-auto max-w-2xl space-y-4">
             <h2 className="text-3xl font-extrabold tracking-tight text-neutral-950 dark:text-white">
-              Ready to Explore Quantum Telemetry?
+              Open the console
             </h2>
             <p className="text-base text-neutral-600 dark:text-neutral-400">
-              Access the live multi-backend operations console with sample IBM Brisbane and C-DAC testbed telemetries.
+              Sign in with a lab account. Demo backends appear when mock data is on.
             </p>
             <div className="pt-4 flex flex-wrap justify-center gap-4">
               <Link to="/login">

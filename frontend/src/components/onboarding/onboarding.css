@@ -56,17 +56,108 @@
   }
 }
 
-.onboarding-welcome-grid {
+.onboarding-wizard-steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.onboarding-wizard-step {
+  font-size: 11px;
+  line-height: 1;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 0;
+  background: color-mix(in srgb, var(--text-muted, #64748b) 12%, transparent);
+  color: var(--text-muted, #64748b);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.onboarding-wizard-step--current {
+  background: #0891b2;
+  color: #fff;
+}
+
+.onboarding-wizard-step--done {
+  background: color-mix(in srgb, #0891b2 18%, var(--bg-card, #fff));
+  color: #0e7490;
+}
+
+.onboarding-wizard-step--locked {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.onboarding-landing-grid {
   display: grid;
   gap: 16px;
 }
 
-@media (min-width: 900px) {
-  .onboarding-welcome-grid {
-    grid-template-columns: minmax(0, 1fr) 280px;
+@media (min-width: 800px) {
+  .onboarding-landing-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 20px;
     align-items: stretch;
   }
+}
+
+.onboarding-landing-card {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  width: 100%;
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--bg-card, #fff) 88%, transparent);
+  backdrop-filter: blur(12px);
+  padding: 22px 20px 20px;
+  cursor: pointer;
+  color: inherit;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.onboarding-landing-card:hover {
+  border-color: rgba(8, 145, 178, 0.5);
+  transform: translateY(-2px);
+}
+
+.onboarding-landing-card.is-active {
+  border-color: #0891b2;
+  box-shadow: 0 12px 32px -18px rgba(8, 145, 178, 0.7);
+}
+
+.onboarding-landing-card__tag {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0891b2;
+  margin: 0 0 8px;
+}
+
+.onboarding-landing-card__title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.onboarding-landing-card__body {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.onboarding-welcome-grid {
+  display: grid;
+  gap: 16px;
 }
 
 .onboarding-slide-panel {

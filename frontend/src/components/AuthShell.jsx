@@ -4,10 +4,12 @@ import { ArrowLeft } from 'lucide-react'
 import cdacLogo from '../assets/cdaclogo.png'
 import { AuthFridgeVisual } from '@/components/marketing/AuthFridgeVisual'
 import { PublicMarketingHeader } from '@/components/marketing/PublicMarketingHeader'
+import { QuantumBackground } from '@/components/ui/quantum-background'
 
 export function AuthShell({ title, subtitle, children, footer, maxWidth = 'max-w-5xl' }) {
   return (
-    <div className="relative min-h-screen flex flex-col bg-[#e8eef5] text-neutral-900 dark:bg-[#05080f] dark:text-neutral-100">
+    <div className="relative min-h-screen flex flex-col bg-[#f8fafc] text-neutral-900 dark:bg-[#070a0f] dark:text-neutral-100">
+      <QuantumBackground />
       <PublicMarketingHeader />
 
       <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-10 sm:px-6">
@@ -36,7 +38,7 @@ export function AuthShell({ title, subtitle, children, footer, maxWidth = 'max-w
                 Quantum observability for superconducting QPUs
               </h2>
               <p className="text-sm leading-relaxed text-slate-400">
-                Monitor T1 and T2 coherence, gate fidelity, calibration drift, and incidents — built for multi-backend fleets.
+                T1 and T2 coherence, gate fidelity, calibration drift, and incidents for multi-backend fleets.
               </p>
               <Link
                 to="/"

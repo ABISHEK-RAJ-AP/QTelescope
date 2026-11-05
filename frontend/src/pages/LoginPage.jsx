@@ -124,13 +124,13 @@ export function LoginPage({ onLoginSuccess }) {
               to="/register"
               className="font-semibold text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:underline"
             >
-              Register here
+              Register
             </Link>
           </p>
           {showDevPresets ? (
             <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
               <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
-                Dev lab presets only — not for production
+                Lab presets
               </span>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -149,11 +149,7 @@ export function LoginPage({ onLoginSuccess }) {
                 </button>
               </div>
             </div>
-          ) : (
-            <p className="text-center text-xs text-neutral-500">
-              Bootstrap accounts require passwords set via ADMIN_PASSWORD / USER_PASSWORD in the environment.
-            </p>
-          )}
+          ) : null}
         </div>
       }
     >

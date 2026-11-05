@@ -10,6 +10,8 @@ def test_intro_slides_drop_highlight_beans():
     assert "Signal lanes" not in text
     assert "highlights:" not in text
     assert "tag: 'Observe'" in text
+    assert "marketing summary" not in text
+    assert "—" not in text
 
 
 def test_register_marks_onboarding_pending():

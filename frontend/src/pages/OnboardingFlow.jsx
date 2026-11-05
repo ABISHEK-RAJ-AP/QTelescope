@@ -83,7 +83,6 @@ export function OnboardingFlow({ currentUser }) {
   });
 
   const stepIndex = Math.max(0, STEPS.indexOf(step));
-  const slide = INTRO_SLIDES[slideIndex];
 
   useEffect(() => {
     setMaxReachable((m) => Math.max(m, stepIndex));
@@ -138,7 +137,7 @@ export function OnboardingFlow({ currentUser }) {
 
   const saveProvider = async (providerId) => {
     if (!isAdmin) {
-      setSaveNote('Only Admin can save provider keys here. Skip to use the lab catalog, or ask an admin to configure integrations.');
+      setSaveNote('Only Admin can save provider keys. Skip to use the lab catalog.');
       return;
     }
     const draft = drafts[providerId] || { extra: {} };
@@ -150,7 +149,7 @@ export function OnboardingFlow({ currentUser }) {
         endpoint_url: draft.endpoint_url,
         extra: draft.extra,
       });
-      setSaveNote(`${p?.name || providerId} saved — discovery will pick it up in the next step.`);
+      setSaveNote(`${p?.name || providerId} saved. Discovery runs in the next step.`);
       const creds = await api.getCredentials();
       setProviders((creds?.providers || []).filter((x) => PRIMARY_PROVIDERS.includes(x.id)));
     } catch (err) {
@@ -180,28 +179,11 @@ export function OnboardingFlow({ currentUser }) {
     if (step === 'welcome') {
       return (
         <WizardFooter
-          left={(
-            <span className="onboarding-slide-dots__label">
-              Overview {slideIndex + 1} of {INTRO_SLIDES.length}
-            </span>
-          )}
+          left={null}
           right={(
-            <>
-              {slideIndex > 0 && (
-                <button type="button" className="btn btn-secondary" onClick={() => setSlideIndex((i) => i - 1)}>
-                  <ChevronLeft size={16} aria-hidden /> Previous
-                </button>
-              )}
-              {slideIndex < INTRO_SLIDES.length - 1 ? (
-                <button type="button" className="btn btn-primary" onClick={() => setSlideIndex((i) => i + 1)}>
-                  Continue <ArrowRight size={16} aria-hidden />
-                </button>
-              ) : (
-                <button type="button" className="btn btn-primary" onClick={() => goStep('connect')}>
-                  Connect hardware <Key size={16} aria-hidden />
-                </button>
-              )}
-            </>
+            <button type="button" className="btn btn-primary" onClick={() => goStep('connect')}>
+              Connect hardware <Key size={16} aria-hidden />
+            </button>
           )}
         />
       );
@@ -209,7 +191,7 @@ export function OnboardingFlow({ currentUser }) {
     if (step === 'connect') {
       return (
         <WizardFooter
-          hint={!isAdmin ? 'Non-admins: skip to demo catalog or ask an admin to save credentials under Configure → Integrations.' : undefined}
+          hint={!isAdmin ? 'Only Admin can save keys. Skip to use the demo catalog.' : undefined}
           left={(
             <button type="button" className="btn btn-secondary" onClick={() => goStep('welcome')}>
               <ChevronLeft size={16} aria-hidden /> Back
@@ -266,7 +248,7 @@ export function OnboardingFlow({ currentUser }) {
     if (step === 'features') {
       return (
         <WizardFooter
-          hint="Run again from Configure → Integrations → Platform setup."
+          hint="Run again from Configure, Integrations, Platform setup."
           left={(
             <button type="button" className="btn btn-secondary" onClick={() => goStep('map')}>
               <ChevronLeft size={16} aria-hidden /> Back
@@ -287,7 +269,6 @@ export function OnboardingFlow({ currentUser }) {
     <OnboardingShell
       currentUser={currentUser}
       onExit={skipAll}
-      step={step}
       stepIndex={stepIndex}
       onStepChange={goStep}
       maxReachableIndex={maxReachable}
@@ -296,34 +277,26 @@ export function OnboardingFlow({ currentUser }) {
       <main id="onboarding-main-content" className="onboarding-main" data-qt-scroll tabIndex={-1}>
         <div className="onboarding-shell__inner">
           {step === 'welcome' && (
-            <div className="onboarding-welcome-grid">
-              <div className="onboarding-card onboarding-card--hero">
-                <article key={slide.id} className="onboarding-slide-panel" aria-live="polite">
-                  <div className="onboarding-slide-accent" style={{ background: slide.accent }} aria-hidden />
-                  <p className="onboarding-intro-badge">{slide.tag}</p>
-                  <h1 className="onboarding-slide-title">{slide.title}</h1>
-                  <p className="onboarding-slide-body">{slide.body}</p>
+            <div className="onboarding-landing-grid" role="listbox" aria-label="Console areas">
+              {INTRO_SLIDES.map((s, i) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  role="option"
+                  aria-selected={i === slideIndex}
+                  className={`onboarding-landing-card${i === slideIndex ? ' is-active' : ''}`}
+                  onClick={() => setSlideIndex(i)}
+                >
+                  <p className="onboarding-landing-card__tag">{s.tag}</p>
+                  <h2 className="onboarding-landing-card__title">{s.title}</h2>
+                  <p className="onboarding-landing-card__body">{s.body}</p>
                   <ul className="onboarding-bullet-list">
-                    {slide.bullets?.map((b) => (
+                    {s.bullets?.map((b) => (
                       <li key={b}>{b}</li>
                     ))}
                   </ul>
-                </article>
-              </div>
-              <aside className="onboarding-intro-rail" aria-label="Choose intro topic">
-                {INTRO_SLIDES.map((s, i) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className={`onboarding-intro-rail__item${i === slideIndex ? ' onboarding-intro-rail__item--active' : ''}`}
-                    aria-current={i === slideIndex ? 'true' : undefined}
-                    onClick={() => setSlideIndex(i)}
-                  >
-                    <p className="onboarding-intro-rail__tag">{s.tag}</p>
-                    <p className="onboarding-intro-rail__title">{s.title}</p>
-                  </button>
-                ))}
-              </aside>
+                </button>
+              ))}
             </div>
           )}
 
@@ -333,7 +306,7 @@ export function OnboardingFlow({ currentUser }) {
                 <p className="onboarding-intro-badge">Integrations</p>
                 <h2 className="onboarding-slide-title" style={{ fontSize: '1.35rem' }}>Provider credentials</h2>
                 <p className="onboarding-slide-body" style={{ maxWidth: 'none' }}>
-                  Add cloud or on-prem credentials. Keys stay on the platform — never echoed back in the UI.
+                  Add cloud or on-prem credentials. Keys stay on the server and are not shown again.
                   {!isAdmin && ' Your role can view the catalog; an Admin saves live tokens.'}
                 </p>
                 {saveNote && (
@@ -342,7 +315,7 @@ export function OnboardingFlow({ currentUser }) {
                 <div className="onboarding-provider-grid" style={{ marginTop: 20 }}>
                   {providers.length === 0 && (
                     <p className="onboarding-empty-note" role="status">
-                      Provider list still loading, or the server is unreachable. Skip to use the demo catalog, or add credentials later under Configure → Integrations.
+                      Provider list still loading, or the server is unreachable. Skip to use the demo catalog.
                     </p>
                   )}
                   {providers.map((p) => {
@@ -445,7 +418,7 @@ export function OnboardingFlow({ currentUser }) {
                 <div className="onboarding-analysis__orb" aria-hidden={analysisDone} />
                 <div className="onboarding-analysis__phase">
                   {analysisDone
-                    ? `Ready — ${discovery.backends.length} backend(s) in catalog`
+                    ? `Ready. ${discovery.backends.length} backend(s) in catalog`
                     : ANALYSIS_PHASES[Math.min(analysisPhase, ANALYSIS_PHASES.length - 1)]?.label}
                 </div>
                 <ul className="onboarding-analysis__list">
@@ -482,7 +455,7 @@ export function OnboardingFlow({ currentUser }) {
                 )}
                 <p className="onboarding-section-title" style={{ marginTop: 16 }}>What happens next</p>
                 <p className="onboarding-slide-body" style={{ maxWidth: 'none', fontSize: '13px' }}>
-                  The data map step links each signal lane to console routes — telemetry, execution, alerts, and ops — so you know where live data lands.
+                  Next: which signals land on which console pages.
                 </p>
               </div>
             </div>
@@ -493,7 +466,7 @@ export function OnboardingFlow({ currentUser }) {
               <p className="onboarding-intro-badge">Signal map</p>
               <h2 className="onboarding-slide-title" style={{ fontSize: '1.35rem' }}>Signals and console destinations</h2>
               <p className="onboarding-slide-body" style={{ marginBottom: 16, maxWidth: 'none' }}>
-                {discovery.configuredCount} provider slot(s) configured · {discovery.backends.length} backends · {liveAdapters} live adapter(s)
+                {discovery.configuredCount} provider(s) configured, {discovery.backends.length} backends, {liveAdapters} live adapter(s)
               </p>
               <div className="onboarding-lane-grid">
                 {COLLECTION_LANES.map((lane) => (
@@ -551,7 +524,7 @@ export function OnboardingFlow({ currentUser }) {
                 <p className="onboarding-intro-badge">Console</p>
                 <h2 className="onboarding-slide-title" style={{ fontSize: '1.35rem' }}>Primary console routes</h2>
                 <p className="onboarding-slide-body" style={{ marginBottom: 18, maxWidth: 'none' }}>
-                  Each tile opens a main workspace. Finishing starts a short sidebar tour.
+                  Each tile is a console route. Finish to start a short sidebar tour.
                 </p>
                 <div className="onboarding-feature-grid">
                   {features.map((f) => (
