@@ -35,8 +35,9 @@ def test_evidence_download_blocks_anonymous_when_rbac(monkeypatch):
 
 
 def test_platform_health_endpoint():
-    client = TestClient(app)
-    r = client.get(f"{settings.API_V1_STR}/operations/platform-health")
+    with TestClient(app) as client:
+        r = client.get(f"{settings.API_V1_STR}/operations/platform-health")
     assert r.status_code == 200
     body = r.json()
     assert "database" in body and "sse_stream" in body
+    assert "reachable" in body["database"]

@@ -41,18 +41,24 @@ def get_operations_centre(db: Session = Depends(get_db)):
     except Exception:
         db.rollback()
 
-    backends = db.query(BackendModel).all()
+    backends = []
+    open_incidents = []
+    active_alerts = 0
+    try:
+        backends = db.query(BackendModel).all()
+        open_incidents = (
+            db.query(IncidentModel)
+            .filter(IncidentModel.status.in_(["OPEN", "ACKNOWLEDGED", "INVESTIGATING"]))
+            .order_by(IncidentModel.last_detected_at.desc())
+            .limit(10)
+            .all()
+        )
+        active_alerts = db.query(AlertModel).filter(AlertModel.status == "ACTIVE").count()
+    except Exception:
+        db.rollback()
     online = sum(1 for b in backends if b.operational_status == "ONLINE")
     offline = sum(1 for b in backends if b.operational_status == "OFFLINE")
     maintenance = sum(1 for b in backends if b.operational_status not in ("ONLINE", "OFFLINE"))
-    open_incidents = (
-        db.query(IncidentModel)
-        .filter(IncidentModel.status.in_(["OPEN", "ACKNOWLEDGED", "INVESTIGATING"]))
-        .order_by(IncidentModel.last_detected_at.desc())
-        .limit(10)
-        .all()
-    )
-    active_alerts = db.query(AlertModel).filter(AlertModel.status == "ACTIVE").count()
     collectors = list_provider_health()
     collector_fail = sum(1 for c in collectors if c.get("status") not in ("OK", None))
 
@@ -119,11 +125,21 @@ def get_platform_health(db: Session = Depends(get_db)):
 
     collectors = list_provider_health()
     failed = [c for c in collectors if c.get("status") not in ("OK", None, "")]
-    latest_bt = (
-        db.query(BackendTelemetryModel)
-        .order_by(BackendTelemetryModel.timestamp.desc())
-        .first()
-    )
+    latest_bt = None
+    live_backends_exist = False
+    try:
+        latest_bt = (
+            db.query(BackendTelemetryModel)
+            .order_by(BackendTelemetryModel.timestamp.desc())
+            .first()
+        )
+        live_backends_exist = bool(
+            [b for b in db.query(BackendModel).all() if b.backend_id not in MOCK_BACKEND_IDS]
+        )
+    except Exception as exc:
+        db.rollback()
+        db_ok = False
+        db_error = db_error or str(exc)[:200]
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "database": {
@@ -157,7 +173,7 @@ def get_platform_health(db: Session = Depends(get_db)):
             "enable_mock_data": settings.ENABLE_MOCK_DATA,
             "platform_data_mode": platform_data_mode(
                 settings.ENABLE_MOCK_DATA,
-                bool([b for b in db.query(BackendModel).all() if b.backend_id not in MOCK_BACKEND_IDS]),
+                live_backends_exist,
             ),
         },
     }

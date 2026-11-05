@@ -132,6 +132,20 @@ def revoke_session_for_user(username: str, session_id: str, current_token: Optio
     return False
 
 
+def revoke_all_sessions_for_user(username: str) -> int:
+    n = 0
+    with _LOCK:
+        _load_file()
+        for tok, rec in list(_SESSIONS.items()):
+            if rec.get("username") != username:
+                continue
+            _SESSIONS.pop(tok, None)
+            n += 1
+        if n:
+            _save_file()
+    return n
+
+
 def revoke_other_sessions(username: str, current_token: str) -> int:
     n = 0
     with _LOCK:

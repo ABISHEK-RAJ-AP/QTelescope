@@ -10,10 +10,13 @@ from app.core.sessions import get_session, require_api_auth
 
 _PUBLIC_SUFFIXES = (
     "/auth/login",
+    "/auth/login/mfa",
     "/auth/register",
     "/auth/captcha",
     "/auth/config-status",
     "/auth/verify-captcha",
+    "/auth/password/forgot",
+    "/auth/password/reset",
 )
 
 

@@ -189,6 +189,17 @@ class MfaLoginRequest(BaseModel):
     code: str = Field(min_length=6, max_length=32)
 
 
+class ForgotPasswordRequest(BaseModel):
+    username: Optional[str] = None
+    email: Optional[str] = None
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=8)
+    new_password: str = Field(min_length=6)
+    confirm_password: str = Field(min_length=6)
+
+
 class RegisterRequest(BaseModel):
     username: str
     password: str = Field(min_length=6)
@@ -238,6 +249,30 @@ def get_new_captcha():
 def verify_captcha(req: VerifyCaptchaRequest):
     _consume_captcha(req.captcha_id, req.captcha_code)
     return {"status": "SUCCESS", "message": "Image challenge accepted."}
+
+
+def _maybe_mfa_or_session(username: str, role: str, extra: Optional[Dict[str, Any]] = None):
+    from app.core.user_mfa import mfa_status
+
+    if mfa_status(username).get("enabled"):
+        mfa_token = f"mfa_{uuid.uuid4().hex}"
+        with _LOCK:
+            expired = [k for k, v in _MFA_LOGIN_PENDING.items() if v.get("expires_at", 0) < time.time()]
+            for k in expired:
+                _MFA_LOGIN_PENDING.pop(k, None)
+            _MFA_LOGIN_PENDING[mfa_token] = {
+                "username": username,
+                "role": role,
+                "extra": extra or {},
+                "expires_at": time.time() + MFA_LOGIN_TTL_SECONDS,
+            }
+        return {
+            "status": "MFA_REQUIRED",
+            "message": "Enter the authenticator code.",
+            "mfa_token": mfa_token,
+            "expires_in_seconds": MFA_LOGIN_TTL_SECONDS,
+        }
+    return _issue_session(username, role, extra)
 
 
 def _issue_session(username: str, role: str, extra: Optional[Dict[str, Any]] = None):
@@ -317,15 +352,15 @@ def authenticate_user(req: LoginRequest, request: Request):
     )
 
     if username == settings.ADMIN_USERNAME and password == settings.ADMIN_PASSWORD:
-        return _issue_session(username, "Admin", {"email": "", "full_name": "Platform Admin", "org": "C-DAC"})
+        return _maybe_mfa_or_session(username, "Admin", {"email": "", "full_name": "Platform Admin", "org": "C-DAC"})
     if username == settings.USER_USERNAME and password == settings.USER_PASSWORD:
-        return _issue_session(username, "Operator", {"email": "", "full_name": "Researcher", "org": "C-DAC"})
+        return _maybe_mfa_or_session(username, "Operator", {"email": "", "full_name": "Researcher", "org": "C-DAC"})
 
     with _LOCK:
         users = user_store.load_all_users()
         record = users.get(username)
     if record and record.get("password_hash") == _hash_password(password):
-        return _issue_session(
+        return _maybe_mfa_or_session(
             username,
             record.get("role") or "Operator",
             {
@@ -336,6 +371,74 @@ def authenticate_user(req: LoginRequest, request: Request):
         )
 
     raise HTTPException(status_code=401, detail="Invalid username or password.")
+
+
+@router.post("/login/mfa")
+def complete_mfa_login(req: MfaLoginRequest, request: Request):
+    check_auth_rate_limit(request, "login_mfa")
+    with _LOCK:
+        pending = _MFA_LOGIN_PENDING.get(req.mfa_token)
+        if pending and pending.get("expires_at", 0) < time.time():
+            _MFA_LOGIN_PENDING.pop(req.mfa_token, None)
+            pending = None
+    if not pending:
+        raise HTTPException(status_code=401, detail="Authenticator step expired. Sign in again.")
+    from app.core.user_mfa import verify_login_code
+
+    if not verify_login_code(pending["username"], req.code):
+        raise HTTPException(status_code=401, detail="Invalid authenticator code.")
+    with _LOCK:
+        _MFA_LOGIN_PENDING.pop(req.mfa_token, None)
+    return _issue_session(pending["username"], pending["role"], pending.get("extra"))
+
+
+_FORGOT_MSG = "If an account exists for that identity, a reset link was issued."
+
+
+@router.post("/password/forgot")
+def forgot_password(req: ForgotPasswordRequest, request: Request):
+    from app.core.env_profile import is_production_profile
+    from app.core.password_reset import issue_reset_token
+
+    check_auth_rate_limit(request, "password_forgot")
+    username = (req.username or "").strip()
+    email = (req.email or "").strip().lower()
+    found = None
+    users = user_store.load_all_users()
+    if username and username in users:
+        found = username
+    elif email:
+        for uname, rec in users.items():
+            if (rec.get("email") or "").strip().lower() == email:
+                found = uname
+                break
+    payload = {"status": "SUCCESS", "message": _FORGOT_MSG}
+    if found:
+        token = issue_reset_token(found)
+        if not is_production_profile():
+            payload["dev_reset_token"] = token
+    return payload
+
+
+@router.post("/password/reset")
+def reset_password(req: ResetPasswordRequest, request: Request):
+    from app.core.password_reset import consume_reset_token
+    from app.core.sessions import revoke_all_sessions_for_user
+    from app.core.audit_log import record_audit
+
+    check_auth_rate_limit(request, "password_reset")
+    if req.new_password != req.confirm_password:
+        raise HTTPException(status_code=400, detail="Password confirmation does not match.")
+    username = consume_reset_token(req.token)
+    if not username:
+        raise HTTPException(status_code=400, detail="Reset link is invalid or expired.")
+    users = user_store.load_all_users()
+    rec = dict(users.get(username) or {"username": username})
+    rec["password_hash"] = _hash_password(req.new_password)
+    user_store.upsert_user(username, rec)
+    revoke_all_sessions_for_user(username)
+    record_audit("password.reset", actor=username, resource_type="user", resource_id=username)
+    return {"status": "SUCCESS", "message": "Password updated. Sign in with the new password."}
 
 
 @router.get("/me")

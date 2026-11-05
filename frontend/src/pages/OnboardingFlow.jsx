@@ -308,14 +308,6 @@ export function OnboardingFlow({ currentUser }) {
                       <li key={b}>{b}</li>
                     ))}
                   </ul>
-                  <div className="onboarding-stat-grid" aria-label="Highlights">
-                    {slide.highlights?.map((h) => (
-                      <div key={h.label} className="onboarding-stat-card">
-                        <span className="onboarding-stat-card__value">{h.value}</span>
-                        <span className="onboarding-stat-card__label">{h.label}</span>
-                      </div>
-                    ))}
-                  </div>
                 </article>
               </div>
               <aside className="onboarding-intro-rail" aria-label="Choose intro topic">
@@ -481,8 +473,8 @@ export function OnboardingFlow({ currentUser }) {
                     <span className="onboarding-stat-card__label">Live adapters</span>
                   </div>
                   <div className="onboarding-stat-card">
-                    <span className="onboarding-stat-card__value">{COLLECTION_LANES.length}</span>
-                    <span className="onboarding-stat-card__label">Signal lanes</span>
+                    <span className="onboarding-stat-card__value">{(discovery.backends || []).filter((b) => b.operational_status === 'ONLINE').length}</span>
+                    <span className="onboarding-stat-card__label">ONLINE now</span>
                   </div>
                 </div>
                 {discovery.discoverMessage && (

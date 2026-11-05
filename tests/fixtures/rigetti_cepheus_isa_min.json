@@ -1,0 +1,16 @@
+{
+  "name": "Cepheus-1-108Q",
+  "architecture": {
+    "nodes": [{"node_id": 0}, {"node_id": 1}],
+    "edges": [{"node_ids": [0, 1]}]
+  },
+  "benchmarks": [
+    {
+      "name": "FreeInversionRecovery",
+      "sites": [{"node_ids": [0], "characteristics": [{"name": "T1", "value": 3.2e-5, "error": 1e-6}]}]
+    }
+  ],
+  "instructions": [
+    {"name": "RX", "sites": [{"node_ids": [0], "characteristics": [{"name": "fRO", "value": 0.97}]}]}
+  ]
+}

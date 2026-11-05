@@ -40,7 +40,7 @@ def truth_help(label: str) -> str:
     return {
         STUB: "Credential slot only — no collector adapter",
         MOCK_ONLY: "Live slot but mock catalog only (no vendor API poll)",
-        LIVE_NOT_CONFIGURED: "Adapter wired — credentials not set",
+        LIVE_NOT_CONFIGURED: "Adapter wired — credentials not set (Rigetti public ISA needs none)",
         LIVE_UNVERIFIED: "Configured; live poll not verified in this environment",
         LIVE_VERIFIED: "Live contract check passed with credentials",
     }.get(label, label)

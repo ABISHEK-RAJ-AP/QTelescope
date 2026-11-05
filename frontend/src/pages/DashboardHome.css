@@ -129,10 +129,35 @@
 
 .dashboard-exceptions {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   padding: 12px 14px !important;
   overflow: visible;
+}
+.fo-shift {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 14px;
+  animation: fo-shift-in 0.45s ease;
+}
+.fo-shift__kpis {
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+.fo-shift__charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+@media (max-width: 900px) {
+  .fo-shift__charts { grid-template-columns: 1fr; }
+}
+@keyframes fo-shift-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
 }
 @media (max-width: 1100px) {
   .dashboard-exceptions { grid-template-columns: repeat(3, minmax(0, 1fr)); }

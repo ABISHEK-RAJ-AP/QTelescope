@@ -59,6 +59,12 @@ class TotpDisableBody(BaseModel):
     code: str
 
 
+class PasswordChangeBody(BaseModel):
+    current_password: str = Field(min_length=1)
+    new_password: str = Field(min_length=6)
+    confirm_password: str = Field(min_length=6)
+
+
 def _profile(username: str) -> Dict[str, Any]:
     users = load_all_users()
     rec = users.get(username) or {}
@@ -177,6 +183,41 @@ def assign_role(
         detail={"from": old, "to": new_role},
     )
     return {"username": target_username, "role": new_role}
+
+
+@router.post("/me/password")
+def change_password(
+    body: PasswordChangeBody,
+    username: str = Depends(get_current_username),
+    role: str = Depends(get_current_role),
+    token: Optional[str] = Depends(_bearer_token),
+):
+    if username == "anonymous":
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    if body.new_password != body.confirm_password:
+        raise HTTPException(status_code=400, detail="Password confirmation does not match.")
+    from app.api.auth import _hash_password
+    from app.core.config import settings
+    from app.core.sessions import revoke_other_sessions
+
+    users = load_all_users()
+    rec = dict(users.get(username) or {"username": username})
+    current_ok = False
+    if username == settings.ADMIN_USERNAME and body.current_password == settings.ADMIN_PASSWORD:
+        current_ok = True
+    if username == settings.USER_USERNAME and body.current_password == settings.USER_PASSWORD:
+        current_ok = True
+    stored = rec.get("password_hash") or ""
+    if stored and stored == _hash_password(body.current_password):
+        current_ok = True
+    if not current_ok:
+        raise HTTPException(status_code=401, detail="Current password is incorrect.")
+    rec["password_hash"] = _hash_password(body.new_password)
+    upsert_user(username, rec)
+    if token:
+        revoke_other_sessions(username, token)
+    record_audit("password.change", actor=username, role=role, resource_type="user", resource_id=username)
+    return {"status": "SUCCESS", "message": "Password updated. Other sessions were signed out."}
 
 
 @router.get("/me/mfa/status")

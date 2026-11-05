@@ -13,7 +13,7 @@ from app.providers.catalog import BY_ID
 
 _HARNESS = (
     ("ibm_quantum", "IBM_QUANTUM_TOKEN", "ibm_brisbane"),
-    ("rigetti_quantum", "RIGETTI_API_KEY", "rigetti_aspen_m3"),
+    ("rigetti_quantum", "RIGETTI_API_KEY", "rigetti_cepheus_1_108q"),
     ("ionq_quantum", "IONQ_API_KEY", "ionq_forte"),
 )
 
@@ -31,7 +31,8 @@ def run_live_verification() -> List[Dict[str, Any]]:
     for pid, env_key, probe in _HARNESS:
         item = BY_ID.get(pid) or {"id": pid, "adapter": "live"}
         token = os.getenv(env_key, "")
-        if not token or len(token.strip()) < 8:
+        public_ok = pid == "rigetti_quantum"
+        if (not token or len(token.strip()) < 8) and not public_ok:
             out.append(
                 {
                     "provider_id": pid,
@@ -41,7 +42,7 @@ def run_live_verification() -> List[Dict[str, Any]]:
                 }
             )
             continue
-        adapter = _adapter_for(pid, token)
+        adapter = _adapter_for(pid, token or "")
         result = run_adapter_contract(adapter, probe_backend_id=probe)
         verified = bool(result.get("ok"))
         out.append(

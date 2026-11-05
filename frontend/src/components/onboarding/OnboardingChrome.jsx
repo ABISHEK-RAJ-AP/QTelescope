@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Moon, SkipForward, Sun } from 'lucide-react';
+import { ChevronRight, Moon, SkipForward, Sun } from 'lucide-react';
 import { QuantumBackground } from '@/components/ui/quantum-background';
 import { PublicMarketingFooter } from '@/components/marketing/PublicMarketingFooter';
 import { useTheme } from '@/components/ui/ThemeProvider';
@@ -84,32 +84,35 @@ export function OnboardingStepNav({ step, stepIndex, onStepChange, maxReachableI
   return (
     <nav
       className="relative z-20 shrink-0 border-b border-neutral-200/50 bg-white/70 px-4 py-3 dark:border-neutral-800/50 dark:bg-neutral-950/50 sm:px-8"
-      aria-label="Setup steps"
+      aria-label="Setup breadcrumb"
     >
-      <ol className="mx-auto flex max-w-6xl gap-2 overflow-x-auto pb-1 scrollbar-thin">
+      <ol className="onboarding-crumb mx-auto flex max-w-6xl items-center gap-1 overflow-x-auto pb-1">
+        <li className="onboarding-crumb__root shrink-0 text-[11px] font-bold uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          Setup
+        </li>
         {STEP_LABELS.map((label, i) => {
           const active = i === stepIndex;
           const done = i < stepIndex;
           const reachable = i <= maxReachableIndex;
           return (
-            <li key={ids[i]} className="shrink-0">
+            <li key={ids[i]} className="flex shrink-0 items-center gap-1">
+              <ChevronRight size={14} className="text-neutral-400" aria-hidden />
               <button
                 type="button"
-                disabled={!reachable || active}
+                disabled={!reachable}
                 onClick={() => reachable && !active && onStepChange(ids[i])}
                 aria-current={active ? 'step' : undefined}
                 className={[
-                  'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide transition-colors',
+                  'rounded-md px-2 py-1 text-[12px] font-semibold transition-colors',
                   active
-                    ? 'border-cyan-600/50 bg-cyan-50 text-cyan-900 dark:border-cyan-500/40 dark:bg-cyan-950/40 dark:text-cyan-100'
+                    ? 'bg-cyan-50 text-cyan-900 dark:bg-cyan-950/50 dark:text-cyan-100'
                     : done
-                      ? 'border-emerald-600/30 bg-emerald-50/80 text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-950/30 dark:text-emerald-200'
-                      : 'border-neutral-200 bg-white text-neutral-600 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-400',
-                  !reachable && 'opacity-45 cursor-not-allowed',
+                      ? 'text-emerald-800 hover:bg-emerald-50 dark:text-emerald-200 dark:hover:bg-emerald-950/40'
+                      : 'text-neutral-500 dark:text-neutral-400',
+                  !reachable && 'cursor-not-allowed opacity-40',
                 ].join(' ')}
               >
-                <span className="tabular-nums">{i + 1}</span>
-                <span className="hidden sm:inline">{label}</span>
+                {label}
               </button>
             </li>
           );

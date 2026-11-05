@@ -23,8 +23,10 @@ def test_live_harness_skips_without_secrets(monkeypatch):
     monkeypatch.delenv("IBM_QUANTUM_TOKEN", raising=False)
     monkeypatch.delenv("RIGETTI_API_KEY", raising=False)
     monkeypatch.delenv("IONQ_API_KEY", raising=False)
-    results = run_live_verification()
-    assert all(r.get("skipped") for r in results)
+    results = {r["provider_id"]: r for r in run_live_verification()}
+    assert results["ibm_quantum"].get("skipped")
+    assert results["ionq_quantum"].get("skipped")
+    assert not results["rigetti_quantum"].get("skipped")
 
 
 def test_mqtt_disabled_without_broker(monkeypatch):

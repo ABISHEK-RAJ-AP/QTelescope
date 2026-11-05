@@ -91,7 +91,8 @@ def get_configured_credentials():
     """Catalog + configured flags. Never returns secret values."""
     live_flags = {
         "ibm_quantum": _env_configured("IBM_QUANTUM_TOKEN", ["~/.qiskit/qiskit-ibm.json"]),
-        "rigetti_quantum": _env_configured("RIGETTI_API_KEY") or bool(os.getenv("QCS_API_KEY", "")) or os.path.exists(os.path.expanduser("~/.qcs/config.toml")),
+        # Public QCS ISA needs no key; optional token still counts as configured.
+        "rigetti_quantum": True,
         "ionq_quantum": _env_configured("IONQ_API_KEY"),
         "cdac_quantum": _env_configured("ONPREM_QPU_URL"),
     }
@@ -223,12 +224,11 @@ def save_provider_credentials(
         if not adapter.is_authenticated:
             raise HTTPException(status_code=400, detail="IBM Quantum Token authentication failed. Please check your IBM Cloud API Key.")
     elif prov in ["rigetti", "rigetti_quantum"]:
-        if not token:
-            raise HTTPException(status_code=400, detail="Rigetti API Key cannot be empty.")
-        os.environ["RIGETTI_API_KEY"] = token
-        os.environ["QCS_API_KEY"] = token
-        _update_env_file("RIGETTI_API_KEY", token)
-        adapter = RigettiProviderAdapter(api_key=token)
+        if token:
+            os.environ["RIGETTI_API_KEY"] = token
+            os.environ["QCS_API_KEY"] = token
+            _update_env_file("RIGETTI_API_KEY", token)
+        adapter = RigettiProviderAdapter(api_key=token or None)
     elif prov in ["ionq", "ionq_quantum"]:
         if not token:
             raise HTTPException(status_code=400, detail="IonQ API Key cannot be empty.")

@@ -6,6 +6,7 @@ import { CaptchaField } from '@/components/CaptchaField'
 import { Button } from '@/components/ui/Button'
 import { api } from '@/services/api'
 import { shouldRunOnboarding } from '@/lib/onboardingState'
+import { safePostLoginRedirect } from '@/lib/safePostLoginRedirect'
 
 export function LoginPage({ onLoginSuccess }) {
   const navigate = useNavigate()
@@ -17,8 +18,50 @@ export function LoginPage({ onLoginSuccess }) {
   const [captchaId, setCaptchaId] = useState('')
   const [captchaCode, setCaptchaCode] = useState('')
   const [captchaKey, setCaptchaKey] = useState(0)
+  const [mfaToken, setMfaToken] = useState('')
+  const [mfaCode, setMfaCode] = useState('')
   /* Default hidden — only show when API explicitly allows (dev). Safer for VAPT/VM. */
   const [showDevPresets, setShowDevPresets] = useState(false)
+
+  const finishSession = async (res) => {
+    let user = res.user
+    try {
+      localStorage.setItem('quantum_user', JSON.stringify(res.user))
+      const me = await api.getMe()
+      if (me?.authenticated) {
+        user = {
+          ...res.user,
+          permissions: me.permissions,
+          role_label: me.role_label,
+          full_name: me.full_name ?? res.user.full_name,
+          email: me.email ?? res.user.email,
+          org: me.org ?? res.user.org,
+        }
+      }
+    } catch { /* keep login payload */ }
+    localStorage.setItem('quantum_user', JSON.stringify(user))
+    onLoginSuccess?.(user)
+    const postLogin = safePostLoginRedirect(sessionStorage.getItem('qre_post_login_redirect'))
+    sessionStorage.removeItem('qre_post_login_redirect')
+    if (postLogin) {
+      navigate(postLogin)
+      return
+    }
+    if (shouldRunOnboarding(res.user)) {
+      navigate('/app/onboarding')
+      return
+    }
+    let landing = '/app/overview'
+    if (res.user?.role === 'Operator') {
+      try {
+        const profile = await api.getDeploymentProfile()
+        if (profile?.ux?.operator_landing === 'operations') landing = '/app/operate'
+      } catch {
+        landing = '/app/operate'
+      }
+    }
+    navigate(landing)
+  }
 
   useEffect(() => {
     api.getConfigStatus()
@@ -48,44 +91,13 @@ export function LoginPage({ onLoginSuccess }) {
         captcha_code: captchaCode.trim(),
       })
 
+      if (res?.status === 'MFA_REQUIRED' && res.mfa_token) {
+        setMfaToken(res.mfa_token)
+        setMfaCode('')
+        return
+      }
       if (res?.status === 'SUCCESS') {
-        let user = res.user
-        try {
-          localStorage.setItem('quantum_user', JSON.stringify(res.user))
-          const me = await api.getMe()
-          if (me?.authenticated) {
-            user = {
-              ...res.user,
-              permissions: me.permissions,
-              role_label: me.role_label,
-              full_name: me.full_name ?? res.user.full_name,
-              email: me.email ?? res.user.email,
-              org: me.org ?? res.user.org,
-            }
-          }
-        } catch { /* keep login payload */ }
-        localStorage.setItem('quantum_user', JSON.stringify(user))
-        onLoginSuccess?.(user)
-        const postLogin = sessionStorage.getItem('qre_post_login_redirect')
-        if (postLogin) {
-          sessionStorage.removeItem('qre_post_login_redirect')
-          window.location.href = postLogin
-          return
-        }
-        if (shouldRunOnboarding(res.user)) {
-          navigate('/app/onboarding')
-          return
-        }
-        let landing = '/app/overview'
-        if (res.user?.role === 'Operator') {
-          try {
-            const profile = await api.getDeploymentProfile()
-            if (profile?.ux?.operator_landing === 'operations') landing = '/app/operate'
-          } catch {
-            landing = '/app/operate'
-          }
-        }
-        navigate(landing)
+        await finishSession(res)
       }
     } catch (err) {
       setError(err?.message || 'Sign-in failed. Check the image and credentials.')
@@ -103,6 +115,10 @@ export function LoginPage({ onLoginSuccess }) {
       footer={
         <div className="space-y-4">
           <p className="text-center text-sm text-neutral-500">
+            <Link to="/forgot-password" className="font-semibold text-cyan-600 hover:text-cyan-700 dark:text-cyan-400">
+              Forgot password
+            </Link>
+            {' · '}
             Need an operator account?{' '}
             <Link
               to="/register"
@@ -141,6 +157,57 @@ export function LoginPage({ onLoginSuccess }) {
         </div>
       }
     >
+      {mfaToken ? (
+      <form
+        className="space-y-4"
+        onSubmit={async (e) => {
+          e.preventDefault()
+          setError('')
+          if (!mfaCode.trim()) {
+            setError('Enter the authenticator code.')
+            return
+          }
+          setLoading(true)
+          try {
+            const res = await api.loginMfa({ mfa_token: mfaToken, code: mfaCode.trim() })
+            if (res?.status === 'SUCCESS') await finishSession(res)
+          } catch (err) {
+            setError(err?.message || 'Authenticator verification failed.')
+          } finally {
+            setLoading(false)
+          }
+        }}
+      >
+        <Field label="Authenticator code">
+          <input
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            required
+            value={mfaCode}
+            onChange={(e) => setMfaCode(e.target.value)}
+            className={fieldClass}
+            placeholder="6-digit code"
+          />
+        </Field>
+        {error && (
+          <div className="rounded-md border border-rose-300 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400">
+            {error}
+          </div>
+        )}
+        <Button type="submit" className="h-11 w-full gap-2 text-sm font-semibold" disabled={loading}>
+          {loading ? <Loader2 className="size-4 animate-spin" /> : null}
+          Verify and sign in
+        </Button>
+        <button
+          type="button"
+          className="w-full text-center text-xs text-neutral-500 underline"
+          onClick={() => { setMfaToken(''); setMfaCode(''); setError('') }}
+        >
+          Back to password
+        </button>
+      </form>
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label="Username">
           <div className="relative">
@@ -198,6 +265,7 @@ export function LoginPage({ onLoginSuccess }) {
           Sign in <ArrowRight className="size-4" />
         </Button>
       </form>
+      )}
     </AuthShell>
   )
 }

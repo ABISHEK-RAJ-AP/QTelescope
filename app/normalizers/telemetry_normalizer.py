@@ -23,7 +23,7 @@ class TelemetryNormalizer:
         return {
             "backend_id": str(raw_status.get("backend_id", "unknown")),
             "operational": bool(operational),
-            "pending_jobs": int(raw_status.get("pending_jobs", 0)),
+            "pending_jobs": int(raw_status["pending_jobs"]) if raw_status.get("pending_jobs") is not None else None,
             "estimated_wait_time": float(raw_status["estimated_wait_time"]) if raw_status.get("estimated_wait_time") is not None else None,
             "telemetry_source": format_telemetry_source(lineage, provider_id),
             "data_quality": "VALID" if operational else "DEGRADED",

@@ -36,7 +36,7 @@ const fmtUs = (v) => {
 /** Widgets that still exist. Others from saved layouts are dropped (redundant/decorative). */
 const ACTIVE = [
   WIDGET_IDS.exceptions, WIDGET_IDS.fleetSummary, WIDGET_IDS.alertQueue,
-  WIDGET_IDS.queueChart, WIDGET_IDS.calChart, WIDGET_IDS.coherenceChart,
+  WIDGET_IDS.calChart, WIDGET_IDS.coherenceChart,
   WIDGET_IDS.fleetTrend, WIDGET_IDS.modalityStrip, WIDGET_IDS.platformPanel,
   WIDGET_IDS.opsTimeline,
 ];
@@ -188,10 +188,8 @@ function DashboardHomeInner() {
 
   const crit = alertSummary?.critical ?? 0;
   const warn = alertSummary?.warning ?? 0;
-  const total = alertSummary?.active ?? d.centre?.operations?.active_alerts ?? 0;
+  const total = alertSummary?.active ?? d.centre?.operations?.active_alerts ?? crit + warn;
   const other = Math.max(0, total - crit - warn);
-  const redBackends = rows.filter((r) => r.router === 'RED').length;
-  const offline = rows.filter((r) => r.operational_status && r.operational_status !== 'ONLINE').length;
   const collectorBad = providers.filter((p) => {
     const age = ageMinutes(p.last_success_at);
     return p.status !== 'OK' || (age != null && age > STALE_MIN);
@@ -277,6 +275,29 @@ function DashboardHomeInner() {
     () => rows.reduce((sum, r) => sum + (Number(r.pending) || 0), 0),
     [rows],
   );
+  const calStale = useMemo(
+    () => (d.calibrations || []).filter((c) => {
+      const status = String(c.freshness_status || '').toLowerCase();
+      if (status === 'stale') return true;
+      const age = Number(c.calibration_age);
+      return Number.isFinite(age) && age >= 24;
+    }).length,
+    [d.calibrations],
+  );
+  const qubitMixOption = useMemo(() => ({
+    backgroundColor: 'transparent',
+    tooltip: { ...baseTooltip(resolved === 'dark'), trigger: 'item' },
+    series: [{
+      type: 'pie',
+      radius: ['48%', '72%'],
+      center: ['50%', '52%'],
+      avoidLabelOverlap: true,
+      label: { color: theme.textColor, fontSize: 10, formatter: '{b}\n{c}' },
+      data: STATES.map((s) => ({
+        name: s, value: fleetStateTotals[s] || 0, itemStyle: { color: STATE_COLORS[s] },
+      })).filter((d) => d.value > 0),
+    }],
+  }), [fleetStateTotals, theme, resolved]);
 
   /** Actionable: where alert load concentrates (replaces weak state-mix pie). */
   const alertPressureRows = useMemo(
@@ -373,47 +394,69 @@ function DashboardHomeInner() {
     switch (id) {
       case WIDGET_IDS.exceptions: {
         const openInc = d.centre?.operations?.open_incidents;
+        const activeAlerts = (Number(crit) || 0) + (Number(warn) || 0);
+        const kpis = [
+          {
+            id: 'alerts', label: 'Active alerts', value: activeAlerts,
+            sub: crit ? `${crit} critical · ${warn} warning` : (warn ? `${warn} warning` : 'None open'),
+            tone: crit > 0 ? 'critical' : warn > 0 ? 'warn' : 'ok',
+            onClick: go('/app/alerts'),
+            help: 'CRITICAL + WARNING still ACTIVE. Open Alerts to acknowledge or resolve.',
+          },
+          {
+            id: 'inc', label: 'Open incidents', value: openInc ?? '—',
+            sub: openInc ? 'Triage required' : 'None open',
+            tone: openInc > 0 ? 'warn' : 'ok',
+            onClick: go('/app/alerts/incidents'),
+            help: 'Incidents in Open, Acknowledged, or Investigating.',
+          },
+          {
+            id: 'q', label: 'Pending jobs', value: totalPending,
+            sub: rows.length ? `${rows.length} backends` : 'No queue data',
+            tone: totalPending > 20 ? 'warn' : 'ok',
+            onClick: go('/app/execution/queues'),
+            help: 'Sum of pending_jobs across discovered backends.',
+          },
+          {
+            id: 'cal', label: 'Calibrations ≥24h', value: calStale,
+            sub: collectorBad ? `${collectorBad} collector(s) stale` : (greenPct != null ? `${greenPct}% qubits GREEN` : 'Age from last snapshot'),
+            tone: calStale > 0 || collectorBad > 0 ? 'warn' : 'ok',
+            onClick: go(collectorBad ? '/app/platform/health' : '/app/telemetry/calibration'),
+            help: 'Backends whose last calibration is stale or older than 24 hours. Subline flags stale collectors.',
+          },
+        ];
         return (
-          <ExceptionStrip
-            ariaLabel="Fleet exceptions"
-            items={[
-              {
-                id: 'crit', label: 'Critical alerts', value: crit,
-                sub: warn ? `${warn} warnings active` : 'No warnings',
-                tone: crit > 0 ? 'critical' : warn > 0 ? 'warn' : 'ok',
-                onClick: go('/app/alerts'),
-                help: 'Active CRITICAL alerts fleet-wide. Subline shows active WARNING count.',
-              },
-              {
-                id: 'inc', label: 'Open incidents', value: openInc ?? '—',
-                sub: openInc ? 'Needs triage' : 'Queue clear',
-                tone: openInc > 0 ? 'warn' : 'ok',
-                onClick: go('/app/alerts/incidents'),
-                help: 'Incidents in Open, Acknowledged, or Investigating state.',
-              },
-              {
-                id: 'red', label: 'Advisory RED', value: d.health ? redBackends : '—',
-                sub: rows.length ? `${rows.length} backends scored` : 'Awaiting health',
-                tone: redBackends > 0 ? 'critical' : 'ok',
-                onClick: go(HEALTH_PATH),
-                help: 'Backends whose routing recommendation is RED (do not schedule).',
-              },
-              {
-                id: 'off', label: 'Not ONLINE', value: rows.length ? offline : '—',
-                sub: rows.length ? `${rows.length - offline} online` : '—',
-                tone: offline > 0 ? 'warn' : 'ok',
-                onClick: go('/app/backends/inventory'),
-                help: 'Backends whose operational status is not ONLINE.',
-              },
-              {
-                id: 'col', label: 'Collectors stale', value: providers.length ? collectorBad : '—',
-                sub: providers.length ? `${providers.length - collectorBad}/${providers.length} healthy` : '—',
-                tone: collectorBad > 0 ? 'critical' : providers.length ? 'ok' : 'neutral',
-                onClick: go('/app/platform/health'),
-                help: `Collector not OK, or last success older than ${STALE_MIN} minutes.`,
-              },
-            ]}
-          />
+          <section className="card fo-shift" aria-label="Shift snapshot">
+            <ExceptionStrip ariaLabel="Shift exceptions" className="fo-shift__kpis" items={kpis} />
+            <div className="fo-shift__charts">
+              <ChartPanel
+                title="Qubit router mix"
+                question="GREEN / YELLOW / RED counts across scored backends."
+                sourceKind="derived"
+                state={qubitTotal ? 'ready' : 'empty'}
+                emptyMessage="Health vector not loaded yet."
+                minHeight={220}
+                actions={<Link className="fs-link" to={HEALTH_PATH}>Health vector</Link>}
+              >
+                <QtECharts option={qubitMixOption} style={{ height: 200, width: '100%' }} />
+              </ChartPanel>
+              <ChartPanel
+                title="Queue depth"
+                question="Pending jobs per backend — click a bar to open that machine."
+                sourceKind="stored"
+                state={queueRows.length ? 'ready' : 'empty'}
+                emptyMessage="No queue samples."
+                minHeight={220}
+                actions={<Link className="fs-link" to="/app/execution/queues">Queues</Link>}
+              >
+                <QtECharts
+                  option={queueOption}
+                  style={{ height: 200, width: '100%' }}
+                  onEvents={{ click: (p) => { const q = queueRows[p.dataIndex]; if (q?.backend_id) navigate(`/app/execution/queues?backend=${encodeURIComponent(q.backend_id)}`); } }}
+                />
+              </ChartPanel>
+            </div>
+          </section>
         );
       }
       case WIDGET_IDS.fleetSummary:
@@ -674,7 +717,7 @@ function DashboardHomeInner() {
         return null;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [d, rows, alertSummary, crit, warn, other, total, redBackends, offline, collectorBad, providers.length,
+  }, [d, rows, alertSummary, crit, warn, collectorBad, calStale, qubitMixOption, qubitTotal,
     cohRows, cohOption, queueRows, queueOption, calRows, calOption, fleetStateTotals, greenPct, totalPending,
     alertPressureRows, alertPressureOption, workloadScatter, workloadOption, routerStackOption,
     events, failed, latestTelemetry, loadData, navigate, chartsReady]);

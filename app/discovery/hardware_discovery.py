@@ -54,7 +54,11 @@ class HardwareDiscoveryEngine:
         qcs_config_path = os.path.expanduser("~/.qcs/config.toml")
         has_rigetti = bool(rigetti_key or os.path.exists(qcs_config_path))
         rigetti_adapter = RigettiProviderAdapter(api_key=rigetti_key if rigetti_key else None)
-        detected_providers.append(("rigetti_quantum", rigetti_adapter, "Rigetti Computing (QCS Forest QPU)" if has_rigetti else "Rigetti Aspen/Ankaa Architecture"))
+        detected_providers.append((
+            "rigetti_quantum",
+            rigetti_adapter,
+            "Rigetti QCS public ISA" + (" + API token" if has_rigetti else ""),
+        ))
 
         # 4. IonQ Trapped-Ion Probe (IonQ Cloud / AWS Braket Key)
         ionq_key = settings.IONQ_API_KEY or os.getenv("IONQ_API_KEY", "")

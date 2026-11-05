@@ -41,6 +41,10 @@ export function UserSettings({ currentUser, onUserUpdate }) {
   const [backups, setBackups] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [sessionsBusy, setSessionsBusy] = useState(false);
+  const [pwCurrent, setPwCurrent] = useState('');
+  const [pwNew, setPwNew] = useState('');
+  const [pwConfirm, setPwConfirm] = useState('');
+  const [pwBusy, setPwBusy] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -229,6 +233,56 @@ export function UserSettings({ currentUser, onUserUpdate }) {
 
       {tab === 'security' && (
         <>
+        <section className="us-card">
+          <header className="us-card__head">
+            <h3 className="us-card__title">Change password</h3>
+            <p className="us-card__desc">Other sessions are signed out after a successful change.</p>
+          </header>
+          <div className="us-grid">
+            <div className="us-field">
+              <label>Current password
+                <input type="password" autoComplete="current-password" value={pwCurrent} onChange={(e) => setPwCurrent(e.target.value)} />
+              </label>
+            </div>
+            <div className="us-field">
+              <label>New password
+                <input type="password" autoComplete="new-password" value={pwNew} onChange={(e) => setPwNew(e.target.value)} />
+              </label>
+            </div>
+            <div className="us-field">
+              <label>Confirm new password
+                <input type="password" autoComplete="new-password" value={pwConfirm} onChange={(e) => setPwConfirm(e.target.value)} />
+              </label>
+            </div>
+          </div>
+          <div className="us-actions">
+            <button
+              type="button"
+              className="btn btn-primary"
+              disabled={pwBusy}
+              onClick={async () => {
+                setPwBusy(true);
+                try {
+                  await api.changePassword({
+                    current_password: pwCurrent,
+                    new_password: pwNew,
+                    confirm_password: pwConfirm,
+                  });
+                  setPwCurrent('');
+                  setPwNew('');
+                  setPwConfirm('');
+                  notifySuccess('Password updated.');
+                } catch (e) {
+                  notifyError(e?.message || 'Password change failed.');
+                } finally {
+                  setPwBusy(false);
+                }
+              }}
+            >
+              {pwBusy ? 'Updating…' : 'Update password'}
+            </button>
+          </div>
+        </section>
         <section className="us-card">
           <header className="us-card__head">
             <h3 className="us-card__title">Two-factor authentication</h3>

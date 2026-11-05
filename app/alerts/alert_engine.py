@@ -40,7 +40,7 @@ class AlertEngine:
 
         # Rule 2: Queue Congestion
         key = f"QUEUE:{backend_id}:HIGH_QUEUE"
-        if pending_jobs > 50 and key not in active_keys:
+        if pending_jobs is not None and pending_jobs > 50 and key not in active_keys:
             new_alerts.append(AlertModel(
                 alert_id=f"alt_{uuid.uuid4().hex[:8]}",
                 resource_type="QUEUE",
