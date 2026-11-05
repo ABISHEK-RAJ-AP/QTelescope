@@ -49,15 +49,13 @@ if [[ -x "$ROOT/scripts/start-local-infra.sh" ]]; then
 fi
 
 command -v npm >/dev/null || die "npm missing. Install Node via nvm, then rerun."
-if [[ -n "${QRP_ROOT:-}" && -d "${QRP_ROOT}/frontend" ]]; then
-  QRP_FE="$(cd "$QRP_ROOT/frontend" && pwd)"
-elif [[ -d "$ROOT/../QuantumResourcePortal/frontend" ]]; then
+# shellcheck source=/dev/null
+source "$ROOT/scripts/lib/qre-paths.sh"
+QRP_FE="$(qrp_frontend_dir || true)"
+if [[ -z "$QRP_FE" && -d "$ROOT/../QuantumResourcePortal/frontend" ]]; then
   QRP_FE="$(cd "$ROOT/../QuantumResourcePortal/frontend" && pwd)"
-elif [[ -d "$ROOT/quantum-resource-portal/frontend" ]]; then
-  QRP_FE="$(cd "$ROOT/quantum-resource-portal/frontend" && pwd)"
-else
-  die "QRP frontend missing. Clone QuantumResourcePortal or set QRP_ROOT."
 fi
+[[ -n "$QRP_FE" && -d "$QRP_FE" ]] || die "QRP frontend missing at /home/cloud/QuantumResourcePortal"
 if [[ ! -d "$QRP_FE/node_modules" ]]; then
   log "npm install (QRP)"
   (cd "$QRP_FE" && npm install)

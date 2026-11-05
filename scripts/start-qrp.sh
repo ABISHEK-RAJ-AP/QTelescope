@@ -5,15 +5,11 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
-# Portal UI lives in QuantumResourcePortal. Local nested copy is optional.
-if [[ -n "${QRP_ROOT:-}" && -d "${QRP_ROOT}/frontend" ]]; then
-  QRP_FE="$(cd "$QRP_ROOT/frontend" && pwd)"
-elif [[ -d "$ROOT/../QuantumResourcePortal/frontend" ]]; then
+# shellcheck source=/dev/null
+source "$ROOT/scripts/lib/qre-paths.sh"
+QRP_FE="$(qrp_frontend_dir || true)"
+if [[ -z "$QRP_FE" && -d "$ROOT/../QuantumResourcePortal/frontend" ]]; then
   QRP_FE="$(cd "$ROOT/../QuantumResourcePortal/frontend" && pwd)"
-elif [[ -d "$ROOT/quantum-resource-portal/frontend" ]]; then
-  QRP_FE="$(cd "$ROOT/quantum-resource-portal/frontend" && pwd)"
-else
-  QRP_FE=""
 fi
 
 # shellcheck source=/dev/null
@@ -59,7 +55,7 @@ spawn_term() {
   bash -lc "$wrapped"
 }
 
-[[ -n "$QRP_FE" && -d "$QRP_FE" ]] || pause_fail "QRP frontend missing. Clone QuantumResourcePortal next to this repo, or set QRP_ROOT, or keep a local quantum-resource-portal/frontend."
+[[ -n "$QRP_FE" && -d "$QRP_FE" ]] || pause_fail "QRP frontend missing at /home/cloud/QuantumResourcePortal (or QRP_ROOT)."
 command -v npm >/dev/null || pause_fail "npm not found (install Node.js / nvm). PATH=$PATH"
 
 export PATH="${MINIFORGE_BIN:-$HOME/miniforge3/bin}:${PATH:-}"
