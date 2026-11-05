@@ -1,0 +1,91 @@
+.ops-cal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .ops-cal { grid-template-columns: 1fr; }
+}
+
+.ops-cal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.ops-cal__title { margin: 0; font-size: 15px; font-weight: 700; }
+.ops-cal__nav { display: flex; align-items: center; gap: 8px; }
+.ops-cal__month { min-width: 9rem; text-align: center; font-weight: 700; font-size: 13px; }
+
+.ops-cal__weekdays,
+.ops-cal__cells {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.ops-cal__weekday {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 4px 0;
+}
+.ops-cal__cell {
+  min-height: 88px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 6px 7px;
+  background: var(--bg-card);
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+.ops-cal__cell--empty { visibility: hidden; }
+.ops-cal__cell:hover { border-color: var(--accent-cyan); }
+.ops-cal__cell.is-today { border-color: var(--accent-cyan); }
+.ops-cal__cell.is-selected { box-shadow: 0 0 0 2px var(--accent-cyan); }
+.ops-cal__cell.is-crit { background: color-mix(in srgb, var(--accent-rose, #e11d48) 8%, var(--bg-card)); }
+.ops-cal__day { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
+.ops-cal__pill {
+  display: block;
+  font-size: 10px;
+  line-height: 1.3;
+  padding: 2px 4px;
+  margin-top: 2px;
+  border-radius: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ops-cal__pill--alert { background: color-mix(in srgb, var(--accent-amber, #d97706) 16%, transparent); }
+.ops-cal__pill--incident { background: color-mix(in srgb, var(--accent-cyan, #0891b2) 16%, transparent); }
+.ops-cal__more { display: block; font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+.ops-cal__side {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 14px;
+  background: var(--bg-card);
+  min-height: 200px;
+}
+.ops-cal__side-title { margin: 0; font-size: 14px; font-weight: 700; }
+.ops-cal__side-hint { margin: 4px 0 12px; font-size: 12px; color: var(--text-muted); }
+.ops-cal__empty { margin: 0; font-size: 13px; color: var(--text-muted); }
+.ops-cal__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.ops-cal__item {
+  width: 100%;
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card-hover, transparent);
+  padding: 8px 10px;
+  cursor: pointer;
+  color: inherit;
+}
+.ops-cal__item-kind { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--accent-cyan); }
+.ops-cal__item-title { font-size: 13px; font-weight: 600; }
+.ops-cal__item-meta { font-size: 11px; color: var(--text-muted); }

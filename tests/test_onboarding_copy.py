@@ -14,6 +14,15 @@ def test_intro_slides_drop_highlight_beans():
     assert "—" not in text
 
 
+def test_onboarding_drops_signal_map_step():
+    flow = (ROOT / "frontend/src/pages/OnboardingFlow.jsx").read_text(encoding="utf-8")
+    chrome = (ROOT / "frontend/src/components/onboarding/OnboardingChrome.jsx").read_text(encoding="utf-8")
+    assert "Signal map" not in flow
+    assert "Signal map" not in chrome
+    assert "onboarding-analysis__orb" not in flow
+    assert "Skip keys" in flow
+
+
 def test_register_marks_onboarding_pending():
     src = (ROOT / "frontend/src/pages/RegisterPage.jsx").read_text(encoding="utf-8")
     assert "markOnboardingPending" in src

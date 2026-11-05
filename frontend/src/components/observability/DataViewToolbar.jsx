@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutGrid, List } from 'lucide-react';
+import { CalendarDays, LayoutGrid, List } from 'lucide-react';
 import './dataViewToolbar.css';
 
 export function toggleSortKey(prev, key, defaultDir = 'asc') {
@@ -41,6 +41,7 @@ export function ViewModeToggle({
   toggleClassName = 'dvt-view-toggle',
   btnClassName = 'dvt-view-btn',
   ariaLabel = 'Layout',
+  includeCalendar = false,
 }) {
   return (
     <div className={toggleClassName} role="group" aria-label={ariaLabel}>
@@ -62,6 +63,17 @@ export function ViewModeToggle({
       >
         <List size={16} aria-hidden />
       </button>
+      {includeCalendar ? (
+        <button
+          type="button"
+          className={`${btnClassName}${value === 'calendar' ? ' is-active' : ''}`}
+          aria-pressed={value === 'calendar'}
+          title="Calendar"
+          onClick={() => onChange('calendar')}
+        >
+          <CalendarDays size={16} aria-hidden />
+        </button>
+      ) : null}
     </div>
   );
 }

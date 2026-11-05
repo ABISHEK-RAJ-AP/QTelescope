@@ -1,13 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Moon, SkipForward, Sun } from 'lucide-react';
+import { Check, Moon, SkipForward, Sun } from 'lucide-react';
 import { QuantumBackground } from '@/components/ui/quantum-background';
 import { PublicMarketingFooter } from '@/components/marketing/PublicMarketingFooter';
 import { useTheme } from '@/components/ui/ThemeProvider';
 import cdacLogo from '../../assets/cdaclogo.png';
 
-const STEP_LABELS = ['Overview', 'Integrations', 'Discovery', 'Signal map', 'Console'];
-const STEP_IDS = ['welcome', 'connect', 'analyze', 'map', 'features'];
+export const STEP_LABELS = ['Overview', 'Integrations', 'Inventory', 'Console'];
+export const STEP_IDS = ['welcome', 'connect', 'analyze', 'features'];
 
 export function OnboardingMarketingHeader({ currentUser, onExit, stepIndex, onStepChange, maxReachableIndex }) {
   const { resolved, setTheme } = useTheme();
@@ -15,7 +15,7 @@ export function OnboardingMarketingHeader({ currentUser, onExit, stepIndex, onSt
 
   return (
     <header className="relative z-30 w-full shrink-0 border-b border-neutral-200/60 bg-white/85 backdrop-blur-xl dark:border-neutral-800/60 dark:bg-[#070a0f]/80">
-      <div className="flex min-h-[64px] w-full items-center gap-4 px-4 sm:px-6 lg:px-10">
+      <div className="flex min-h-[56px] w-full items-center gap-4 px-4 sm:px-6 lg:px-10">
         <Link to="/app/overview" className="flex shrink-0 items-center gap-3 group">
           <img
             src={cdacLogo}
@@ -31,36 +31,6 @@ export function OnboardingMarketingHeader({ currentUser, onExit, stepIndex, onSt
             </span>
           </div>
         </Link>
-
-        <ol className="onboarding-wizard-steps hidden min-w-0 flex-1 md:flex" aria-label="Setup steps">
-          {STEP_LABELS.map((label, i) => {
-            const active = i === stepIndex;
-            const done = i < stepIndex;
-            const reachable = i <= maxReachableIndex;
-            return (
-              <li key={STEP_IDS[i]}>
-                <button
-                  type="button"
-                  disabled={!reachable}
-                  onClick={() => reachable && !active && onStepChange(STEP_IDS[i])}
-                  aria-current={active ? 'step' : undefined}
-                  className={[
-                    'onboarding-wizard-step',
-                    active && 'onboarding-wizard-step--current',
-                    done && !active && 'onboarding-wizard-step--done',
-                    !reachable && 'onboarding-wizard-step--locked',
-                  ].filter(Boolean).join(' ')}
-                >
-                  {i + 1}. {label}
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-
-        <p className="md:hidden text-xs font-semibold text-neutral-500">
-          {stepIndex + 1}/{STEP_LABELS.length} {STEP_LABELS[stepIndex]}
-        </p>
 
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">
           {currentUser?.username && (
@@ -86,6 +56,33 @@ export function OnboardingMarketingHeader({ currentUser, onExit, stepIndex, onSt
           </button>
         </div>
       </div>
+
+      <ol className="onboarding-dot-stepper" aria-label="Setup steps">
+        {STEP_LABELS.map((label, i) => {
+          const active = i === stepIndex;
+          const done = i < stepIndex;
+          const reachable = i <= maxReachableIndex;
+          return (
+            <li
+              key={STEP_IDS[i]}
+              className={`onboarding-dot-step${active ? ' is-active' : ''}${done ? ' is-done' : ''}`}
+            >
+              <button
+                type="button"
+                disabled={!reachable}
+                onClick={() => reachable && !active && onStepChange(STEP_IDS[i])}
+                aria-current={active ? 'step' : undefined}
+                className="onboarding-dot-step__btn"
+              >
+                <span className="onboarding-dot-step__dot" aria-hidden>
+                  {done ? <Check size={14} strokeWidth={2.5} /> : i + 1}
+                </span>
+                <span className="onboarding-dot-step__label">{label}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
     </header>
   );
 }

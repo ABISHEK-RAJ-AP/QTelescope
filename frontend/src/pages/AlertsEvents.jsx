@@ -28,6 +28,7 @@ import { usePermissions } from '../hooks/usePermissions.js';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { parseIncidentTitle, formatDurationMs } from '../lib/incidentUi.js';
 import { ViewModeToggle } from '../components/observability/DataViewToolbar.jsx';
+import { OpsMonthCalendar } from '../components/observability/OpsMonthCalendar.jsx';
 import './AlertsEvents.css';
 
 const FETCH_LIMIT = 500; // API max for /alerts
@@ -112,6 +113,9 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   const [incCommentBusy, setIncCommentBusy] = useState(false);
   const [listLayout, setListLayout] = useState('table');
   const [incLayout, setIncLayout] = useState('grid');
+  const [alertDetail, setAlertDetail] = useState(null);
+  const [alertComment, setAlertComment] = useState('');
+  const [alertCommentBusy, setAlertCommentBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -224,6 +228,41 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
 
   const alertById = useMemo(() => new Map(alerts.map((a) => [a.alert_id, a])), [alerts]);
   const drawerAlert = drawerId ? alertById.get(drawerId) : null;
+
+  useEffect(() => {
+    if (!drawerId) {
+      setAlertDetail(null);
+      setAlertComment('');
+      return undefined;
+    }
+    let cancelled = false;
+    api.getAlert(drawerId).then((d) => { if (!cancelled) setAlertDetail(d); }).catch(() => {
+      if (!cancelled) setAlertDetail(null);
+    });
+    return () => { cancelled = true; };
+  }, [drawerId]);
+
+  const calEvents = useMemo(() => {
+    const alertEv = alerts.map((a) => ({
+      id: a.alert_id,
+      at: a.detected_at,
+      title: `${a.backend_id} ${a.alert_type}`,
+      kind: 'Alert',
+      severity: a.severity,
+      status: a.status,
+      open: () => openAlert(a.alert_id),
+    }));
+    const incEv = incidents.map((inc) => ({
+      id: inc.incident_id,
+      at: inc.first_detected_at || inc.created_at,
+      title: inc.title || inc.incident_id,
+      kind: 'Incident',
+      severity: inc.severity,
+      status: inc.status,
+      open: () => openIncident(inc.incident_id),
+    }));
+    return view === 'incidents' ? incEv : [...alertEv, ...incEv];
+  }, [alerts, incidents, view, openAlert, openIncident]);
   const relatedIncident = (a) => incidents.find((i) => i.backend_id === a.backend_id && String(i.title).endsWith(a.alert_type));
 
   const toggleSort = (key) => setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'count' || key === 'latest' ? 'desc' : 'asc' }));
@@ -405,11 +444,19 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
             Each incident groups alerts for one backend and rule. Parentheses show alerts still ACTIVE now.
           </p>
           <div className="dvt-toolbar" style={{ borderBottom: 'none', paddingTop: 0 }}>
-            <ViewModeToggle value={incLayout} onChange={setIncLayout} />
+            <ViewModeToggle value={incLayout} onChange={setIncLayout} includeCalendar />
             <span className="dvt-toolbar__count">{incidents.length} incident{incidents.length === 1 ? '' : 's'}</span>
           </div>
           {incidents.length === 0 ? (
             <div className="card al-card al-pad"><TableEmpty colSpan={1} title="No incidents" message="Incidents are created when rules escalate alerts." /></div>
+          ) : incLayout === 'calendar' ? (
+            <div className="card al-card al-pad">
+              <OpsMonthCalendar
+                title="Incident calendar"
+                events={calEvents}
+                onOpenEvent={(ev) => ev.open?.()}
+              />
+            </div>
           ) : incLayout === 'table' ? (
             <div className="card al-card">
               <div className="table-container">
@@ -591,11 +638,19 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                 <input type="checkbox" checked={grouped} onChange={(e) => setGrouped(e.target.checked)} /> Group by backend + rule
               </label>
               <button type="button" className="btn btn-secondary btn--xs" onClick={clearFilters}>Reset filters</button>
-              <ViewModeToggle value={listLayout} onChange={setListLayout} />
+              <ViewModeToggle value={listLayout} onChange={setListLayout} includeCalendar />
               <span className="al-count" role="status">{filtered.length} alert{filtered.length === 1 ? '' : 's'} · {rows.length} {grouped ? 'group' : 'row'}{rows.length === 1 ? '' : 's'}</span>
             </div>
 
-            {listLayout === 'grid' ? (
+            {listLayout === 'calendar' ? (
+              <div className="al-pad">
+                <OpsMonthCalendar
+                  title="Alerts and incidents"
+                  events={calEvents}
+                  onOpenEvent={(ev) => ev.open?.()}
+                />
+              </div>
+            ) : listLayout === 'grid' ? (
               <div className="dvt-grid" style={{ padding: 14 }}>
                 {pageRows.length === 0 ? (
                   <div style={{ gridColumn: '1 / -1' }}><TableEmpty colSpan={1} title={alerts.length === 0 ? 'No alerts recorded' : 'No alerts match filters'} message={alerts.length === 0 ? 'No alerts in the store.' : `Filters exclude all ${alerts.length} stored alerts.`} action={alerts.length ? <button type="button" className="btn btn-secondary btn--xs" onClick={clearFilters}>Reset filters</button> : undefined} /></div>
@@ -801,9 +856,46 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                   ) : a.status === 'RESOLVED' ? (
                     <span className="page-hint">Already resolved.</span>
                   ) : !perms.canAckAlerts && !perms.canResolveAlerts ? (
-                    <span className="page-hint">Read-only — no respond permissions.</span>
+                    <span className="page-hint">Read-only. No respond permission.</span>
                   ) : null}
                 </div>
+              </DetailModalSection>
+              <DetailModalSection title={`Discussion (${(alertDetail?.comments || []).length})`}>
+                {(alertDetail?.comments || []).length === 0 ? <p className="page-hint">No comments yet.</p> : (
+                  <ul className="al-comments">
+                    {(alertDetail.comments || []).map((c, i) => (
+                      <li key={c.comment_id || i}><b>{c.author || 'operator'}</b>{c.role ? ` (${c.role})` : ''}: {c.text}</li>
+                    ))}
+                  </ul>
+                )}
+                {perms.canComment ? (
+                  <form
+                    className="al-comment-form"
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const t = alertComment.trim();
+                      if (!t) return;
+                      setAlertCommentBusy(true);
+                      try {
+                        await api.addAlertComment(a.alert_id, t);
+                        setAlertComment('');
+                        const d = await api.getAlert(a.alert_id);
+                        setAlertDetail(d);
+                      } catch (err) {
+                        notifyError(err?.message || String(err));
+                      } finally {
+                        setAlertCommentBusy(false);
+                      }
+                    }}
+                  >
+                    <label className="al-field">Add comment
+                      <textarea className="input-control" rows={2} value={alertComment} onChange={(e) => setAlertComment(e.target.value)} />
+                    </label>
+                    <button type="submit" className="btn btn-primary btn--xs" disabled={alertCommentBusy}>{alertCommentBusy ? 'Posting' : 'Post comment'}</button>
+                  </form>
+                ) : (
+                  <p className="page-hint">Comments need alerts:comment permission.</p>
+                )}
               </DetailModalSection>
             </DetailModalBody>
           );
@@ -845,7 +937,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
               </DetailModalSection>
               <DetailModalSection title={`Discussion (${(inc.comments || []).length})`}>
                 {(inc.comments || []).length === 0 ? <p className="page-hint">No comments yet.</p> : (
-                  <ul className="al-comments">{inc.comments.map((c, i) => <li key={c.comment_id || i}><b>{c.author || 'operator'}</b>: {c.text}</li>)}</ul>
+                  <ul className="al-comments">{inc.comments.map((c, i) => <li key={c.comment_id || i}><b>{c.author || 'operator'}</b>{c.role ? ` (${c.role})` : ''}: {c.text}</li>)}</ul>
                 )}
                 {perms.canComment ? (
                   <form
