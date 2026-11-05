@@ -1,5 +1,19 @@
 /** Sidebar groups: top-level routes and nested pages (replaces in-content tab bars). */
 
+export const NAV_HELP = {
+  home: 'Fleet KPIs, queues, calibration age, and alert pressure across backends.',
+  operations: 'Work queue: acknowledge, investigate, or remediate items that need an owner.',
+  backends: 'Catalog of registered QPUs. Open a backend for qubits and calibration.',
+  telemetry: 'Live and stored measurements: T1/T2, drift, topology, anomalies.',
+  investigate: 'Time-ordered alerts, incidents, and collector events.',
+  platform: 'Collector health, ingestion freshness, and adapter run times.',
+  execution: 'Jobs that ran and how deep each backend queue is.',
+  resources: 'Qubit health vector, facility environment, and metric coverage.',
+  reports: 'CSV/HTML/JSON exports for audit evidence.',
+  alerts: 'Active detections and grouped incidents. Ack/resolve by role.',
+  admin: 'Credentials, collectors, alert rules, and user roles.',
+};
+
 export const TELEMETRY_NAV = [
   { value: 'live', label: 'Live telemetry' },
   { value: 'calibration', label: 'Calibration status' },

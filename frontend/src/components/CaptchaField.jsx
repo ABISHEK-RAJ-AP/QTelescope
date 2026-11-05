@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { RotateCw, ShieldCheck } from 'lucide-react'
 import { api } from '@/services/api'
 import { fieldClass } from '@/components/AuthShell'
+import { InfoTooltip } from '@/components/observability/InfoTooltip.jsx'
 
 export function CaptchaField({ value, onChange, onChallenge }) {
   const [captchaImage, setCaptchaImage] = useState('')
@@ -35,8 +36,11 @@ export function CaptchaField({ value, onChange, onChallenge }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between">
-        <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-700 dark:text-neutral-300">
+        <label className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-700 dark:text-neutral-300">
           Image verification
+          <InfoTooltip label="Image verification">
+            Type the six characters shown. This proves a person is signing in, not a script. After an API restart, click New image.
+          </InfoTooltip>
         </label>
         <button
           type="button"

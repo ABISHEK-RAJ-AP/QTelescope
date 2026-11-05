@@ -22,6 +22,7 @@ export function LoginPage({ onLoginSuccess }) {
   const [mfaToken, setMfaToken] = useState('')
   const [mfaCode, setMfaCode] = useState('')
   const [showDevPresets, setShowDevPresets] = useState(true)
+  const [ldapHint, setLdapHint] = useState('')
 
   const finishSession = async (res) => {
     let user = res.user
@@ -69,6 +70,9 @@ export function LoginPage({ onLoginSuccess }) {
         if (s?.bootstrap && Object.prototype.hasOwnProperty.call(s.bootstrap, 'show_dev_login_presets')) {
           setShowDevPresets(Boolean(s.bootstrap.show_dev_login_presets))
         }
+        if (s?.ldap?.enabled) {
+          setLdapHint(`Directory login on ${s.ldap.host || 'LDAP'} — local accounts still work.`)
+        }
       })
       .catch(() => setShowDevPresets(true))
   }, [])
@@ -115,7 +119,7 @@ export function LoginPage({ onLoginSuccess }) {
   return (
     <AuthShell
       title="Sign In"
-      subtitle="Sign in to the operations console."
+      subtitle={ldapHint || 'Sign in to the operations console. Local account or LDAP if configured.'}
       footer={
         <div className="space-y-4">
           <p className="text-center text-sm text-neutral-500">

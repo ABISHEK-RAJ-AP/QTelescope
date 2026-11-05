@@ -107,7 +107,7 @@ export function resolvePageContext(state) {
         description = 'Overview, qubits, calibration, connectivity, execution, and alerts for this backend.';
       } else {
         title = BACKEND_LABELS.inventory;
-        description = '';
+        description = 'Registered QPUs, last telemetry age, alert counts, and queue depth. Open a row for qubits and calibration.';
       }
       break;
     }

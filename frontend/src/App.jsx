@@ -11,6 +11,7 @@ import {
   EXECUTION_NAV,
   RESOURCES_NAV,
   ALERTS_NAV,
+  NAV_HELP,
   navBranchActive,
   navChildActive,
   goStateForNavChild,
@@ -614,7 +615,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
           key={item.id}
           data-tour={`nav-${item.id}`}
           className={`nav-item ${branchActive ? 'active' : ''}`}
-          title={item.label}
+          title={NAV_HELP[item.id] || item.label}
           onClick={() => go(defaultGoStateForBranch(item))}
         >
           <span className="nav-icon">
@@ -642,7 +643,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
               go({ mainTopic: item.id });
             }
           }}
-          title={effectiveCollapsed ? item.label : undefined}
+          title={NAV_HELP[item.id] || item.label}
         >
           <span className="nav-icon">
             <Icon size={18} color={item.id === 'alerts' && item.badge > 0 ? '#e11d48' : 'currentColor'} />

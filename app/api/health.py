@@ -253,7 +253,7 @@ def get_module_status():
             {"id": "decide", "name": "Decide (GREEN/YELLOW/RED router)", "status": "LIVE"},
             {"id": "act_quarantine", "name": "Act (qubit quarantine)", "status": "LIVE"},
             {"id": "record", "name": "Record (alerts, reports CSV/HTML/JSON)", "status": "LIVE"},
-            {"id": "auth", "name": "Auth (register, PNG captcha)", "status": "LIVE"},
+            {"id": "auth", "name": "Auth (register, PNG captcha, TOTP, optional LDAP bind)", "status": "LIVE"},
             {"id": "providers_live", "name": "Adapters IBM / Rigetti / IonQ / C-DAC", "status": "LIVE"},
             {"id": "providers_catalog", "name": "Credential slots (Braket, Azure, Google, …)", "status": "STUB"},
             {"id": "environment_import", "name": "Environment JSON import", "status": "LIVE"},

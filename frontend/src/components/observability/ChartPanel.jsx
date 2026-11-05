@@ -55,9 +55,11 @@ export function ChartPanel({
           {sourceKind && (
             <ProvenanceChip kind={sourceKind} asOf={asOf} detail={provenanceDetail} compact />
           )}
-          {help && (
-            <InfoTooltip label="Chart help">
-              <div style={{ fontSize: '0.75rem', maxWidth: 280 }}>{help}</div>
+          {(help || question) && (
+            <InfoTooltip label={`About ${title || 'this chart'}`}>
+              <div style={{ fontSize: '0.75rem', maxWidth: 280, lineHeight: 1.45 }}>
+                {help || question}
+              </div>
             </InfoTooltip>
           )}
           {showExpand && (

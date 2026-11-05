@@ -7,6 +7,7 @@ import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { writeDensity } from '../utils/uiPreferences.js';
 import { listPermissionsForRole, roleLabel } from '../lib/permissions.js';
+import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
 import './UserSettings.css';
 
 const THEME_OPTIONS = [
@@ -285,8 +286,13 @@ export function UserSettings({ currentUser, onUserUpdate }) {
         </section>
         <section className="us-card">
           <header className="us-card__head">
-            <h3 className="us-card__title">Two-factor authentication</h3>
-            <p className="us-card__desc">TOTP authenticator app — required for privileged roles when enforced by policy.</p>
+            <h3 className="us-card__title">
+              Two-factor authentication
+              <InfoTooltip label="Two-factor authentication">
+                Uses a TOTP app (Authenticator, Aegis). After enable, sign-in asks for a 6-digit code. This is not SMS. LDAP users can still enroll TOTP on this account name.
+              </InfoTooltip>
+            </h3>
+            <p className="us-card__desc">TOTP authenticator app. Not SMS or email OTP.</p>
           </header>
           {!mfa.enabled && !enroll && (
             <button type="button" className="btn btn-primary" onClick={startMfa}>Enable 2FA</button>

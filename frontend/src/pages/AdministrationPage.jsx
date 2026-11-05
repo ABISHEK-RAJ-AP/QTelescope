@@ -71,6 +71,11 @@ function Integrations({ providers, health, verification, setVerification, canEdi
   const [discovery, setDiscovery] = useState(null);
   const [confirm, setConfirm] = useState(null); // provider id awaiting confirm
   const [open, setOpen] = useState(null);
+  const [ldap, setLdap] = useState(null);
+
+  useEffect(() => {
+    api.getConfigStatus().then((s) => setLdap(s?.ldap || { enabled: false })).catch(() => setLdap({ enabled: false }));
+  }, []);
 
   const healthBy = useMemo(() => Object.fromEntries((health || []).map((h) => [h.provider_id, h])), [health]);
   const verBy = useMemo(() => Object.fromEntries((verification || []).map((v) => [v.provider_id, v])), [verification]);
@@ -183,6 +188,23 @@ function Integrations({ providers, health, verification, setVerification, canEdi
                 </div>
               </div>
             )
+        )}
+      </div>
+
+      <div className="card admin-pad" style={{ marginBottom: 14 }}>
+        <h3 className="admin-card-title">Directory login (LDAP)</h3>
+        {!ldap || !ldap.enabled ? (
+          <p className="page-hint">
+            LDAP is off. Set <code>LDAP_URL</code> and <code>LDAP_USER_DN</code> (example <code>uid={'{username}'},ou=people,dc=example,dc=com</code>) then restart the API.
+            Optional <code>LDAP_DEFAULT_ROLE</code> and <code>LDAP_GROUP_ROLE_MAP</code> as <code>cn=ops=OpsEngineer;cn=sec=SecurityAdmin</code>.
+            Install <code>ldap3</code>. This is directory bind, not SSO/SAML.
+          </p>
+        ) : (
+          <p className="page-hint">
+            LDAP bind against <strong>{ldap.host}</strong> ({ldap.mode}
+            {ldap.library ? '' : ' — ldap3 missing, logins will 503'}).
+            Default role {ldap.default_role}. Local accounts are tried first.
+          </p>
         )}
       </div>
 

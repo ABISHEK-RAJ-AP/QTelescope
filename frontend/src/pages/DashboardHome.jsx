@@ -433,6 +433,7 @@ function DashboardHomeInner() {
               <ChartPanel
                 title="Qubit router mix"
                 question="GREEN / YELLOW / RED counts across scored backends."
+                help="Router state is advisory, not a 0–100 score. GREEN = within thresholds, YELLOW = watch, RED = triage. Click Health vector for per-qubit rows."
                 sourceKind="derived"
                 state={qubitTotal ? 'ready' : 'empty'}
                 emptyMessage="Health vector not loaded yet."

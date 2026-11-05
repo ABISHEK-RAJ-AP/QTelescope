@@ -562,13 +562,13 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
         </section>
       ) : (
         <>
-          <CollapsibleSection id="al-chart-h" title="Alert detections · last 24 hours" className="card al-card al-pad al-chart-card" defaultOpen={false}>
+          <CollapsibleSection id="al-chart-h" title="Alert detections · last 24 hours" help="New alerts created per hour (IST), stacked by severity. Not the same as how many are still ACTIVE." className="card al-card al-pad al-chart-card" defaultOpen={false}>
             <p className="page-hint al-chart-hint">New detections per hour by severity — not the same as currently active count.</p>
             <QtECharts option={trendOption} style={{ height: 220, width: '100%' }} />
           </CollapsibleSection>
 
           <section className="al-summary" aria-label="Alert summary">
-            <CollapsibleSection id="al-matrix-h" title="Severity × status" className="card al-card al-pad">
+            <CollapsibleSection id="al-matrix-h" title="Severity × status" help="Click a cell to filter the table to that severity and status. Counts are from the loaded alert set (newest 500)." className="card al-card al-pad">
               <table className="al-matrix">
                 <thead><tr><th scope="col"><span className="sr-only">Severity</span></th>{STATUSES.map((s) => <th key={s} scope="col">{s.toLowerCase()}</th>)}</tr></thead>
                 <tbody>
@@ -589,7 +589,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                 </tbody>
               </table>
             </CollapsibleSection>
-            <CollapsibleSection id="al-backend-h" title="Active alerts by backend" className="card al-card al-pad">
+            <CollapsibleSection id="al-backend-h" title="Active alerts by backend" help="Share of currently ACTIVE alerts. Click a backend to filter the list. Red = critical, amber = warning." className="card al-card al-pad">
               {stats.byBackend.length === 0 ? <p className="page-hint">No active alerts.</p> : (
                 <ul className="al-rank">
                   {stats.byBackend.map((b) => (

@@ -216,15 +216,18 @@ class AuthStatusResponse(BaseModel):
     project_name: str
     version: str
     bootstrap: dict
+    ldap: dict = {}
 
 
 @router.get("/config-status", response_model=AuthStatusResponse)
 def get_config_status():
+    from app.core.ldap_auth import ldap_public_status
     return AuthStatusResponse(
         enable_mock_data=settings.ENABLE_MOCK_DATA,
         project_name=settings.PROJECT_NAME,
         version=settings.VERSION,
         bootstrap=bootstrap_security_report(settings.ADMIN_USERNAME, settings.USER_USERNAME),
+        ldap=ldap_public_status(),
     )
 
 
@@ -369,6 +372,15 @@ def authenticate_user(req: LoginRequest, request: Request):
                 "org": record.get("org", "C-DAC"),
             },
         )
+
+    from app.core.ldap_auth import authenticate_ldap, ldap_enabled
+    if ldap_enabled():
+        try:
+            ldap_user = authenticate_ldap(username, password)
+        except RuntimeError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        if ldap_user:
+            return _maybe_mfa_or_session(ldap_user["username"], ldap_user["role"], ldap_user.get("extra"))
 
     raise HTTPException(status_code=401, detail="Invalid username or password.")
 
