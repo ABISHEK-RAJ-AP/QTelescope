@@ -32,12 +32,12 @@
 | # | Requirement | Status | Evidence / gap |
 | --- | --- | --- | --- |
 | 1.1 | Verify execution history — no rebuild | ✅ | `collector_executions.py`, B07 |
-| 1.2 | Durable execution record (full schema) | 🔧 | Missing trigger, retry, record counts |
+| 1.2 | Durable execution record (full schema) | 🔧 | `trigger_type`, `since`/`until` filters; no retry/record counts |
 | 1.3 | Ingestion quality v2 | 🔧 | `ingestion_quality.py` heuristic |
-| 1.4 | Unified Logs Explorer | ⬜ | Audit-only |
-| 1.5 | Alert → log links | ⬜ | |
-| 1.6 | Entity search palette | 🔧 | Backends/alerts/incidents; not jobs |
-| 1.7 | Tests B1–B3 | 🔧 | Partial pytest; B1 open |
+| 1.4 | Unified Logs Explorer | 🔧 | `0cb168f` audit + app tabs; `app_structured.jsonl` |
+| 1.5 | Alert → log links | 🔧 | `buildLogsExplorerLocation`, alert **Related logs** |
+| 1.6 | Entity search palette | 🔧 | + jobs, collectors (`CommandPalette.jsx`) |
+| 1.7 | Tests B1–B3 | 🔧 | `test_app_structured_log.py` + collector tests |
 
 ---
 
