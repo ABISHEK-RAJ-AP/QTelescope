@@ -105,7 +105,7 @@ Prioritized from [benchmark/FEATURE_GAP_MATRIX.md](benchmark/FEATURE_GAP_MATRIX.
 
 1. Unified **Logs Explorer** (app stdout + `request_id` join) + alert drill-down.
 2. **Metrics Explorer** v1 — shipped (`/app/telemetry/explorer`); server-backed saves backlog.
-4. **Resource catalogue** (owner, facility, tags).
+4. **Resource catalogue** — shipped ([QA/SPRINT5_RESOURCE_CATALOG.md](QA/SPRINT5_RESOURCE_CATALOG.md)).
 5. **Composite alert** rules + notification routing.
 6. VM Playwright re-run + production secret rotation (QT-06).
 
