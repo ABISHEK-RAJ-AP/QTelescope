@@ -10,7 +10,8 @@ import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { getChartTheme, baseTooltip, chartLabelStyle } from '../components/observability/chartTheme.js';
 import { formatISTTime } from '../utils/time';
 import { usePageActions } from '../context/PageActionsContext.jsx';
-import { DataPanelToolbar, SortableTh } from '../components/observability/DataViewToolbar.jsx';
+import { DataPanelToolbar } from '../components/observability/DataViewToolbar.jsx';
+import { EnterpriseDataTable } from '../components/observability/EnterpriseDataTable.jsx';
 import './PlatformHealth.css';
 
 const STALE_MIN = 30;
@@ -45,7 +46,6 @@ export const PlatformHealth = () => {
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [layout, setLayout] = useState('table');
-  const [sort, setSort] = useState({ key: 'provider', dir: 'asc' });
   const { setActions, clearActions } = usePageActions();
 
   const load = useCallback(() => {
@@ -77,18 +77,62 @@ export const PlatformHealth = () => {
   const db = data?.database || {};
   const coll = data?.collectors || {};
   const providers = useMemo(() => coll.providers || [], [coll.providers]);
-  const sortedProviders = useMemo(() => {
-    const list = providers.slice();
-    const mul = sort.dir === 'asc' ? 1 : -1;
-    list.sort((a, b) => {
-      let c = 0;
-      if (sort.key === 'duration') c = (a.duration_ms || 0) - (b.duration_ms || 0);
-      else if (sort.key === 'backends') c = (a.backends_detected || 0) - (b.backends_detected || 0);
-      else c = String(a.provider_id).localeCompare(String(b.provider_id));
-      return c * mul;
-    });
-    return list;
-  }, [providers, sort]);
+  const providerRows = useMemo(
+    () => providers.map((p) => ({
+      id: p.provider_id,
+      provider: p.provider_id,
+      backends: p.backends_detected ?? 0,
+      duration: p.duration_ms ?? 0,
+      raw: p,
+    })),
+    [providers],
+  );
+
+  const providerColumns = useMemo(
+    () => [
+      { key: 'provider', label: 'Provider', render: (row) => <code>{row.provider}</code> },
+      {
+        key: 'status',
+        label: 'Status',
+        sortable: false,
+        render: (row) => {
+          const p = row.raw;
+          return (
+            <>
+              <span className={`badge ${p.status === 'OK' ? 'badge-healthy' : 'badge-critical'}`}>{p.status || '—'}</span>
+              {p.error && <div className="ph-err">{p.error}</div>}
+            </>
+          );
+        },
+      },
+      {
+        key: 'backends',
+        label: 'Backends',
+        defaultSortDir: 'desc',
+        render: (row) => (
+          <span title={(row.raw.backend_names || []).join(', ')}>{row.raw.backends_detected ?? '—'}</span>
+        ),
+      },
+      {
+        key: 'lastSuccess',
+        label: 'Last success',
+        sortable: false,
+        render: (row) => {
+          const m = ageMin(row.raw.last_success_at || row.raw.last_run_at);
+          return (
+            <span title={row.raw.last_success_at ? formatISTTime(row.raw.last_success_at) : ''}>{ageText(m)}</span>
+          );
+        },
+      },
+      {
+        key: 'duration',
+        label: 'Duration',
+        defaultSortDir: 'desc',
+        render: (row) => (row.raw.duration_ms != null ? `${row.raw.duration_ms} ms` : '—'),
+      },
+    ],
+    [],
+  );
   const telAge = ageMin(data?.latest_backend_telemetry_at);
   const sse = data?.sse_stream || {};
 
@@ -161,11 +205,11 @@ export const PlatformHealth = () => {
             <h3 className="chart-panel__title">Provider adapters</h3>
             <p className="chart-panel__question">Last successful collection per vendor adapter.</p>
           </div></header>
-          <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${sortedProviders.length} provider${sortedProviders.length === 1 ? '' : 's'}`} />
+          <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${providers.length} provider${providers.length === 1 ? '' : 's'}`} />
           {layout === 'grid' ? (
             <div className="dvt-grid">
-              {sortedProviders.length === 0 && <p className="page-hint" style={{ gridColumn: '1 / -1', padding: '0 14px 14px' }}>No collector runs recorded.</p>}
-              {sortedProviders.map((p) => {
+              {providers.length === 0 && <p className="page-hint" style={{ gridColumn: '1 / -1', padding: '0 14px 14px' }}>No collector runs recorded.</p>}
+              {providers.map((p) => {
                 const m = ageMin(p.last_success_at || p.last_run_at);
                 return (
                   <article key={p.provider_id} className="dvt-card">
@@ -184,34 +228,17 @@ export const PlatformHealth = () => {
               })}
             </div>
           ) : (
-            <div className="table-container" style={{ border: 'none' }}>
-              <table className="custom-table custom-table--dense">
-                <thead>
-                  <tr>
-                    <SortableTh sort={sort} sortKey="provider" onToggle={setSort} defaultDir="asc">Provider</SortableTh>
-                    <th>Status</th>
-                    <SortableTh sort={sort} sortKey="backends" onToggle={setSort} defaultDir="desc">Backends</SortableTh>
-                    <th>Last success</th>
-                    <SortableTh sort={sort} sortKey="duration" onToggle={setSort} defaultDir="desc">Duration</SortableTh>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedProviders.length === 0 && <tr><td colSpan={5} style={{ color: 'var(--text-muted)' }}>No collector runs recorded.</td></tr>}
-                  {sortedProviders.map((p) => {
-                    const m = ageMin(p.last_success_at || p.last_run_at);
-                    return (
-                      <tr key={p.provider_id}>
-                        <td><code>{p.provider_id}</code></td>
-                        <td><span className={`badge ${p.status === 'OK' ? 'badge-healthy' : 'badge-critical'}`}>{p.status || '—'}</span>{p.error && <div className="ph-err">{p.error}</div>}</td>
-                        <td title={(p.backend_names || []).join(', ')}>{p.backends_detected ?? '—'}</td>
-                        <td title={p.last_success_at ? formatISTTime(p.last_success_at) : ''}>{ageText(m)}</td>
-                        <td>{p.duration_ms != null ? `${p.duration_ms} ms` : '—'}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <EnterpriseDataTable
+              rows={providerRows}
+              columns={providerColumns}
+              loading={loading && !data}
+              searchKeys={['provider']}
+              searchPlaceholder="Search providers"
+              pageSize={12}
+              emptyTitle="No collector runs"
+              emptyMessage="No collector runs recorded."
+              ariaLabel="Provider adapters"
+            />
           )}
         </div>
 

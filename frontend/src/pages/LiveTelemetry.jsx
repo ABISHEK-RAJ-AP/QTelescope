@@ -287,6 +287,7 @@ export const LiveTelemetry = () => {
           <div className="card-value">{latest.active_alerts ?? '—'}</div>
           <div
             className="card-subtitle"
+            data-testid="live-sse-status"
             title="SSE aggregate stream; new frames about every 5 seconds from platform storage."
           >
             {isConnected ? 'Live · ~5s' : 'Offline'}

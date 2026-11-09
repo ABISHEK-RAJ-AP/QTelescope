@@ -432,7 +432,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
         )}
 
         {activeTab === 'calibration' && (
-          <>
+          <div data-tour="page-backend-calibration">
             {calibration ? (
               <section className="card bd-panel" aria-label="Calibration freshness">
                 <h3>Calibration freshness <Link className="bd-link" to={link('/app/telemetry/calibration')}>Calibration status</Link></h3>
@@ -467,7 +467,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
                 </div>
               </section>
             )}
-          </>
+          </div>
         )}
 
         {activeTab === 'connectivity' && (

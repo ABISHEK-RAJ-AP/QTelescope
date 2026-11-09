@@ -169,15 +169,17 @@ export const HistoricalTrends = () => {
 
   return (
     <div className="page-stack">
-      <ContextBar
-        backend={selectedBackend}
-        backends={backends}
-        onBackendChange={setBackend}
-        hours={windowHours}
-        onHoursChange={setWindowHours}
-        showTimeRange
-        timeRangeAffectsQuery={false}
-      />
+      <div data-tour="page-telemetry-filters">
+        <ContextBar
+          backend={selectedBackend}
+          backends={backends}
+          onBackendChange={setBackend}
+          hours={windowHours}
+          onHoursChange={setWindowHours}
+          showTimeRange
+          timeRangeAffectsQuery={false}
+        />
+      </div>
 
       {hasHistory && (
         <div className="tm-kpis">

@@ -109,7 +109,7 @@ export const CalibrationStatus = () => {
 
   return (
     <div className="page-stack">
-      <section className="cs-kpis" aria-label="Calibration freshness">
+      <section className="cs-kpis" aria-label="Calibration freshness" data-tour="page-calibration">
         {['Fresh', 'Recent', 'Aging', 'Stale', 'None'].map((s) => (
           <div className={`cs-kpi card cs-kpi--${s.toLowerCase()}`} key={s}>
             <div className="cs-kpi__label">{s === 'None' ? 'No snapshot' : s}</div>
