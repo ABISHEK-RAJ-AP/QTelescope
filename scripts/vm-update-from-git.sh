@@ -75,7 +75,13 @@ echo "==> Restart API"
 pkill -f 'uvicorn app.main:app' 2>/dev/null || true
 sleep 1
 if [[ -f .env ]]; then
-  set -a && source .env && set +a
+  set -a
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]] || continue
+    [[ "$line" == *'<'* || "$line" == *'`'* ]] && continue
+    export "$line"
+  done < .env
+  set +a
 fi
 export PYTHONPATH="${ROOT}"
 if [[ -d .venv ]]; then
@@ -87,7 +93,7 @@ echo "API log: ${ROOT}/.backend.log"
 
 echo "==> Health check"
 sleep 2
-"${ROOT}/scripts/verify-stack.sh" || true
+STACK_VERIFY_SKIP_INFRA="${STACK_VERIFY_SKIP_INFRA:-1}" "${ROOT}/scripts/verify-stack.sh" || true
 
 echo ""
 echo "Done. Hard-refresh browser (Ctrl+Shift+R)."

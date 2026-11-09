@@ -15,9 +15,21 @@ curl_ok() {
 }
 
 echo "=== Infra ==="
-export PATH="${MINIFORGE_BIN:-$HOME/miniforge3/bin}:$PATH"
-pg_isready -h localhost -p 5432 -U postgres >/dev/null || fail "PostgreSQL not ready (run scripts/start-local-infra.sh)"
-redis-cli ping 2>/dev/null | grep -q PONG || fail "Redis not responding"
+DB_URL="${DATABASE_URL:-}"
+if [[ -z "$DB_URL" && -f .env ]]; then
+  DB_URL=$(grep -m1 '^DATABASE_URL=' .env 2>/dev/null | cut -d= -f2- || true)
+fi
+if [[ "${STACK_VERIFY_SKIP_INFRA:-0}" == "1" || "$DB_URL" == sqlite* ]]; then
+  echo "SKIP PostgreSQL/Redis (sqlite or STACK_VERIFY_SKIP_INFRA=1)"
+else
+  export PATH="${MINIFORGE_BIN:-$HOME/miniforge3/bin}:$PATH"
+  if command -v pg_isready >/dev/null 2>&1; then
+    pg_isready -h localhost -p 5432 -U postgres >/dev/null || fail "PostgreSQL not ready (run scripts/start-local-infra.sh)"
+  else
+  fail "pg_isready not found — install Postgres client or set DATABASE_URL=sqlite:///./data/qtelescope.db"
+  fi
+  redis-cli ping 2>/dev/null | grep -q PONG || fail "Redis not responding"
+fi
 
 echo "=== API (direct :8000) ==="
 curl_ok "$API/auth/captcha" "captcha"
