@@ -9,8 +9,15 @@ from app.schemas.schemas import BackendResponse, BackendStatusResponse, Connecti
 from app.core.config import settings
 from app.core.provenance import MOCK_BACKEND_IDS
 from app.discovery.hardware_discovery import ensure_discovered
+from app.services.backend_catalog import get_catalog_entry
 
 router = APIRouter(prefix="/backends", tags=["Backends"])
+
+
+def _backend_response(backend: BackendModel) -> BackendResponse:
+    base = BackendResponse.model_validate(backend)
+    meta = get_catalog_entry(backend.backend_id, provider_id=backend.provider_id)
+    return base.model_copy(update=meta)
 
 KNOWN_PROVIDER_IDS = frozenset(
     {"ibm_quantum", "rigetti_quantum", "ionq_quantum", "cdac_quantum"}
@@ -30,7 +37,7 @@ def get_backends(provider_id: Optional[str] = None, db: Session = Depends(get_db
     query = _fleet_query(db)
     if provider_id:
         query = query.filter(BackendModel.provider_id == provider_id)
-    return query.all()
+    return [_backend_response(b) for b in query.all()]
 
 
 @router.get("/status-all", response_model=List[BackendStatusResponse])
@@ -82,7 +89,7 @@ def get_backend_detail(backend_id: str, db: Session = Depends(get_db)):
     backend = db.query(BackendModel).filter(BackendModel.backend_id == backend_id).first()
     if not backend:
         raise HTTPException(status_code=404, detail="Backend not found")
-    return backend
+    return _backend_response(backend)
 
 @router.get("/{backend_id}/status", response_model=BackendStatusResponse)
 def get_backend_status(backend_id: str, db: Session = Depends(get_db)):

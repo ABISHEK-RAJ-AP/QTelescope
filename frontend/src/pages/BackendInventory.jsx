@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus } from 'lucide-react';
+import { Pencil, Plus } from 'lucide-react';
 import { ViewModeToggle } from '../components/observability/DataViewToolbar.jsx';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { usePageActions } from '../context/PageActionsContext.jsx';
@@ -15,6 +15,8 @@ import './fleetShared.css';
 
 const COLUMNS = [
   { key: 'name', label: 'Backend' },
+  { key: 'owner', label: 'Owner' },
+  { key: 'facility', label: 'Facility' },
   { key: 'provider', label: 'Provider · source' },
   { key: 'modality', label: 'Modality' },
   { key: 'qubits', label: 'Qubits', right: true },
@@ -33,7 +35,9 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
   const [fatal, setFatal] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [search, setSearch] = useState('');
-  const [f, setF] = useState({ provider: 'ALL', modality: 'ALL', status: 'ALL', source: 'ALL' });
+  const [f, setF] = useState({ provider: 'ALL', modality: 'ALL', status: 'ALL', source: 'ALL', facility: 'ALL' });
+  const [catalogEdit, setCatalogEdit] = useState(null);
+  const [catalogSaving, setCatalogSaving] = useState(false);
   const [sort, setSort] = useState({ key: 'health', dir: 'desc' });
   const [view, setView] = useState('grid');
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -93,6 +97,9 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
     return {
       id,
       name: b.backend_name,
+      owner: b.owner || '—',
+      facility: b.facility || '—',
+      tags: Array.isArray(b.tags) ? b.tags : [],
       provider: providerName(b.provider_id),
       providerId: b.provider_id,
       source: lineageOf(lineage.map, b.provider_id),
@@ -122,7 +129,8 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
       && (f.modality === 'ALL' || r.modality === f.modality)
       && (f.status === 'ALL' || r.status === f.status)
       && (f.source === 'ALL' || r.source === f.source)
-      && (!needle || `${r.id} ${r.name} ${r.provider} ${r.modality}`.toLowerCase().includes(needle))
+      && (f.facility === 'ALL' || r.facility === f.facility)
+      && (!needle || `${r.id} ${r.name} ${r.provider} ${r.modality} ${r.owner} ${r.facility} ${(r.tags || []).join(' ')}`.toLowerCase().includes(needle))
     ));
     const { key, dir } = sort;
     const sign = dir === 'asc' ? 1 : -1;
@@ -239,8 +247,9 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
           {select('modality', 'Modality', uniq(displayRows, 'modality'))}
           {select('status', 'Status', uniq(displayRows, 'status'))}
           {select('source', 'Source', uniq(displayRows, 'source'))}
+          {select('facility', 'Facility', uniq(displayRows, 'facility').filter((x) => x && x !== '—'))}
           {filtersActive && (
-            <button type="button" className="btn btn-secondary" onClick={() => { setSearch(''); setF({ provider: 'ALL', modality: 'ALL', status: 'ALL', source: 'ALL' }); }}>Clear filters</button>
+            <button type="button" className="btn btn-secondary" onClick={() => { setSearch(''); setF({ provider: 'ALL', modality: 'ALL', status: 'ALL', source: 'ALL', facility: 'ALL' }); }}>Clear filters</button>
           )}
           <ViewModeToggle value={view} onChange={setView} toggleClassName="bk-view-toggle dvt-view-toggle" btnClassName="bk-view-btn dvt-view-btn" />
           <span className="bk-muted bk-toolbar__count" aria-live="polite">{shown.length} of {displayRows.length} backends</span>
@@ -264,8 +273,15 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
                   <div className="bk-card__tags">
                     <span className="bk-tag">{r.modality}</span>
                     <span className="bk-tag">{r.provider}</span>
+                    {r.facility !== '—' && <span className="bk-tag">{r.facility}</span>}
                     <LineageTag lineage={r.source} />
                   </div>
+                  {(r.owner !== '—' || r.tags.length > 0) && (
+                    <p className="bk-muted" style={{ fontSize: 12, margin: '4px 0 0' }}>
+                      {r.owner !== '—' ? `Owner ${r.owner}` : ''}
+                      {r.tags.length ? `${r.owner !== '—' ? ' · ' : ''}${r.tags.join(', ')}` : ''}
+                    </p>
+                  )}
                   <div className="bk-card__metrics">
                     <div><span className="bk-muted">Qubits</span><strong>{r.qubits ?? '—'}</strong></div>
                     <div><span className="bk-muted">Queue</span><strong>{r.queue ?? '—'}</strong></div>
@@ -277,6 +293,22 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
                     <StateBar counts={r.counts} label={r.name} />
                   </div>
                 </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn--xs"
+                    style={{ margin: '0 12px 12px' }}
+                    onClick={() => setCatalogEdit({
+                      id: r.id,
+                      name: r.name,
+                      owner: r.owner === '—' ? '' : r.owner,
+                      facility: r.facility === '—' ? '' : r.facility,
+                      tags: (r.tags || []).join(', '),
+                    })}
+                  >
+                    <Pencil size={14} aria-hidden /> Catalogue
+                  </button>
+                )}
               </article>
             ))}
           </div>
@@ -302,6 +334,13 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
                       <button type="button" className="bk-link" onClick={(e) => { e.stopPropagation(); onSelectBackend?.(r.id); }} aria-label={`Open workspace for ${r.name}`}>{r.name}</button>
                       <span className="bk-id">{r.id}</span>
                     </td>
+                    <td>
+                      {r.owner}
+                      {isAdmin && (
+                        <button type="button" className="bk-link" style={{ marginLeft: 6, fontSize: 11 }} onClick={(e) => { e.stopPropagation(); setCatalogEdit({ id: r.id, name: r.name, owner: r.owner === '—' ? '' : r.owner, facility: r.facility === '—' ? '' : r.facility, tags: (r.tags || []).join(', ') }); }}>Edit</button>
+                      )}
+                    </td>
+                    <td>{r.facility}</td>
                     <td>{r.provider}<div style={{ marginTop: 3 }}><LineageTag lineage={r.source} /></div></td>
                     <td>{r.modality}</td>
                     <td className="bk-r">{r.qubits ?? '—'}</td>
@@ -330,6 +369,58 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
         onComplete={load}
         isAdmin={isAdmin}
       />
+
+      {catalogEdit && (
+        <div className="admin-modal-backdrop" role="presentation" onClick={() => !catalogSaving && setCatalogEdit(null)}>
+          <div className="admin-modal" role="dialog" aria-labelledby="catalog-edit-title" onClick={(e) => e.stopPropagation()}>
+            <header className="admin-modal-header">
+              <h3 id="catalog-edit-title">Catalogue — {catalogEdit.name}</h3>
+              <button type="button" className="admin-modal-close" aria-label="Close" onClick={() => setCatalogEdit(null)}>×</button>
+            </header>
+            <div className="admin-modal-body" style={{ display: 'grid', gap: 10 }}>
+              <label className="admin-form-field">
+                <span className="admin-form-label">Owner</span>
+                <input className="input-control" value={catalogEdit.owner} onChange={(e) => setCatalogEdit({ ...catalogEdit, owner: e.target.value })} />
+              </label>
+              <label className="admin-form-field">
+                <span className="admin-form-label">Facility</span>
+                <input className="input-control" value={catalogEdit.facility} onChange={(e) => setCatalogEdit({ ...catalogEdit, facility: e.target.value })} />
+              </label>
+              <label className="admin-form-field">
+                <span className="admin-form-label">Tags (comma-separated)</span>
+                <input className="input-control" value={catalogEdit.tags} onChange={(e) => setCatalogEdit({ ...catalogEdit, tags: e.target.value })} />
+              </label>
+            </div>
+            <footer className="admin-modal-footer">
+              <button type="button" className="btn btn-secondary" disabled={catalogSaving} onClick={() => setCatalogEdit(null)}>Cancel</button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={catalogSaving}
+                onClick={async () => {
+                  setCatalogSaving(true);
+                  try {
+                    const tags = catalogEdit.tags.split(',').map((t) => t.trim()).filter(Boolean);
+                    await api.updateBackendCatalog(catalogEdit.id, {
+                      owner: catalogEdit.owner.trim() || null,
+                      facility: catalogEdit.facility.trim() || null,
+                      tags,
+                    });
+                    setCatalogEdit(null);
+                    await load();
+                  } catch (e) {
+                    console.error(e);
+                  } finally {
+                    setCatalogSaving(false);
+                  }
+                }}
+              >
+                {catalogSaving ? 'Saving…' : 'Save catalogue'}
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

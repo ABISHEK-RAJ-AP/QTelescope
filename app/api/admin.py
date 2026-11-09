@@ -28,7 +28,7 @@ from app.core.provenance import (
     utcnow_iso,
 )
 from app.services.collector_health import list_provider_health, load_all as load_collector_health
-from app.core.rbac import require_admin
+from app.core.rbac import get_current_username, require_admin
 from app.jobs.telemetry_retention import retention_policy, run_telemetry_retention
 from app.core.rbac_audit import rbac_audit_report
 from app.providers.catalog import (
@@ -55,6 +55,12 @@ class GenericCredentialSchema(BaseModel):
     token: Optional[str] = None
     endpoint_url: Optional[str] = None
     extra: Optional[Dict[str, Any]] = None
+
+
+class BackendCatalogPatch(BaseModel):
+    owner: Optional[str] = None
+    facility: Optional[str] = None
+    tags: Optional[List[str]] = None
 
 @router.get("/summary", response_model=DashboardSummaryResponse)
 def get_dashboard_summary(db: Session = Depends(get_db)):
@@ -442,6 +448,31 @@ def delete_alert_rule(rule_id: str, db: Session = Depends(get_db), _: str = Depe
     db.delete(rule)
     db.commit()
     return {"status": "SUCCESS", "message": f"Alert rule '{rule_id}' deleted successfully."}
+
+@router.patch("/backends/{backend_id}/catalog")
+def patch_backend_catalog(
+    backend_id: str,
+    body: BackendCatalogPatch,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+    actor: str = Depends(get_current_username),
+):
+    """Update operator catalogue fields (owner, facility, tags) for a backend."""
+    backend = db.query(BackendModel).filter(BackendModel.backend_id == backend_id).first()
+    if not backend:
+        raise HTTPException(status_code=404, detail="Backend not found")
+    from app.services.backend_catalog import get_catalog_entry, upsert_catalog
+
+    upsert_catalog(
+        backend_id,
+        owner=body.owner,
+        facility=body.facility,
+        tags=body.tags,
+        actor=actor,
+    )
+    meta = get_catalog_entry(backend_id, provider_id=backend.provider_id)
+    return {"backend_id": backend_id, **meta}
+
 
 @router.get("/collector-health")
 def get_collector_health():

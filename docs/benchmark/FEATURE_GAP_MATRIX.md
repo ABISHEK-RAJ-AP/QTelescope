@@ -14,8 +14,8 @@ Priority: **P0** foundation · **P1** enterprise ops · **P2** quantum depth · 
 | Composite alerts | AWS | **UNIMPLEMENTED** | `alert_engine.py` single-type rules | Boolean rule DSL | P1 |
 | Anomaly detection | AWS/Splunk | **PARTIAL** | `AnomalyMonitor.jsx`, anomaly APIs | Baselines + explain | P2 |
 | Synthetic monitoring | AWS | **PARTIAL** | Playwright `tests/e2e/` | Scheduled probes + admin UI | P2 |
-| Resource catalogue | Datadog | **PARTIAL** | Inventory only | `resource_registry` model | P1 |
-| Ownership / escalation | Datadog/Grafana | **UNIMPLEMENTED** | — | Owner on backend/collector | P1 |
+| Resource catalogue | Datadog | **PARTIAL** | Owner/facility/tags on inventory + `backend_catalog.json` | DB `resource_registry`, lifecycle | P1 |
+| Ownership / escalation | Datadog/Grafana | **PARTIAL** | Backend owner field + admin edit | Collector owner, escalation routes | P1 |
 | On-call rotation | Grafana IRM | **UNIMPLEMENTED** | — | Schedules + notify routes | P2 |
 | Logs explorer | Splunk | **PARTIAL** | Admin audit search on `audit_events.jsonl`; no app log index | Unified log index + UI | P1 |
 | Distributed tracing | OTel | **UNIMPLEMENTED** | `X-Request-Id` only | OTel SDK + Trace Explorer | P1 |

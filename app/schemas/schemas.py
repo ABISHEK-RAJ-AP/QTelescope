@@ -35,6 +35,10 @@ class BackendBase(BaseModel):
 class BackendResponse(BackendBase):
     created_at: datetime.datetime
     updated_at: datetime.datetime
+    owner: Optional[str] = None
+    facility: Optional[str] = None
+    tags: Optional[List[str]] = None
+
     class Config:
         from_attributes = True
 

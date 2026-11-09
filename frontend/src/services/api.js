@@ -139,6 +139,11 @@ export const api = {
 
   // Backends
   getBackends: () => fetchApi('/backends'),
+  updateBackendCatalog: (backendId, body) =>
+    fetchApi(`/admin/backends/${encodeURIComponent(backendId)}/catalog`, {
+      method: 'PATCH',
+      body: JSON.stringify(body || {}),
+    }),
   getBackendsStatusAll: () => fetchApi('/backends/status-all'),
   getBackendDetail: (id) => fetchApi(`/backends/${id}`),
   getBackendStatus: (id) => fetchApi(`/backends/${id}/status`),
