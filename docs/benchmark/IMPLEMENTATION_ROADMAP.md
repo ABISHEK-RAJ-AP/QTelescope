@@ -33,19 +33,28 @@ Maps [ENTERPRISE_BENCHMARK_REPORT.md](ENTERPRISE_BENCHMARK_REPORT.md) to [../ENT
 
 ## Release B — Enterprise observability (P1)
 
-**Sprint S4 (weeks 5–6)** — Pipelines & logs
+### Shipped on `main` (2026-11-09 — do not rebuild)
 
-- Unified **Logs Explorer** (read `audit_events` + structured app logs).
-- **Collector execution** persistence + Platform Health UI (closes B07 partial).
-- **Data quality report** per ingest cycle (API + admin widget).
-- **Entity search** in command palette (backends, incidents, alerts).
+| Item | Evidence |
+| --- | --- |
+| Collector execution history + quality JSONL | `82f3fd1`, B07 PASS, [SPRINT4_OBSERVABILITY.md](../QA/SPRINT4_OBSERVABILITY.md) |
+| Audit log search (not unified app logs) | `/app/admin/logs`, E25 |
+| Command palette entity search (partial) | Backends, alerts, incidents |
+| Metrics Explorer v1 | `795ab5b`, [SPRINT4_METRICS_EXPLORER.md](../QA/SPRINT4_METRICS_EXPLORER.md) |
+| Resource catalogue v1 | `336b956`, [SPRINT5_RESOURCE_CATALOG.md](../QA/SPRINT5_RESOURCE_CATALOG.md) |
 
-**Sprint S5 (weeks 6–7)** — Metrics & catalogue
+### B-S4 remainder (Prompt 1)
 
-- **Metrics Explorer** v1 (saved queries, multi-backend, time compare).
-- **Resource catalogue** v1 (extend inventory → owner, facility, tags).
+- Unified **Logs Explorer** (structured app logs + audit; request_id).
+- **Extend** collector execution API (30d, filters, richer fields) — JSONL exists.
+- **Extend** ingestion quality schema — v1 heuristic exists.
+- **Alert → log** links; quality tiles on Platform Health / backend.
+
+### B-S5 remainder (Prompt 2)
+
 - **Dependency map** v1 (collector → backend → alerts).
-- Roll **EnterpriseDataTable** to jobs, alerts, calibration (per route audit).
+- Server-backed **saved metric queries**; registry-driven metrics.
+- Roll **EnterpriseDataTable** (jobs, alerts, calibration, incidents per route audit).
 
 **Sprint S6 (weeks 7–8)** — Reliability analytics
 

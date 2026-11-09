@@ -7,9 +7,12 @@
 
 | Outcome | Count |
 | --- | --- |
-| Passed | **22–24** (serial workers; data-conditional skips) |
-| Skipped | **2–6** (no export rows, E21 preconditions, etc.) |
-| Failed | **0** (serial `workers=1`) |
+| Passed | **22** (last full serial gate, Sprint 3 — see below) |
+| Skipped | **6** (data-conditional + E21/E22 env) |
+| Failed | **0** (`PW_WORKERS=1`) |
+
+**Catalogue size:** **30** tests across `telescope-*.spec.ts` (E01–E26; E22 duplicated in 3 files).  
+**After gate:** E25 (audit log), E26 (metrics explorer) added — **re-run required** before claiming Pass count.
 
 Command:
 

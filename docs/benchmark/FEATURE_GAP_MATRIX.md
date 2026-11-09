@@ -22,10 +22,10 @@ Priority: **P0** foundation · **P1** enterprise ops · **P2** quantum depth · 
 | Notification routing | Grafana | **PARTIAL** | SMTP reset; no alert routing | Templates, Teams/Slack | P1 |
 | Change management | Azure | **UNIMPLEMENTED** | Audit partial | Change requests + windows | P2 |
 | Config drift | Azure | **UNIMPLEMENTED** | — | Diff admin config vs policy | P2 |
-| Data quality engine | Splunk | **PARTIAL** | Provenance, health engine | Per-ingest quality report | P1 |
-| Telemetry pipeline mgmt | OTel | **PARTIAL** | `collectors/`, scheduler | Pipeline run history UI | P1 |
+| Data quality engine | Splunk | **PARTIAL** | `ingestion_quality.jsonl` + admin UI (heuristic); provenance hooks | Per-record valid/reject/dup schema | P1 |
+| Telemetry pipeline mgmt | OTel | **PARTIAL** | Collectors + JSONL execution history + admin tables (B07 PASS) | 30d query, DB persistence, detail drawer | P1 |
 | Event store / outbox | Event-driven | **PARTIAL** | SSE, `audit_events` | Durable outbox + replay | P2 |
-| Circuit breaker (providers) | AWS | **UNIMPLEMENTED** | — | Per-adapter breaker + stale UX | P1 |
+| Circuit breaker (providers) | AWS | **PARTIAL** | `circuit_breaker.py`, platform-health snapshot | Stale UX copy + half-open ops UI | P1 |
 | Multi-facility tenancy | AWS org | **PARTIAL** | `EnvironmentPage.jsx` | Facility-scoped queries | P2 |
 | Hardware capability registry | IBM | **PARTIAL** | `DeviceCapabilities.jsx`, capabilities API | Versioned JSON profile | P2 |
 | Instruction-level metrics | IBM | **PARTIAL** | Topology, calibration tabs | Gate/edge error history | P2 |

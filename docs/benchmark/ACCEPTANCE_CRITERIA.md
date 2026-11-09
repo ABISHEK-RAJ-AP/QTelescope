@@ -24,17 +24,19 @@
 
 ## Release B — Enterprise observability
 
-| ID | Criterion | Verification |
-| --- | --- | --- |
-| B1 | Logs Explorer: search by `request_id`, backend, time | Playwright + manual |
-| B2 | Collector executions queryable 30d | API test + Platform Health UI |
-| B3 | Data quality report after collection | pytest fixture ingest |
-| B4 | Metrics Explorer saves/restores one query | E2E journey |
-| B5 | Resource row shows owner + facility fields | API + inventory UI |
-| B6 | SLO: 1 SLI measured hourly | Job log + dashboard tile |
-| B7 | Trace waterfall for one API request | Trace ID in UI or Jaeger link |
-| B8 | Synthetic probe fires alert on forced failure | Integration test |
-| B9 | T05/T06: baseline screenshots stored | CI artefact |
+| ID | Criterion | Verification | Status (2026-11-09) |
+| --- | --- | --- | --- |
+| B1 | Logs Explorer: search by `request_id`, backend, time | Playwright + manual | **OPEN** — audit-only search |
+| B2 | Collector executions queryable 30d | API test + Platform Health UI | **PARTIAL** — JSONL + UI; no 30d contract |
+| B3 | Data quality report after collection | pytest fixture ingest | **PARTIAL** — heuristic quality JSONL |
+| B4 | Metrics Explorer saves/restores one query | E2E journey | **PARTIAL** — localStorage; E26 spec |
+| B5 | Resource row shows owner + facility fields | API + inventory UI | **PARTIAL** — v1 catalogue; pytest |
+| B6 | SLO: 1 SLI measured hourly | Job log + dashboard tile | **OPEN** |
+| B7 | Trace waterfall for one API request | Trace ID in UI or Jaeger link | **OPEN** |
+| B8 | Synthetic probe fires alert on forced failure | Integration test | **OPEN** |
+| B9 | T05/T06: baseline screenshots stored | CI artefact | **OPEN** |
+
+Gate 0: [../QA/ENTERPRISE_BASELINE_RECONCILIATION.md](../QA/ENTERPRISE_BASELINE_RECONCILIATION.md)
 
 ---
 

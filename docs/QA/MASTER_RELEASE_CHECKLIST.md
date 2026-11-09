@@ -3,7 +3,8 @@
 **Tracker only — not a production score.** A single critical **FAIL** in security still blocks release.
 
 **Last updated:** 2026-11-09  
-**Summary:** **34 PASS** · **26 PARTIAL** · **4 FAIL** · **29 NOT VERIFIED**  
+**Summary:** **19 PASS** · **47 PARTIAL** · **8 FAIL** · **19 NOT_VERIFIED**  
+_Authoritative recount: [ENTERPRISE_BASELINE_RECONCILIATION.md](ENTERPRISE_BASELINE_RECONCILIATION.md) (Gate 0, 2026-11-09)._  
 _Remaining PARTIAL = Sprint S4–S6 blueprint scope (notifications, provenance E2E, full UI sweep) unless row notes say otherwise._
 
 Programme: [../ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md)
@@ -22,7 +23,7 @@ Programme: [../ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md
 
 ---
 
-## Frontend foundation (6 / 15 PASS)
+## Frontend foundation (4 / 15 PASS)
 
 _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared `EnterpriseDataTable`, `AppFormField`.
 
@@ -38,7 +39,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 | F08 | Confirm dialogs for destructive actions | PARTIAL | Logout, admin, alerts; gaps remain |
 | F09 | Toast consistency | PASS | `ToastHost` + react-toastify |
 | F10 | Breadcrumbs / deep links | PASS | `appNav.js`, `PageHeader` |
-| F11 | Global search / command palette | PARTIAL | Ctrl+K palette (nav only); no entity search |
+| F11 | Global search / command palette | PARTIAL | Ctrl+K nav + entity search (backends, alerts, incidents); jobs/collectors backlog |
 | F12 | Keyboard nav / focus | PARTIAL | Modals; full app not audited |
 | F13 | Light/dark themes | PASS | `ThemeProvider` |
 | F14 | Responsive 9 viewports | NOT_VERIFIED | Matrix exists; no screenshots |
@@ -46,7 +47,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 
 ---
 
-## Interaction and usability (4 / 12 PASS)
+## Interaction and usability (1 / 12 PASS)
 
 | ID | Item | Status | Notes |
 | --- | --- | --- | --- |
@@ -65,7 +66,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 
 ---
 
-## Backend and APIs (9 / 13 PASS)
+## Backend and APIs (4 / 13 PASS)
 
 | ID | Item | Status | Notes |
 | --- | --- | --- | --- |
@@ -85,7 +86,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 
 ---
 
-## Database and data quality (3 / 12 PASS)
+## Database and data quality (1 / 12 PASS)
 
 | ID | Item | Status | Notes |
 | --- | --- | --- | --- |
@@ -104,7 +105,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 
 ---
 
-## Authentication and security (9 / 14 PASS)
+## Authentication and security (5 / 14 PASS)
 
 | ID | Item | Status | Notes |
 | --- | --- | --- | --- |
@@ -125,7 +126,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 
 ---
 
-## Quantum operational features (2 / 13 PASS)
+## Quantum operational features (0 / 13 PASS)
 
 | ID | Item | Status | Notes |
 | --- | --- | --- | --- |
@@ -145,7 +146,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 
 ---
 
-## Testing and deployment (6 / 14 PASS)
+## Testing and deployment (4 / 14 PASS)
 
 | ID | Item | Status | Notes |
 | --- | --- | --- | --- |

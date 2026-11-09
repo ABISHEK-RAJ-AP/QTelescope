@@ -5,6 +5,8 @@
 **Scope:** `frontend/` + `app/` only (not QRP, Govern, qniverse unless shared API)  
 **Authoritative architecture:** [PLATFORM_STATUS_AND_WORKFLOWS.md](PLATFORM_STATUS_AND_WORKFLOWS.md)  
 **Release gate:** [QA/MASTER_RELEASE_CHECKLIST.md](QA/MASTER_RELEASE_CHECKLIST.md)  
+**Authoritative baseline (Gate 0):** [QA/ENTERPRISE_BASELINE_RECONCILIATION.md](QA/ENTERPRISE_BASELINE_RECONCILIATION.md)  
+**Execution checklist:** [QA/ENTERPRISE_SPRINT_IMPLEMENTATION_CHECKLIST.md](QA/ENTERPRISE_SPRINT_IMPLEMENTATION_CHECKLIST.md)  
 **Big-tech benchmark & gap programme:** [benchmark/INDEX.md](benchmark/INDEX.md) (Releases A–E, sprints S4–S14)
 
 ## Guiding principles (non-negotiable)
@@ -17,7 +19,7 @@
 
 | Milestone | Target | Current (2026-11-09) |
 | --- | --- | --- |
-| Enterprise UI/ops polish | Phase 1–3 complete | **Sprint 1–4 slice shipped** (checklist **34/93 PASS**); S4 remainder in backlog |
+| Enterprise UI/ops polish | Phase 1–3 complete | **Release B slices on main** (checklist **19/93 PASS**, 47 PARTIAL); see Gate 0 backlog |
 | Production security gate | Phase 2 complete | **Sprint 3 shipped**; P1 **QT-06** (rotate demo secrets); SMTP relay on VM |
 | Quantum differentiation | Phase 4 | **Partial** (provenance hooks exist; quality states incomplete) |
 | Go-live rehearsal | Phase 5 | **Not started** |
@@ -48,7 +50,8 @@ See [benchmark/IMPLEMENTATION_ROADMAP.md](benchmark/IMPLEMENTATION_ROADMAP.md).
 | **S10–S11** | D | Calibration diff, benchmarks, readiness scorecards |
 | **S12–S14** | E | Multi-facility, developer centre, UAT |
 
-**S1–S3** = Release A (foundation — shipped in lab per checklist 33/93 PASS).
+**S1–S3** = Release A (foundation — lab shipped).  
+**Naming:** Phase sprints **S1–S6** (table above) ≠ benchmark **S4–S14** (Release B–E). Use **B-S4** etc. in backlog when ambiguous ([QA/ENTERPRISE_BASELINE_RECONCILIATION.md](QA/ENTERPRISE_BASELINE_RECONCILIATION.md) §2.4).
 
 ---
 
