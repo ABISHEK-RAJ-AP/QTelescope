@@ -25,8 +25,11 @@ Benchmark Q-TeleScope against patterns from Google Cloud Monitoring, AWS CloudWa
 
 ## Related programme docs
 
-- [../ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md) — S1–S6 execution  
-- [../QA/MASTER_RELEASE_CHECKLIST.md](../QA/MASTER_RELEASE_CHECKLIST.md) — 93-row gate (**33 PASS** lab)  
+- [../QA/ENTERPRISE_BASELINE_RECONCILIATION.md](../QA/ENTERPRISE_BASELINE_RECONCILIATION.md) — **Gate 0 authoritative baseline**  
+- [../QA/ENTERPRISE_SPRINT_IMPLEMENTATION_CHECKLIST.md](../QA/ENTERPRISE_SPRINT_IMPLEMENTATION_CHECKLIST.md) — Prompts 0–12 tracker  
+- [../QA/ENTERPRISE_IMPLEMENTATION_BACKLOG.md](../QA/ENTERPRISE_IMPLEMENTATION_BACKLOG.md) — Prioritized remaining work  
+- [../ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md) — Phase S1–S6 + Release map  
+- [../QA/MASTER_RELEASE_CHECKLIST.md](../QA/MASTER_RELEASE_CHECKLIST.md) — 93-row gate (**19 PASS** recount 2026-11-09)  
 - [../PLATFORM_STATUS_AND_WORKFLOWS.md](../PLATFORM_STATUS_AND_WORKFLOWS.md) — architecture truth
 
 ## Classification legend
