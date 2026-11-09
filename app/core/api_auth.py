@@ -22,7 +22,7 @@ _PUBLIC_SUFFIXES = (
 
 
 def _is_public_path(path: str) -> bool:
-    if path in ("/", "/docs", "/redoc", "/openapi.json"):
+    if path in ("/", "/docs", "/redoc", "/openapi.json", "/healthz", "/readyz"):
         return True
     prefix = settings.API_V1_STR
     if not path.startswith(prefix):

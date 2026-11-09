@@ -182,8 +182,9 @@ export function LoginPage({ onLoginSuccess }) {
           }
         }}
       >
-        <Field label="Authenticator code">
+        <Field label="Authenticator code" forId="login-mfa-code">
           <input
+            id="login-mfa-code"
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
@@ -213,10 +214,11 @@ export function LoginPage({ onLoginSuccess }) {
       </form>
       ) : (
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Field label="Username">
+        <Field label="Username" forId="login-username">
           <div className="relative">
             <User className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
             <input
+              id="login-username"
               type="text"
               autoComplete="username"
               required
@@ -228,10 +230,11 @@ export function LoginPage({ onLoginSuccess }) {
           </div>
         </Field>
 
-        <Field label="Password">
+        <Field label="Password" forId="login-password">
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
             <input
+              id="login-password"
               type={showPw ? 'text' : 'password'}
               autoComplete="current-password"
               required

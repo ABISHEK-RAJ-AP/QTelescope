@@ -67,10 +67,13 @@ export function AuthShell({ title, subtitle, children, footer, maxWidth = 'max-w
   )
 }
 
-export function Field({ label, children }) {
+export function Field({ label, forId, children }) {
   return (
     <div className="space-y-1.5">
-      <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-400">
+      <label
+        htmlFor={forId}
+        className="block text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-400"
+      >
         {label}
       </label>
       {children}

@@ -36,6 +36,53 @@ def _save(blob: Dict[str, Dict[str, Any]]) -> None:
     os.replace(tmp, path)
 
 
+def _store_secret(rec: Dict[str, Any], secret: str) -> None:
+    from app.core import secret_box
+
+    rec.pop("secret", None)
+    if secret_box.mfa_encrypt_at_rest():
+        rec[secret_box.mfa_secret_field()] = secret_box.seal_plaintext(secret)
+    else:
+        rec["secret"] = secret
+
+
+def _secret_from_rec(rec: Dict[str, Any]) -> Optional[str]:
+    from app.core import secret_box
+
+    enc_key = secret_box.mfa_secret_field()
+    if rec.get(enc_key):
+        try:
+            return secret_box.open_ciphertext(str(rec[enc_key]))
+        except Exception:
+            return None
+    plain = rec.get("secret")
+    return str(plain) if plain else None
+
+
+def _migrate_plaintext_secrets(blob: Dict[str, Dict[str, Any]]) -> bool:
+    from app.core import secret_box
+
+    if not secret_box.mfa_encrypt_at_rest():
+        return False
+    changed = False
+    for username, rec in list(blob.items()):
+        if not isinstance(rec, dict):
+            continue
+        if rec.get("secret") and not rec.get(secret_box.mfa_secret_field()):
+            secret = rec.pop("secret")
+            rec[secret_box.mfa_secret_field()] = secret_box.seal_plaintext(secret)
+            blob[username] = rec
+            changed = True
+    return changed
+
+
+def _load_persisted() -> Dict[str, Dict[str, Any]]:
+    blob = _load()
+    if _migrate_plaintext_secrets(blob):
+        _save(blob)
+    return blob
+
+
 def _totp_code(secret_b32: str, for_time: Optional[int] = None, digits: int = 6) -> str:
     import hmac
     import struct
@@ -61,7 +108,7 @@ def verify_totp(secret_b32: str, code: str, window: int = 1) -> bool:
 
 
 def mfa_status(username: str) -> Dict[str, Any]:
-    rec = _load().get(username) or {}
+    rec = _load_persisted().get(username) or {}
     return {
         "enabled": bool(rec.get("enabled")),
         "enrolled_at": rec.get("enrolled_at"),
@@ -88,13 +135,14 @@ def confirm_enroll(username: str, code: str) -> Tuple[bool, Optional[list]]:
     backups = [secrets.token_hex(4) for _ in range(8)]
     backup_hashes = [hashlib.sha256(c.encode()).hexdigest() for c in backups]
     with _LOCK:
-        all_m = _load()
-        all_m[username] = {
+        all_m = _load_persisted()
+        row: Dict[str, Any] = {
             "enabled": True,
-            "secret": secret,
             "enrolled_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "backup_hashes": backup_hashes,
         }
+        _store_secret(row, secret)
+        all_m[username] = row
         _save(all_m)
     return True, backups
 
@@ -105,11 +153,11 @@ def verify_login_code(username: str, code: str) -> bool:
     if not code:
         return False
     with _LOCK:
-        all_m = _load()
+        all_m = _load_persisted()
         rec = all_m.get(username)
         if not rec or not rec.get("enabled"):
             return False
-        secret = rec.get("secret")
+        secret = _secret_from_rec(rec)
         if secret and verify_totp(secret, code):
             return True
         if len(code) >= 6:
@@ -126,11 +174,12 @@ def verify_login_code(username: str, code: str) -> bool:
 
 def disable_mfa(username: str, code: str) -> bool:
     with _LOCK:
-        all_m = _load()
+        all_m = _load_persisted()
         rec = all_m.get(username)
         if not rec or not rec.get("enabled"):
             return True
-        if not verify_totp(rec["secret"], code):
+        secret = _secret_from_rec(rec)
+        if not secret or not verify_totp(secret, code):
             return False
         all_m.pop(username, None)
         _save(all_m)

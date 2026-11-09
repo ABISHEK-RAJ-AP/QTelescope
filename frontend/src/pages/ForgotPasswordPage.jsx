@@ -40,8 +40,9 @@ export function ForgotPasswordPage() {
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Field label="Username">
+        <Field label="Username" forId="forgot-username">
           <input
+            id="forgot-username"
             type="text"
             autoComplete="username"
             required

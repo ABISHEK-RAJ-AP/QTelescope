@@ -78,6 +78,16 @@ def _log_prod_security_warnings() -> None:
         _startup_log.error(
             "Production profile using insecure default SECRET_KEY — rotate before VAPT/go-live."
         )
+    from app.core.mail_delivery import password_reset_smtp_ready
+
+    if not password_reset_smtp_ready():
+        _startup_log.warning(
+            "Production profile but SMTP_HOST/SMTP_FROM unset — password reset emails will not be delivered."
+        )
+    elif not (settings.PUBLIC_APP_URL or "").strip():
+        _startup_log.warning(
+            "Production profile: set PUBLIC_APP_URL so reset emails contain a full link."
+        )
 
 
 @asynccontextmanager

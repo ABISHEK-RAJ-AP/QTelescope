@@ -8,7 +8,11 @@ Optional browser smoke for **Q-TeleScope** and Govern / Build. **Default CI uses
 cd tests/e2e
 npm install
 npx playwright install chromium
+# Debian/CDN slow: system Chromium
+# export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
 ```
+
+Pin: `@playwright/test@1.56.1` (see `package.json`). Commit `package-lock.json` after `npm install`.
 
 API and Govern dev servers must be reachable (or use `webServer` in config).
 
@@ -16,14 +20,17 @@ API and Govern dev servers must be reachable (or use `webServer` in config).
 
 ```bash
 # Terminal 1
-cd /path/to/repo && E2E_CAPTCHA_BYPASS=1 PYTHONPATH=. uvicorn app.main:app --port 8000
+./scripts/start-e2e-api.sh
 
 # Terminal 2
 cd frontend && npm run dev
 
 # Terminal 3
 cd tests/e2e
-E2E_PLAYWRIGHT=1 E2E_CAPTCHA_BYPASS=1 E2E_API_URL=http://127.0.0.1:8000 E2E_TELESCOPE_URL=http://127.0.0.1:5173 npx playwright test --project=telescope
+E2E_PLAYWRIGHT=1 E2E_CAPTCHA_BYPASS=1 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium \
+  E2E_API_URL=http://127.0.0.1:8000 E2E_TELESCOPE_URL=http://127.0.0.1:5173 \
+  npx playwright test --project=telescope
+# Release gate (2026-11-09): 22 passed, 6 skipped @ workers=1 — see docs/QA/E2E_TELESCOPE_EVIDENCE.md
 ```
 
 | Variable | Default |

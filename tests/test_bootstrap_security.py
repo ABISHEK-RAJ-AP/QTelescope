@@ -29,6 +29,14 @@ def test_block_default_bootstrap_password(monkeypatch):
     assert resp.status_code == 403
 
 
+def test_prod_profile_blocks_default_bootstrap_without_explicit_env(monkeypatch):
+    monkeypatch.delenv("BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS", raising=False)
+    monkeypatch.setenv("QRE_PROFILE", "production")
+    from app.core.bootstrap_security import block_default_bootstrap_enabled
+
+    assert block_default_bootstrap_enabled() is True
+
+
 def test_config_status_bootstrap_flags(monkeypatch):
     monkeypatch.setenv("BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS", "true")
     client = _client(monkeypatch)

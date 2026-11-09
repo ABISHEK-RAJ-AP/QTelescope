@@ -16,8 +16,8 @@
 
 | Milestone | Target | Current (2026-11-09) |
 | --- | --- | --- |
-| Enterprise UI/ops polish | Phase 1–3 complete | **Sprint 2 in progress** (~28% of master checklist) |
-| Production security gate | Phase 2 complete | **Open P1s** (secrets, MFA at rest, reset mail, E2E) |
+| Enterprise UI/ops polish | Phase 1–3 complete | **Sprint 1–3 shipped** (checklist **33/93 PASS**); S4+ backlog |
+| Production security gate | Phase 2 complete | **Sprint 3 shipped**; P1 **QT-06** (rotate demo secrets); SMTP relay on VM |
 | Quantum differentiation | Phase 4 | **Partial** (provenance hooks exist; quality states incomplete) |
 | Go-live rehearsal | Phase 5 | **Not started** |
 
@@ -66,6 +66,16 @@
 | Queue backend filter | `QueueMonitoring.jsx` `?backend=` |
 | Platform Health table | `PlatformHealth.jsx` → `EnterpriseDataTable` |
 | E2E captcha bypass (non-prod) | `E2E_CAPTCHA_BYPASS=1`, code `BYPASS`, `test_e2e_captcha_bypass.py` |
+
+### Sprint 3 — in progress (security)
+
+| Item | Evidence |
+| --- | --- |
+| MFA secrets encrypted at rest | `secret_box.py`, `user_mfa.json` → `secret_enc` |
+| Prod default bootstrap block | `bootstrap_security.py` + `test_prod_profile_blocks_default_bootstrap_without_explicit_env` |
+| Password reset SMTP (prod) | `mail_delivery.py`, `.env.production.example` |
+| Playwright lab green (serial) | 22 pass / 6 skip — [QA/E2E_TELESCOPE_EVIDENCE.md](QA/E2E_TELESCOPE_EVIDENCE.md) |
+| Sprint 3 notes | [QA/SPRINT3_SECURITY.md](QA/SPRINT3_SECURITY.md) |
 
 ### Sprint 1 backlog (still open)
 

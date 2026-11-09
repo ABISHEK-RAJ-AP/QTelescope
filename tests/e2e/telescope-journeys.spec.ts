@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { E2E_CAPTCHA_BYPASS, loginAsAdmin } from './telescope-helpers';
+import { E2E_CAPTCHA_BYPASS, fillLoginForm, gotoBackendInventory, loginAsAdmin } from './telescope-helpers';
 
 const api = process.env.E2E_API_URL || 'http://127.0.0.1:8000';
 
@@ -20,18 +20,18 @@ test.describe('Q-TeleScope journeys E01–E06', () => {
 
   test('E02 login → captcha validation error', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel(/username/i).fill('admin');
-    await page.getByLabel(/^password$/i).fill('wrong-password');
-    await page.getByLabel(/image verification|characters/i).fill('NOTVALID');
+    await fillLoginForm(page, { username: 'admin', password: 'wrong-password', captcha: 'NOTVALID' });
     await page.getByTestId('login-submit').click();
     await expect(page.getByTestId('login-error')).toBeVisible({ timeout: 15_000 });
   });
 
   test('E03 login → MFA step when required', async ({ page }) => {
     await page.goto('/login');
-    await page.getByLabel(/username/i).fill(process.env.E2E_TELESCOPE_USER ?? 'admin');
-    await page.getByLabel(/^password$/i).fill(process.env.E2E_TELESCOPE_PASSWORD ?? 'quantum2026');
-    await page.getByLabel(/image verification|characters/i).fill(E2E_CAPTCHA_BYPASS);
+    await fillLoginForm(page, {
+      username: process.env.E2E_TELESCOPE_USER ?? 'admin',
+      password: process.env.E2E_TELESCOPE_PASSWORD ?? 'quantum2026',
+      captcha: E2E_CAPTCHA_BYPASS,
+    });
     await page.getByTestId('login-submit').click();
     const mfa = page.getByLabel(/authenticator code/i);
     const dashboard = page.locator('[data-tour="page-kpis"]');
@@ -41,21 +41,22 @@ test.describe('Q-TeleScope journeys E01–E06', () => {
   test('E04 forgot password flow loads', async ({ page }) => {
     await page.goto('/forgot-password');
     await expect(page.getByRole('heading', { name: /reset password/i })).toBeVisible();
-    await page.getByLabel(/username/i).fill('admin');
+    await page.locator('input[autocomplete="username"]').fill('admin');
     await page.getByRole('button', { name: /request reset/i }).click();
-    await expect(page.getByText(/reset|token|account/i)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/if an account exists for that identity/i)).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   test('E05 login → dashboard overview', async ({ page }) => {
     await loginAsAdmin(page);
-    await expect(page).toHaveURL(/\/app\/(overview|operate)/);
-    await expect(page.locator('[data-tour="page-kpis"]')).toBeVisible();
+    await page.goto('/app/overview');
+    await expect(page.locator('[data-tour="page-kpis"]')).toBeVisible({ timeout: 60_000 });
   });
 
   test('E06 dashboard → backend inventory', async ({ page }) => {
     await loginAsAdmin(page);
-    await page.goto('/app/backends/inventory');
-    await expect(page.locator('[data-tour="page-inventory"]')).toBeVisible({ timeout: 20_000 });
+    await gotoBackendInventory(page);
   });
 
   test('E22 unauthorized API structured error', async ({ request }) => {

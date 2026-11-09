@@ -51,8 +51,8 @@ test.describe('Q-TeleScope journeys E17–E24', () => {
   test('E20 session cleared → sign-in gate', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/app/overview');
-    await page.evaluate(() => localStorage.removeItem('quantum_user'));
-    await page.reload();
+    await page.getByRole('button', { name: /^Sign out$/i }).click();
+    await page.getByRole('button', { name: /yes, sign out/i }).click();
     await expect(page.getByRole('heading', { name: /sign in/i })).toBeVisible({ timeout: 15_000 });
   });
 

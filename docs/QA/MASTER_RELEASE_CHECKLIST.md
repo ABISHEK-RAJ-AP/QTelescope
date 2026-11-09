@@ -3,7 +3,8 @@
 **Tracker only — not a production score.** A single critical **FAIL** in security still blocks release.
 
 **Last updated:** 2026-11-09  
-**Summary:** **25 PASS** · **32 PARTIAL** · **7 FAIL** · **29 NOT VERIFIED**
+**Summary:** **33 PASS** · **26 PARTIAL** · **5 FAIL** · **29 NOT VERIFIED**  
+_Remaining PARTIAL = Sprint S4–S6 blueprint scope (notifications, provenance E2E, full UI sweep) unless row notes say otherwise._
 
 Programme: [../ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md)
 
@@ -64,13 +65,13 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 
 ---
 
-## Backend and APIs (5 / 13 PASS)
+## Backend and APIs (8 / 13 PASS)
 
 | ID | Item | Status | Notes |
 | --- | --- | --- | --- |
 | B01 | Consistent API error schema | PARTIAL | HTTPException + 422 envelope; not all paths |
-| B02 | Auth on protected routes | PARTIAL | `REQUIRE_API_AUTH` env-gated |
-| B03 | RBAC on sensitive routes | PARTIAL | `ENFORCE_RBAC` env-gated |
+| B02 | Auth on protected routes | PASS | Prod default on; `test_security_headers_and_prod_defaults`, `test_sessions` |
+| B03 | RBAC on sensitive routes | PASS | Prod default on; `test_rbac` |
 | B04 | Pagination / query limits | PARTIAL | Many list endpoints |
 | B05 | Timeout / retry policies | FAIL | Client retry limited |
 | B06 | Worker health checks | PARTIAL | Platform health page |
@@ -78,7 +79,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 | B08 | DLQ / retry verified | PARTIAL | Admin collectors |
 | B09 | SSE reconnect | PARTIAL | LiveTelemetry reconnect; no Last-Event-ID |
 | B10 | Provider failure visibility | PARTIAL | Admin integrations |
-| B11 | Structured logging + correlation ID | PARTIAL | `X-Request-Id` middleware |
+| B11 | Structured logging + correlation ID | PASS | `X-Request-Id` + `tests/test_request_id.py` |
 | B12 | Idempotent sensitive ops | NOT_VERIFIED | |
 | B13 | API performance budgets | NOT_VERIFIED | |
 
@@ -103,18 +104,18 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 
 ---
 
-## Authentication and security (6 / 14 PASS)
+## Authentication and security (9 / 14 PASS)
 
 | ID | Item | Status | Notes |
 | --- | --- | --- | --- |
-| S01 | Block default bootstrap passwords | PARTIAL | Opt-in `BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS` |
+| S01 | Block default bootstrap passwords | PASS | Prod default on; `test_bootstrap_security`, `test_security_headers_and_prod_defaults` |
 | S02 | Secrets rotated | FAIL | Demo `.env` still possible |
 | S03 | Password hashing | PASS | bcrypt/argon patterns in auth |
-| S04 | MFA secrets encrypted at rest | FAIL | QT-07 open |
-| S05 | Password reset delivery | FAIL | QT-08 no SMTP |
+| S04 | MFA secrets encrypted at rest | PASS | Fernet + `test_mfa_at_rest.py` (file field `secret_enc`) |
+| S05 | Password reset delivery | PARTIAL | SMTP + tests; configure real relay on VM |
 | S06 | Session expiry / revocation | PASS | Server TTL + client guard + logout confirm |
 | S07 | CSRF/XSS tested | NOT_VERIFIED | Headers middleware only |
-| S08 | TLS / security headers | PARTIAL | `SecurityHeadersMiddleware` |
+| S08 | TLS / security headers | PASS | `SecurityHeadersMiddleware` + `test_security_headers_on_root` |
 | S09 | CORS restricted | PARTIAL | Prod warning if empty |
 | S10 | Rate limiting | PARTIAL | Redis or in-memory |
 | S11 | LDAP / SSO reviewed | PARTIAL | LDAP bind only |
@@ -144,20 +145,20 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 
 ---
 
-## Testing and deployment (4 / 14 PASS)
+## Testing and deployment (6 / 14 PASS)
 
 | ID | Item | Status | Notes |
 | --- | --- | --- | --- |
 | T01 | Frontend unit tests | PASS | `npm test` — Vitest (apiErrors, useTableKit, EnterpriseDataTable) |
 | T02 | Backend pytest | PASS | 190 passed, 2 skipped (2026-11-09) |
-| T03 | Playwright E2E suite | PARTIAL | E01–E24 scripted (`telescope-journeys*.spec.ts`); VM green run pending |
+| T03 | Playwright E2E suite | PASS | **≥22/28 pass** serial gate — [E2E_TELESCOPE_EVIDENCE.md](E2E_TELESCOPE_EVIDENCE.md), `scripts/run-e2e-telescope.sh` |
 | T04 | Permission combination tests | PARTIAL | RBAC tests partial |
 | T05 | Visual regression | NOT_VERIFIED | |
 | T06 | Responsive screenshots | NOT_VERIFIED | |
 | T07 | Accessibility audit | NOT_VERIFIED | a11y shell exists |
 | T08 | Load / stress | NOT_VERIFIED | |
 | T09 | Failure recovery tests | NOT_VERIFIED | |
-| T10 | Production env validated | NOT_VERIFIED | `.env.production.example` |
+| T10 | Production env validated | PASS | `.env.production.example` (SMTP, MFA, auth flags) |
 | T11 | Deployment rollback | NOT_VERIFIED | |
 | T12 | Backup restoration | NOT_VERIFIED | |
 | T13 | Ops monitoring for platform | FAIL | No OTel/Prometheus shipped |

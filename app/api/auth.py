@@ -438,7 +438,15 @@ def forgot_password(req: ForgotPasswordRequest, request: Request):
     payload = {"status": "SUCCESS", "message": _FORGOT_MSG}
     if found:
         token = issue_reset_token(found)
-        if not is_production_profile():
+        if is_production_profile():
+            from app.core.mail_delivery import deliver_password_reset, password_reset_smtp_ready
+
+            if password_reset_smtp_ready():
+                rec = users.get(found) or {}
+                to_email = (rec.get("email") or "").strip()
+                if to_email:
+                    deliver_password_reset(username=found, to_email=to_email, token=token)
+        else:
             payload["dev_reset_token"] = token
     return payload
 

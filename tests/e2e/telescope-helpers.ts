@@ -4,6 +4,22 @@ export const E2E_CAPTCHA_BYPASS = 'BYPASS';
 
 const apiBase = () => process.env.E2E_API_URL || 'http://127.0.0.1:8000';
 
+export async function fillLoginForm(
+  page: Page,
+  opts: { username: string; password: string; captcha: string },
+) {
+  await page.locator('input[autocomplete="username"]').fill(opts.username);
+  await page.locator('input[autocomplete="current-password"]').fill(opts.password);
+  await page.getByLabel(/characters from the image/i).fill(opts.captcha);
+}
+
+export async function gotoBackendInventory(page: Page) {
+  await page.goto('/app/backends/inventory');
+  await expect(page.getByRole('heading', { name: /backend library/i })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('status', { name: 'Loading' })).toBeHidden({ timeout: 90_000 });
+  await expect(page.locator('[data-tour="page-inventory"]')).toBeVisible({ timeout: 90_000 });
+}
+
 export async function apiLoginBypass(
   request: APIRequestContext,
   opts?: { username?: string; password?: string },
@@ -49,9 +65,11 @@ export async function loginAsAdmin(page: Page, opts?: { username?: string; passw
   const password = opts?.password ?? process.env.E2E_TELESCOPE_PASSWORD ?? 'quantum2026';
 
   await page.goto('/login');
-  await page.getByLabel(/username/i).fill(username);
-  await page.getByLabel(/^password$/i).fill(password);
-  await page.getByLabel(/image verification|characters/i).fill(E2E_CAPTCHA_BYPASS);
+  await expect(page.getByRole('heading', { name: /sign in/i })).toBeVisible();
+  // AuthShell Field labels are visual-only (no htmlFor) — use stable input hooks.
+  await page.locator('input[autocomplete="username"]').fill(username);
+  await page.locator('input[autocomplete="current-password"]').fill(password);
+  await page.getByLabel(/characters from the image/i).fill(E2E_CAPTCHA_BYPASS);
   await page.getByTestId('login-submit').click();
 
   const mfa = page.getByLabel(/authenticator code/i);
@@ -60,12 +78,12 @@ export async function loginAsAdmin(page: Page, opts?: { username?: string; passw
     return;
   }
 
+  await expect(page).toHaveURL(/\/app\//, { timeout: 45_000 });
   await expect(
     page
       .locator('[data-tour="page-kpis"]')
-      .or(page.locator('[data-tour="page-inventory"]'))
-      .or(page.getByRole('main')),
-  ).toBeVisible({ timeout: 30_000 });
+      .or(page.getByRole('heading', { name: /backend library|fleet overview|operator console/i })),
+  ).toBeVisible({ timeout: 45_000 });
 }
 
 function testSkipMfa(page: Page) {

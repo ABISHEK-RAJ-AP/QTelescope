@@ -81,4 +81,12 @@ class Settings(BaseSettings):
     def ONPREM_QPU_URL(self) -> str:
         return read_env_val("ONPREM_QPU_URL", "")
 
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = ""
+    SMTP_USE_TLS: bool = True
+    PUBLIC_APP_URL: str = ""
+
 settings = Settings()
