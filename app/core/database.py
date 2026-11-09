@@ -1,9 +1,17 @@
 import os
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.pool import StaticPool
 from app.core.config import settings
+
+
+def _sqlite_on_connect(dbapi_conn, _connection_record):
+    """WAL + busy wait — demo VMs use file sqlite with concurrent API + workers."""
+    cur = dbapi_conn.cursor()
+    cur.execute("PRAGMA journal_mode=WAL")
+    cur.execute("PRAGMA busy_timeout=30000")
+    cur.close()
 
 
 def _pool_kwargs() -> dict:
@@ -29,6 +37,7 @@ elif settings.DATABASE_URL.startswith("sqlite"):
         settings.DATABASE_URL,
         connect_args={"check_same_thread": False},
     )
+    event.listen(engine, "connect", _sqlite_on_connect)
 else:
     engine = create_engine(settings.DATABASE_URL, **_pool_kwargs())
 
