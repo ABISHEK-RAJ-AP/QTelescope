@@ -5,6 +5,7 @@ const TELEMETRY_LABELS = {
   calibration: 'Calibration status',
   drift: 'Drift analysis',
   trends: 'Historical trends',
+  explorer: 'Metrics explorer',
   topology: 'Topology explorer',
   'cal-timeline': 'Calibration timeline',
   compare: 'Backend comparison',

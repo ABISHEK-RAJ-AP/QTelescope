@@ -104,7 +104,7 @@ See [benchmark/IMPLEMENTATION_ROADMAP.md](benchmark/IMPLEMENTATION_ROADMAP.md).
 Prioritized from [benchmark/FEATURE_GAP_MATRIX.md](benchmark/FEATURE_GAP_MATRIX.md):
 
 1. Unified **Logs Explorer** (app stdout + `request_id` join) + alert drill-down.
-2. **Metrics Explorer** v1 + saved queries.
+2. **Metrics Explorer** v1 — shipped (`/app/telemetry/explorer`); server-backed saves backlog.
 4. **Resource catalogue** (owner, facility, tags).
 5. **Composite alert** rules + notification routing.
 6. VM Playwright re-run + production secret rotation (QT-06).

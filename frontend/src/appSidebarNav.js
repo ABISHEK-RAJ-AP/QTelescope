@@ -19,6 +19,7 @@ export const TELEMETRY_NAV = [
   { value: 'calibration', label: 'Calibration status' },
   { value: 'drift', label: 'Drift analysis' },
   { value: 'trends', label: 'Historical trends' },
+  { value: 'explorer', label: 'Metrics explorer' },
   { value: 'topology', label: 'Topology explorer' },
   { value: 'cal-timeline', label: 'Calibration timeline' },
   { value: 'compare', label: 'Backend comparison' },

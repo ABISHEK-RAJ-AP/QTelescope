@@ -47,6 +47,19 @@ test.describe('Q-TeleScope journeys E07–E10', () => {
     await expect(page.getByTestId('live-sse-status')).toContainText(/live|offline/i, { timeout: 45_000 });
   });
 
+  test('E26 metrics explorer save and restore query', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/app/telemetry/explorer');
+    await expect(page.locator('[data-tour="page-metrics-explorer"]')).toBeVisible({ timeout: 20_000 });
+    const name = `e2e_mq_${Date.now()}`;
+    await page.getByPlaceholder('Query name').fill(name);
+    await page.getByRole('button', { name: /save query/i }).click();
+    await page.reload();
+    const savedSelect = page.locator('label').filter({ hasText: 'Saved queries' }).locator('select');
+    await savedSelect.selectOption({ label: name });
+    await expect(savedSelect).toBeVisible();
+  });
+
   test('E10 alert acknowledgement flow', async ({ page }) => {
     await loginAsAdmin(page);
     await page.goto('/app/alerts');

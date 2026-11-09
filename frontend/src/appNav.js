@@ -181,7 +181,7 @@ export function parseAppPath(pathname) {
   if (head === 'telemetry') {
     out.mainTopic = 'telemetry';
     const allowed = [
-      'live', 'calibration', 'drift', 'trends', 'topology', 'cal-timeline',
+      'live', 'calibration', 'drift', 'trends', 'explorer', 'topology', 'cal-timeline',
       'compare', 'anomalies', 'replay', 'metrics',
     ];
     if (sub && allowed.includes(sub)) out.telemetrySubTab = sub;

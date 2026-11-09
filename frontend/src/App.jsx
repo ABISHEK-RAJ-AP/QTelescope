@@ -24,7 +24,7 @@ import { IstClock } from './components/shell/IstClock.jsx';
 import { LoginPage } from './pages/LoginPage.jsx';
 import {
   DashboardHome, BackendInventory, BackendDetails, LiveTelemetry,
-  CalibrationStatus, DriftAnalysis, HistoricalTrends, TopologyExplorer, CalibrationTimeline,
+  CalibrationStatus, DriftAnalysis, HistoricalTrends, MetricsExplorer, TopologyExplorer, CalibrationTimeline,
   MetricsCoverage, BackendComparison, AnomalyMonitor, TemporalReplay, JobMonitoring,
   QueueMonitoring, ResourceHealth, EnvironmentPage, DeviceCapabilities, AlertsEvents, ReportsPage,
   AdministrationPage, OperationsCentre, PlatformHealth, OpsTimeline, OnboardingFlow, UserSettings,
@@ -393,6 +393,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
             {telemetrySubTab === 'calibration' && <CalibrationStatus />}
             {telemetrySubTab === 'drift' && <DriftAnalysis />}
             {telemetrySubTab === 'trends' && <HistoricalTrends />}
+            {telemetrySubTab === 'explorer' && <MetricsExplorer />}
             {telemetrySubTab === 'topology' && <TopologyExplorer />}
             {telemetrySubTab === 'cal-timeline' && <CalibrationTimeline />}
             {telemetrySubTab === 'compare' && <BackendComparison />}

@@ -23,6 +23,7 @@ export const LiveTelemetry = lazyNamed(() => import('./pages/LiveTelemetry.jsx')
 export const CalibrationStatus = lazyNamed(() => import('./pages/CalibrationStatus.jsx'), 'CalibrationStatus');
 export const DriftAnalysis = lazyNamed(() => import('./pages/DriftAnalysis.jsx'), 'DriftAnalysis');
 export const HistoricalTrends = lazyNamed(() => import('./pages/HistoricalTrends.jsx'), 'HistoricalTrends');
+export const MetricsExplorer = lazyNamed(() => import('./pages/MetricsExplorer.jsx'), 'MetricsExplorer');
 export const TopologyExplorer = lazyNamed(() => import('./pages/TopologyExplorer.jsx'), 'TopologyExplorer');
 export const CalibrationTimeline = lazyNamed(() => import('./pages/CalibrationTimeline.jsx'), 'CalibrationTimeline');
 export const MetricsCoverage = lazyNamed(() => import('./pages/MetricsCoverage.jsx'), 'MetricsCoverage');

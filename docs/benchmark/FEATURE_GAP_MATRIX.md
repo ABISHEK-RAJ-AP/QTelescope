@@ -8,7 +8,7 @@ Priority: **P0** foundation · **P1** enterprise ops · **P2** quantum depth · 
 | --- | --- | --- | --- | --- | --- |
 | Fleet inventory | Google/AWS | **COMPLETE** | `BackendInventory.jsx`, `GET /backends` | Lifecycle states, groups | P1 |
 | Live telemetry SSE | Splunk | **PARTIAL** | `LiveTelemetry.jsx`, `events.py` | Last-Event-ID replay | P1 |
-| Historical metrics | Google | **PARTIAL** | `HistoricalTrends.jsx`, calibration APIs | Metrics Explorer, saved queries | P1 |
+| Historical metrics | Google | **PARTIAL** | `MetricsExplorer.jsx` saved queries + compare; `HistoricalTrends.jsx` | Server-backed saved queries, modality registry | P1 |
 | Custom dashboards | Grafana | **PARTIAL** | `DashboardHome.jsx` layout save | Widget library, share | P1 |
 | SLO / error budget | Google SRE | **UNIMPLEMENTED** | — | `slo_*` schema + UI | P1 |
 | Composite alerts | AWS | **UNIMPLEMENTED** | `alert_engine.py` single-type rules | Boolean rule DSL | P1 |

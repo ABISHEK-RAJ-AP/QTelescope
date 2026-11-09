@@ -12,6 +12,7 @@ const NAV_COMMANDS = [
   { id: 'platform', label: 'Platform health', path: '/app/platform/health', nav: 'platform', group: 'Observe' },
   { id: 'inventory', label: 'Backend inventory', path: '/app/backends/inventory', nav: 'backends', group: 'Observe' },
   { id: 'live', label: 'Live telemetry', path: '/app/telemetry/live', nav: 'telemetry', group: 'Analyze' },
+  { id: 'metrics-explorer', label: 'Metrics explorer', path: '/app/telemetry/explorer', nav: 'telemetry', group: 'Analyze' },
   { id: 'calibration', label: 'Calibration status', path: '/app/telemetry/calibration', nav: 'telemetry', group: 'Analyze' },
   { id: 'drift', label: 'Drift analysis', path: '/app/telemetry/drift', nav: 'telemetry', group: 'Analyze' },
   { id: 'jobs', label: 'Job monitoring', path: '/app/execution/jobs', nav: 'execution', group: 'Execute' },
