@@ -48,7 +48,7 @@
 | 2.1 | Metrics Explorer operational | 🔧 | `MetricsExplorer.jsx` |
 | 2.2 | Durable saved queries | 🔧 | localStorage |
 | 2.3 | Resource catalogue | 🔧 | `backend_catalog.py` |
-| 2.4 | Dependency map | ⬜ | |
+| 2.4 | Dependency map | 🔧 | Platform Health `dependency_links` v1 |
 | 2.5 | EnterpriseDataTable rollout | 🔧 | Platform Health only + audit |
 
 ---
