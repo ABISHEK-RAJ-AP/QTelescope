@@ -1,6 +1,8 @@
 # Q-TeleScope application inventory
 
-Evidence date: 2026-11-05. Scope: `frontend/` + `app/` (not QRP, not qniverse).
+Evidence date: 2026-11-09. Scope: `frontend/` + `app/` (not QRP, not qniverse).
+
+**Expanded architecture / workflows:** [../PLATFORM_STATUS_AND_WORKFLOWS.md](../PLATFORM_STATUS_AND_WORKFLOWS.md)
 
 ## Stack
 
