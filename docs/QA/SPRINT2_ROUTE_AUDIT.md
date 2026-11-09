@@ -49,8 +49,12 @@ Legend: **OK** = uses shared shell/skeleton/error; **MIX** = partial; **GAP** = 
 | Playwright E01–E06 | `tests/e2e/telescope-journeys.spec.ts` |
 | E2E captcha bypass (non-prod) | `E2E_CAPTCHA_BYPASS=1` + code `BYPASS` |
 
-## Next (Sprint 2b)
+## Sprint 2 E2E catalog
 
-1. Migrate Platform Health provider table → `EnterpriseDataTable`.
-2. Adopt `AppFormField` on Admin user/rule forms.
-3. Console-error sweep F01 with Playwright route crawl (not yet automated).
+All blueprint journeys **E01–E24** have Playwright specs under `tests/e2e/telescope-journeys*.spec.ts` (green VM run still required for T03 **PASS**).
+
+## Next (Sprint 3)
+
+1. Adopt `AppFormField` on Admin user/rule forms.
+2. Console-error sweep F01 with Playwright route crawl.
+3. Security blockers (Sprint 3 programme).

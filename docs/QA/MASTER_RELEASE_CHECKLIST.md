@@ -150,7 +150,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 | --- | --- | --- | --- |
 | T01 | Frontend unit tests | PASS | `npm test` — Vitest (apiErrors, useTableKit, EnterpriseDataTable) |
 | T02 | Backend pytest | PASS | 190 passed, 2 skipped (2026-11-09) |
-| T03 | Playwright E2E suite | PARTIAL | E01–E16 (`telescope-journeys*.spec.ts`); E17–E24 open |
+| T03 | Playwright E2E suite | PARTIAL | E01–E24 scripted (`telescope-journeys*.spec.ts`); VM green run pending |
 | T04 | Permission combination tests | PARTIAL | RBAC tests partial |
 | T05 | Visual regression | NOT_VERIFIED | |
 | T06 | Responsive screenshots | NOT_VERIFIED | |

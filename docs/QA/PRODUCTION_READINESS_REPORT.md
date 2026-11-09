@@ -14,7 +14,7 @@ Unresolved **P1:** QT-06 (bootstrap secrets), QT-07 (MFA at rest), QT-08 (reset 
 | Frontend `api.js` methods | 143+ | `/api/v1` |
 | Backend pytest | **190 passed / 2 skipped** | `USE_ALEMBIC=false`, SQLite, ~5 min (2026-11-09) |
 | Auth pytest | 4/4 | `test_auth_mfa_password.py` |
-| E2E Playwright TeleScope | **E01–E16 + smoke / 24 journeys** | `telescope-journeys*.spec.ts` (needs `E2E_CAPTCHA_BYPASS=1` on API) |
+| E2E Playwright TeleScope | **E01–E24 scripted + smoke** | `telescope-journeys*.spec.ts` (needs `E2E_CAPTCHA_BYPASS=1`; green run on VM) |
 | Frontend Vitest | **7 tests** | `cd frontend && npm test` |
 | Responsive viewports | 0 / 9 | NOT_VERIFIED |
 | Master checklist | 25 PASS / 93 | See MASTER_RELEASE_CHECKLIST.md |

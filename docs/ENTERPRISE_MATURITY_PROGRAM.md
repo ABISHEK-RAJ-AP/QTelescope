@@ -62,14 +62,14 @@
 | Shared enterprise table | `EnterpriseDataTable.jsx` |
 | Shared form field chrome | `AppFormField.jsx` |
 | Route audit (28 routes) | [QA/SPRINT2_ROUTE_AUDIT.md](QA/SPRINT2_ROUTE_AUDIT.md) |
-| Playwright E01–E16 | `telescope-journeys*.spec.ts` (auth, ops, record) |
+| Playwright E01–E24 | `telescope-journeys*.spec.ts` (full journey catalog) |
 | Queue backend filter | `QueueMonitoring.jsx` `?backend=` |
 | Platform Health table | `PlatformHealth.jsx` → `EnterpriseDataTable` |
 | E2E captcha bypass (non-prod) | `E2E_CAPTCHA_BYPASS=1`, code `BYPASS`, `test_e2e_captcha_bypass.py` |
 
 ### Sprint 1 backlog (still open)
 
-- Full Playwright journeys E07–E24.
+- Playwright green run on VM (all specs; E21 needs session persist).
 - Saved table views, notification centre, shift handover.
 - Metric-level provenance and quality enums end-to-end.
 - TanStack Query adoption / `api.js` split (optional refactor).

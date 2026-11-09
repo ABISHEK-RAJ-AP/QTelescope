@@ -34,7 +34,9 @@ E2E_PLAYWRIGHT=1 E2E_CAPTCHA_BYPASS=1 E2E_API_URL=http://127.0.0.1:8000 E2E_TELE
 
 Login journeys type captcha code **`BYPASS`** when API has `E2E_CAPTCHA_BYPASS=1` and profile is not production.
 
-Specs: `telescope-smoke.spec.ts`, `telescope-journeys.spec.ts` (E01–E06), `telescope-journeys-ops.spec.ts` (E07–E10), `telescope-journeys-record.spec.ts` (E11–E16).
+Specs: `telescope-smoke.spec.ts`, `telescope-journeys.spec.ts` (E01–E06), `telescope-journeys-ops.spec.ts` (E07–E10), `telescope-journeys-record.spec.ts` (E11–E16), `telescope-journeys-admin.spec.ts` (E17–E24).
+
+E21 needs `PERSIST_API_SESSIONS=true` and two concurrent logins. E17 collection can take up to ~2 minutes.
 
 ## Run Govern smoke
 

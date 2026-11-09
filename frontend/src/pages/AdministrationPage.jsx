@@ -388,7 +388,7 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
 
   return (
     <>
-      <div className="card admin-kv-card">
+      <div className="card admin-kv-card" data-tour="page-admin-collectors">
         <h3 className="admin-card-title">Scheduler</h3>
         <dl className="admin-kv">
           <div><dt>Background scheduler</dt><dd><span className={`badge ${scheduler?.enabled ? 'badge-online' : 'badge-offline'}`}>{scheduler?.enabled ? 'Enabled' : 'Disabled'}</span></dd></div>
@@ -583,7 +583,7 @@ function Rules({ rules, canEdit, reload }) {
 
   return (
     <>
-      <div className="card" style={{ padding: 0 }}>
+      <div className="card" style={{ padding: 0 }} data-tour="page-admin-rules">
         <div className="admin-card-header-actions admin-pad">
           <div>
             <h3 className="admin-card-title" style={{ marginBottom: 2 }}>Alert rules</h3>
@@ -763,7 +763,7 @@ function UsersDirectory({ canEdit }) {
   return (
     <>
       <RoleMatrix compact />
-      <div className="card admin-users">
+      <div className="card admin-users" data-tour="page-admin-users">
         <h3 className="admin-card-title">User directory</h3>
         <p className="page-hint">Search accounts and assign roles. Capabilities follow the matrix above.</p>
         {err && <Notice note={{ type: 'error', text: err }} />}

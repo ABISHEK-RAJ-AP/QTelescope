@@ -331,7 +331,7 @@ export function UserSettings({ currentUser, onUserUpdate }) {
           )}
 
         </section>
-        <section className="us-card">
+        <section className="us-card" data-tour="page-settings-sessions">
           <header className="us-card__head">
             <h3 className="us-card__title">Active sessions</h3>
             <p className="us-card__desc">Signed-in browsers and clients. Revoke sessions you do not recognize.</p>

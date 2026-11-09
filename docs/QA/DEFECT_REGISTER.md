@@ -12,7 +12,7 @@ Evidence: 2026-11-05. Pytest `tests/` ignore e2e: **167 passed, 4 failed** then 
 | QT-06 | P1 | Lab `.env` | `ADMIN_PASSWORD=quantum2026`, default `SECRET_KEY` | Bootstrap for demo VM | Do not ship; `BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS` in prod | `test_bootstrap_security` | Open until prod env |
 | QT-07 | P1 | MFA at rest | `data/user_mfa.json` secrets not encrypted | File store | Not this cycle | Auth audit | Open |
 | QT-08 | P1 | Password reset mail | No SMTP; lab returns `dev_reset_token` off-prod | No mailer | Documented | `test_password_reset_and_login` | Open (prod blocker) |
-| QT-09 | P2 | Playwright Q-TeleScope journeys | E01–E16 + smoke; E17–E24 open | `telescope-journeys*.spec.ts` | Run with `E2E_CAPTCHA_BYPASS=1` | PARTIAL | Open until E24 green |
+| QT-09 | P2 | Playwright Q-TeleScope journeys | E01–E24 scripted + smoke | `telescope-journeys*.spec.ts` | Run with `E2E_CAPTCHA_BYPASS=1` + `PERSIST_API_SESSIONS` for E21 | PARTIAL | Open until VM suite green |
 | QT-10 | P2 | Frontend unit tests | `frontend/package.json` has no `test` script | Vite app only | — | BLOCKED | Open |
 | QT-11 | P2 | Sessions | In-memory unless `PERSIST_API_SESSIONS` | Restart drops tokens | Env flag exists | `test_sessions` | Open for multi-worker |
 | QT-12 | P3 | Cert Studio copy | TeleScope ops shell ≠ Studio marketing | By design | Do not clone | Visual review BLOCKED | Accepted |
