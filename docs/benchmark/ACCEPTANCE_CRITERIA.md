@@ -28,7 +28,7 @@
 | --- | --- | --- | --- |
 | B1 | Logs Explorer: search by `request_id`, backend, time | Playwright + manual | **PARTIAL** — audit + app JSONL; collector emits logs |
 | B2 | Collector executions queryable 30d | API test + Platform Health UI | **PARTIAL** — since/until filters; file retention not 30d SLA |
-| B3 | Data quality report after collection | pytest fixture ingest | **PARTIAL** — heuristic quality JSONL |
+| B3 | Data quality report after collection | pytest fixture ingest | **PARTIAL** — schema v2 + measured telemetry rows; `test_ingestion_quality_v2` |
 | B4 | Metrics Explorer saves/restores one query | E2E journey | **PARTIAL** — localStorage; E26 spec |
 | B5 | Resource row shows owner + facility fields | API + inventory UI | **PARTIAL** — v1 catalogue; pytest |
 | B6 | SLO: 1 SLI measured hourly | Job log + dashboard tile | **OPEN** |

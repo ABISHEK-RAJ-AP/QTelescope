@@ -512,18 +512,19 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
         <h3 className="admin-card-title admin-pad">Ingestion quality (recent)</h3>
         <div className="table-container" style={{ border: 'none' }}>
           <table className="custom-table admin-table">
-            <thead><tr><th>Time</th><th>Provider</th><th>Status</th><th>Completeness</th><th>Backends</th></tr></thead>
+            <thead><tr><th>Time</th><th>Provider</th><th>Outcome</th><th>Completeness</th><th>Backends</th><th>Telemetry rows</th></tr></thead>
             <tbody>
               {qualityReports.map((r) => (
                 <tr key={r.report_id}>
                   <td className="admin-sub">{fmtTime(r.timestamp)}</td>
                   <td>{r.provider_id}</td>
-                  <td>{r.status}</td>
+                  <td>{r.quality_outcome || r.status}</td>
                   <td>{r.completeness_pct != null ? `${r.completeness_pct}%` : '—'}</td>
                   <td>{r.received_backends ?? '—'}</td>
+                  <td>{r.backend_telemetry_rows ?? '—'}</td>
                 </tr>
               ))}
-              {qualityReports.length === 0 && <TableEmpty colSpan={5} title="No quality reports" message="Quality snapshots appear after collector runs." />}
+              {qualityReports.length === 0 && <TableEmpty colSpan={6} title="No quality reports" message="Quality snapshots appear after collector runs." />}
             </tbody>
           </table>
         </div>

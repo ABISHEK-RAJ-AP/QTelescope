@@ -212,6 +212,12 @@ class TelemetryCollector:
                 self.db.add(new_alt)
 
         self.db.commit()
+        self._last_cycle_stats = {
+            "backends_processed": len(backends),
+            "backend_telemetry_rows": len(backends),
+            "calibration_snapshots": len(backends),
+            "provider_id": prov_id,
+        }
         try:
             from app.core.cache import invalidate_operational_cache
 

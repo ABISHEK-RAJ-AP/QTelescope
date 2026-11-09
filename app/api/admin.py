@@ -540,11 +540,20 @@ def get_app_structured_logs(
 def get_ingestion_quality(
     limit: int = 30,
     provider_id: str | None = None,
+    since: str | None = None,
+    until: str | None = None,
     _: str = Depends(require_admin),
 ):
     from app.services.ingestion_quality import list_quality
 
-    return {"reports": list_quality(limit=limit, provider_id=provider_id or None)}
+    return {
+        "reports": list_quality(
+            limit=limit,
+            provider_id=provider_id or None,
+            since=since,
+            until=until,
+        )
+    }
 
 
 @router.get("/audit-log")

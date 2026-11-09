@@ -4,6 +4,8 @@ from __future__ import annotations
 import time
 from datetime import datetime, timezone
 
+from typing import Any, Dict, List
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -176,7 +178,55 @@ def get_platform_health(db: Session = Depends(get_db)):
                 live_backends_exist,
             ),
         },
+        "ingestion_quality_latest": _ingestion_quality_snapshot(),
+        "dependency_links": _dependency_snapshot(db),
     }
+
+
+def _ingestion_quality_snapshot() -> List[Dict[str, Any]]:
+    try:
+        from app.services.ingestion_quality import latest_by_provider
+
+        return latest_by_provider()
+    except Exception:
+        return []
+
+
+def _dependency_snapshot(db: Session) -> List[Dict[str, Any]]:
+    """Provider → backend → active alert count (real FK relationships)."""
+    try:
+        from app.models.entities import AlertModel, BackendModel
+
+        backends = db.query(BackendModel).all()
+        alert_counts: Dict[str, int] = {}
+        for a in db.query(AlertModel).filter(AlertModel.status == "ACTIVE").all():
+            if a.resource_type == "BACKEND" and a.resource_id:
+                alert_counts[a.resource_id] = alert_counts.get(a.resource_id, 0) + 1
+        by_provider: Dict[str, List[Dict[str, Any]]] = {}
+        for b in backends:
+            by_provider.setdefault(b.provider_id, []).append(
+                {
+                    "backend_id": b.backend_id,
+                    "backend_name": b.backend_name,
+                    "operational_status": b.operational_status,
+                    "active_alerts": alert_counts.get(b.backend_id, 0),
+                }
+            )
+        collectors = list_provider_health()
+        coll_map = {c.get("provider_id"): c for c in collectors}
+        out = []
+        for pid, bes in by_provider.items():
+            out.append(
+                {
+                    "provider_id": pid,
+                    "collector_status": (coll_map.get(pid) or {}).get("status"),
+                    "last_run_at": (coll_map.get(pid) or {}).get("last_run_at"),
+                    "backends": bes,
+                }
+            )
+        return out
+    except Exception:
+        return []
 
 
 @router.get("/timeline")

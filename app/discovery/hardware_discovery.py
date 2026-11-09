@@ -93,9 +93,11 @@ class HardwareDiscoveryEngine:
                     collector = TelemetryCollector(local_db, provider_adapter=ad)
                     collector.run_full_collection_cycle()
                     backends = ad.discover_backends()
+                    stats = getattr(collector, "_last_cycle_stats", None)
                     return {
                         "backends": backends,
                         "lineage": getattr(collector, "_last_lineage", infer_collection_lineage(backends)),
+                        "collection_stats": stats,
                     }
                 finally:
                     local_db.close()
@@ -104,6 +106,7 @@ class HardwareDiscoveryEngine:
             backends = outcome.get("backends", []) if status == "OK" else []
             lineage = outcome.get("lineage", "stub") if status == "OK" else None
             err_msg = outcome.get("error") if status != "OK" else None
+            coll_stats = outcome.get("collection_stats") if status == "OK" else None
 
             record_provider_run(
                 prov_id,
@@ -114,6 +117,7 @@ class HardwareDiscoveryEngine:
                 error=err_msg,
                 backend_names=[b["backend_name"] for b in backends],
                 trigger_type=trigger_type,
+                collection_stats=coll_stats,
             )
             circuit_record(prov_id, status)
             if status != "OK":

@@ -33,7 +33,7 @@
 | --- | --- | --- | --- |
 | 1.1 | Verify execution history — no rebuild | ✅ | `collector_executions.py`, B07 |
 | 1.2 | Durable execution record (full schema) | 🔧 | `trigger_type`, `since`/`until` filters; no retry/record counts |
-| 1.3 | Ingestion quality v2 | 🔧 | `ingestion_quality.py` heuristic |
+| 1.3 | Ingestion quality v2 | 🔧 | schema v2, cycle stats, Platform Health table |
 | 1.4 | Unified Logs Explorer | 🔧 | `0cb168f` audit + app tabs; `app_structured.jsonl` |
 | 1.5 | Alert → log links | 🔧 | `buildLogsExplorerLocation`, alert **Related logs** |
 | 1.6 | Entity search palette | 🔧 | + jobs, collectors (`CommandPalette.jsx`) |

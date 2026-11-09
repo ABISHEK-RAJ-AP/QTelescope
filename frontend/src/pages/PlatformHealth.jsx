@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { api } from '../services/api';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
@@ -263,6 +264,61 @@ export const PlatformHealth = () => {
           </ChartPanel>
         </div>
       </section>
+
+      {(data?.ingestion_quality_latest || []).length > 0 && (
+        <section className="card page-panel" data-tour="page-platform-quality">
+          <h3 className="chart-panel__title">Ingestion quality (latest cycle)</h3>
+          <p className="page-hint">Measured row counts from the collector — rejected/duplicate counts are not inferred.</p>
+          <table className="custom-table custom-table--dense">
+            <thead>
+              <tr>
+                <th>Provider</th><th>Outcome</th><th>Completeness</th><th>Backends</th><th>Telemetry rows</th><th>When</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data.ingestion_quality_latest || []).map((q) => (
+                <tr key={q.report_id || q.provider_id}>
+                  <td><code>{q.provider_id}</code></td>
+                  <td>{q.quality_outcome || q.status}</td>
+                  <td>{q.completeness_pct != null ? `${q.completeness_pct}%` : '—'}</td>
+                  <td>{q.received_backends ?? '—'}</td>
+                  <td>{q.backend_telemetry_rows ?? '—'}</td>
+                  <td>{q.timestamp ? formatISTTime(q.timestamp) : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {(data?.dependency_links || []).length > 0 && (
+        <section className="card page-panel" data-tour="page-platform-dependencies">
+          <h3 className="chart-panel__title">Dependency map</h3>
+          <p className="page-hint">Collector status → registered backends → active alerts (counts from database).</p>
+          <ul className="ph-dep-list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {(data.dependency_links || []).map((row) => (
+              <li key={row.provider_id} style={{ marginBottom: 16, borderBottom: '1px solid var(--border-color)', paddingBottom: 12 }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <strong>{row.provider_id}</strong>
+                  <span className="badge badge-info">collector {row.collector_status || '—'}</span>
+                  <Link className="fs-link" to="/app/admin/collectors">Run history</Link>
+                </div>
+                <ul style={{ margin: '8px 0 0', paddingLeft: 16 }}>
+                  {(row.backends || []).map((b) => (
+                    <li key={b.backend_id} style={{ marginTop: 4 }}>
+                      <Link to={buildBackendDetailsPath(b.backend_id)}>{b.backend_name || b.backend_id}</Link>
+                      <span className="ph-timeline__meta"> · {b.operational_status} · {b.active_alerts} active alert{b.active_alerts === 1 ? '' : 's'}</span>
+                      {b.active_alerts > 0 && (
+                        <Link className="fs-link" style={{ marginLeft: 8 }} to={`/app/alerts?backend=${encodeURIComponent(b.backend_id)}`}>Alerts</Link>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {timeline.length > 0 && (
         <section className="card page-panel ph-timeline">

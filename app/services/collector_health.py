@@ -45,6 +45,7 @@ def record_provider_run(
     error: Optional[str] = None,
     backend_names: Optional[List[str]] = None,
     trigger_type: Optional[str] = None,
+    collection_stats: Optional[dict] = None,
 ) -> None:
     from app.core.app_structured_log import emit_app_log
     from app.core.log_context import collector_trigger_ctx
@@ -83,6 +84,7 @@ def record_provider_run(
         duration_ms=duration_ms,
         lineage=lineage,
         error=error,
+        collection_stats=collection_stats,
     )
     now = datetime.now(timezone.utc).isoformat()
     with _LOCK:
