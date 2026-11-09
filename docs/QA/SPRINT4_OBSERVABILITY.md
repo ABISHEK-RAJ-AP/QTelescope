@@ -13,11 +13,19 @@
 | UI — Collectors | Run history + quality tables on Admin → Collectors | Manual: `/app/admin/collectors` |
 | UI — Audit log | Admin → Audit log (`/app/admin/logs`) search by text, action, actor | Manual + RBAC via `visibleAdminNav` |
 
+## Also shipped (S4 continuation)
+
+| Item | Evidence |
+| --- | --- |
+| Observability admin APIs gated | `require_admin` on executions / quality / audit; `test_admin_observability_api.py` |
+| Platform Health → collectors | Collectors tile links to run history |
+| Command palette entity search | Backends, active alerts, open incidents (≥2 chars) |
+| Playwright E25 | `telescope-journeys-admin.spec.ts` audit log |
+
 ## Not in this slice
 
 - Unified index of application stdout / correlation across services (AC B1 full Splunk-class explorer)
-- `request_id` join from audit UI into backend logs
-- Playwright journey for audit search (backlog E2E)
+- Dedicated `request_id` filter (use audit text search)
 
 ## Checklist impact
 
