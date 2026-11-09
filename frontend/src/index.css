@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Lexend:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400;1,700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Lexend:wght@400;500;600&display=swap');
 @import "tailwindcss";
 @import "./components/observability/observability.css";
 @import "./styles/a11y-shell.css";
@@ -9,6 +9,7 @@
 
 :root {
   --font-scale: 1;
+  --ui-density: 1.1;
   --bg-dark: #f8fafc;
   --bg-card: #ffffff;
   --bg-card-hover: #f1f5f9;
@@ -45,8 +46,8 @@
   --border-highlight: #334155;
 
   --text-primary: #f8fafc;
-  --text-secondary: #cbd5e1;
-  --text-muted: #94a3b8;
+  --text-secondary: #e2e8f0;
+  --text-muted: #cbd5e1;
   --foreground: var(--text-primary);
   --background: #070a0f;
   --ns-muted: #94a3b8;
@@ -57,6 +58,12 @@
   --accent-emerald: #34d399;
   --accent-amber: #fbbf24;
   --accent-rose: #fb7185;
+
+  --ds-status-healthy: var(--accent-emerald);
+  --ds-status-warn: var(--accent-amber);
+  --ds-status-critical: var(--accent-rose);
+  --ds-status-info: var(--accent-blue);
+  --ds-status-unknown: var(--text-muted);
 }
 
 * {
@@ -64,8 +71,8 @@
 }
 
 html {
-  /* Accessibility --font-scale (0.7–1.7) drives rem; floor/ceiling only for tiny viewports */
-  font-size: clamp(12px, calc(16px * var(--font-scale, 1)), 28px);
+  /* --ui-density 1.1 ≈ browser 110% zoom at 100%; a11y --font-scale stacks on top */
+  font-size: clamp(13px, calc(16px * var(--ui-density, 1) * var(--font-scale, 1)), 31px);
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 }
@@ -130,6 +137,15 @@ body {
   flex-direction: column;
 }
 
+:root {
+  scroll-padding-top: 72px;
+}
+
+body.chart-expand-open,
+body:has(.detail-drawer-backdrop) {
+  scroll-padding-top: 88px;
+}
+
 :focus-visible {
   outline: 2px solid var(--accent-blue);
   outline-offset: 2px;
@@ -138,6 +154,14 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .pulse-dot {
     animation: none !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

@@ -118,7 +118,7 @@ export function ProductTour({
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(() => reposition({ scroll: false }));
     };
-    window.addEventListener('resize', schedule);
+    window.addEventListener('resize', schedule, { passive: true });
     window.addEventListener('scroll', schedule, { passive: true, capture: true });
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);

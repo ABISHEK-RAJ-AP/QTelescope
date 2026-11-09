@@ -36,7 +36,16 @@ def _extract_token(request: Request) -> str | None:
     if auth.lower().startswith("bearer "):
         return auth[7:].strip()
     if request.url.path.endswith("/events/stream"):
-        return (request.query_params.get("access_token") or "").strip() or None
+        from app.core.stream_tickets import resolve_stream_ticket
+        from app.core.env_profile import is_production_profile
+
+        ticket = (request.query_params.get("stream_ticket") or "").strip()
+        if ticket:
+            return resolve_stream_ticket(ticket)
+        legacy = (request.query_params.get("access_token") or "").strip()
+        if legacy and not is_production_profile():
+            return legacy
+        return None
     return None
 
 

@@ -13,7 +13,7 @@ import {
   DetailModalRow,
   DetailModalRelated,
 } from '../components/observability/DetailModalLayout.jsx';
-import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
+import { buildBackendDetailsPath, buildDriftInvestigationLocation, buildTimelineInvestigationLocation } from '../lib/investigationLinks.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { useProviderLineage, LineageBadge } from './useLineage.jsx';
 import './MetricsCoverage.css';
@@ -183,8 +183,10 @@ export const MetricsCoverage = () => {
               {openState === 'unsupported' && <p className="page-hint">Check modality: some metrics (e.g. frequency, gate duration) are not exposed by every adapter.</p>}
             </DetailModalSection>
             <DetailModalRelated>
-              <button type="button" className="btn btn-secondary" onClick={() => nav(buildBackendDetailsPath(open.b.backend_id, 'calibration'))}>Backend calibration</button>
-              <button type="button" className="btn btn-secondary" onClick={() => nav(buildBackendDetailsPath(open.b.backend_id, 'qubits'))}>Backend qubits</button>
+              <button type="button" className="btn btn-primary" onClick={() => nav(buildBackendDetailsPath(open.b.backend_id, 'telemetry'))}>Open backend workspace</button>
+              <button type="button" className="btn btn-secondary" onClick={() => nav(`/app/telemetry/explorer?backend=${encodeURIComponent(open.b.backend_id)}&metric=${encodeURIComponent(open.m.metric_id)}`)}>Metrics explorer</button>
+              <button type="button" className="btn btn-secondary" onClick={() => nav(buildTimelineInvestigationLocation({ backendId: open.b.backend_id }))}>Ops timeline</button>
+              <button type="button" className="btn btn-secondary" onClick={() => nav(buildDriftInvestigationLocation({ backendId: open.b.backend_id }))}>Drift analysis</button>
             </DetailModalRelated>
           </DetailModalBody>
         )}

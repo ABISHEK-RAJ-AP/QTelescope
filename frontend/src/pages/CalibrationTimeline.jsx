@@ -11,7 +11,7 @@ import { useTheme } from '../components/ui/ThemeProvider';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { usePageActions } from '../context/PageActionsContext.jsx';
-import { baseTooltip, getChartTheme } from '../components/observability/chartTheme.js';
+import { baseTooltip, getChartTheme, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { buildBackendDetailsPath, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
 import { modalityOf } from './telemetryPageUtils.js';
 import { DataPanelToolbar } from '../components/observability/DataViewToolbar.jsx';
@@ -68,8 +68,15 @@ export const CalibrationTimeline = () => {
   }, [loadTimeline, lastRefresh, setActions, clearActions]);
 
   const option = useMemo(() => {
-    const series = payload?.t1_mean_series || [];
-    const events = payload?.calibration_events || [];
+    const sem = getChartSemanticColors();
+    const cutoff = Date.now() - windowHours * 3.6e6;
+    const inWindow = (ts) => {
+      if (!ts) return false;
+      const ms = new Date(ts).getTime();
+      return Number.isFinite(ms) && ms >= cutoff;
+    };
+    const series = (payload?.t1_mean_series || []).filter((p) => inWindow(p.observed_at));
+    const events = (payload?.calibration_events || []).filter((e) => inWindow(e.calibration_timestamp));
     if (!series.length && !events.length) return null;
 
     const xData = series.map((p) => formatISTTime(p.observed_at, false));
@@ -80,7 +87,7 @@ export const CalibrationTimeline = () => {
       .map((e) => ({
         xAxis: formatISTTime(e.calibration_timestamp, false),
         label: { formatter: 'cal', fontSize: 9 },
-        lineStyle: { color: '#7c3aed', type: 'dashed' },
+        lineStyle: { color: sem.info, type: 'dashed' },
       }));
 
     return {
@@ -106,11 +113,11 @@ export const CalibrationTimeline = () => {
         type: 'line',
         data: yData,
         smooth: true,
-        itemStyle: { color: '#0284c7' },
+        itemStyle: { color: sem.accent },
         markLine: markLines.length ? { symbol: 'none', data: markLines } : undefined,
       }],
     };
-  }, [payload, isDark, theme]);
+  }, [payload, isDark, theme, windowHours]);
 
   if (loading && !payload) return <BoneyardSkeleton layout="grid" />;
 
@@ -145,9 +152,8 @@ export const CalibrationTimeline = () => {
       )}
 
       {backendId && (
-        <div className="cal-timeline-actions">
-          <button type="button" className="btn btn-secondary" onClick={() => navigate(buildBackendDetailsPath(backendId, 'calibration'))}>Backend calibration</button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate(buildDriftInvestigationLocation({ backendId }))}>Drift</button>
+        <div className="page-hint" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <button type="button" className="btn btn-secondary" onClick={() => navigate(buildBackendDetailsPath(backendId, 'calibration'))}>Calibration workspace</button>
         </div>
       )}
 

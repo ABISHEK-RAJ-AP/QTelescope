@@ -1,4 +1,8 @@
 .fs-muted { color: var(--text-muted); font-size: 12px; }
+
+.dark .fs-muted {
+  color: var(--text-secondary);
+}
 .fs-lineage { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
   padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border-color); color: var(--text-muted); white-space: nowrap; }
 .fs-lineage--live { color: var(--accent-emerald); border-color: var(--accent-emerald); }

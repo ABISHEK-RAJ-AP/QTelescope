@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { Filter } from 'lucide-react';
 import { api } from '../services/api';
+import { unableToLoad } from '../constants/messages.js';
 import { formatISTTime } from '../utils/time';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
@@ -14,7 +15,7 @@ import { useAppScope } from '../hooks/useAppScope.js';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { usePageActions } from '../context/PageActionsContext.jsx';
-import { baseTooltip, getChartTheme } from '../components/observability/chartTheme.js';
+import { baseTooltip, getChartTheme, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
 import { fmtMetric, healthLink, timelineLink, modalityOf } from './telemetryPageUtils.js';
 import { DataPanelToolbar, SortableTh } from '../components/observability/DataViewToolbar.jsx';
@@ -143,6 +144,7 @@ export const DriftAnalysis = () => {
   const mixedModality = useMemo(() => new Set(rankedSummaries.map((r) => modalityOf(backends, r.backend_id)).filter(Boolean)).size > 1, [rankedSummaries, backends]);
 
   const chartOption = useMemo(() => {
+    const sem = getChartSemanticColors();
     const labels = (driftData?.timestamps || []).map((t) => formatISTTime(t, false));
     return {
       backgroundColor: 'transparent',
@@ -180,8 +182,8 @@ export const DriftAnalysis = () => {
         axisLabel: { color: theme.textColor },
       },
       series: [
-        { name: 'Raw telemetry', type: 'line', smooth: true, data: driftData?.data_points || [], itemStyle: { color: '#0284c7' } },
-        { name: 'Rolling mean', type: 'line', smooth: true, lineStyle: { type: 'dashed' }, data: driftData?.rolling_mean || [], itemStyle: { color: '#7c3aed' } },
+        { name: 'Raw telemetry', type: 'line', smooth: true, data: driftData?.data_points || [], itemStyle: { color: sem.accent } },
+        { name: 'Rolling mean', type: 'line', smooth: true, lineStyle: { type: 'dashed' }, data: driftData?.rolling_mean || [], itemStyle: { color: sem.info } },
       ],
     };
   }, [driftData, isDark, theme]);
@@ -335,7 +337,7 @@ export const DriftAnalysis = () => {
         </div>
       )}
 
-      {driftErr && <p className="tm-callout tm-callout--bad" role="alert">Drift series failed to load for this backend and qubit.</p>}
+      {driftErr && <p className="tm-callout tm-callout--bad" role="alert">{unableToLoad('drift series for this backend and qubit')}</p>}
 
       <ChartPanel
         title={`${metric} drift · Q${qubitIndex}${mod ? ` · ${mod}` : ''}`}

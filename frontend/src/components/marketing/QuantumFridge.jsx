@@ -149,7 +149,7 @@ export function QuantumFridge() {
     renderProgress(state.reduced ? 1 : state.target);
     observer.observe(section);
     window.addEventListener('scroll', measure, { passive: true });
-    window.addEventListener('resize', measure);
+    window.addEventListener('resize', measure, { passive: true });
     motion.addEventListener('change', updateReduced);
 
     return () => {

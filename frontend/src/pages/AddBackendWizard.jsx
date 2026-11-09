@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 import { Check, X } from 'lucide-react';
 import { api } from '../services/api';
+import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import './AddBackendWizard.css';
 
 const STEPS = [
@@ -41,6 +42,7 @@ export function AddBackendWizard({ open, onClose, onComplete, isAdmin }) {
   const [token, setToken] = useState('');
   const [endpoint, setEndpoint] = useState('');
   const [busy, setBusy] = useState(false);
+  const [providersLoading, setProvidersLoading] = useState(false);
   const [msg, setMsg] = useState(null);
   const closeRef = useRef(null);
 
@@ -52,7 +54,11 @@ export function AddBackendWizard({ open, onClose, onComplete, isAdmin }) {
     setToken('');
     setEndpoint('');
     setMsg(null);
-    api.getCredentials().then((r) => setProviders(r?.providers || r || [])).catch(() => setProviders([]));
+    setProvidersLoading(true);
+    api.getCredentials()
+      .then((r) => setProviders(r?.providers || r || []))
+      .catch(() => setProviders([]))
+      .finally(() => setProvidersLoading(false));
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     const onKey = (e) => { if (e.key === 'Escape' && !busy) onClose?.(); };
@@ -147,7 +153,10 @@ export function AddBackendWizard({ open, onClose, onComplete, isAdmin }) {
             </p>
           )}
 
-          {step === 0 && (
+          {step === 0 && providersLoading && (
+            <BoneyardSkeleton layout="grid" />
+          )}
+          {step === 0 && !providersLoading && (
             <>
               <div className="bk-wizard__search">
                 <input

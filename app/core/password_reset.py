@@ -41,4 +41,6 @@ def consume_reset_token(token: str) -> Optional[str]:
         rec = _TOKENS.pop(key, None)
     if not rec:
         return None
+    if float(rec.get("expires_at", 0)) < time.time():
+        return None
     return rec.get("username")

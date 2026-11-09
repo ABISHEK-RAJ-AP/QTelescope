@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -26,9 +26,19 @@ class EnvRecord(BaseModel):
     severity: Optional[str] = None
 
 
+MAX_ENV_IMPORT_RECORDS = 2_000
+
+
 class EnvImport(BaseModel):
     kind: str = "environment"
-    records: List[EnvRecord]
+    records: List[EnvRecord] = Field(default_factory=list, max_length=MAX_ENV_IMPORT_RECORDS)
+
+    @field_validator("records")
+    @classmethod
+    def _cap_records(cls, v: List[EnvRecord]) -> List[EnvRecord]:
+        if len(v) > MAX_ENV_IMPORT_RECORDS:
+            raise ValueError(f"At most {MAX_ENV_IMPORT_RECORDS} records per import")
+        return v
 
 
 def env_severity_for(backend_id: str) -> Optional[str]:

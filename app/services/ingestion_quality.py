@@ -5,7 +5,7 @@ import json
 import os
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 _LOCK = threading.RLock()
@@ -15,6 +15,32 @@ _PATH = os.path.join(
     "ingestion_quality.jsonl",
 )
 SCHEMA_VERSION = 2
+_RETENTION_DAYS = int(os.getenv("INGESTION_QUALITY_RETENTION_DAYS", "30"))
+
+
+def _trim_by_retention() -> None:
+    if not os.path.isfile(_PATH) or _RETENTION_DAYS <= 0:
+        return
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=_RETENTION_DAYS)).isoformat()
+    try:
+        with open(_PATH, encoding="utf-8") as fh:
+            lines = fh.readlines()
+        keep: List[str] = []
+        for line in lines:
+            raw = line.strip()
+            if not raw:
+                continue
+            try:
+                rec = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            if (rec.get("timestamp") or "") >= cutoff:
+                keep.append(line if line.endswith("\n") else f"{raw}\n")
+        if len(keep) < len(lines):
+            with open(_PATH, "w", encoding="utf-8") as fh:
+                fh.writelines(keep if keep else [])
+    except OSError:
+        pass
 
 
 def _quality_outcome(status: str, backends_detected: int, stats: Optional[Dict[str, Any]]) -> str:
@@ -74,6 +100,7 @@ def record_quality(
         os.makedirs(os.path.dirname(_PATH), exist_ok=True)
         with open(_PATH, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(row, default=str) + "\n")
+        _trim_by_retention()
     return row
 
 

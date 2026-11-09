@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { notifyError, notifyWarn } from '../lib/toast.js';
 import { api } from '../services/api';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
@@ -11,6 +10,7 @@ import { usePageActions } from '../context/PageActionsContext.jsx';
 import { formatISTTime } from '../utils/time';
 import { buildBackendDetailsPath, buildTimelineInvestigationLocation } from '../lib/investigationLinks.js';
 import { STALE_MIN, ageMinutes, fetchActiveAlerts, groupAlerts, lineageByProvider, sevBadge } from './fleetData.js';
+import { LayoutGrid, List } from 'lucide-react';
 import { LineageChip } from './fleetShared.jsx';
 import './OperationsCentre.css';
 
@@ -38,26 +38,37 @@ const LANE_TONE = {
   info: 'ok',
 };
 
-function Row({ item }) {
+/** One clear destination per row — avoids bean clutter. */
+function pickPrimaryLink(links = []) {
+  const order = ['Incident', 'Alerts', 'Backend', 'Platform health', 'Qubit health'];
+  for (const label of order) {
+    const hit = links.find((l) => l.label === label);
+    if (hit) return hit;
+  }
+  return links[0];
+}
+
+function QueueRow({ item, laneLabel, layout, showLane }) {
   const sev = item.severity || 'INFO';
+  const primary = pickPrimaryLink(item.links);
+
   return (
-    <li className={`oc-item oc-item--${sev}`}>
+    <li className={`oc-item oc-item--${sev.toLowerCase()}${layout === 'grid' ? ' oc-item--grid' : ''}`}>
       <div className="oc-item__main">
-        <span className={`badge ${sevBadge(sev)}`}>{sev}</span>
+        <span className={`badge ${sevBadge(sev)} oc-item__badge`}>{sev}</span>
         <div className="oc-item__body">
           <div className="oc-item__title">{item.title}</div>
           <div className="oc-item__meta">
-            {item.backend && <code>{item.backend}</code>}
+            {showLane && <span className="oc-item__lane">{laneLabel}</span>}
+            {item.backend && <code className="oc-item__backend">{item.backend}</code>}
             {item.lineage && <LineageChip lineage={item.lineage} />}
-            {item.meta && <span>{item.meta}</span>}
+            {item.meta && <span className="oc-item__time">{item.meta}</span>}
           </div>
         </div>
       </div>
-      <div className="oc-item__actions">
-        {item.links.map((l) => (
-          <Link key={l.label} className="qts-bean" to={l.to}>{l.label}</Link>
-        ))}
-      </div>
+      {primary && (
+        <Link className="btn btn-primary oc-item__cta" to={primary.to}>{primary.label}</Link>
+      )}
     </li>
   );
 }
@@ -75,33 +86,45 @@ function pickTopItem(lanes) {
 }
 
 export const OperationsCentre = () => {
-  const navigate = useNavigate();
   const [d, setD] = useState({});
   const [failed, setFailed] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [laneFilter, setLaneFilter] = useState('ack');
+  const [queueView, setQueueView] = useState('list');
   const { setActions, clearActions } = usePageActions();
 
-  const load = useCallback(async () => {
-    const calls = {
-      centre: api.getOperationsCentre(), alerts: fetchActiveAlerts(),
-      health: api.getHealthVector(), incidents: api.getIncidents(),
-    };
-    const res = await Promise.allSettled(SOURCES.map((k) => calls[k]));
+  const mergeSources = useCallback((keys, res) => {
     const bad = [];
     setD((prev) => {
       const next = { ...prev };
-      res.forEach((r, i) => { if (r.status === 'fulfilled') next[SOURCES[i]] = r.value; else bad.push(SOURCES[i]); });
+      res.forEach((r, i) => {
+        if (r.status === 'fulfilled') next[keys[i]] = r.value;
+        else bad.push(keys[i]);
+      });
       return next;
     });
-    setFailed(bad);
-    if (bad.length < SOURCES.length) setLastRefresh(new Date());
-    setLoading(false);
+    setFailed((prev) => [...new Set([...prev.filter((x) => !keys.includes(x)), ...bad])]);
+    if (res.some((r) => r.status === 'fulfilled')) setLastRefresh(new Date());
   }, []);
+
+  const load = useCallback(async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
+    const primary = await Promise.allSettled([api.getOperationsCentre()]);
+    mergeSources(['centre'], primary);
+    if (!silent) setLoading(false);
+
+    const secondary = await Promise.allSettled([
+      fetchActiveAlerts(200),
+      api.getHealthVector(),
+      api.getIncidents(undefined, { limit: 100 }),
+    ]);
+    mergeSources(['alerts', 'health', 'incidents'], secondary);
+  }, [mergeSources]);
 
   useEffect(() => {
     load();
-    const t = setInterval(() => { if (!document.hidden) load(); }, 15000);
+    const t = setInterval(() => { if (!document.hidden) load({ silent: true }); }, 30000);
     return () => clearInterval(t);
   }, [load]);
 
@@ -202,9 +225,35 @@ export const OperationsCentre = () => {
     [lanes],
   );
 
-  const scrollLane = (id) => () => {
-    document.getElementById(`oc-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+  const laneMeta = useMemo(
+    () => Object.fromEntries(LANES.map(([id, title, sub]) => [id, { title, sub }])),
+    [],
+  );
+
+  const visibleItems = useMemo(() => {
+    const raw = laneFilter === 'all'
+      ? LANES.flatMap(([id]) => lanes[id].map((item) => ({ item, laneId: id })))
+      : (lanes[laneFilter] || []).map((item) => ({ item, laneId: laneFilter }));
+    const rank = (s) => ({ CRITICAL: 0, WARNING: 1, INFO: 2 }[s] ?? 3);
+    return raw.slice().sort((a, b) => rank(a.item.severity) - rank(b.item.severity) || a.laneId.localeCompare(b.laneId));
+  }, [laneFilter, lanes]);
+
+  const actionable = useMemo(
+    () => lanes.ack.length + lanes.inv.length + lanes.fix.length,
+    [lanes],
+  );
+
+  const staleCollectors = useMemo(() => (providers || []).filter((p) => {
+    const age = ageMinutes(p.last_success_at);
+    return p.status !== 'OK' || (age != null && age > STALE_MIN);
+  }).length, [providers]);
+
+  useEffect(() => {
+    const firstBusy = LANES.find(([id]) => lanes[id].length > 0);
+    if (firstBusy && lanes[laneFilter]?.length === 0) {
+      setLaneFilter(firstBusy[0]);
+    }
+  }, [lanes, laneFilter]);
 
   const noData = failed.length === SOURCES.length;
 
@@ -218,16 +267,12 @@ export const OperationsCentre = () => {
     else notifyWarn(msg, { toastId: 'ops-load' });
   }, [loading, failed, noData, lastRefresh]);
 
-  if (loading) return <BoneyardSkeleton layout="dashboard" />;
+  if (loading) return <div className="page-stack"><BoneyardSkeleton layout="dashboard" /></div>;
 
-  const actionable = lanes.ack.length + lanes.inv.length + lanes.fix.length;
-  const staleCollectors = (providers || []).filter((p) => {
-    const age = ageMinutes(p.last_success_at);
-    return p.status !== 'OK' || (age != null && age > STALE_MIN);
-  }).length;
+  const topPrimary = top ? pickPrimaryLink(top.item.links) : null;
 
   return (
-    <div className="ops-page page-stack">
+    <div className="ops-page page-stack" data-tour="page-operations-centre">
       <ExceptionStrip
         data-tour="page-ops-kpis"
         ariaLabel="Action queue summary"
@@ -236,110 +281,127 @@ export const OperationsCentre = () => {
             id: 'ack', label: 'Acknowledgement', value: lanes.ack.length,
             sub: lanes.ack.length ? 'Needs owner' : 'Queue clear',
             tone: lanes.ack.length ? (lanes.ack.some((i) => i.severity === 'CRITICAL') ? 'critical' : 'warn') : 'ok',
-            onClick: scrollLane('ack'),
+            onClick: () => setLaneFilter('ack'),
             help: 'Open incidents and unowned alert groups waiting for acknowledgement.',
           },
           {
             id: 'inv', label: 'Investigation', value: lanes.inv.length,
             sub: staleCollectors ? `${staleCollectors} collectors stale` : 'Collectors OK',
             tone: lanes.inv.length ? 'warn' : 'ok',
-            onClick: scrollLane('inv'),
+            onClick: () => setLaneFilter('inv'),
             help: 'Degraded backends, stale collectors, or unknown health.',
           },
           {
             id: 'fix', label: 'Remediation', value: lanes.fix.length,
             sub: lanes.fix.length ? 'Routing advisories' : 'No quarantine',
             tone: lanes.fix.some((i) => i.severity === 'CRITICAL') ? 'critical' : lanes.fix.length ? 'warn' : 'ok',
-            onClick: scrollLane('fix'),
+            onClick: () => setLaneFilter('fix'),
             help: 'Health-engine routing recommendations (recalibrate / quarantine).',
           },
           {
             id: 'info', label: 'Informational', value: lanes.info.length,
-            sub: 'Lower priority',
+            sub: `${critCount} crit · ${warnCount} warn`,
             tone: 'ok',
-            onClick: scrollLane('info'),
+            onClick: () => setLaneFilter('info'),
             help: 'Acknowledged alerts and lower-priority context.',
           },
         ]}
       />
 
-      <div className="oc-focus">
-        <section data-tour="page-ops-focus" className={`oc-focus__card oc-focus__card--priority${top?.item?.severity === 'CRITICAL' ? ' is-critical' : ''}`} aria-labelledby="oc-next-h">
-          <p className="oc-focus__eyebrow" id="oc-next-h">Next up</p>
-          {top ? (
-            <>
-              <h2 className="oc-focus__title">{top.item.title}</h2>
-              <div className="oc-focus__meta">
-                <span className={`badge ${sevBadge(top.item.severity)}`}>{top.item.severity || 'INFO'}</span>
-                {top.item.backend && <code>{top.item.backend}</code>}
-                {top.item.meta && <span>{top.item.meta}</span>}
-                <span>{LANES.find((l) => l[0] === top.lane)?.[1]}</span>
-              </div>
-              <div className="oc-focus__actions">
-                {top.item.links.map((l) => (
-                  <Link key={l.label} className="qts-bean qts-bean--emphasis" to={l.to}>{l.label}</Link>
-                ))}
-                <button type="button" className="qts-bean" onClick={scrollLane(top.lane)}>
-                  View lane <ChevronRight size={12} aria-hidden />
-                </button>
-              </div>
-            </>
-          ) : (
-            <EmptyState compact variant="inline" title="Queue clear" message="Nothing waiting in acknowledgement, investigation, or remediation." />
-          )}
-        </section>
-
-        <section className="oc-focus__card oc-quick" aria-label="Operator shortcuts">
-          <p className="oc-focus__eyebrow">Fleet pulse</p>
-          <div className="oc-pulse">
-            <div className={`oc-pulse__cell${critCount ? ' oc-pulse__cell--crit' : ' oc-pulse__cell--ok'}`}>
-              <span className="oc-pulse__n">{critCount}</span>
-              <span className="oc-pulse__l">Critical in queue</span>
-            </div>
-            <div className={`oc-pulse__cell${warnCount ? ' oc-pulse__cell--warn' : ' oc-pulse__cell--ok'}`}>
-              <span className="oc-pulse__n">{warnCount}</span>
-              <span className="oc-pulse__l">Warnings in queue</span>
-            </div>
-            <div className={`oc-pulse__cell${actionable ? ' oc-pulse__cell--warn' : ' oc-pulse__cell--ok'}`}>
-              <span className="oc-pulse__n">{actionable}</span>
-              <span className="oc-pulse__l">Actionable total</span>
-            </div>
+      {top && (
+        <section data-tour="page-ops-focus" className={`card oc-next${top.item.severity === 'CRITICAL' ? ' oc-next--critical' : ''}`}>
+          <p className="oc-next__eyebrow">Next up</p>
+          <h2 className="oc-next__title">{top.item.title}</h2>
+          <div className="oc-next__meta">
+            <span className={`badge ${sevBadge(top.item.severity)}`}>{top.item.severity}</span>
+            <span className="oc-next__lane">{laneMeta[top.lane]?.title}</span>
+            {top.item.backend && <code>{top.item.backend}</code>}
+            {top.item.meta && <span>{top.item.meta}</span>}
           </div>
-          <div className="oc-quick__links">
-            <Link className="qts-bean" to="/app/alerts">Active alerts</Link>
-            <Link className="qts-bean" to="/app/alerts/incidents">Incidents</Link>
-            <Link className="qts-bean" to="/app/platform/health">Platform health</Link>
-            <Link className="qts-bean" to={HEALTH_PATH}>Health vector</Link>
-            <Link className="qts-bean" to="/app/execution/queues">Queues</Link>
-            <Link className="qts-bean" to="/app/investigate/timeline">Timeline</Link>
+          <div className="oc-next__actions">
+            {topPrimary && (
+              <Link className="btn btn-primary" to={topPrimary.to}>{topPrimary.label}</Link>
+            )}
+            <Link className="btn btn-secondary" to="/app/alerts">Active alerts</Link>
+            <Link className="btn btn-secondary" to="/app/platform/health">Platform health</Link>
           </div>
         </section>
-      </div>
+      )}
 
-      {!noData && actionable === 0 && (
+      {!top && !noData && actionable === 0 && (
         <EmptyState compact variant="panel" title="Action queue empty" message="No items pending acknowledgement, investigation, or remediation." />
       )}
 
-      <div className="oc-lanes">
-        {LANES.map(([id, title, sub]) => (
-          <section key={id} className={`card oc-lane oc-lane--${id}`} aria-labelledby={`oc-${id}`}>
-            <header className="oc-lane__head">
-              <div className="oc-lane__head-row">
-                <h2 id={`oc-${id}`} className="ops-panel__title">{title}</h2>
-                <span className="oc-count" data-tone={LANE_TONE[id]}>{lanes[id].length}</span>
-              </div>
-              <p className="ops-panel__sub">{sub}</p>
-            </header>
-            <div className="oc-lane__body">
-              {lanes[id].length === 0 ? (
-                <p className="oc-lane-empty">{LANE_EMPTY[id]}</p>
-              ) : (
-                <ul className="oc-list">{lanes[id].map((it) => <Row key={it.key} item={it} />)}</ul>
-              )}
+      <section className="card oc-queue" aria-labelledby="oc-queue-h">
+        <header className="oc-queue__head">
+          <div>
+            <h2 id="oc-queue-h" className="oc-queue__title">Action queue</h2>
+            <p className="oc-queue__sub">One list, filtered by lane. Primary button opens the usual investigation path.</p>
+          </div>
+          <div className="oc-queue__controls">
+            <nav className="oc-lane-tabs" aria-label="Queue lanes">
+            <button
+              type="button"
+              className={`oc-lane-tab${laneFilter === 'all' ? ' is-active' : ''}`}
+              onClick={() => setLaneFilter('all')}
+            >
+              All <span className="oc-count">{actionable + lanes.info.length}</span>
+            </button>
+            {LANES.map(([id, title]) => (
+              <button
+                key={id}
+                type="button"
+                className={`oc-lane-tab oc-lane-tab--${id}${laneFilter === id ? ' is-active' : ''}`}
+                onClick={() => setLaneFilter(id)}
+              >
+                {title} <span className="oc-count" data-tone={LANE_TONE[id]}>{lanes[id].length}</span>
+              </button>
+            ))}
+            </nav>
+            <div className="oc-view-toggle" role="group" aria-label="Queue layout">
+              <button
+                type="button"
+                className={`oc-view-toggle__btn${queueView === 'list' ? ' is-active' : ''}`}
+                aria-pressed={queueView === 'list'}
+                title="List view"
+                onClick={() => setQueueView('list')}
+              >
+                <List size={18} aria-hidden />
+                <span className="oc-view-toggle__label">List</span>
+              </button>
+              <button
+                type="button"
+                className={`oc-view-toggle__btn${queueView === 'grid' ? ' is-active' : ''}`}
+                aria-pressed={queueView === 'grid'}
+                title="Grid view"
+                onClick={() => setQueueView('grid')}
+              >
+                <LayoutGrid size={18} aria-hidden />
+                <span className="oc-view-toggle__label">Grid</span>
+              </button>
             </div>
-          </section>
-        ))}
-      </div>
+          </div>
+        </header>
+
+        <div className="oc-queue__body">
+          <p className="oc-queue__lane-desc">{laneFilter === 'all' ? 'All open items, critical first within each lane.' : laneMeta[laneFilter]?.sub}</p>
+          {visibleItems.length === 0 ? (
+            <p className="oc-lane-empty">{laneFilter === 'all' ? 'Queue clear — nothing requires action.' : LANE_EMPTY[laneFilter]}</p>
+          ) : (
+            <ul className={queueView === 'grid' ? 'oc-list oc-list--grid' : 'oc-list'}>
+              {visibleItems.map(({ item, laneId }) => (
+                <QueueRow
+                  key={item.key}
+                  item={item}
+                  laneLabel={laneMeta[laneId]?.title}
+                  layout={queueView}
+                  showLane={laneFilter === 'all'}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
     </div>
   );
 };

@@ -17,9 +17,10 @@ import {
   DetailModalProvenance,
 } from '../components/observability/DetailModalLayout.jsx';
 import { TableEmpty } from '../components/observability/EmptyState.jsx';
-import { getChartTheme, baseTooltip } from '../components/observability/chartTheme.js';
+import { getChartTheme, baseTooltip, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { buildBackendDetailsPath, buildTimelineInvestigationLocation } from '../lib/investigationLinks.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
+import { unableToLoad } from '../constants/messages.js';
 import { formatIST } from '../utils/time';
 import { DataPanelToolbar, SortableTh } from '../components/observability/DataViewToolbar.jsx';
 import './QueueMonitoring.css';
@@ -140,7 +141,7 @@ export const QueueMonitoring = () => {
       setError(null);
       setLastRefresh(new Date());
     } catch (e) {
-      setError(e.message || 'Failed to load queues.');
+      setError(e.message || unableToLoad('queue snapshots'));
     }
   }, []);
 
@@ -188,20 +189,23 @@ export const QueueMonitoring = () => {
     return list;
   }, [ranked, sort, backendFilter]);
 
-  const barOption = useMemo(() => ({
-    grid: { left: 8, right: 24, top: 28, bottom: 8, containLabel: true },
-    tooltip: { ...baseTooltip(dark), axisPointer: { type: 'shadow' } },
-    legend: { top: 0, textStyle: { color: t.textColor } },
-    xAxis: [
-      { type: 'value', name: 'pending', minInterval: 1, axisLabel: { color: t.textColor }, splitLine: { lineStyle: { color: t.splitColor } } },
-      { type: 'value', name: 'wait (s)', show: false },
-    ],
-    yAxis: { type: 'category', inverse: true, data: ranked.map((q) => q.backend_name), axisLabel: { color: t.textColor }, axisLine: { lineStyle: { color: t.axisLine } } },
-    series: [
-      { name: 'Pending jobs', type: 'bar', itemStyle: { color: '#22d3ee' }, barGap: '10%', label: { show: true, position: 'right', color: t.textColor }, data: ranked.map((q) => q.pending_jobs || 0) },
-      { name: 'Est. wait (s)', type: 'bar', xAxisIndex: 1, itemStyle: { color: '#fbbf24' }, label: { show: true, position: 'right', color: t.textColor, formatter: (p) => fmtWait(p.value) }, data: ranked.map((q) => q.estimated_wait_time || 0) },
-    ],
-  }), [ranked, dark, t]);
+  const barOption = useMemo(() => {
+    const sem = getChartSemanticColors();
+    return {
+      grid: { left: 8, right: 24, top: 28, bottom: 8, containLabel: true },
+      tooltip: { ...baseTooltip(dark), axisPointer: { type: 'shadow' } },
+      legend: { top: 0, textStyle: { color: t.textColor } },
+      xAxis: [
+        { type: 'value', name: 'pending', minInterval: 1, axisLabel: { color: t.textColor }, splitLine: { lineStyle: { color: t.splitColor } } },
+        { type: 'value', name: 'wait (s)', show: false },
+      ],
+      yAxis: { type: 'category', inverse: true, data: ranked.map((q) => q.backend_name), axisLabel: { color: t.textColor }, axisLine: { lineStyle: { color: t.axisLine } } },
+      series: [
+        { name: 'Pending jobs', type: 'bar', itemStyle: { color: sem.accent }, barGap: '10%', label: { show: true, position: 'right', color: t.textColor }, data: ranked.map((q) => q.pending_jobs || 0) },
+        { name: 'Est. wait (s)', type: 'bar', xAxisIndex: 1, itemStyle: { color: sem.warn }, label: { show: true, position: 'right', color: t.textColor, formatter: (p) => fmtWait(p.value) }, data: ranked.map((q) => q.estimated_wait_time || 0) },
+      ],
+    };
+  }, [ranked, dark, t]);
 
   const withHist = (queues || []).filter((q) => (history[q.backend_id] || []).length > 0);
   const lineOption = useMemo(() => ({

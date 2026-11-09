@@ -19,7 +19,7 @@ Legend: **OK** = uses shared shell/skeleton/error; **MIX** = partial; **GAP** = 
 | `/app/backends/inventory` | BackendInventory | implicit | skeleton | ErrorState | cards/table | `data-tour=page-inventory` |
 | `/app/backends/details/*` | BackendDetails | tabs | per-tab | ErrorState | mixed | workspace target |
 | `/app/telemetry/live` | LiveTelemetry | implicit | skeleton | ErrorState | charts | SSE reconnect |
-| `/app/telemetry/calibration` | CalibrationStatus | implicit | skeleton | ErrorState | table | |
+| `/app/telemetry/calibration` | CalibrationStatus | implicit | skeleton | ErrorState | **EnterpriseDataTable** (table layout) | grid layout unchanged |
 | `/app/telemetry/drift` | DriftAnalysis | implicit | skeleton | ErrorState | table | |
 | `/app/telemetry/trends` | HistoricalTrends | implicit | skeleton | ErrorState | table | |
 | `/app/telemetry/topology` | TopologyExplorer | implicit | skeleton | ErrorState | graph + table | |
@@ -27,13 +27,13 @@ Legend: **OK** = uses shared shell/skeleton/error; **MIX** = partial; **GAP** = 
 | `/app/telemetry/anomalies` | AnomalyMonitor | implicit | skeleton | ErrorState | table | |
 | `/app/telemetry/replay` | TemporalReplay | implicit | skeleton | ErrorState | table | |
 | `/app/telemetry/metrics` | MetricsCoverage | implicit | skeleton | ErrorState | matrix | not EnterpriseDataTable |
-| `/app/execution/jobs` | JobMonitoring | implicit | skeleton | ErrorState | DataPanelToolbar | reference table UX |
+| `/app/execution/jobs` | JobMonitoring | implicit | skeleton | ErrorState | **EnterpriseDataTable** (table layout) | grid + status chips unchanged |
 | `/app/execution/queues` | QueueMonitoring | implicit | skeleton | ErrorState | table | |
 | `/app/resources/health` | ResourceHealth | implicit | skeleton | ErrorState | panels | |
 | `/app/resources/environment` | EnvironmentPage | implicit | skeleton | ErrorState | cards | |
 | `/app/resources/capabilities` | DeviceCapabilities | hero | skeleton | ErrorState | chips | |
-| `/app/alerts` | AlertsEvents | implicit | skeleton | ErrorState | al-table | bulk actions |
-| `/app/alerts/incidents` | AlertsEvents | implicit | skeleton | ErrorState | table | |
+| `/app/alerts` | AlertsEvents | implicit | skeleton | ErrorState | **EnterpriseDataTable** when ungrouped; grouped al-table | bulk actions |
+| `/app/alerts/incidents` | AlertsEvents | implicit | skeleton | ErrorState | **EnterpriseDataTable** (table layout) | grid/calendar unchanged |
 | `/app/reports` | ReportsPage | implicit | skeleton | ErrorState | table | |
 | `/app/settings` | UserSettings | implicit | partial | toast | mixed fields | adopt AppFormField |
 | `/app/admin/*` | AdministrationPage | implicit | skeleton | ErrorState | admin-table | |

@@ -8,12 +8,26 @@ import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
-import { getChartTheme, baseTooltip, chartLabelStyle } from '../components/observability/chartTheme.js';
+import { getChartTheme, baseTooltip, chartLabelStyle, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { formatISTTime } from '../utils/time';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { DataPanelToolbar } from '../components/observability/DataViewToolbar.jsx';
 import { EnterpriseDataTable } from '../components/observability/EnterpriseDataTable.jsx';
+import { CollapsibleSection } from '../components/observability/CollapsibleSection.jsx';
 import './PlatformHealth.css';
+
+const EXEC_LINES = (data) => {
+  const coll = data?.collectors || {};
+  const failed = coll.failed_count ?? 0;
+  const providers = coll.providers || [];
+  const ok = providers.length - failed;
+  return [
+    `Database ${data?.database?.reachable ? 'reachable' : 'unreachable'} · storage ${data?.database?.storage || '—'}`,
+    `Collectors ${ok}/${providers.length} OK${failed ? ` · ${failed} need attention` : ''}`,
+    `Latest backend telemetry ${data?.latest_backend_telemetry_at ? formatISTTime(data.latest_backend_telemetry_at) : 'none stored'}`,
+    `Data mode ${data?.data_platform?.platform_data_mode || '—'}${data?.data_platform?.enable_mock_data ? ' (demo telemetry on)' : ''}`,
+  ];
+};
 
 const STALE_MIN = 30;
 
@@ -139,17 +153,19 @@ export const PlatformHealth = () => {
 
   const durationOption = useMemo(() => {
     const t = getChartTheme(isDark);
+    const sem = getChartSemanticColors();
     const rows = [...providers].sort((a, b) => (a.duration_ms || 0) - (b.duration_ms || 0));
     return {
       grid: { left: 110, right: 24, top: 8, bottom: 28 },
       tooltip: { ...baseTooltip(isDark), trigger: 'item', formatter: (p) => `${p.name}<br/>${p.value} ms (last run)` },
       xAxis: { type: 'value', name: 'ms', nameTextStyle: chartLabelStyle(isDark, 10), axisLabel: chartLabelStyle(isDark, 10), splitLine: { lineStyle: { color: t.splitColor } } },
       yAxis: { type: 'category', data: rows.map((p) => p.provider_id), axisLabel: chartLabelStyle(isDark, 11) },
-      series: [{ type: 'bar', barMaxWidth: 22, data: rows.map((p) => ({ value: p.duration_ms, itemStyle: { color: p.status === 'OK' ? '#38bdf8' : '#fb7185' } })) }],
+      series: [{ type: 'bar', barMaxWidth: 22, data: rows.map((p) => ({ value: p.duration_ms, itemStyle: { color: p.status === 'OK' ? sem.series : sem.critical } })) }],
     };
   }, [providers, isDark]);
 
   const statusPieOption = useMemo(() => {
+    const sem = getChartSemanticColors();
     const ok = providers.filter((p) => p.status === 'OK').length;
     const bad = providers.length - ok;
     return {
@@ -159,8 +175,8 @@ export const PlatformHealth = () => {
         type: 'pie', radius: ['42%', '68%'],
         label: { color: getChartTheme(isDark).textColor, fontSize: chartLabelStyle(isDark, 11).fontSize },
         data: [
-          { name: 'OK', value: ok || 0, itemStyle: { color: '#34d399' } },
-          { name: 'Attention', value: bad || 0, itemStyle: { color: '#fb7185' } },
+          { name: 'OK', value: ok || 0, itemStyle: { color: sem.healthy } },
+          { name: 'Attention', value: bad || 0, itemStyle: { color: sem.critical } },
         ].filter((d) => d.value > 0),
       }],
     };
@@ -186,11 +202,50 @@ export const PlatformHealth = () => {
         </div>
         <p className="ph-summary__meta">
           Generated {data?.generated_at ? formatISTTime(data.generated_at) : '—'}
-          {' · '}
-          Data mode {data?.data_platform?.platform_data_mode || '—'}
-          {data?.data_platform?.enable_mock_data ? ' · demo telemetry enabled' : ''}
+        </p>
+        <ul className="ph-exec-list">
+          {EXEC_LINES(data).map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+        <p className="page-hint ph-rbac-note">
+          <strong>Who can act:</strong> all signed-in roles can view this page. Changing collectors, credentials, or schedules requires an administrator role under Administration.
         </p>
       </section>
+
+      {(data?.synthetics || []).length > 0 && (
+        <CollapsibleSection id="ph-synth" title="Synthetic probes" defaultOpen={false} className="card page-panel ph-synth" data-tour="page-platform-synthetic">
+          <p className="page-hint">In-process checks on each platform-health refresh — not distributed synthetics.</p>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {(data.synthetics || []).map((p) => (
+              <li key={p.probe_id} style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'baseline', padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>
+                <strong>{p.name}</strong>
+                <span className={p.status === 'OK' ? 'badge badge-healthy' : 'badge badge-critical'}>{p.status}</span>
+                <span className="ph-timeline__meta">{p.latency_ms} ms · {p.target}{p.error ? ` · ${p.error}` : ''}</span>
+              </li>
+            ))}
+          </ul>
+        </CollapsibleSection>
+      )}
+
+      {(data?.slis || []).length > 0 && (
+        <CollapsibleSection id="ph-sli" title="Service level indicators" defaultOpen={false} className="card page-panel ph-slo" data-tour="page-platform-sli">
+          <p className="page-hint">Measured from stored collector execution history — not an external time-series backend.</p>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+            {(data.slis || []).map((s) => (
+              <li key={s.sli_id} style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'baseline', padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>
+                <strong>{s.name}</strong>
+                <span className={s.missing_data ? 'badge badge-info' : s.compliant ? 'badge badge-healthy' : 'badge badge-warning'}>
+                  {s.missing_data ? 'No data' : `${(s.value * 100).toFixed(1)}%`}
+                </span>
+                <span className="ph-timeline__meta">
+                  target {(s.target * 100).toFixed(0)}% · {s.numerator}/{s.denominator} in {s.window_hours}h · {s.data_source}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </CollapsibleSection>
+      )}
 
       <section className="ph-tiles" aria-label="Platform status" data-tour="page-platform">
         <Tile title="Database" tone={db.reachable ? 'ok' : 'bad'} value={db.reachable ? 'Reachable' : 'Unreachable'} detail={`${db.storage || '—'}${db.error ? ` · ${db.error}` : ''}`} />

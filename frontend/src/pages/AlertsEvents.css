@@ -19,8 +19,11 @@
 .al-chart-card { margin-bottom: 0; }
 .al-chart-hint { margin: 0 0 10px; font-size: 12px; }
 
+.al-inc-grid-wrap { min-width: 0; overflow: hidden; }
 .al-inc-grid-hint { margin: 0 0 12px; }
-.al-inc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 14px; align-items: stretch; }
+.al-inc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 14px; align-items: stretch; width: 100%; min-width: 0; }
+.al-inc-grid .dvt-card,
+.al-inc-grid .al-inc-card { min-width: 0; overflow: hidden; max-width: 100%; }
 .al-inc-card { height: 100%; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; box-sizing: border-box; }
 .al-inc-card__head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
 .al-inc-card__title { border: 0; background: transparent; padding: 0; font: inherit; font-size: 16px; font-weight: 700; color: var(--accent-cyan); text-align: left; cursor: pointer; text-decoration: underline; overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }
@@ -107,6 +110,8 @@
 .al-banner { margin: 0; padding: 10px 14px; border-radius: 10px; font-size: 13px; border: 1px solid var(--border-color); background: var(--bg-card); }
 .al-banner--err { border-color: color-mix(in srgb, var(--accent-rose) 40%, var(--border-color)); }
 .al-banner--warn { border-color: color-mix(in srgb, var(--accent-amber) 40%, var(--border-color)); }
+.al-banner--split { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 12px; }
+.al-banner__action { flex-shrink: 0; }
 
 .al-comment-form { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--border-color); }
 

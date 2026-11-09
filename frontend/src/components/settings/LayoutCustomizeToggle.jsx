@@ -27,10 +27,10 @@ export function LayoutCustomizeToggle({
               type="button"
               className="btn btn-secondary layout-customize-toggle__smart"
               onClick={onSmartLayout}
-              title={smartLayoutHint || 'Auto-fill row gaps and balance panel widths'}
+              title={smartLayoutHint || 'Reorder panels to fill row gaps'}
             >
               <Sparkles size={14} aria-hidden />
-              Smart fill
+              Suggested layout
             </button>
           )}
           <button

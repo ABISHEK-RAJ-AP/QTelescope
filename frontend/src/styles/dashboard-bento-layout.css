@@ -3,7 +3,7 @@
 .dash-bento {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
   align-items: start;
   grid-auto-flow: dense;
 }
@@ -36,6 +36,12 @@
     grid-column: span 6;
   }
 
+  .dash-bento__item--compact {
+    grid-column: span 6;
+  }
+}
+
+@media (min-width: 1280px) {
   .dash-bento__item--compact {
     grid-column: span 4;
   }

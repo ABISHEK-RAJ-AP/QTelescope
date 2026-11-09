@@ -19,8 +19,16 @@ def _validate_record(rec: Dict[str, Any]) -> None:
     float(rec.get("value"))
 
 
+MAX_ENV_ROWS = 50_000
+MAX_BATCH = 2_000
+
+
 def append_records(records: List[Dict[str, Any]], source: str = "rest") -> Tuple[int, List[str]]:
+    if len(records) > MAX_BATCH:
+        return 0, [f"Batch exceeds {MAX_BATCH} records"]
     rows = load_rows()
+    if len(rows) >= MAX_ENV_ROWS:
+        return 0, [f"Store at capacity ({MAX_ENV_ROWS} rows)"]
     added = 0
     errors: List[str] = []
     now = datetime.now(timezone.utc).isoformat()

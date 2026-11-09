@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 import os
 
 _startup_log = logging.getLogger("app.startup")
@@ -12,7 +13,11 @@ _startup_log = logging.getLogger("app.startup")
 from app.core.config import settings
 from app.core.api_auth import ApiAuthMiddleware
 from app.core.request_id import RequestIdMiddleware, request_id_for
+from app.core.slow_request import SlowRequestMiddleware
+from app.core.startup_validation import validate_startup_configuration
 from app.core.security_headers import SecurityHeadersMiddleware
+from app.core.origin_guard import OriginGuardMiddleware
+from app.core.write_rate_middleware import WriteRateLimitMiddleware
 from app.core.env_profile import is_production_profile
 from app.core.database import Base, engine, SessionLocal
 import app.models.entities  # Ensure all models are registered on Base.metadata
@@ -95,6 +100,7 @@ async def lifespan(app: FastAPI):
     from app.core.schema import apply_schema
 
     apply_schema(engine)
+    validate_startup_configuration()
     _log_prod_security_warnings()
     execute_startup_hardware_discovery()
     stop = asyncio.Event()
@@ -176,7 +182,10 @@ async def _validation_exception_handler(request: Request, exc: RequestValidation
 
 
 # Outermost → innermost: SecurityHeaders wraps responses after CORS/Auth.
+app.add_middleware(GZipMiddleware, minimum_size=512)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(OriginGuardMiddleware)
+app.add_middleware(WriteRateLimitMiddleware)
 # Auth runs inside CORS so 401/preflight responses still get Access-Control-* headers.
 app.add_middleware(ApiAuthMiddleware)
 
@@ -214,6 +223,7 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-User-Role", "X-User-Name", "X-QRE-Dev-Ack", "Accept", "X-Request-Id"],
 )
 app.add_middleware(RequestIdMiddleware)
+app.add_middleware(SlowRequestMiddleware)
 
 # Include API Routers
 app.include_router(backends.router, prefix=settings.API_V1_STR)

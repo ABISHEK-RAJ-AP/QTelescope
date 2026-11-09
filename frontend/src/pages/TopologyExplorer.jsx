@@ -7,10 +7,14 @@ import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { ChartPanel, EmptyState, getChartTheme, baseTooltip } from '../components/observability';
+import { getFleetStateChartColors, getChartInkColor } from '../components/observability/chartTheme.js';
+import { unableToLoad } from '../constants/messages.js';
+import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
+import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import './TopologyExplorer.css';
 
-const STATE_COLOR = { GREEN: '#059669', YELLOW: '#d97706', RED: '#e11d48', UNKNOWN: '#94a3b8' };
 const STATE_SYMBOL = { GREEN: 'circle', YELLOW: 'diamond', RED: 'triangle', UNKNOWN: 'rect' };
+const stateColors = () => getFleetStateChartColors();
 const LEGACY = { Healthy: 'GREEN', Warning: 'YELLOW', Degraded: 'RED' };
 const fmt = (v, d = 2) => (v == null || !Number.isFinite(Number(v)) ? '—' : Number(v).toFixed(d));
 
@@ -42,11 +46,12 @@ function layoutNodes(nodes, links) {
 }
 
 function metricColor(q, mode) {
-  if (mode === 'state') return STATE_COLOR[q.state] || STATE_COLOR.UNKNOWN;
+  const c = stateColors();
+  if (mode === 'state') return c[q.state] || c.UNKNOWN;
   const v = mode === 't1' ? q.t1 : q.readout_error;
-  if (v == null) return STATE_COLOR.UNKNOWN;
-  if (mode === 't1') return v < 50 ? STATE_COLOR.RED : v < 100 ? STATE_COLOR.YELLOW : STATE_COLOR.GREEN;
-  return v > 0.05 ? STATE_COLOR.RED : v > 0.02 ? STATE_COLOR.YELLOW : STATE_COLOR.GREEN;
+  if (v == null) return c.UNKNOWN;
+  if (mode === 't1') return v < 50 ? c.RED : v < 100 ? c.YELLOW : c.GREEN;
+  return v > 0.05 ? c.RED : v > 0.02 ? c.YELLOW : c.GREEN;
 }
 
 export const TopologyExplorer = () => {
@@ -125,7 +130,7 @@ export const TopologyExplorer = () => {
     }));
     const links = (graph.links || []).map((l) => ({
       source: String(l.source), target: String(l.target), gate_error: l.gate_error,
-      lineStyle: { width: l.gate_error != null ? 1 + Math.min(l.gate_error * 120, 4) : 1.5, color: l.gate_error > 0.03 ? STATE_COLOR.RED : th.axisLine, opacity: 0.9 },
+      lineStyle: { width: l.gate_error != null ? 1 + Math.min(l.gate_error * 120, 4) : 1.5, color: l.gate_error > 0.03 ? stateColors().RED : th.axisLine, opacity: 0.9 },
     }));
     return {
       animation: false,
@@ -159,7 +164,7 @@ export const TopologyExplorer = () => {
       },
       series: [{
         type: 'graph', layout: 'none', roam: true, data, links, zoom: 1,
-        label: { show: true, position: 'inside', fontSize: big ? 8 : 11, color: '#0b1220', formatter: (p) => p.name.slice(1) },
+        label: { show: true, position: 'inside', fontSize: big ? 8 : 11, color: getChartInkColor(), formatter: (p) => p.name.slice(1) },
         emphasis: { focus: 'adjacency', lineStyle: { width: 4 } },
         scaleLimit: { min: 0.4, max: 8 },
       }],
@@ -170,6 +175,14 @@ export const TopologyExplorer = () => {
   const onEvents = useMemo(() => ({ click: (p) => { if (p.dataType === 'node') setSelectedId(p.data.id); } }), []);
   const backendName = backends.find((b) => b.backend_id === backendId)?.backend_name;
   const hvTime = vector ? 'live health vector' : 'health vector unavailable — topology fields only';
+
+  if (loadState === 'loading' && !graph?.nodes?.length && backendId) {
+    return (
+      <div className="page-stack">
+        <BoneyardSkeleton layout="grid" />
+      </div>
+    );
+  }
 
   return (
     <div className="page-stack">
@@ -195,7 +208,7 @@ export const TopologyExplorer = () => {
           state={loadState === 'ready' ? 'ready' : loadState}
           emptyTitle="No topology"
           emptyMessage="This backend reports no qubits or couplings."
-          errorMessage="Could not load topology."
+          errorMessage={unableToLoad('backend topology')}
           onRetry={load}
           minHeight={560}
           tableAlternative={(
@@ -222,10 +235,10 @@ export const TopologyExplorer = () => {
           <div className="topo-legend">
             {colorMode === 'state' ? (
               <>
-                <span><i style={{ background: STATE_COLOR.GREEN }} />Green ●</span>
-                <span><i className="sq" style={{ background: STATE_COLOR.YELLOW, transform: 'rotate(45deg)' }} />Yellow ◆</span>
-                <span><i className="sq" style={{ background: STATE_COLOR.RED }} />Red ▲</span>
-                <span><i className="sq" style={{ background: STATE_COLOR.UNKNOWN }} />Unknown ■</span>
+                <span><i style={{ background: stateColors().GREEN }} />Green ●</span>
+                <span><i className="sq" style={{ background: stateColors().YELLOW, transform: 'rotate(45deg)' }} />Yellow ◆</span>
+                <span><i className="sq" style={{ background: stateColors().RED }} />Red ▲</span>
+                <span><i className="sq" style={{ background: stateColors().UNKNOWN }} />Unknown ■</span>
               </>
             ) : (
               <span>{colorMode === 't1' ? 'T1: green ≥100 µs, amber 50–100, red <50' : 'Readout: green ≤2%, amber 2–5%, red >5%'} · marker shape still shows health state</span>
@@ -253,10 +266,12 @@ export const TopologyExplorer = () => {
                   <button key={x.id} type="button" className="topo-nbr" onClick={() => setSelectedId(x.id)} title={`gate error ${fmt(x.err, 4)}`}>Q{x.id} · {fmt(x.err, 4)}</button>
                 ))}
               </div>
-              <div className="topo-actions">
-                <Link className="btn btn-secondary" to="/app/resources/health">Health vector</Link>
-                <Link className="btn btn-secondary" to={`/app/telemetry/drift?backend=${encodeURIComponent(backendId)}`}>Drift analysis</Link>
-              </div>
+              <Link
+                className="btn btn-primary topo-investigate"
+                to={buildBackendDetailsPath(backendId, 'qubits')}
+              >
+                Open qubit in workspace
+              </Link>
             </>
           ) : (
             <EmptyState variant="inline" compact align="start" title="No qubit selected" message="Select a node or table row to view metrics and neighbors." />

@@ -237,7 +237,11 @@ def get_config_status():
         enable_mock_data=settings.ENABLE_MOCK_DATA,
         project_name=settings.PROJECT_NAME,
         version=settings.VERSION,
-        bootstrap=bootstrap_security_report(settings.ADMIN_USERNAME, settings.USER_USERNAME),
+        bootstrap=bootstrap_security_report(
+            settings.ADMIN_USERNAME,
+            settings.USER_USERNAME,
+            settings.SUPERADMIN_USERNAME,
+        ),
         ldap=ldap_public_status(),
     )
 
@@ -314,7 +318,7 @@ def register_user(req: RegisterRequest, request: Request):
     email = req.email.strip().lower()
     if not username or not email:
         raise HTTPException(status_code=400, detail="Username and email are required.")
-    if username in (settings.ADMIN_USERNAME, settings.USER_USERNAME):
+    if username in (settings.ADMIN_USERNAME, settings.USER_USERNAME, settings.SUPERADMIN_USERNAME):
         raise HTTPException(status_code=409, detail="That username is reserved.")
 
     role = (req.role or "Operator").strip()
@@ -362,9 +366,19 @@ def authenticate_user(req: LoginRequest, request: Request):
     check_auth_rate_limit(request, "login")
     _consume_captcha(req.captcha_id, req.captcha_code)
     reject_if_default_bootstrap_password(
-        username, password, settings.ADMIN_USERNAME, settings.USER_USERNAME
+        username,
+        password,
+        settings.ADMIN_USERNAME,
+        settings.USER_USERNAME,
+        settings.SUPERADMIN_USERNAME,
     )
 
+    if username == settings.SUPERADMIN_USERNAME and password == settings.SUPERADMIN_PASSWORD:
+        return _maybe_mfa_or_session(
+            username,
+            "SuperAdmin",
+            {"email": "", "full_name": "Super Administrator", "org": "C-DAC"},
+        )
     if username == settings.ADMIN_USERNAME and password == settings.ADMIN_PASSWORD:
         return _maybe_mfa_or_session(username, "Admin", {"email": "", "full_name": "Platform Admin", "org": "C-DAC"})
     if username == settings.USER_USERNAME and password == settings.USER_PASSWORD:
@@ -521,6 +535,34 @@ def get_me(
         "tenant_id": tenant_from_session_record(sess),
         "expires_at": sess.get("expires_at"),
     }
+
+
+class StreamTicketResponse(BaseModel):
+    stream_ticket: str
+    expires_in: int
+    stream_path: str
+
+
+@router.post("/stream-ticket", response_model=StreamTicketResponse)
+def issue_sse_stream_ticket(authorization: Optional[str] = Header(None, alias="Authorization")):
+    """Opaque short-lived ticket for EventSource — session token stays out of URLs."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Bearer session required.")
+    token = authorization[7:].strip()
+    sess = get_session(token)
+    if not sess:
+        raise HTTPException(status_code=401, detail="Invalid or expired session.")
+    from app.core.stream_tickets import issue_stream_ticket
+
+    try:
+        ticket, ttl = issue_stream_ticket(token)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return StreamTicketResponse(
+        stream_ticket=ticket,
+        expires_in=ttl,
+        stream_path=f"{settings.API_V1_STR}/events/stream",
+    )
 
 
 @router.post("/logout")

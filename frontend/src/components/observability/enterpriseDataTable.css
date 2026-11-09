@@ -66,6 +66,13 @@
   }
 }
 
+.edt-pager .btn--xs,
+.custom-table--dense .btn--xs {
+  min-height: 24px;
+  min-width: 24px;
+  padding: 4px 8px;
+}
+
 .edt-pager {
   display: flex;
   flex-wrap: wrap;
@@ -84,4 +91,11 @@
 
 .edt-pager__meta {
   color: var(--text-muted, #64748b);
+}
+
+.custom-table--dense .btn--xs,
+.edt-pager .btn--xs {
+  min-height: 24px;
+  min-width: 24px;
+  padding: 4px 8px;
 }

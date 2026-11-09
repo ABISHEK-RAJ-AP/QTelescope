@@ -4,8 +4,9 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import time
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Callable, Dict, Optional, Tuple, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -14,6 +15,8 @@ T = TypeVar("T")
 _client = None
 _client_checked = False
 _stats = {"hits": 0, "misses": 0, "errors": 0}
+_mem_lock = threading.Lock()
+_mem: Dict[str, Tuple[float, Any]] = {}
 
 
 def _enabled() -> bool:
@@ -121,12 +124,37 @@ def default_ttl(name: str, fallback: int) -> int:
     return fallback
 
 
+def _mem_get(key: str, ttl_sec: int) -> Optional[Any]:
+    now = time.time()
+    with _mem_lock:
+        hit = _mem.get(key)
+        if hit and now - hit[0] < ttl_sec:
+            return hit[1]
+    return None
+
+
+def _mem_set(key: str, value: Any) -> None:
+    with _mem_lock:
+        _mem[key] = (time.time(), value)
+
+
+def _mem_clear_prefix(prefix: str) -> None:
+    with _mem_lock:
+        for k in list(_mem.keys()):
+            if k.startswith(prefix):
+                _mem.pop(k, None)
+
+
 def get_or_set_json(key: str, ttl_sec: int, factory: Callable[[], T]) -> T:
     cached = cache_get_json(key)
     if cached is not None:
         return cached  # type: ignore[return-value]
+    mem = _mem_get(key, ttl_sec)
+    if mem is not None:
+        return mem  # type: ignore[return-value]
     value = factory()
     cache_set_json(key, value, ttl_sec)
+    _mem_set(key, value)
     return value
 
 
@@ -136,6 +164,11 @@ def invalidate_operational_cache() -> None:
     cache_delete_prefix(f"{ns}:health:")
     cache_delete_prefix(f"{ns}:alerts:")
     cache_delete_prefix(f"{ns}:fleet:")
+    cache_delete_prefix(f"{ns}:operations:")
+    _mem_clear_prefix(f"{ns}:health:")
+    _mem_clear_prefix(f"{ns}:alerts:")
+    _mem_clear_prefix(f"{ns}:fleet:")
+    _mem_clear_prefix(f"{ns}:operations:")
 
 
 def cache_health() -> dict:

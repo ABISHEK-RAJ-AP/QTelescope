@@ -19,7 +19,7 @@ from app.models.entities import AlertModel, BackendModel, BackendTelemetryModel,
 from app.services.collector_health import list_provider_health
 from app.services.collector_dlq import list_failures as list_collector_dlq
 from app.services.circuit_breaker import snapshot as circuit_snapshot
-from app.services.incident_service import sync_incidents_from_alerts
+from app.services.incident_service import sync_incidents_from_alerts_if_stale
 from app.infra.classical_metrics import list_classical_infra
 from app.core.cache import cache_health as _cache_health
 
@@ -39,7 +39,7 @@ def _alert_backend_id(alert: AlertModel) -> str | None:
 def get_operations_centre(db: Session = Depends(get_db)):
     ensure_discovered(db)
     try:
-        sync_incidents_from_alerts(db)
+        sync_incidents_from_alerts_if_stale(db)
     except Exception:
         db.rollback()
 
@@ -113,8 +113,7 @@ def get_operations_centre(db: Session = Depends(get_db)):
     }
 
 
-@router.get("/platform-health")
-def get_platform_health(db: Session = Depends(get_db)):
+def _build_platform_health(db: Session) -> Dict[str, Any]:
     """Self-observability: DB, collectors, SSE honesty, collection freshness."""
     ensure_discovered(db)
     db_ok = True
@@ -180,7 +179,36 @@ def get_platform_health(db: Session = Depends(get_db)):
         },
         "ingestion_quality_latest": _ingestion_quality_snapshot(),
         "dependency_links": _dependency_snapshot(db),
+        "slis": _sli_snapshot(),
+        "synthetics": _synthetic_snapshot(),
     }
+
+
+@router.get("/platform-health")
+def get_platform_health(db: Session = Depends(get_db)):
+    from app.core.cache import cache_key, default_ttl, get_or_set_json
+
+    ttl = default_ttl("platform_health", 12)
+    key = cache_key("operations", "platform-health")
+    return get_or_set_json(key, ttl, lambda: _build_platform_health(db))
+
+
+def _synthetic_snapshot() -> List[Dict[str, Any]]:
+    try:
+        from app.services.synthetic_probe import run_lab_probes
+
+        return run_lab_probes()
+    except Exception:
+        return []
+
+
+def _sli_snapshot() -> List[Dict[str, Any]]:
+    try:
+        from app.services.sli_measurements import latest_slis_for_ui
+
+        return latest_slis_for_ui()
+    except Exception:
+        return []
 
 
 def _ingestion_quality_snapshot() -> List[Dict[str, Any]]:
@@ -236,7 +264,7 @@ def get_operations_timeline(
 ):
     """Merged alerts, incidents, and collector failures for ops correlation."""
     try:
-        sync_incidents_from_alerts(db)
+        sync_incidents_from_alerts_if_stale(db)
     except Exception:
         db.rollback()
     events = []

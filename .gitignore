@@ -1,3 +1,9 @@
+# Security-audit skill upstream clone (skill installed under .cursor/skills/security-audit)
+.security-audit-skill-upstream/
+.security-audit/
+security-audit/
+.vendor/skills-upstream/
+
 # Environment & Secrets (NEVER COMMIT .env)
 .env
 .env.*
@@ -103,6 +109,7 @@ data/collector_executions.jsonl
 data/ingestion_quality.jsonl
 data/backend_catalog.json
 data/app_structured.jsonl
+data/sli_measurements.jsonl
 tests/e2e/test-results/
 data/federation_registry.json
 data/federation_snapshots/

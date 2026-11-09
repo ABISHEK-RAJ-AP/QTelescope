@@ -1,15 +1,16 @@
 import datetime
+from collections import Counter
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.entities import AlertModel, IncidentAlertModel, IncidentModel
 from app.schemas.schemas import AlertResponse
 from app.api.alerts import parse_alert_response
-from app.services.incident_service import sync_incidents_from_alerts
+from app.services.incident_service import sync_incidents_from_alerts_if_stale
 from app.services.incident_comments import add_comment, list_comments
 from app.core.rbac import get_current_role, get_current_username, require_permission
 from app.core.audit_log import record_audit
@@ -56,6 +57,38 @@ def _load_incident(db: Session, incident_id: str) -> IncidentModel:
     return inc
 
 
+def _serialize_list(db: Session, rows: List[IncidentModel]) -> List[IncidentResponse]:
+    if not rows:
+        return []
+    ids = [inc.incident_id for inc in rows]
+    links = (
+        db.query(IncidentAlertModel)
+        .filter(IncidentAlertModel.incident_id.in_(ids))
+        .all()
+    )
+    counts = Counter(link.incident_id for link in links)
+    return [
+        IncidentResponse(
+            incident_id=inc.incident_id,
+            title=inc.title,
+            backend_id=inc.backend_id,
+            severity=inc.severity,
+            status=inc.status,
+            summary=inc.summary,
+            first_detected_at=inc.first_detected_at,
+            last_detected_at=inc.last_detected_at,
+            acknowledged_by=inc.acknowledged_by,
+            owner=inc.owner,
+            resolution_notes=inc.resolution_notes,
+            resolved_at=inc.resolved_at,
+            alert_count=counts.get(inc.incident_id, 0),
+            alerts=[],
+            comments=[],
+        )
+        for inc in rows
+    ]
+
+
 def _serialize(db: Session, inc: IncidentModel, include_alerts: bool = False) -> IncidentResponse:
     links = db.query(IncidentAlertModel).filter(IncidentAlertModel.incident_id == inc.incident_id).all()
     alert_ids = [l.alert_id for l in links]
@@ -84,7 +117,7 @@ def _serialize(db: Session, inc: IncidentModel, include_alerts: bool = False) ->
 
 @router.post("/sync")
 def sync_incidents(db: Session = Depends(get_db), _: str = Depends(require_permission("incidents:update"))):
-    count = sync_incidents_from_alerts(db)
+    count = sync_incidents_from_alerts_if_stale(db, force=True)
     return {"status": "SUCCESS", "incidents_updated": count}
 
 
@@ -92,14 +125,15 @@ def sync_incidents(db: Session = Depends(get_db), _: str = Depends(require_permi
 def list_incidents(
     status: Optional[str] = None,
     limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0, le=50_000),
     db: Session = Depends(get_db),
 ):
-    sync_incidents_from_alerts(db)
+    sync_incidents_from_alerts_if_stale(db)
     q = db.query(IncidentModel).order_by(IncidentModel.last_detected_at.desc())
     if status:
         q = q.filter(IncidentModel.status == status.upper())
-    rows = q.limit(limit).all()
-    return [_serialize(db, inc) for inc in rows]
+    rows = q.offset(offset).limit(limit).all()
+    return _serialize_list(db, rows)
 
 
 @router.get("/{incident_id}", response_model=IncidentResponse)

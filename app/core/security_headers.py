@@ -40,4 +40,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
                     "Strict-Transport-Security",
                     "max-age=31536000; includeSubDomains",
                 )
+        # Baseline CSP for API responses (SPA CSP belongs on static host / reverse proxy).
+        if not request.url.path.startswith(("/docs", "/redoc")):
+            response.headers.setdefault(
+                "Content-Security-Policy",
+                "default-src 'none'; frame-ancestors 'none'; base-uri 'none'",
+            )
         return response

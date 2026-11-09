@@ -77,12 +77,16 @@ Per-section PASS counts are corrected in [MASTER_RELEASE_CHECKLIST.md](MASTER_RE
 | Collector execution history | PARTIAL | `app/services/collector_executions.py`, `GET /admin/collector-executions`, Admin Collectors UI, B07 PASS |
 | Ingestion quality snapshots | PARTIAL | `app/services/ingestion_quality.py`, heuristic completeness only |
 | Audit log search (not unified logs) | PARTIAL | `app/core/audit_log.py`, `/app/admin/logs`, E25 |
-| Command palette entity search | PARTIAL | `CommandPalette.jsx` backends/alerts/incidents (≥2 chars); not jobs/collectors/reports |
+| Command palette entity search | PARTIAL | `CommandPalette.jsx` backends/alerts/incidents/jobs/collectors (≥2 chars) |
+| Structured app logs | PARTIAL | `app_structured.jsonl`, Admin Logs application tab |
+| Alert → logs | PARTIAL | `investigationLinks.js`, `AlertDetailPage` Related logs |
+| Dependency map | PARTIAL | `dependency_links` on `GET /operations/platform-health` |
+| Collector SLI (B6 v1) | PARTIAL | `sli_measurements.py`, Platform Health `slis[]` |
 | Metrics Explorer v1 | PARTIAL | `/app/telemetry/explorer`, localStorage saves, Vitest, E26 |
 | Resource catalogue v1 | PARTIAL | `backend_catalog.json`, inventory owner/facility/tags, B5 lab |
 | Platform Health → collectors | PARTIAL | Collectors tile deep link |
 
-**Not shipped (do not claim):** unified app log index, 30d execution query API, alert→log links, server-backed saved metric queries, dependency map, SLO/OTel/synthetics, composite alerts.
+**Not shipped (do not claim):** full stdout log index, Prometheus/OTel export, server-backed saved metric queries, error-budget burn, synthetics, trace waterfall, composite alerts, full 30d DB-backed execution store.
 
 ## 4. Test evidence snapshot
 
@@ -90,7 +94,7 @@ Per-section PASS counts are corrected in [MASTER_RELEASE_CHECKLIST.md](MASTER_RE
 | --- | --- | --- |
 | `pytest` (full) | Referenced T02 | Re-run before release gate; module tests for S4/S5 added |
 | `npm test` (Vitest) | PASS infra | + `metricsExplorerQueries.test.js` |
-| Playwright telescope | NEEDS_VERIFICATION | E25/E26 not in Sprint 3 evidence row |
+| Playwright telescope | PASS (lab gate) | 27 pass, 3 skip, 0 fail — 2026-11-09; E25/E26 in pass set |
 
 ## 5. Superseded documentation
 

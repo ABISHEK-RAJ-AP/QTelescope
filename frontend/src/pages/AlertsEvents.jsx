@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronDown, ChevronRight, ArrowUp, ArrowDown, Search, Check, Eye } from 'lucide-react';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { usePageActions } from '../context/PageActionsContext.jsx';
+import { useAlertsSummary } from '../context/AlertsSummaryContext.jsx';
 import { api, fetchApi } from '../services/api';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
+import { AnimatedNumber } from '../components/ui/AnimatedNumber.jsx';
+import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
 import { TableEmpty } from '../components/observability/EmptyState.jsx';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { DetailDrawer } from '../components/observability/DetailDrawer.jsx';
@@ -26,8 +29,10 @@ import { sevRank, toMs, timelineTo, healthTo, qubitOf } from './opsHelpers.js';
 import { notifyError, notifySuccess } from '../lib/toast.js';
 import { usePermissions } from '../hooks/usePermissions.js';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
+import { getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { parseIncidentTitle, formatDurationMs } from '../lib/incidentUi.js';
 import { ViewModeToggle } from '../components/observability/DataViewToolbar.jsx';
+import { EnterpriseDataTable } from '../components/observability/EnterpriseDataTable.jsx';
 import { OpsMonthCalendar } from '../components/observability/OpsMonthCalendar.jsx';
 import { ListPager } from '../components/observability/ListPager.jsx';
 import { CollapsibleSection } from '../components/observability/CollapsibleSection.jsx';
@@ -87,6 +92,13 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   const perms = usePermissions(currentUser);
   const { backend: scopeBackend, alertId: scopeAlert, setBackend, setAlertId } = useAppScope();
   const { setActions, clearActions } = usePageActions();
+  const {
+    summary: alertSummary,
+    activeCount,
+    criticalCount,
+    refreshSummary,
+    invalidateSummary,
+  } = useAlertsSummary();
   const [alerts, setAlerts] = useState([]);
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -96,6 +108,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   const [sevF, setSevF] = useState('ALL');
   const [statusF, setStatusF] = useState('ACTIVE');
   const [query, setQuery] = useState('');
+  const debouncedQuery = useDebouncedValue(query, 300);
   const [grouped, setGrouped] = useState(true);
   const [sort, setSort] = useState({ key: 'severity', dir: 'asc' });
   const [expanded, setExpanded] = useState(() => new Set());
@@ -122,14 +135,18 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   const [alertCommentBusy, setAlertCommentBusy] = useState(false);
   const [alertDiscOpen, setAlertDiscOpen] = useState(false);
   const [incDiscOpen, setIncDiscOpen] = useState(false);
+  const [hasMoreAlerts, setHasMoreAlerts] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const load = useCallback(async () => {
     try {
       const [a, i] = await Promise.all([
-        fetchApi(`/alerts?limit=${FETCH_LIMIT}`),
+        api.getAlerts(null, null, { limit: FETCH_LIMIT, offset: 0 }),
         api.getIncidents().catch(() => null),
+        refreshSummary({ force: true }).catch(() => null),
       ]);
       setAlerts(a || []);
+      setHasMoreAlerts((a || []).length >= FETCH_LIMIT);
       setIncidents(i || []);
       setError(null);
       setLastRefresh(new Date());
@@ -138,14 +155,29 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [refreshSummary]);
+
+  const loadMoreAlerts = useCallback(async () => {
+    if (loadingMore || !hasMoreAlerts) return;
+    setLoadingMore(true);
+    try {
+      const batch = await api.getAlerts(null, null, { limit: FETCH_LIMIT, offset: alerts.length });
+      const next = batch || [];
+      setAlerts((prev) => [...prev, ...next]);
+      setHasMoreAlerts(next.length >= FETCH_LIMIT);
+    } catch (e) {
+      notifyError(e?.message || 'Could not load older alerts');
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [alerts.length, hasMoreAlerts, loadingMore]);
 
   useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
   useEffect(() => {
     setActions(<RefreshButton onClick={load} lastRefreshAt={lastRefresh} label="Refresh alerts" />);
     return () => clearActions();
   }, [load, lastRefresh, setActions, clearActions]);
-  useEffect(() => { setPage(1); setChildPage({}); }, [sevF, statusF, query, scopeBackend, grouped]);
+  useEffect(() => { setPage(1); setChildPage({}); }, [sevF, statusF, debouncedQuery, scopeBackend, grouped]);
   useEffect(() => {
     if (view !== 'alerts') {
       setDrawerId(null);
@@ -158,7 +190,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   }, [scopeAlert, onOpenAlert, view]);
   useEffect(() => {
     if (error && (alerts.length || incidents.length)) {
-      notifyError(`Last refresh failed: ${error}`, { toastId: 'alerts-load' });
+      notifyError(`Refresh failed: ${error}`, { toastId: 'alerts-load' });
     }
   }, [error, alerts.length, incidents.length]);
 
@@ -177,12 +209,9 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
     return { m, active: active.length, byBackend: Object.values(byBackend).sort((a, b) => b.total - a.total) };
   }, [alerts]);
 
-  const critActive = useMemo(
-    () => alerts.filter((a) => a.status === 'ACTIVE' && a.severity === 'CRITICAL').length,
-    [alerts],
-  );
 
   const trendOption = useMemo(() => {
+    const sem = getChartSemanticColors();
     const hours = 24;
     const now = Date.now();
     const labels = [];
@@ -211,21 +240,21 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
       xAxis: { type: 'category', data: labels, axisLabel: { fontSize: 10, interval: 3 } },
       yAxis: { type: 'value', minInterval: 1, axisLabel: { fontSize: 10 } },
       series: [
-        { name: 'Critical', type: 'bar', stack: 'alerts', data: crit, itemStyle: { color: '#f43f5e' } },
-        { name: 'Warning', type: 'bar', stack: 'alerts', data: warn, itemStyle: { color: '#f59e0b' } },
+        { name: 'Critical', type: 'bar', stack: 'alerts', data: crit, itemStyle: { color: sem.critical } },
+        { name: 'Warning', type: 'bar', stack: 'alerts', data: warn, itemStyle: { color: sem.warn } },
       ],
     };
   }, [alerts]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = debouncedQuery.trim().toLowerCase();
     return alerts.filter((a) => (
       (sevF === 'ALL' || a.severity === sevF)
       && (statusF === 'ALL' || a.status === statusF)
       && (!scopeBackend || a.backend_id === scopeBackend)
       && (!q || [a.alert_id, a.message, a.alert_type, a.backend_id, a.resource_id].some((f) => String(f || '').toLowerCase().includes(q)))
     ));
-  }, [alerts, sevF, statusF, scopeBackend, query]);
+  }, [alerts, sevF, statusF, scopeBackend, debouncedQuery]);
 
   const rows = useMemo(() => {
     const cmp = SORTS[sort.key];
@@ -289,13 +318,26 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   );
 
   // ---- actions ----
-  const run = async (fn, okMsg) => {
+  const patchAlerts = useCallback((items, patch) => {
+    const ids = new Set(items.map((a) => a.alert_id));
+    setAlerts((prev) => prev.map((a) => (ids.has(a.alert_id) ? { ...a, ...patch(a) } : a)));
+  }, []);
+
+  const run = async (fn, okMsg, { optimistic } = {}) => {
     setBusy(true);
+    let rollback = null;
+    if (optimistic) {
+      const snapshot = alerts;
+      rollback = () => setAlerts(snapshot);
+      optimistic.apply();
+    }
     try {
       const res = await fn();
       notifySuccess(typeof okMsg === 'function' ? okMsg(res) : okMsg);
-      await load();
+      invalidateSummary();
+      await Promise.all([load(), refreshSummary({ force: true }).catch(() => null)]);
     } catch (e) {
+      if (rollback) rollback();
       notifyError(e?.message || String(e));
     } finally {
       setBusy(false);
@@ -327,7 +369,13 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
         const failed = res.filter((r) => r.status === 'rejected');
         if (failed.length === res.length) throw new Error(failed[0].reason?.message || 'All requests failed');
         return { ok: res.length - failed.length, failed: failed.length };
-      }, (r) => `${isAck ? 'Acknowledged' : 'Resolved'} ${r.ok} alert(s)${r.failed ? `; ${r.failed} failed` : ''}.`),
+      }, (r) => `${isAck ? 'Acknowledged' : 'Resolved'} ${r.ok} alert(s)${r.failed ? `; ${r.failed} failed` : ''}.`, {
+        optimistic: {
+          apply: () => patchAlerts(items, () => (isAck
+            ? { status: 'ACKNOWLEDGED', acknowledged_by: actorName }
+            : { status: 'RESOLVED', resolved_at: new Date().toISOString() })),
+        },
+      }),
     });
   };
 
@@ -436,27 +484,44 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
       <section className="al-kpi-row" aria-label="Operational summary" data-tour="page-alert-kpis">
         <button type="button" className="al-kpi card" onClick={() => { onViewChange?.('alerts'); setStatusF('ACTIVE'); setSevF('ALL'); }}>
           <span className="al-kpi__label">Active alerts</span>
-          <span className="al-kpi__value">{stats.active}</span>
-          <span className="al-kpi__hint">Across {stats.byBackend.length} backend{stats.byBackend.length === 1 ? '' : 's'}</span>
+          <span className="al-kpi__value"><AnimatedNumber value={activeCount} /></span>
+          <span className="al-kpi__hint">Across {Object.keys(alertSummary?.by_backend || {}).length || stats.byBackend.length} backend{(Object.keys(alertSummary?.by_backend || {}).length || stats.byBackend.length) === 1 ? '' : 's'}</span>
         </button>
         <button type="button" className="al-kpi card" onClick={() => { onViewChange?.('alerts'); setSevF('CRITICAL'); setStatusF('ACTIVE'); }}>
           <span className="al-kpi__label">Critical (active)</span>
-          <span className="al-kpi__value al-kpi__value--crit">{critActive}</span>
+          <span className="al-kpi__value al-kpi__value--crit"><AnimatedNumber value={criticalCount} /></span>
           <span className="al-kpi__hint">Needs immediate triage</span>
         </button>
         <button type="button" className="al-kpi card" onClick={() => onViewChange?.('incidents')}>
           <span className="al-kpi__label">Open incidents</span>
-          <span className="al-kpi__value">{openIncidents.length}</span>
+          <span className="al-kpi__value"><AnimatedNumber value={openIncidents.length} /></span>
           <span className="al-kpi__hint">{openCritInc} critical · {openIncidents.length - openCritInc} other</span>
         </button>
         <button type="button" className="al-kpi card" onClick={() => onViewChange?.('incidents')}>
           <span className="al-kpi__label">Unassigned incidents</span>
-          <span className="al-kpi__value">{unassignedInc}</span>
+          <span className="al-kpi__value"><AnimatedNumber value={unassignedInc} /></span>
           <span className="al-kpi__hint">No owner yet</span>
         </button>
       </section>
 
-      {alerts.length >= FETCH_LIMIT && <p className="al-banner al-banner--warn" role="note">Showing the newest {FETCH_LIMIT} alerts; older records are not loaded in this view.</p>}
+      {(hasMoreAlerts || alerts.length >= FETCH_LIMIT) && (
+        <div className="al-banner al-banner--warn al-banner--split" role="note">
+          <span>
+            Loaded {alerts.length} alert{alerts.length === 1 ? '' : 's'} (newest first).
+            {hasMoreAlerts ? ' Older records are available.' : ''}
+          </span>
+          {hasMoreAlerts ? (
+            <button
+              type="button"
+              className="btn btn-secondary btn--xs al-banner__action"
+              disabled={loadingMore}
+              onClick={loadMoreAlerts}
+            >
+              {loadingMore ? 'Loading…' : `Load ${FETCH_LIMIT} more`}
+            </button>
+          ) : null}
+        </div>
+      )}
 
       {view === 'incidents' ? (
         <section className="al-inc-grid-wrap" aria-label="Incidents" data-tour="page-incidents">
@@ -478,41 +543,65 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
               />
             </div>
           ) : incLayout === 'table' ? (
-            <div className="card al-card">
-              <div className="table-container">
-                <table className="custom-table al-table">
-                  <thead>
-                    <tr><th>Backend</th><th>Rule</th><th>Severity</th><th>Status</th><th>Alerts</th><th>Owner</th><th>Detected</th><th>Actions</th></tr>
-                  </thead>
-                  <tbody>
-                    {incRows.map((inc) => {
-                      const { backendLabel, rule } = parseIncidentTitle(inc.title);
-                      const activeNow = alerts.filter(
-                        (a) => a.backend_id === inc.backend_id && String(inc.title).endsWith(a.alert_type) && a.status === 'ACTIVE',
-                      ).length;
-                      return (
-                        <tr
-                          key={inc.incident_id}
-                          className="al-row-clickable"
-                          tabIndex={0}
-                          role="button"
-                          onClick={() => openIncident(inc.incident_id)}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openIncident(inc.incident_id); } }}
-                        >
-                          <td><span className="al-inc-card__title" style={{ fontSize: 13 }}>{backendLabel || inc.backend_id}</span></td>
-                          <td>{rule || inc.backend_id}</td>
-                          <td><SevBadge severity={inc.severity} /></td>
-                          <td><StatusBadge status={inc.status} /></td>
-                          <td>{inc.alert_count} <span className="al-sub">({activeNow} active)</span></td>
-                          <td>{inc.owner || inc.acknowledged_by || 'Unassigned'}</td>
-                          <td className="al-nowrap">{formatIST(inc.first_detected_at, false)}</td>
-                          <td><div className="dvt-actions al-actions" onClick={stopRow} onKeyDown={stopRow}>{incActions(inc)}<button type="button" className="btn btn-secondary btn--xs" onClick={() => openIncident(inc.incident_id)}>Open workspace</button></div></td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+            <div className="card al-card al-pad" style={{ paddingTop: 0 }}>
+              <EnterpriseDataTable
+                rows={incidents.map((inc) => {
+                  const { backendLabel, rule } = parseIncidentTitle(inc.title);
+                  const activeNow = alerts.filter(
+                    (a) => a.backend_id === inc.backend_id && String(inc.title).endsWith(a.alert_type) && a.status === 'ACTIVE',
+                  ).length;
+                  return {
+                    id: inc.incident_id,
+                    backend: backendLabel || inc.backend_id,
+                    rule: rule || inc.backend_id,
+                    severity_rank: sevRank(inc.severity),
+                    severity: inc.severity,
+                    status: inc.status,
+                    alerts_label: `${inc.alert_count} (${activeNow} active)`,
+                    alert_count: inc.alert_count,
+                    owner: inc.owner || inc.acknowledged_by || 'Unassigned',
+                    detected_sort: toMs(inc.first_detected_at) ?? 0,
+                    detected: formatIST(inc.first_detected_at, false),
+                    _inc: inc,
+                  };
+                })}
+                columns={[
+                  { key: 'backend', label: 'Backend' },
+                  { key: 'rule', label: 'Rule' },
+                  {
+                    key: 'severity_rank',
+                    label: 'Severity',
+                    defaultSortDir: 'asc',
+                    render: (row) => <SevBadge severity={row.severity} />,
+                  },
+                  {
+                    key: 'status',
+                    label: 'Status',
+                    render: (row) => <StatusBadge status={row.status} />,
+                  },
+                  { key: 'alerts_label', label: 'Alerts' },
+                  { key: 'owner', label: 'Owner' },
+                  { key: 'detected_sort', label: 'Detected', defaultSortDir: 'desc', render: (row) => row.detected },
+                  {
+                    key: 'id',
+                    label: 'Actions',
+                    sortable: false,
+                    render: (row) => (
+                      <div className="dvt-actions al-actions" onClick={stopRow} onKeyDown={stopRow}>
+                        {incActions(row._inc)}
+                        <button type="button" className="btn btn-secondary btn--xs" onClick={() => openIncident(row.id)}>Open workspace</button>
+                      </div>
+                    ),
+                  },
+                ]}
+                searchKeys={['backend', 'rule', 'owner', 'status', 'id']}
+                searchPlaceholder="Search incidents…"
+                pageSize={15}
+                initialSort={{ key: 'detected_sort', dir: 'desc' }}
+                ariaLabel="Incidents"
+                onRowClick={(row) => openIncident(row.id)}
+                tableClassName="custom-table al-table"
+              />
             </div>
           ) : (
             <div className="al-inc-grid">
@@ -558,7 +647,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
               })}
             </div>
           )}
-          <ListPager page={incCur} pages={incPages} onPage={setIncPage} />
+          {incLayout === 'grid' && <ListPager page={incCur} pages={incPages} onPage={setIncPage} />}
         </section>
       ) : (
         <>
@@ -712,6 +801,72 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                   );
                 })}
               </div>
+            ) : !grouped ? (
+              <EnterpriseDataTable
+                rows={rows.map((g) => {
+                  const a = g.items[0];
+                  return {
+                    id: a.alert_id,
+                    alert_id: a.alert_id,
+                    severity_rank: sevRank(g.worst),
+                    severity: g.worst,
+                    type: g.type,
+                    backend: g.backend,
+                    status: a.status,
+                    observed: `${num(a.current_value)} µs vs ${num(g.threshold)}`,
+                    latest_sort: g.latest,
+                    latest: formatIST(g.latestIso, false),
+                    qubit: qubitOf(a) || '',
+                    _alert: a,
+                  };
+                })}
+                columns={[
+                  {
+                    key: 'severity_rank',
+                    label: 'Severity',
+                    defaultSortDir: 'asc',
+                    render: (row) => <SevBadge severity={row.severity} />,
+                  },
+                  {
+                    key: 'type',
+                    label: 'Rule',
+                    render: (row) => (
+                      <>
+                        <b>{row.type}</b>
+                        {row.qubit ? <div className="al-sub">{row.qubit}</div> : null}
+                      </>
+                    ),
+                  },
+                  { key: 'backend', label: 'Backend' },
+                  {
+                    key: 'status',
+                    label: 'Status',
+                    render: (row) => <StatusBadge status={row.status} />,
+                  },
+                  { key: 'observed', label: 'Observed vs threshold', className: 'al-nowrap' },
+                  { key: 'latest_sort', label: 'Latest detected (IST)', defaultSortDir: 'desc', render: (row) => row.latest },
+                  {
+                    key: 'alert_id',
+                    label: 'Actions',
+                    sortable: false,
+                    render: (row) => (
+                      <div className="dvt-actions al-actions" onClick={stopRow} onKeyDown={stopRow}>
+                        <button type="button" className="btn btn-secondary btn--xs" onClick={() => openAlert(row.alert_id)}>Open workspace</button>
+                        {rowActions(row._alert)}
+                      </div>
+                    ),
+                  },
+                ]}
+                searchKeys={['alert_id', 'type', 'backend', 'status', 'qubit']}
+                searchPlaceholder="Search alerts…"
+                pageSize={15}
+                initialSort={{ key: 'severity_rank', dir: 'asc' }}
+                ariaLabel="Alerts"
+                onRowClick={(row) => openAlert(row.alert_id)}
+                tableClassName="custom-table al-table"
+                emptyTitle={alerts.length === 0 ? 'No alerts recorded' : 'No alerts match filters'}
+                emptyMessage={alerts.length === 0 ? 'No alerts in the store.' : `Filters exclude all ${alerts.length} stored alerts.`}
+              />
             ) : (
             <div className="table-container">
               <table className="custom-table al-table">
@@ -829,7 +984,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
               </table>
             </div>
             )}
-            <ListPager page={curPage} pages={pages} onPage={setPage} />
+            {grouped && <ListPager page={curPage} pages={pages} onPage={setPage} />}
           </section>
         </>
       )}

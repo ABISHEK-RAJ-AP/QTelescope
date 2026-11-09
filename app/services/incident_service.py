@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime
+import time
 import uuid
 from collections import defaultdict
 from typing import Dict, List, Optional
@@ -11,6 +12,9 @@ from sqlalchemy.orm import Session
 from app.models.entities import AlertModel, BackendModel, IncidentAlertModel, IncidentModel
 
 SEVERITY_RANK = {"INFO": 0, "WARNING": 1, "CRITICAL": 2}
+
+_LAST_SYNC_MONO = 0.0
+SYNC_THROTTLE_SEC = 45
 
 
 def _utcnow() -> datetime.datetime:
@@ -35,6 +39,17 @@ def _max_severity(alerts: List[AlertModel]) -> str:
 def _incident_title(backend_id: str, alerts: List[AlertModel]) -> str:
     types = sorted({a.alert_type for a in alerts})
     return f"{backend_id} — {', '.join(types[:3])}" + ("…" if len(types) > 3 else "")
+
+
+def sync_incidents_from_alerts_if_stale(db: Session, *, force: bool = False) -> int:
+    """Throttle expensive sync on hot read paths (dashboard, list). POST /sync uses force=True."""
+    global _LAST_SYNC_MONO
+    now = time.monotonic()
+    if not force and (now - _LAST_SYNC_MONO) < SYNC_THROTTLE_SEC:
+        return 0
+    n = sync_incidents_from_alerts(db)
+    _LAST_SYNC_MONO = now
+    return n
 
 
 def sync_incidents_from_alerts(db: Session) -> int:
@@ -92,17 +107,16 @@ def sync_incidents_from_alerts(db: Session) -> int:
             inc.title = _incident_title(backend_id, alerts)
             inc.summary = f"{len(alerts)} related alert(s) on {backend_id}"
 
+        linked = {
+            row[0]
+            for row in db.query(IncidentAlertModel.alert_id)
+            .filter(IncidentAlertModel.incident_id == inc.incident_id)
+            .all()
+        }
         for a in alerts:
-            exists = (
-                db.query(IncidentAlertModel)
-                .filter(
-                    IncidentAlertModel.incident_id == inc.incident_id,
-                    IncidentAlertModel.alert_id == a.alert_id,
-                )
-                .first()
-            )
-            if not exists:
+            if a.alert_id not in linked:
                 db.add(IncidentAlertModel(incident_id=inc.incident_id, alert_id=a.alert_id))
+                linked.add(a.alert_id)
         touched += 1
 
     try:

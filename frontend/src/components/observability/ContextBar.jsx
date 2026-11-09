@@ -44,7 +44,7 @@ export function ContextBar({
             onChange={(e) => onBackendChange?.(e.target.value)}
             aria-label="Backend scope"
           >
-            {!backend && <option value="">All backends</option>}
+            <option value="">All backends</option>
             {backends.map((b) => (
               <option key={b.backend_id} value={b.backend_id}>
                 {b.backend_name || b.backend_id}

@@ -5,8 +5,8 @@ from app.core.config import settings
 from app.main import app
 
 P = settings.API_V1_STR
-ADMIN = {"X-User-Role": "Admin", "X-User-Name": "admin"}
-OPS = {"X-User-Role": "Operator", "X-User-Name": "op"}
+ADMIN = {"X-User-Role": "Admin", "X-User-Name": "admin", "X-QRE-Dev-Ack": "1"}
+OPS = {"X-User-Role": "Operator", "X-User-Name": "op", "X-QRE-Dev-Ack": "1"}
 
 
 def test_observability_admin_routes_require_admin(monkeypatch):

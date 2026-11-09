@@ -10,6 +10,7 @@ import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { STATES, ageMinutes, formatAge, isStale, lineageOf, modalityName, providerName, useProviderLineage, STALE_MIN, KNOWN_PROVIDER_IDS } from './backendUtils.js';
 import { LineageTag, StateBar, StatusText } from './backendCommon.jsx';
 import { AddBackendWizard } from './AddBackendWizard.jsx';
+import { unableToLoad } from '../constants/messages.js';
 import './BackendInventory.css';
 import './fleetShared.css';
 
@@ -144,7 +145,7 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
     });
   }, [displayRows, f, search, sort]);
 
-  if (fatal) return <ErrorState variant="panel" message="Backend registry failed to load." onRetry={load} />;
+  if (fatal) return <ErrorState variant="panel" message={unableToLoad('the backend registry')} onRetry={load} />;
   if (!data) return <BoneyardSkeleton layout="table" />;
 
   const fleetCounts = STATES.reduce((acc, s) => ({ ...acc, [s]: displayRows.reduce((n, r) => n + (r.counts?.[s] || 0), 0) }), {});

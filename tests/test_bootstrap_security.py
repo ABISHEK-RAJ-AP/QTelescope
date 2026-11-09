@@ -44,6 +44,30 @@ def test_config_status_bootstrap_flags(monkeypatch):
     assert body["bootstrap"]["show_dev_login_presets"] is False
 
 
+def test_superadmin_bootstrap_login(monkeypatch):
+    monkeypatch.setenv("BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS", "false")
+    client = _client(monkeypatch)
+    resp = client.post(
+        "/api/v1/auth/login",
+        json={
+            "username": settings.SUPERADMIN_USERNAME,
+            "password": settings.SUPERADMIN_PASSWORD,
+            "captcha_id": "x",
+            "captcha_code": "y",
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body.get("status") == "SUCCESS"
+    assert body.get("user", {}).get("role") == "SuperAdmin"
+
+
+def test_config_status_reserved_includes_superadmin(monkeypatch):
+    client = _client(monkeypatch)
+    reserved = client.get("/api/v1/auth/config-status").json()["bootstrap"]["reserved_usernames"]
+    assert settings.SUPERADMIN_USERNAME in reserved
+
+
 def test_login_without_captcha_is_400(monkeypatch):
     monkeypatch.setenv("BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS", "false")
     from fastapi import FastAPI

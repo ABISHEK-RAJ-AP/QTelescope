@@ -7,12 +7,12 @@
 
 | Outcome | Count |
 | --- | --- |
-| Passed | **22** (last full serial gate, Sprint 3 — see below) |
-| Skipped | **6** (data-conditional + E21/E22 env) |
-| Failed | **0** (`PW_WORKERS=1`) |
+| Passed | **28** (2026-11-09 full gate `scripts/run-e2e-telescope.sh`, 3.9m) |
+| Skipped | **2** (E21 second session, E23 deep-route refresh) |
+| Failed | **0** |
 
 **Catalogue size:** **30** tests across `telescope-*.spec.ts` (E01–E26; E22 duplicated in 3 files).  
-**After gate:** E25 (audit log), E26 (metrics explorer) added — **re-run required** before claiming Pass count.
+**Gate:** `≥22 passed`, `≤6 skipped`, `0 failed` — **met** (E25, E26 included in pass set).
 
 Command:
 
@@ -34,5 +34,6 @@ cd tests/e2e && E2E_PLAYWRIGHT=1 E2E_CAPTCHA_BYPASS=1 PLAYWRIGHT_CHROMIUM_EXECUT
 ## Skips (expected in lab)
 
 - E22 when `REQUIRE_API_AUTH=false`.
-- E21 when second session / revoke API preconditions missing.
+- **E21** (multi-session): needs `PERSIST_API_SESSIONS=1` (or stack default that keeps ≥2 active sessions) plus revoke/list API reachable from test user.
+- **E23** (deep-route refresh): needs at least one backend with calibration snapshot so `data-tour="page-backend-calibration"` hydrates after hard refresh on `/backends/:id`.
 - Journeys that call `test.skip` when data empty (export, evidence generate).

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { api } from '../services/api';
+import { unableToLoad } from '../constants/messages.js';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { useTheme } from '../components/ui/ThemeProvider';
@@ -10,7 +11,7 @@ import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { InsightModal } from '../components/observability/InsightModal.jsx';
 import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
-import { getChartTheme, baseTooltip, itemTooltip, formatQubitHealthTooltip } from '../components/observability/chartTheme.js';
+import { getChartTheme, baseTooltip, itemTooltip, formatQubitHealthTooltip, getFleetStateChartColors } from '../components/observability/chartTheme.js';
 import { ConfirmDialog } from '../components/observability/ConfirmDialog.jsx';
 import { buildBackendDetailsPath, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
 import { useAppScope } from '../hooks/useAppScope.js';
@@ -18,7 +19,7 @@ import { usePageActions } from '../context/PageActionsContext.jsx';
 import './ResourceHealth.css';
 
 const STATES = ['GREEN', 'YELLOW', 'RED', 'UNKNOWN'];
-const STATE_COLOR = { GREEN: '#34d399', YELLOW: '#fbbf24', RED: '#fb7185', UNKNOWN: '#64748b' };
+const stateColor = (state) => getFleetStateChartColors()[state] || getFleetStateChartColors().UNKNOWN;
 const STATE_MEANING = {
   GREEN: 'Allow routing',
   YELLOW: 'Recalibrate recommended',
@@ -185,7 +186,7 @@ export const ResourceHealth = () => {
     setLoadError(null);
     api.getHealthVector()
       .then((r) => { setPayload(r); setLastRefresh(new Date()); })
-      .catch(() => setLoadError('Health vector failed to load.'));
+      .catch(() => setLoadError(unableToLoad('the health vector')));
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -250,7 +251,7 @@ export const ResourceHealth = () => {
       )),
       xAxis: { type: 'log', name: 'T1 (µs)', nameLocation: 'middle', nameGap: 26, nameTextStyle: { color: th.textColor }, axisLabel: { color: th.textColor }, splitLine: { lineStyle: { color: th.splitColor } } },
       yAxis: { type: 'value', name: 'Readout error', nameTextStyle: { color: th.textColor }, axisLabel: { color: th.textColor }, splitLine: { lineStyle: { color: th.splitColor } } },
-      series: ['GREEN', 'YELLOW', 'RED'].map((s) => ({ name: s, type: 'scatter', symbolSize: 9, itemStyle: { color: STATE_COLOR[s], opacity: 0.85 }, data: pts(s) })),
+      series: ['GREEN', 'YELLOW', 'RED'].map((s) => ({ name: s, type: 'scatter', symbolSize: 9, itemStyle: { color: stateColor(s), opacity: 0.85 }, data: pts(s) })),
     };
   }, [qubits, resolved]);
 
@@ -417,7 +418,7 @@ export const ResourceHealth = () => {
                     <span>{mode.higherIsBetter ? 'worse' : 'better'}</span><span className="hv-ramp" /><span>{mode.higherIsBetter ? 'better' : 'worse'}</span>
                     <span>◆ red · ● yellow marker = router state · hatched = no value</span>
                   </>
-                ) : STATES.map((s) => <span key={s}><i style={{ background: STATE_COLOR[s] }} />{s} · {STATE_MEANING[s]}</span>)}
+                ) : STATES.map((s) => <span key={s}><i style={{ background: stateColor(s) }} />{s} · {STATE_MEANING[s]}</span>)}
               </div>
               {hugeEta && <p className="hv-note">η_cal is huge on this backend (T1 ≫ gate time, typical of trapped ions). The coherence-limit ratio is not meaningful there, so every qubit scores YELLOW. Treat the state as a model artifact until a modality-aware rule exists.</p>}
               {active.confidence !== 'high' && <p className="hv-note">Scoring confidence is "{active.confidence}": some inputs are missing{qubits.some((q) => q.missing_components?.length) ? ` (${[...new Set(qubits.flatMap((q) => q.missing_components || []))].join(', ')})` : ''}.</p>}

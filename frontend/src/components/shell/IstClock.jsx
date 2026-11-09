@@ -1,13 +1,37 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Clock } from 'lucide-react';
-import { formatIST } from '../../utils/time';
+import { IST_TIMEZONE, LOCALE } from '../../utils/time';
 
-/** Isolated 1s clock — updates only this subtree, not the full app shell. */
+const timeOnlyFmt = new Intl.DateTimeFormat(LOCALE, {
+  timeZone: IST_TIMEZONE,
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: true,
+});
+
+const dateFmt = new Intl.DateTimeFormat(LOCALE, {
+  timeZone: IST_TIMEZONE,
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+});
+
+/** Isolated clock — cheap formatters; pauses when tab hidden. */
 export function IstClock() {
-  const [istTime, setIstTime] = useState(() => formatIST(new Date()));
+  const [now, setNow] = useState(() => new Date());
+
+  const label = useMemo(
+    () => `${dateFmt.format(now)}, ${timeOnlyFmt.format(now)} IST`,
+    [now],
+  );
 
   useEffect(() => {
-    const timer = setInterval(() => setIstTime(formatIST(new Date())), 1000);
+    const tick = () => setNow(new Date());
+    tick();
+    const timer = setInterval(() => {
+      if (!document.hidden) tick();
+    }, 1000);
     return () => clearInterval(timer);
   }, []);
 
@@ -15,7 +39,7 @@ export function IstClock() {
     <div className="ist-clock">
       <span className="pulse-dot" />
       <Clock size={14} />
-      <span>{istTime}</span>
+      <span>{label}</span>
     </div>
   );
 }

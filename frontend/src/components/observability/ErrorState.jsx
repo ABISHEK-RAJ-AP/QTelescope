@@ -1,8 +1,9 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
+import { ERROR_DEFAULTS, ERROR_RETRY_LABEL } from '../../constants/messages.js';
 
 export function ErrorState({
-  title = 'Could not load data',
+  title = ERROR_DEFAULTS.title,
   message,
   requestId,
   diagnosticsHint,
@@ -35,7 +36,7 @@ export function ErrorState({
         <div className="obs-error__actions">
           {onRetry && (
             <button type="button" className="btn btn-secondary" onClick={onRetry}>
-              Retry
+              {ERROR_RETRY_LABEL}
             </button>
           )}
           {onDiagnostics && (

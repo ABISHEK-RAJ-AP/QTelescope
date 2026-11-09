@@ -11,7 +11,10 @@ import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { ExceptionStrip } from '../components/observability/ExceptionStrip.jsx';
-import { getChartTheme, baseTooltip } from '../components/observability/chartTheme.js';
+import { AnimatedNumber } from '../components/ui/AnimatedNumber.jsx';
+import {
+  getChartTheme, baseTooltip, getChartSemanticColors, getFleetStateChartColors,
+} from '../components/observability/chartTheme.js';
 import { buildBackendDetailsLocation } from '../lib/investigationLinks.js';
 import { WIDGET_IDS, readDashboardWidgets } from '../utils/dashboardPreferences.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
@@ -21,6 +24,7 @@ import { usePageLayout } from '../hooks/usePageLayout.js';
 import { buildBackendDetailsPath, buildTimelineInvestigationLocation } from '../lib/investigationLinks.js';
 import { STALE_MIN, ageMinutes, groupTimeline, lineageByProvider, sevBadge } from './fleetData.js';
 import { StateBar } from './fleetShared.jsx';
+import { unableToLoad } from '../constants/messages.js';
 import './DashboardHome.css';
 
 const HEALTH_PATH = '/app/resources/health';
@@ -151,7 +155,7 @@ function DashboardHomeInner() {
           onToggle={() => setCustomizing((v) => !v)}
           onReset={resetLayout}
           onSmartLayout={applySmart}
-          smartLayoutHint={layoutSuggestions[0]?.reason}
+          smartLayoutHint={layoutSuggestions[0]?.reason ? `Suggested layout: ${layoutSuggestions[0].reason}` : undefined}
           label="Customize"
         />
         <RefreshButton onClick={() => loadData({ silent: true })} lastRefreshAt={lastRefresh} label="Refresh dashboard" />
@@ -203,6 +207,7 @@ function DashboardHomeInner() {
   );
   const t1Crit = d.health?.t1_crit_us;
   const cohOption = useMemo(() => {
+    const sem = getChartSemanticColors();
     const names = cohRows.map((c) => `${shortName(c.backend_name)} (${c.qpu_modality})`);
     const opt = {
       backgroundColor: 'transparent',
@@ -223,17 +228,17 @@ function DashboardHomeInner() {
       },
       series: [
         {
-          name: 'T1 mean', type: 'bar', barMaxWidth: 14, itemStyle: { color: '#0284c7', borderRadius: [0, 3, 3, 0] },
+          name: 'T1 mean', type: 'bar', barMaxWidth: 14, itemStyle: { color: sem.accent, borderRadius: [0, 3, 3, 0] },
           data: cohRows.map((c) => c.t1_mean),
           markLine: t1Crit ? {
-            symbol: 'none', lineStyle: { color: '#e11d48', type: 'dashed' },
+            symbol: 'none', lineStyle: { color: sem.critical, type: 'dashed' },
             label: { formatter: `T1 floor ${t1Crit} µs`, color: theme.textColor, fontSize: 10 },
             data: [{ xAxis: t1Crit }],
           } : undefined,
         },
         {
           name: 'Worst qubit T1', type: 'scatter', symbol: 'diamond', symbolSize: 10,
-          itemStyle: { color: '#e11d48' }, data: cohRows.map((c) => c.t1_min),
+          itemStyle: { color: sem.critical }, data: cohRows.map((c) => c.t1_min),
         },
       ],
     };
@@ -244,32 +249,38 @@ function DashboardHomeInner() {
     () => (d.queues || []).slice().sort((a, b) => (Number(b.pending_jobs) || 0) - (Number(a.pending_jobs) || 0)),
     [d.queues],
   );
-  const queueOption = useMemo(() => ({
-    backgroundColor: 'transparent',
-    tooltip: baseTooltip(resolved === 'dark'),
-    xAxis: { type: 'category', data: queueRows.map((q) => shortName(rows.find((r) => r.backend_id === q.backend_id)?.backend_name || q.backend_id)), axisLabel: { color: theme.textColor, rotate: 24, fontSize: 10 }, axisLine: { lineStyle: { color: theme.axisLine } } },
-    yAxis: { type: 'value', name: 'pending', nameTextStyle: { color: theme.textColor }, axisLabel: { color: theme.textColor }, splitLine: { lineStyle: { color: theme.splitColor } } },
-    series: [{ type: 'bar', barMaxWidth: 28, data: queueRows.map((q) => q.pending_jobs ?? null), itemStyle: { color: '#0284c7', borderRadius: [4, 4, 0, 0] } }],
-  }), [queueRows, rows, theme, resolved]);
+  const queueOption = useMemo(() => {
+    const sem = getChartSemanticColors();
+    return {
+      backgroundColor: 'transparent',
+      tooltip: baseTooltip(resolved === 'dark'),
+      xAxis: { type: 'category', data: queueRows.map((q) => shortName(rows.find((r) => r.backend_id === q.backend_id)?.backend_name || q.backend_id)), axisLabel: { color: theme.textColor, rotate: 24, fontSize: 10 }, axisLine: { lineStyle: { color: theme.axisLine } } },
+      yAxis: { type: 'value', name: 'pending', nameTextStyle: { color: theme.textColor }, axisLabel: { color: theme.textColor }, splitLine: { lineStyle: { color: theme.splitColor } } },
+      series: [{ type: 'bar', barMaxWidth: 28, data: queueRows.map((q) => q.pending_jobs ?? null), itemStyle: { color: sem.accent, borderRadius: [4, 4, 0, 0] } }],
+    };
+  }, [queueRows, rows, theme, resolved]);
 
   const calRows = useMemo(
     () => (d.calibrations || []).slice().filter((c) => c.calibration_age != null).sort((a, b) => Number(b.calibration_age) - Number(a.calibration_age)),
     [d.calibrations],
   );
-  const calOption = useMemo(() => ({
-    backgroundColor: 'transparent',
-    tooltip: baseTooltip(resolved === 'dark'),
-    xAxis: { type: 'category', data: calRows.map((c) => shortName(c.backend_name || c.backend_id)), axisLabel: { color: theme.textColor, rotate: 24, fontSize: 10 }, axisLine: { lineStyle: { color: theme.axisLine } } },
-    yAxis: { type: 'value', name: 'hours', nameTextStyle: { color: theme.textColor }, axisLabel: { color: theme.textColor }, splitLine: { lineStyle: { color: theme.splitColor } } },
-    series: [{ type: 'bar', barMaxWidth: 28, data: calRows.map((c) => Number(c.calibration_age)), itemStyle: { color: '#7c3aed', borderRadius: [4, 4, 0, 0] } }],
-  }), [calRows, theme, resolved]);
+  const calOption = useMemo(() => {
+    const sem = getChartSemanticColors();
+    return {
+      backgroundColor: 'transparent',
+      tooltip: baseTooltip(resolved === 'dark'),
+      xAxis: { type: 'category', data: calRows.map((c) => shortName(c.backend_name || c.backend_id)), axisLabel: { color: theme.textColor, rotate: 24, fontSize: 10 }, axisLine: { lineStyle: { color: theme.axisLine } } },
+      yAxis: { type: 'value', name: 'hours', nameTextStyle: { color: theme.textColor }, axisLabel: { color: theme.textColor }, splitLine: { lineStyle: { color: theme.splitColor } } },
+      series: [{ type: 'bar', barMaxWidth: 28, data: calRows.map((c) => Number(c.calibration_age)), itemStyle: { color: sem.info, borderRadius: [4, 4, 0, 0] } }],
+    };
+  }, [calRows, theme, resolved]);
 
   const fleetStateTotals = useMemo(() => {
     const t = { GREEN: 0, YELLOW: 0, RED: 0, UNKNOWN: 0 };
     rows.forEach((r) => STATES.forEach((s) => { t[s] += r.counts?.[s] || 0; }));
     return t;
   }, [rows]);
-  const STATE_COLORS = { GREEN: '#34d399', YELLOW: '#fbbf24', RED: '#fb7185', UNKNOWN: '#64748b' };
+  const STATE_COLORS = getFleetStateChartColors();
   const qubitTotal = fleetStateTotals.GREEN + fleetStateTotals.YELLOW + fleetStateTotals.RED + fleetStateTotals.UNKNOWN;
   const greenPct = qubitTotal ? Math.round((100 * fleetStateTotals.GREEN) / qubitTotal) : null;
   const totalPending = useMemo(
@@ -285,21 +296,6 @@ function DashboardHomeInner() {
     }).length,
     [d.calibrations],
   );
-  const qubitMixOption = useMemo(() => ({
-    backgroundColor: 'transparent',
-    tooltip: { ...baseTooltip(resolved === 'dark'), trigger: 'item' },
-    series: [{
-      type: 'pie',
-      radius: ['48%', '72%'],
-      center: ['50%', '52%'],
-      avoidLabelOverlap: true,
-      label: { color: theme.textColor, fontSize: 10, formatter: '{b}\n{c}' },
-      data: STATES.map((s) => ({
-        name: s, value: fleetStateTotals[s] || 0, itemStyle: { color: STATE_COLORS[s] },
-      })).filter((d) => d.value > 0),
-    }],
-  }), [fleetStateTotals, theme, resolved]);
-
   /** Actionable: where alert load concentrates (replaces weak state-mix pie). */
   const alertPressureRows = useMemo(
     () => rows
@@ -309,38 +305,41 @@ function DashboardHomeInner() {
       .slice(0, 8),
     [rows],
   );
-  const alertPressureOption = useMemo(() => ({
-    backgroundColor: 'transparent',
-    tooltip: baseTooltip(resolved === 'dark'),
-    legend: { top: 0, textStyle: { color: theme.textColor, fontSize: 11 } },
-    grid: { top: 28, left: 8, right: 16, bottom: 8, containLabel: true },
-    yAxis: {
-      type: 'category',
-      data: alertPressureRows.map((r) => r.name).reverse(),
-      axisLabel: { color: theme.textColor, fontSize: 11 },
-      axisLine: { show: false },
-      axisTick: { show: false },
-    },
-    xAxis: {
-      type: 'value',
-      name: 'active',
-      nameTextStyle: { color: theme.textColor, fontSize: 10 },
-      axisLabel: { color: theme.textColor },
-      splitLine: { lineStyle: { color: theme.splitColor, type: 'dashed' } },
-    },
-    series: [
-      {
-        name: 'Critical', type: 'bar', stack: 'a', barMaxWidth: 16,
-        data: alertPressureRows.map((r) => r.crit).reverse(),
-        itemStyle: { color: '#e11d48', borderRadius: [0, 0, 0, 0] },
+  const alertPressureOption = useMemo(() => {
+    const sem = getChartSemanticColors();
+    return {
+      backgroundColor: 'transparent',
+      tooltip: baseTooltip(resolved === 'dark'),
+      legend: { top: 0, textStyle: { color: theme.textColor, fontSize: 11 } },
+      grid: { top: 28, left: 8, right: 16, bottom: 8, containLabel: true },
+      yAxis: {
+        type: 'category',
+        data: alertPressureRows.map((r) => r.name).reverse(),
+        axisLabel: { color: theme.textColor, fontSize: 11 },
+        axisLine: { show: false },
+        axisTick: { show: false },
       },
-      {
-        name: 'Warning', type: 'bar', stack: 'a', barMaxWidth: 16,
-        data: alertPressureRows.map((r) => r.warn).reverse(),
-        itemStyle: { color: '#d97706', borderRadius: [0, 3, 3, 0] },
+      xAxis: {
+        type: 'value',
+        name: 'active',
+        nameTextStyle: { color: theme.textColor, fontSize: 10 },
+        axisLabel: { color: theme.textColor },
+        splitLine: { lineStyle: { color: theme.splitColor, type: 'dashed' } },
       },
-    ],
-  }), [alertPressureRows, theme, resolved]);
+      series: [
+        {
+          name: 'Critical', type: 'bar', stack: 'a', barMaxWidth: 16,
+          data: alertPressureRows.map((r) => r.crit).reverse(),
+          itemStyle: { color: sem.critical, borderRadius: [0, 0, 0, 0] },
+        },
+        {
+          name: 'Warning', type: 'bar', stack: 'a', barMaxWidth: 16,
+          data: alertPressureRows.map((r) => r.warn).reverse(),
+          itemStyle: { color: sem.warn, borderRadius: [0, 3, 3, 0] },
+        },
+      ],
+    };
+  }, [alertPressureRows, theme, resolved]);
 
   const workloadScatter = useMemo(() => rows.map((r) => {
     const qs = r.qubits || [];
@@ -349,20 +348,23 @@ function DashboardHomeInner() {
     return { id: r.backend_id, name: r.backend_name, modality: r.qpu_modality, pending: r.pending, meanT1 };
   }).filter((r) => r.meanT1 != null && r.pending != null), [rows]);
 
-  const workloadOption = useMemo(() => ({
-    backgroundColor: 'transparent',
-    tooltip: {
-      ...baseTooltip(resolved === 'dark'), trigger: 'item',
-      formatter: (p) => `${p.data.name}<br/>pending ${p.data.pending}<br/>mean T1 ${fmtUs(p.data.meanT1)}<br/>${p.data.modality || ''}`,
-    },
-    xAxis: { type: 'log', name: 'mean T1 µs', nameTextStyle: { color: theme.textColor }, axisLabel: { color: theme.textColor }, splitLine: { lineStyle: { color: theme.splitColor } } },
-    yAxis: { type: 'value', name: 'pending jobs', nameTextStyle: { color: theme.textColor }, axisLabel: { color: theme.textColor }, splitLine: { lineStyle: { color: theme.splitColor } } },
-    series: [{
-      type: 'scatter', symbolSize: 14,
-      data: workloadScatter.map((r) => ({ value: [r.meanT1, r.pending], name: shortName(r.name || r.id), id: r.id, pending: r.pending, meanT1: r.meanT1, modality: r.modality })),
-      itemStyle: { color: '#059669', opacity: 0.85 },
-    }],
-  }), [workloadScatter, theme, resolved]);
+  const workloadOption = useMemo(() => {
+    const sem = getChartSemanticColors();
+    return {
+      backgroundColor: 'transparent',
+      tooltip: {
+        ...baseTooltip(resolved === 'dark'), trigger: 'item',
+        formatter: (p) => `${p.data.name}<br/>pending ${p.data.pending}<br/>mean T1 ${fmtUs(p.data.meanT1)}<br/>${p.data.modality || ''}`,
+      },
+      xAxis: { type: 'log', name: 'mean T1 µs', nameTextStyle: { color: theme.textColor }, axisLabel: { color: theme.textColor }, splitLine: { lineStyle: { color: theme.splitColor } } },
+      yAxis: { type: 'value', name: 'pending jobs', nameTextStyle: { color: theme.textColor }, axisLabel: { color: theme.textColor }, splitLine: { lineStyle: { color: theme.splitColor } } },
+      series: [{
+        type: 'scatter', symbolSize: 14,
+        data: workloadScatter.map((r) => ({ value: [r.meanT1, r.pending], name: shortName(r.name || r.id), id: r.id, pending: r.pending, meanT1: r.meanT1, modality: r.modality })),
+        itemStyle: { color: sem.healthy, opacity: 0.85 },
+      }],
+    };
+  }, [workloadScatter, theme, resolved]);
 
   const routerStackOption = useMemo(() => {
     const top = rows.slice(0, 8);
@@ -429,31 +431,20 @@ function DashboardHomeInner() {
         return (
           <section className="card fo-shift" aria-label="Shift snapshot">
             <ExceptionStrip data-tour="page-kpis" ariaLabel="Shift exceptions" className="fo-shift__kpis" items={kpis} />
-            <div className="fo-shift__charts" data-tour="page-charts">
-              <ChartPanel
-                title="Qubit router mix"
-                question="GREEN / YELLOW / RED counts across scored backends."
-                help="Router state is advisory, not a 0–100 score. GREEN = within thresholds, YELLOW = watch, RED = triage. Click Health vector for per-qubit rows."
-                sourceKind="derived"
-                state={qubitTotal ? 'ready' : 'empty'}
-                emptyMessage="Health vector not loaded yet."
-                minHeight={220}
-                actions={<Link className="fs-link" to={HEALTH_PATH}>Health vector</Link>}
-              >
-                <QtECharts option={qubitMixOption} style={{ height: 200, width: '100%' }} />
-              </ChartPanel>
+            <div className="fo-shift__charts fo-shift__charts--single" data-tour="page-charts">
               <ChartPanel
                 title="Queue depth"
                 question="Pending jobs per backend — click a bar to open that machine."
+                help="Fleet G/Y/R breakdown is in the backends table below; qubit rows live on Health vector."
                 sourceKind="stored"
                 state={queueRows.length ? 'ready' : 'empty'}
                 emptyMessage="No queue samples."
-                minHeight={220}
+                minHeight={240}
                 actions={<Link className="fs-link" to="/app/execution/queues">Queues</Link>}
               >
                 <QtECharts
                   option={queueOption}
-                  style={{ height: 200, width: '100%' }}
+                  style={{ height: 220, width: '100%' }}
                   onEvents={{ click: (p) => { const q = queueRows[p.dataIndex]; if (q?.backend_id) navigate(`/app/execution/queues?backend=${encodeURIComponent(q.backend_id)}`); } }}
                 />
               </ChartPanel>
@@ -633,7 +624,7 @@ function DashboardHomeInner() {
             </div>
             <div className="fo-platform-kpis">
               <button type="button" className={`fo-platform-kpi${collectorBad ? ' fo-platform-kpi--bad' : ' fo-platform-kpi--ok'}`} onClick={() => navigate('/app/platform/health')}>
-                <span className="fo-platform-kpi__val">{collectorBad}/{providers.length || '—'}</span>
+                <span className="fo-platform-kpi__val"><AnimatedNumber value={collectorBad} />/{providers.length ? <AnimatedNumber value={providers.length} /> : '—'}</span>
                 <span className="fo-platform-kpi__lbl">Collectors bad</span>
               </button>
               <button type="button" className="fo-platform-kpi" onClick={() => navigate('/app/telemetry/live')}>
@@ -641,11 +632,11 @@ function DashboardHomeInner() {
                 <span className="fo-platform-kpi__lbl">Latest telemetry</span>
               </button>
               <button type="button" className="fo-platform-kpi" onClick={() => navigate('/app/execution/queues')}>
-                <span className="fo-platform-kpi__val">{totalPending}</span>
+                <span className="fo-platform-kpi__val"><AnimatedNumber value={totalPending} /></span>
                 <span className="fo-platform-kpi__lbl">Fleet pending jobs</span>
               </button>
               <button type="button" className={`fo-platform-kpi${greenPct != null && greenPct < 50 ? ' fo-platform-kpi--warn' : ' fo-platform-kpi--ok'}`} onClick={() => navigate(HEALTH_PATH)}>
-                <span className="fo-platform-kpi__val">{greenPct != null ? `${greenPct}%` : '—'}</span>
+                <span className="fo-platform-kpi__val">{greenPct != null ? <><AnimatedNumber value={greenPct} />%</> : '—'}</span>
                 <span className="fo-platform-kpi__lbl">Qubits GREEN</span>
               </button>
             </div>
@@ -674,7 +665,7 @@ function DashboardHomeInner() {
             sourceKind="stored"
             asOf={latestTelemetry ? formatISTTime(latestTelemetry) : undefined}
             state={d.coherence == null && failed.includes('coherence') ? 'error' : cohRows.length === 0 ? 'empty' : 'ready'}
-            errorMessage="Coherence failed to load."
+            errorMessage={unableToLoad('coherence aggregates')}
             onRetry={loadData}
             emptyMessage="No stored T1 samples for any backend."
             minHeight={320}
@@ -719,7 +710,7 @@ function DashboardHomeInner() {
         return null;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [d, rows, alertSummary, crit, warn, collectorBad, calStale, qubitMixOption, qubitTotal,
+  }, [d, rows, alertSummary, crit, warn, collectorBad, calStale, qubitTotal,
     cohRows, cohOption, queueRows, queueOption, calRows, calOption, fleetStateTotals, greenPct, totalPending,
     alertPressureRows, alertPressureOption, workloadScatter, workloadOption, routerStackOption,
     events, failed, latestTelemetry, loadData, navigate, chartsReady]);

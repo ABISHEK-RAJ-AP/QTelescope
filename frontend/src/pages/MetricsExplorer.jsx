@@ -11,7 +11,7 @@ import { useAppScope } from '../hooks/useAppScope.js';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { usePageActions } from '../context/PageActionsContext.jsx';
-import { baseTooltip, getChartTheme } from '../components/observability/chartTheme.js';
+import { baseTooltip, getChartTheme, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { readTelemetryWindowHours, writeTelemetryWindowHours } from '../utils/telemetryWindow';
 import {
   EXPLORER_METRICS,
@@ -117,6 +117,7 @@ export const MetricsExplorer = () => {
   const filteredB = useMemo(() => windowFilter(seriesB, windowHours), [seriesB, windowHours]);
 
   const chartOption = useMemo(() => {
+    const sem = getChartSemanticColors();
     const labels = filteredA.map((p) => formatISTTime(p.t, false));
     const series = [
       {
@@ -125,7 +126,7 @@ export const MetricsExplorer = () => {
         smooth: true,
         data: filteredA.map((p) => (p.v != null && Number.isFinite(Number(p.v)) ? Number(p.v) : null)),
         connectNulls: false,
-        itemStyle: { color: '#059669' },
+        itemStyle: { color: sem.healthy },
       },
     ];
     if (compareBackend && filteredB.length) {
@@ -135,7 +136,7 @@ export const MetricsExplorer = () => {
         smooth: true,
         data: filteredB.map((p) => (p.v != null && Number.isFinite(Number(p.v)) ? Number(p.v) : null)),
         connectNulls: false,
-        itemStyle: { color: '#0284c7' },
+        itemStyle: { color: sem.accent },
       });
     }
     return {

@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import HTMLResponse
-from sqlalchemy.orm import Session
-from typing import Any, Dict
+from sqlalchemy.orm import Session, load_only
+from typing import Any, Dict, List, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 from app.core.database import get_db
 from app.models.entities import BackendModel, AlertModel, CalibrationSnapshotModel, AlertRuleModel
 from app.reports.report_generator import ReportGenerator
@@ -12,6 +14,39 @@ from app.core.rbac import require_operator
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
+EXPORT_ROW_CAP = 5_000
+MAX_BUNDLE_BYTES = 2_000_000
+
+_BACKEND_COLS = load_only(
+    BackendModel.backend_id,
+    BackendModel.backend_name,
+    BackendModel.provider_id,
+    BackendModel.backend_type,
+    BackendModel.qubit_count,
+    BackendModel.operational_status,
+    BackendModel.quantum_volume,
+)
+
+class ReportImportBody(BaseModel):
+    """POST /reports/import — environment slice or bundle wrapper."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    kind: str = Field(default="environment", max_length=64)
+    records: List[Dict[str, Any]] = Field(default_factory=list, max_length=2_000)
+    environment: Optional[List[Dict[str, Any]]] = Field(default=None, max_length=2_000)
+
+
+_ALERT_COLS = load_only(
+    AlertModel.alert_id,
+    AlertModel.resource_id,
+    AlertModel.alert_type,
+    AlertModel.severity,
+    AlertModel.status,
+    AlertModel.detected_at,
+    AlertModel.message,
+)
+
 @router.get("/export")
 def export_report(
     report_type: str = "backend_monitoring",
@@ -19,7 +54,7 @@ def export_report(
     db: Session = Depends(get_db)
 ):
     if report_type == "backend_monitoring":
-        backends = db.query(BackendModel).all()
+        backends = db.query(BackendModel).options(_BACKEND_COLS).limit(EXPORT_ROW_CAP).all()
         data = [{
             "backend_id": b.backend_id,
             "backend_name": b.backend_name,
@@ -34,7 +69,13 @@ def export_report(
         subtitle = "Inventory, Operational Status, and Capabilities"
 
     elif report_type == "alerts":
-        alerts = db.query(AlertModel).all()
+        alerts = (
+            db.query(AlertModel)
+            .options(_ALERT_COLS)
+            .order_by(AlertModel.detected_at.desc())
+            .limit(EXPORT_ROW_CAP)
+            .all()
+        )
         data = [{
             "alert_id": a.alert_id,
             "resource": a.resource_id,
@@ -48,7 +89,12 @@ def export_report(
         subtitle = "Active, Acknowledged, and Resolved System Alerts"
         
     else: # calibration report
-        snaps = db.query(CalibrationSnapshotModel).all()
+        snaps = (
+            db.query(CalibrationSnapshotModel)
+            .order_by(CalibrationSnapshotModel.timestamp.desc())
+            .limit(EXPORT_ROW_CAP)
+            .all()
+        )
         data = [{
             "backend_id": s.backend_id,
             "calibration_id": s.calibration_identifier,
@@ -76,10 +122,21 @@ def export_report(
 
 @router.get("/bundle")
 def export_bundle(db: Session = Depends(get_db)):
-    backends = db.query(BackendModel).all()
-    alerts = db.query(AlertModel).all()
-    snaps = db.query(CalibrationSnapshotModel).all()
-    rules = db.query(AlertRuleModel).all()
+    backends = db.query(BackendModel).options(_BACKEND_COLS).limit(EXPORT_ROW_CAP).all()
+    alerts = (
+        db.query(AlertModel)
+        .options(_ALERT_COLS)
+        .order_by(AlertModel.detected_at.desc())
+        .limit(EXPORT_ROW_CAP)
+        .all()
+    )
+    snaps = (
+        db.query(CalibrationSnapshotModel)
+        .order_by(CalibrationSnapshotModel.timestamp.desc())
+        .limit(EXPORT_ROW_CAP)
+        .all()
+    )
+    rules = db.query(AlertRuleModel).limit(EXPORT_ROW_CAP).all()
     creds = [
         {
             "id": p["id"],
@@ -125,18 +182,23 @@ def export_bundle(db: Session = Depends(get_db)):
         } for r in rules],
         "credentials_status": creds,
         "environment": load_env_rows(),
+        "export_cap": EXPORT_ROW_CAP,
     }
 
 
 @router.post("/import")
-def import_bundle(payload: Dict[str, Any], db: Session = Depends(get_db), _: str = Depends(require_operator)):
-    kind = (payload.get("kind") or "").lower()
+def import_bundle(body: ReportImportBody, db: Session = Depends(get_db), _: str = Depends(require_operator)):
+    import json
+
+    payload = body.model_dump()
+    if len(json.dumps(payload, default=str)) > MAX_BUNDLE_BYTES:
+        raise HTTPException(status_code=413, detail=f"Import payload exceeds {MAX_BUNDLE_BYTES} bytes")
+    kind = (body.kind or "").lower()
     if kind in ("environment", "env"):
-        recs = payload.get("records") or payload.get("environment") or []
+        recs = body.records or body.environment or []
         return import_environment(EnvImport(kind="environment", records=recs))
-    if kind in ("qtelescope_bundle", "bundle") and payload.get("environment"):
-        recs = payload.get("environment") or []
-        return import_environment(EnvImport(kind="environment", records=recs))
+    if kind in ("qtelescope_bundle", "bundle") and body.environment:
+        return import_environment(EnvImport(kind="environment", records=body.environment))
     raise HTTPException(
         status_code=400,
         detail="Supported import kinds: environment (records[]), or qtelescope_bundle with environment[].",

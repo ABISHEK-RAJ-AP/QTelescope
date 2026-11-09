@@ -82,9 +82,9 @@
 }
 
 .admin-section-nav__item {
-  font-size: 12px;
+  font-size: 0.875rem;
   font-weight: 600;
-  padding: 6px 12px;
+  padding: 8px 14px;
   border-radius: 6px;
   border: 1px solid var(--border-color);
   background: var(--bg-card);
@@ -582,11 +582,12 @@
 .admin-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .admin-kv-card { padding: 14px 16px !important; }
 .admin-kv { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 16px; margin: 0; }
-.admin-kv dt { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
-.admin-kv dd { margin: 2px 0 0; font-size: 13px; font-weight: 600; color: var(--text-primary); word-break: break-word; }
+.admin-kv dt { font-size: 0.75rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+.admin-kv dd { margin: 2px 0 0; font-size: 0.9375rem; font-weight: 600; color: var(--text-primary); word-break: break-word; }
 .admin-kv__note { margin: 10px 0 0; }
-.admin-table th, .admin-table td { vertical-align: middle; }
-.admin-sub { font-size: 11px; color: var(--text-muted); }
+.admin-table { font-size: 0.875rem; }
+.admin-table th, .admin-table td { vertical-align: middle; padding: 0.55rem 0.65rem; }
+.admin-sub { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.45; }
 .admin-mono { font-family: ui-monospace, monospace; }
 .admin-err-cell { max-width: 360px; word-break: break-word; font-size: 12px; }
 .admin-num { width: 96px; }

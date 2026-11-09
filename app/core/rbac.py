@@ -31,6 +31,7 @@ def get_current_role(
     request: Request,
     authorization: Optional[str] = Header(None, alias="Authorization"),
     x_user_role: Optional[str] = Header(None, alias="X-User-Role"),
+    x_qre_dev_ack: Optional[str] = Header(None, alias="X-QRE-Dev-Ack"),
 ) -> str:
     if getattr(request.state, "role", None):
         return str(request.state.role)
@@ -39,6 +40,14 @@ def get_current_role(
         return from_session
     if require_api_auth():
         raise HTTPException(status_code=401, detail="Valid session token required.")
+    from app.core.env_profile import is_production_profile
+
+    if is_production_profile():
+        return "Anonymous"
+    if rbac_enforced():
+        if (x_qre_dev_ack or "").strip() == "1" and x_user_role and x_user_role.strip():
+            return x_user_role.strip()
+        return "Anonymous"
     return (x_user_role or "Anonymous").strip() or "Anonymous"
 
 
@@ -47,6 +56,7 @@ def get_current_username(
     authorization: Optional[str] = Header(None, alias="Authorization"),
     x_user_name: Optional[str] = Header(None, alias="X-User-Name"),
     x_user_role: Optional[str] = Header(None, alias="X-User-Role"),
+    x_qre_dev_ack: Optional[str] = Header(None, alias="X-QRE-Dev-Ack"),
 ) -> str:
     if getattr(request.state, "username", None):
         return str(request.state.username)
@@ -55,6 +65,13 @@ def get_current_username(
         sess = get_session(auth[7:].strip())
         if sess:
             return str(sess.get("username") or "unknown")
+    from app.core.env_profile import is_production_profile
+
+    if require_api_auth() or is_production_profile():
+        return "anonymous"
+    if rbac_enforced():
+        if (x_qre_dev_ack or "").strip() != "1":
+            return "anonymous"
     # Dev stand-in only. Production identity is the session (see QRP plan §3).
     if x_user_name and x_user_name.strip():
         return x_user_name.strip()

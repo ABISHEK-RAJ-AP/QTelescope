@@ -1,0 +1,60 @@
+name: Q-TeleScope release gates
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    paths:
+      - "app/**"
+      - "frontend/**"
+      - "tests/**"
+      - "requirements.txt"
+      - "frontend/package.json"
+      - "scripts/run-dependency-audit.sh"
+
+jobs:
+  python-security-smoke:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: .
+      DATABASE_URL: sqlite:///./data/ci_telescope.db
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r backend/requirements.txt
+      - name: Security-focused pytest
+        run: |
+          pytest tests/test_rbac_header_guards.py \
+            tests/test_stream_ticket_sse.py \
+            tests/test_admin_observability_api.py \
+            tests/test_security_headers_and_prod_defaults.py \
+            -q --tb=short
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pip-audit
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: CVE scan
+        run: ./scripts/run-dependency-audit.sh
+
+  frontend-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - working-directory: frontend
+        run: |
+          npm ci
+          npm test -- --run

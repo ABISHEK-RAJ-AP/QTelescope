@@ -6,6 +6,7 @@ import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { usePermissions } from '../hooks/usePermissions.js';
+import { unableToLoad } from '../constants/messages.js';
 import { formatIST } from '../utils/time';
 import { SevBadge, StatusBadge } from './opsShared.jsx';
 import { qubitOf, timelineTo } from './opsHelpers.js';
@@ -84,7 +85,7 @@ export function AlertDetailPage({
       setAlert(data);
       setError(null);
     } catch (e) {
-      setError(e?.message || 'Failed to load alert');
+      setError(e?.message || unableToLoad('this alert'));
     } finally {
       setLoading(false);
     }

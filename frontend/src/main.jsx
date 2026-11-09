@@ -1,3 +1,4 @@
+import './lib/devPerformanceGuard.js';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
@@ -14,21 +15,23 @@ import './index.css';
 
 initA11yFromStorage();
 
+const appTree = (
+  <ThemeProvider defaultTheme="light">
+    <A11yRuntimeEffects />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/app/*" element={<App />} />
+        <Route path="*" element={<LandingPage />} />
+      </Routes>
+    </BrowserRouter>
+  </ThemeProvider>
+);
+
 createRoot(document.getElementById('root')).render(
-  <StrictMode>
-    <ThemeProvider defaultTheme="light">
-      <A11yRuntimeEffects />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          <Route path="/app/*" element={<App />} />
-          <Route path="*" element={<LandingPage />} />
-        </Routes>
-      </BrowserRouter>
-    </ThemeProvider>
-  </StrictMode>
+  import.meta.env.PROD ? <StrictMode>{appTree}</StrictMode> : appTree,
 );

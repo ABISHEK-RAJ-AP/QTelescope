@@ -112,11 +112,13 @@ Full template: [`.env.production.example`](../.env.production.example).
 ### 3.4 VM deploy (typical)
 
 ```bash
-cd ~/QTeleScope
+cd ~/QTeleScope   # or Quantum_Monitoring-main clone path
 git fetch origin
-git reset --hard origin/main
-chmod +x scripts/vm-demo-restart.sh
-./scripts/vm-demo-restart.sh
+git pull --ff-only origin main
+chmod +x scripts/vm-update-from-git.sh scripts/vm-demo-restart.sh
+./scripts/vm-update-from-git.sh              # pull, migrate, build, nginx, restart API
+# demo login + mock data:
+VM_DEMO_ENV=1 ./scripts/vm-update-from-git.sh
 ```
 
 Hard-refresh the browser after frontend asset updates.

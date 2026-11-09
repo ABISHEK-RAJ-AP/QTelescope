@@ -4,7 +4,7 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.entities import (
@@ -45,22 +45,37 @@ from app.core.safe_url import assert_safe_http_url
 
 logger = logging.getLogger("admin")
 
-router = APIRouter(prefix="/admin", tags=["Administration"])
+router = APIRouter(prefix="/admin", tags=["Administration"], dependencies=[Depends(require_admin)])
 
 class IbmTokenSchema(BaseModel):
-    token: str
+    token: str = Field(..., min_length=8, max_length=4096)
+
 
 class GenericCredentialSchema(BaseModel):
-    provider_id: str
-    token: Optional[str] = None
-    endpoint_url: Optional[str] = None
+    provider_id: str = Field(..., min_length=1, max_length=64)
+    token: Optional[str] = Field(None, max_length=4096)
+    endpoint_url: Optional[str] = Field(None, max_length=2048)
     extra: Optional[Dict[str, Any]] = None
+
+    @field_validator("provider_id")
+    @classmethod
+    def _norm_provider(cls, v: str) -> str:
+        return (v or "").strip().lower()
 
 
 class BackendCatalogPatch(BaseModel):
-    owner: Optional[str] = None
-    facility: Optional[str] = None
-    tags: Optional[List[str]] = None
+    owner: Optional[str] = Field(None, max_length=120)
+    facility: Optional[str] = Field(None, max_length=120)
+    tags: Optional[List[str]] = Field(None, max_length=32)
+
+    @field_validator("tags")
+    @classmethod
+    def _cap_tags(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        if v is None:
+            return v
+        if len(v) > 32:
+            raise ValueError("At most 32 tags")
+        return [str(t).strip()[:64] for t in v if str(t).strip()]
 
 @router.get("/summary", response_model=DashboardSummaryResponse)
 def get_dashboard_summary(db: Session = Depends(get_db)):
@@ -69,7 +84,9 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
     op_b = db.query(BackendModel).filter(BackendModel.operational_status == "ONLINE").count()
     un_b = total_b - op_b
     
-    total_q = sum(b.qubit_count for b in db.query(BackendModel).all())
+    from sqlalchemy import func
+
+    total_q = int(db.query(func.coalesce(func.sum(BackendModel.qubit_count), 0)).scalar() or 0)
     
     stale_calib = db.query(CalibrationSnapshotModel).filter(CalibrationSnapshotModel.freshness_status.in_(["Stale", "Unknown"])).count()
     active_alerts = db.query(AlertModel).filter(AlertModel.status == "ACTIVE").count()
@@ -580,7 +597,15 @@ def get_deployment_profile():
 def get_platform_provenance(db: Session = Depends(get_db)):
     """Platform-wide data lineage: mock flag, DB mode, collectors, latest measurement."""
     ensure_discovered(db)
-    backends = db.query(BackendModel).all()
+    from sqlalchemy.orm import load_only
+
+    backends = db.query(BackendModel).options(
+        load_only(
+            BackendModel.backend_id,
+            BackendModel.provider_id,
+            BackendModel.operational_status,
+        )
+    ).all()
     live_ids = [b.backend_id for b in backends if b.backend_id not in MOCK_BACKEND_IDS]
     latest = (
         db.query(BackendTelemetryModel)

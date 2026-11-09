@@ -8,7 +8,7 @@ export const NAV_HELP = {
   investigate: 'Time-ordered alerts, incidents, and collector events.',
   platform: 'Collector health, ingestion freshness, and adapter run times.',
   execution: 'Jobs that ran and how deep each backend queue is.',
-  resources: 'Qubit health vector, facility environment, and metric coverage.',
+  resources: 'Health vector (fleet heatmap), anomaly monitor (flagged qubits), environment sensors, and metric coverage.',
   reports: 'CSV/HTML/JSON exports for audit evidence.',
   alerts: 'Active detections and grouped incidents. Ack/resolve by role.',
   admin: 'Credentials, collectors, alert rules, and user roles.',

@@ -11,7 +11,7 @@ import { useAppScope } from '../hooks/useAppScope.js';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { usePageActions } from '../context/PageActionsContext.jsx';
-import { baseTooltip, getChartTheme } from '../components/observability/chartTheme.js';
+import { baseTooltip, getChartTheme, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { parseDate } from '../utils/time';
 import { readTelemetryWindowHours, writeTelemetryWindowHours } from '../utils/telemetryWindow';
 import './HistoricalTrends.css';
@@ -97,64 +97,70 @@ export const HistoricalTrends = () => {
   const queueStats = useMemo(() => seriesStats(filtered.map((h) => h.pending_jobs)), [filtered]);
   const waitStats = useMemo(() => seriesStats(filtered.map((h) => h.estimated_wait_time)), [filtered]);
 
-  const queueChartOption = useMemo(() => ({
-    backgroundColor: 'transparent',
-    tooltip: baseTooltip(isDark),
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-    xAxis: {
-      type: 'category',
-      data: xLabels,
-      axisLine: { lineStyle: { color: theme.axisLine } },
-      axisLabel: { color: theme.textColor },
-    },
-    yAxis: {
-      type: 'value',
-      name: 'Pending Jobs',
-      axisLine: { lineStyle: { color: theme.axisLine } },
-      splitLine: { lineStyle: { color: theme.splitColor } },
-      axisLabel: { color: theme.textColor },
-    },
-    series: [
-      {
+  const queueChartOption = useMemo(() => {
+    const sem = getChartSemanticColors();
+    return {
+      backgroundColor: 'transparent',
+      tooltip: baseTooltip(isDark),
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: xLabels,
+        axisLine: { lineStyle: { color: theme.axisLine } },
+        axisLabel: { color: theme.textColor },
+      },
+      yAxis: {
+        type: 'value',
         name: 'Pending Jobs',
-        type: 'line',
-        smooth: true,
-        areaStyle: { opacity: 0.15 },
-        data: filtered.map((h) => h.pending_jobs ?? null),
-        connectNulls: false,
-        itemStyle: { color: '#059669' },
+        axisLine: { lineStyle: { color: theme.axisLine } },
+        splitLine: { lineStyle: { color: theme.splitColor } },
+        axisLabel: { color: theme.textColor },
       },
-    ],
-  }), [filtered, isDark, theme, xLabels]);
+      series: [
+        {
+          name: 'Pending Jobs',
+          type: 'line',
+          smooth: true,
+          areaStyle: { opacity: 0.15 },
+          data: filtered.map((h) => h.pending_jobs ?? null),
+          connectNulls: false,
+          itemStyle: { color: sem.healthy },
+        },
+      ],
+    };
+  }, [filtered, isDark, theme, xLabels]);
 
-  const waitChartOption = useMemo(() => ({
-    backgroundColor: 'transparent',
-    tooltip: baseTooltip(isDark),
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-    xAxis: {
-      type: 'category',
-      data: xLabels,
-      axisLine: { lineStyle: { color: theme.axisLine } },
-      axisLabel: { color: theme.textColor },
-    },
-    yAxis: {
-      type: 'value',
-      name: 'Wait Time (s)',
-      axisLine: { lineStyle: { color: theme.axisLine } },
-      splitLine: { lineStyle: { color: theme.splitColor } },
-      axisLabel: { color: theme.textColor },
-    },
-    series: [
-      {
-        name: 'Est. Wait Time (s)',
-        type: 'line',
-        smooth: true,
-        data: filtered.map((h) => h.estimated_wait_time ?? null),
-        connectNulls: false,
-        itemStyle: { color: '#0284c7' },
+  const waitChartOption = useMemo(() => {
+    const sem = getChartSemanticColors();
+    return {
+      backgroundColor: 'transparent',
+      tooltip: baseTooltip(isDark),
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+      xAxis: {
+        type: 'category',
+        data: xLabels,
+        axisLine: { lineStyle: { color: theme.axisLine } },
+        axisLabel: { color: theme.textColor },
       },
-    ],
-  }), [filtered, isDark, theme, xLabels]);
+      yAxis: {
+        type: 'value',
+        name: 'Wait Time (s)',
+        axisLine: { lineStyle: { color: theme.axisLine } },
+        splitLine: { lineStyle: { color: theme.splitColor } },
+        axisLabel: { color: theme.textColor },
+      },
+      series: [
+        {
+          name: 'Est. Wait Time (s)',
+          type: 'line',
+          smooth: true,
+          data: filtered.map((h) => h.estimated_wait_time ?? null),
+          connectNulls: false,
+          itemStyle: { color: sem.accent },
+        },
+      ],
+    };
+  }, [filtered, isDark, theme, xLabels]);
 
   if (loading) return <BoneyardSkeleton layout="grid" />;
   if (!backends.length) {

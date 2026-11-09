@@ -9,20 +9,27 @@ import { useTheme } from '../components/ui/ThemeProvider';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
-import { getChartTheme, baseTooltip } from '../components/observability/chartTheme.js';
+import { getChartTheme, baseTooltip, getChartSemanticColors, getCalibrationStatusChartColors } from '../components/observability/chartTheme.js';
 import { buildBackendDetailsPath, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { useProviderLineage, LineageBadge } from './useLineage.jsx';
-import { DataPanelToolbar, SortableTh } from '../components/observability/DataViewToolbar.jsx';
+import { DataPanelToolbar } from '../components/observability/DataViewToolbar.jsx';
+import { EnterpriseDataTable } from '../components/observability/EnterpriseDataTable.jsx';
 import './CalibrationStatus.css';
 
-const STATUS = {
-  Fresh: { glyph: '●', color: '#34d399', badge: 'badge-healthy', action: 'None. Calibration is current.' },
-  Recent: { glyph: '◐', color: '#38bdf8', badge: 'badge-info', action: 'Monitor. Recalibrate before 24 h.' },
-  Aging: { glyph: '▲', color: '#fbbf24', badge: 'badge-warning', action: 'Schedule recalibration soon.' },
-  Stale: { glyph: '■', color: '#fb7185', badge: 'badge-critical', action: 'Recalibrate now; avoid routing latency-critical jobs.' },
-  None: { glyph: '○', color: '#64748b', badge: 'badge-info', action: 'No snapshot. Run the collector or scan this QPU in Administration.' },
-};
+function calibrationStatusMeta() {
+  const c = getCalibrationStatusChartColors();
+  return {
+    Fresh: { glyph: '●', color: c.Fresh, badge: 'badge-healthy', action: 'None. Calibration is current.' },
+    Recent: { glyph: '◐', color: c.Recent, badge: 'badge-info', action: 'Monitor. Recalibrate before 24 h.' },
+    Aging: { glyph: '▲', color: c.Aging, badge: 'badge-warning', action: 'Schedule recalibration soon.' },
+    Stale: { glyph: '■', color: c.Stale, badge: 'badge-critical', action: 'Recalibrate now; avoid routing latency-critical jobs.' },
+    None: { glyph: '○', color: c.None, badge: 'badge-info', action: 'No snapshot. Run the collector or scan this QPU in Administration.' },
+  };
+}
+const STATUS = new Proxy({}, {
+  get: (_t, prop) => calibrationStatusMeta()[prop],
+});
 const THRESHOLDS = [6, 12, 24];
 const STATUS_RANK = { Stale: 0, Aging: 1, Recent: 2, Fresh: 3, None: 4 };
 
@@ -39,7 +46,6 @@ export const CalibrationStatus = () => {
   const [error, setError] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [layout, setLayout] = useState('table');
-  const [sort, setSort] = useState({ key: 'age', dir: 'desc' });
   const { setActions, clearActions } = usePageActions();
 
   const load = useCallback(async () => {
@@ -66,23 +72,75 @@ export const CalibrationStatus = () => {
 
   // oldest first; missing snapshots last (age unknown, never plotted as 0)
   const ranked = useMemo(() => (rows || []).slice().sort((a, b) => (b.age ?? -1) - (a.age ?? -1)), [rows]);
-  const sortedRows = useMemo(() => {
-    const list = ranked.slice();
-    const mul = sort.dir === 'asc' ? 1 : -1;
-    list.sort((a, b) => {
-      let c = 0;
-      if (sort.key === 'name') {
-        c = String(a.b.backend_name || a.b.backend_id).localeCompare(String(b.b.backend_name || b.b.backend_id));
-      } else if (sort.key === 'status') {
-        c = (STATUS_RANK[a.status] ?? 9) - (STATUS_RANK[b.status] ?? 9);
-      } else {
-        c = (a.age ?? -1) - (b.age ?? -1);
-      }
-      return c * mul;
-    });
-    return list;
-  }, [ranked, sort]);
+  const tableRows = useMemo(
+    () => ranked.map(({ b, c, age, status }) => ({
+      id: b.backend_id,
+      name: b.backend_name || b.backend_id,
+      backend_id: b.backend_id,
+      status,
+      status_rank: STATUS_RANK[status] ?? 9,
+      age: age ?? -1,
+      ageLabel: age != null ? `${age.toFixed(1)} h` : 'unknown',
+      calibrated: c?.calibration_timestamp ? formatIST(c.calibration_timestamp) : 'missing',
+      action: (STATUS[status] || STATUS.None).action,
+      modality: (b.qpu_modality || 'unknown').replace('_', ' '),
+      provider_id: b.provider_id,
+    })),
+    [ranked],
+  );
+  const calTableColumns = useMemo(
+    () => [
+      {
+        key: 'name',
+        label: 'Backend',
+        render: (row) => (
+          <>
+            <div className="cs-name">{row.name}</div>
+            <div className="cs-meta">
+              {row.modality} <LineageBadge lineage={lineage?.[row.provider_id]} />
+            </div>
+          </>
+        ),
+      },
+      {
+        key: 'status_rank',
+        label: 'Status',
+        defaultSortDir: 'asc',
+        render: (row) => <Badge status={row.status} />,
+      },
+      {
+        key: 'age',
+        label: 'Age',
+        defaultSortDir: 'desc',
+        render: (row) => (
+          <span className="cs-num">
+            {row.age >= 0 ? row.ageLabel : <span className="cs-missing">unknown</span>}
+          </span>
+        ),
+      },
+      { key: 'calibrated', label: 'Calibrated (IST)' },
+      { key: 'action', label: 'Next action', className: 'cs-action' },
+      {
+        key: 'backend_id',
+        label: 'Links',
+        sortable: false,
+        render: (row) => (
+          <div className="dvt-actions cs-links">
+            <button type="button" className="btn btn-secondary btn--xs" onClick={() => nav(buildBackendDetailsPath(row.backend_id, 'calibration'))}>Calibration</button>
+            <button type="button" className="btn btn-secondary btn--xs" onClick={() => nav(buildDriftInvestigationLocation({ backendId: row.backend_id }))}>Drift</button>
+          </div>
+        ),
+      },
+    ],
+    [lineage, nav],
+  );
   const plotted = ranked.filter((r) => r.age != null);
+
+  const freshnessBarColor = (status) => {
+    const sem = getChartSemanticColors();
+    const map = { Fresh: sem.healthy, Recent: sem.info, Aging: sem.warn, Stale: sem.critical, None: sem.unknown };
+    return map[status] || sem.unknown;
+  };
 
   const option = useMemo(() => {
     const t = getChartTheme(resolved === 'dark');
@@ -94,7 +152,7 @@ export const CalibrationStatus = () => {
       yAxis: { type: 'category', data: list.map((r) => r.b.backend_name || r.b.backend_id), axisLabel: { color: t.textColor, width: 140, overflow: 'truncate' } },
       series: [{
         type: 'bar', barMaxWidth: 20,
-        data: list.map((r) => ({ value: r.age, status: r.status, itemStyle: { color: (STATUS[r.status] || STATUS.None).color } })),
+        data: list.map((r) => ({ value: r.age, status: r.status, itemStyle: { color: freshnessBarColor(r.status) } })),
         label: { show: true, position: 'right', color: t.textColor, formatter: (p) => `${STATUS[p.data.status]?.glyph || ''} ${p.data.status}` },
         markLine: { symbol: 'none', silent: true, lineStyle: { type: 'dashed', color: t.axisLine }, label: { color: t.textColor, formatter: '{c} h' }, data: THRESHOLDS.map((x) => ({ xAxis: x })) },
       }],
@@ -129,10 +187,10 @@ export const CalibrationStatus = () => {
 
       <section className="card page-panel dvt-panel">
         <h3 className="dvt-panel__title">Per-backend status</h3>
-        <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${sortedRows.length} backend${sortedRows.length === 1 ? '' : 's'}`} />
+        <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${ranked.length} backend${ranked.length === 1 ? '' : 's'}`} />
         {layout === 'grid' ? (
           <div className="dvt-grid" aria-label="Calibration by backend">
-            {sortedRows.map(({ b, c, age, status }) => (
+            {ranked.map(({ b, c, age, status }) => (
               <article key={b.backend_id} className="dvt-card">
                 <header className="dvt-card__head">
                   <div>
@@ -154,40 +212,15 @@ export const CalibrationStatus = () => {
             ))}
           </div>
         ) : (
-          <div className="table-container" style={{ border: 'none' }}>
-            <table className="custom-table custom-table--dense">
-              <thead>
-                <tr>
-                  <SortableTh sort={sort} sortKey="name" onToggle={setSort} defaultDir="asc">Backend</SortableTh>
-                  <SortableTh sort={sort} sortKey="status" onToggle={setSort} defaultDir="asc">Status</SortableTh>
-                  <SortableTh sort={sort} sortKey="age" onToggle={setSort} defaultDir="desc">Age</SortableTh>
-                  <th>Calibrated (IST)</th>
-                  <th>Next action</th>
-                  <th>Links</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedRows.map(({ b, c, age, status }) => (
-                  <tr key={b.backend_id}>
-                    <td>
-                      <div className="cs-name">{b.backend_name || b.backend_id}</div>
-                      <div className="cs-meta">{(b.qpu_modality || 'unknown').replace('_', ' ')} <LineageBadge lineage={lineage?.[b.provider_id]} /></div>
-                    </td>
-                    <td><Badge status={status} /></td>
-                    <td className="cs-num">{age != null ? `${age.toFixed(1)} h` : <span className="cs-missing">unknown</span>}</td>
-                    <td>{c?.calibration_timestamp ? formatIST(c.calibration_timestamp) : <span className="cs-missing">missing</span>}</td>
-                    <td className="cs-action">{(STATUS[status] || STATUS.None).action}</td>
-                    <td>
-                      <div className="dvt-actions cs-links">
-                        <button type="button" className="btn btn-secondary btn--xs" onClick={() => nav(buildBackendDetailsPath(b.backend_id, 'calibration'))}>Calibration</button>
-                        <button type="button" className="btn btn-secondary btn--xs" onClick={() => nav(buildDriftInvestigationLocation({ backendId: b.backend_id }))}>Drift</button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <EnterpriseDataTable
+            rows={tableRows}
+            columns={calTableColumns}
+            searchKeys={['name', 'backend_id', 'status', 'modality']}
+            searchPlaceholder="Search backends…"
+            pageSize={15}
+            initialSort={{ key: 'age', dir: 'desc' }}
+            ariaLabel="Calibration by backend"
+          />
         )}
       </section>
     </div>

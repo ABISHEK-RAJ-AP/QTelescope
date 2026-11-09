@@ -64,6 +64,7 @@ export const api = {
   register: (payload) => fetchApi('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
   getConfigStatus: () => fetchApi('/auth/config-status'),
   logout: () => fetchApi('/auth/logout', { method: 'POST' }),
+  issueStreamTicket: () => fetchApi('/auth/stream-ticket', { method: 'POST' }),
   getUserProfile: () => fetchApi('/users/me'),
   patchUserProfile: (body) => fetchApi('/users/me', { method: 'PATCH', body: JSON.stringify(body) }),
   getUserPreferences: () => fetchApi('/users/me/preferences'),
@@ -80,14 +81,32 @@ export const api = {
   revokeSession: (sessionId) => fetchApi(`/users/me/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' }),
   getProvenance: () => fetchApi('/admin/provenance'),
   getCollectorHealth: () => fetchApi('/admin/collector-health'),
-  getCollectorExecutions: (limit = 50, providerId = '') => {
+  getCollectorExecutions: ({
+    limit = 50,
+    providerId = '',
+    since = '',
+    until = '',
+    status = '',
+    useDefaultWindow = true,
+  } = {}) => {
     const qs = new URLSearchParams({ limit: String(limit) });
     if (providerId) qs.set('provider_id', providerId);
+    let sinceVal = since;
+    if (!sinceVal && useDefaultWindow) {
+      const d = new Date();
+      d.setUTCDate(d.getUTCDate() - 30);
+      sinceVal = d.toISOString();
+    }
+    if (sinceVal) qs.set('since', sinceVal);
+    if (until) qs.set('until', until);
+    if (status) qs.set('status', status);
     return fetchApi(`/admin/collector-executions?${qs}`);
   },
-  getIngestionQuality: (limit = 30, providerId = '') => {
+  getIngestionQuality: (limit = 30, providerId = '', { since = '', until = '' } = {}) => {
     const qs = new URLSearchParams({ limit: String(limit) });
     if (providerId) qs.set('provider_id', providerId);
+    if (since) qs.set('since', since);
+    if (until) qs.set('until', until);
     return fetchApi(`/admin/ingestion-quality?${qs}`);
   },
   getAuditLog: ({ limit = 100, action = '', actor = '', q = '' } = {}) => {
@@ -264,11 +283,13 @@ export const api = {
   getPlatformHealth: () => fetchApi('/operations/platform-health'),
   getOpsTimeline: (limit = 40) => fetchApi(`/operations/timeline?limit=${limit}`),
   getIncident: (id) => fetchApi(`/incidents/${encodeURIComponent(id)}`),
-  getIncidents: (status) => {
-    const params = new URLSearchParams();
+  getIncidents: (status, { limit = 200, offset = 0 } = {}) => {
+    const params = new URLSearchParams({
+      limit: String(Math.max(1, Math.min(limit, 200))),
+      offset: String(Math.max(0, offset)),
+    });
     if (status) params.append('status', status);
-    const q = params.toString();
-    return fetchApi(`/incidents${q ? `?${q}` : ''}`);
+    return fetchApi(`/incidents?${params.toString()}`);
   },
   syncIncidents: () => fetchApi('/incidents/sync', { method: 'POST' }),
   acknowledgeIncident: (id, body) => fetchApi(`/incidents/${id}/acknowledge`, { method: 'POST', body: JSON.stringify(body || {}) }),
@@ -278,8 +299,11 @@ export const api = {
     fetchApi(`/incidents/${id}/comments`, { method: 'POST', body: JSON.stringify({ text }) }),
 
   // Alerts
-  getAlerts: (status, severity) => {
-    const params = new URLSearchParams({ limit: '500' }); // API default is 100, which undercounts active alerts
+  getAlerts: (status, severity, { limit = 500, offset = 0 } = {}) => {
+    const params = new URLSearchParams({
+      limit: String(Math.min(Math.max(1, limit), 500)),
+      offset: String(Math.max(0, offset)),
+    });
     if (status) params.append('status', status);
     if (severity) params.append('severity', severity);
     return fetchApi(`/alerts?${params.toString()}`);

@@ -185,6 +185,8 @@ export const EnvironmentPage = () => {
     e.target.value = '';
     if (!file) return;
     try {
+      const { assertImportSize } = await import('../lib/clientVitals.js');
+      assertImportSize(file.size);
       const res = await api.importEnvironment(JSON.parse(await file.text()));
       setMsg(`Imported ${res.imported} samples.`);
       load();

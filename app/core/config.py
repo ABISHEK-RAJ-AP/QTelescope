@@ -62,6 +62,14 @@ class Settings(BaseSettings):
         return read_env_val("USER_PASSWORD", "quantum2026")
 
     @property
+    def SUPERADMIN_USERNAME(self) -> str:
+        return read_env_val("SUPERADMIN_USERNAME", "superadmin")
+
+    @property
+    def SUPERADMIN_PASSWORD(self) -> str:
+        return read_env_val("SUPERADMIN_PASSWORD", "quantum2026")
+
+    @property
     def IBM_QUANTUM_TOKEN(self) -> str:
         return read_env_val("IBM_QUANTUM_TOKEN", "")
 

@@ -64,10 +64,13 @@ test.describe('Q-TeleScope journeys E07–E10', () => {
     await loginAsAdmin(page);
     await page.goto('/app/alerts');
     await expect(page.locator('[data-tour="page-alert-filters"]')).toBeVisible({ timeout: 20_000 });
-    const ack = page.getByRole('button', { name: /^Ack$/ }).first();
-    const hasAck = await ack.isVisible().catch(() => false);
-    test.skip(!hasAck, 'No open alerts to acknowledge in this environment');
-    await ack.click();
+    const groupChk = page.getByRole('checkbox', { name: /Group by backend/i });
+    if (await groupChk.isChecked()) await groupChk.uncheck();
+    const ackRow = page.locator('.al-actions').getByRole('button', { name: /^Ack$/ }).first();
+    const ackGroup = page.locator('.al-actions').getByRole('button', { name: /^Ack \d+/ }).first();
+    const target = (await ackRow.isVisible().catch(() => false)) ? ackRow : ackGroup;
+    test.skip(!(await target.isVisible().catch(() => false)), 'No open alerts to acknowledge in this environment');
+    await target.click();
     const dialog = page.getByRole('alertdialog');
     await expect(dialog).toBeVisible();
     await dialog.getByRole('button', { name: /acknowledge/i }).click();

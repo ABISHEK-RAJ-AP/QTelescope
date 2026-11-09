@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Shield, User, Bell, Sparkles, Sun, Moon, Monitor } from 'lucide-react';
 import { api } from '../services/api';
 import { notifyError, notifySuccess } from '../lib/toast.js';
+import { unableToLoad } from '../constants/messages.js';
 import { formatIST } from '../utils/time';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { useTheme } from '../components/ui/ThemeProvider';
@@ -64,7 +65,7 @@ export function UserSettings({ currentUser, onUserUpdate }) {
       setMfa(m || { enabled: false });
       setSessions(sess?.sessions || []);
     } catch (e) {
-      notifyError(e?.message || 'Could not load settings.');
+      notifyError(e?.message || unableToLoad('account settings'));
     } finally {
       setLoading(false);
     }

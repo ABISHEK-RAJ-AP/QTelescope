@@ -42,6 +42,7 @@ def get_alerts(
     severity: Optional[str] = None,
     resource_id: Optional[str] = None,
     limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0, le=50_000),
     db: Session = Depends(get_db)
 ):
     query = db.query(AlertModel)
@@ -52,34 +53,45 @@ def get_alerts(
     if resource_id:
         query = query.filter(AlertModel.resource_id == resource_id)
         
-    alerts = query.order_by(AlertModel.detected_at.desc()).limit(limit).all()
+    alerts = query.order_by(AlertModel.detected_at.desc()).offset(offset).limit(limit).all()
     return [parse_alert_response(a) for a in alerts]
 
 
 def _build_alerts_summary(db: Session) -> AlertSummaryResponse:
-    rows = (
-        db.query(AlertModel.severity, AlertModel.resource_id)
-        .filter(AlertModel.status == "ACTIVE")
-        .all()
+    from sqlalchemy import func
+
+    active_filter = AlertModel.status == "ACTIVE"
+    critical = int(
+        db.query(func.count())
+        .filter(active_filter, AlertModel.severity == "CRITICAL")
+        .scalar()
+        or 0
     )
-    critical = warning = 0
+    warning = int(
+        db.query(func.count())
+        .filter(active_filter, AlertModel.severity == "WARNING")
+        .scalar()
+        or 0
+    )
+    active = int(db.query(func.count()).filter(active_filter).scalar() or 0)
+    stream = (
+        db.query(AlertModel.severity, AlertModel.resource_id)
+        .filter(active_filter)
+        .yield_per(512)
+    )
     by_backend: dict[str, int] = defaultdict(int)
     critical_by_backend: dict[str, int] = defaultdict(int)
     warning_by_backend: dict[str, int] = defaultdict(int)
-    for severity, res_id in rows:
+    for severity, res_id in stream:
         b_id = res_id.rsplit("_Q", 1)[0] if res_id and "_Q" in res_id else (res_id or "")
-        if severity == "CRITICAL":
-            critical += 1
-            if b_id:
-                critical_by_backend[b_id] += 1
-        elif severity == "WARNING":
-            warning += 1
-            if b_id:
-                warning_by_backend[b_id] += 1
+        if severity == "CRITICAL" and b_id:
+            critical_by_backend[b_id] += 1
+        elif severity == "WARNING" and b_id:
+            warning_by_backend[b_id] += 1
         if b_id:
             by_backend[b_id] += 1
     return AlertSummaryResponse(
-        active=len(rows),
+        active=active,
         critical=critical,
         warning=warning,
         by_backend=dict(by_backend),

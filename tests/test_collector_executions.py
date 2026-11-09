@@ -17,6 +17,32 @@ def test_execution_history_appended(monkeypatch, tmp_path):
     assert rows[1]["status"] == "OK"
 
 
+def test_list_executions_since_filter(monkeypatch, tmp_path):
+    path = tmp_path / "cex.jsonl"
+    monkeypatch.setattr("app.services.collector_executions._PATH", str(path))
+    old = {"execution_id": "a", "timestamp": "2020-01-01T00:00:00+00:00", "provider_id": "p", "status": "OK"}
+    new = {"execution_id": "b", "timestamp": "2030-01-01T00:00:00+00:00", "provider_id": "p", "status": "OK"}
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(json.dumps(old) + "\n")
+        fh.write(json.dumps(new) + "\n")
+    rows = list_executions(limit=10, since="2025-01-01T00:00:00+00:00")
+    assert len(rows) == 1
+    assert rows[0]["execution_id"] == "b"
+
+
+def test_retention_drops_old_rows(monkeypatch, tmp_path):
+    path = tmp_path / "cex.jsonl"
+    monkeypatch.setattr("app.services.collector_executions._PATH", str(path))
+    monkeypatch.setattr("app.services.collector_executions._RETENTION_DAYS", 30)
+    old = {"execution_id": "old", "timestamp": "2020-01-01T00:00:00+00:00", "provider_id": "p", "status": "OK"}
+    with open(path, "w", encoding="utf-8") as fh:
+        fh.write(json.dumps(old) + "\n")
+    append_execution("p", status="OK", duration_ms=1.0)
+    rows = list_executions(limit=10)
+    assert len(rows) == 1
+    assert rows[0]["execution_id"] != "old"
+
+
 def test_record_provider_run_writes_history(monkeypatch, tmp_path):
     monkeypatch.setenv("COLLECTOR_HEALTH_PATH", str(tmp_path / "health.json"))
     monkeypatch.setattr("app.services.collector_executions._PATH", str(tmp_path / "cex.jsonl"))

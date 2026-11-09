@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { readClientVitals } from '../lib/clientVitals.js';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Save, RefreshCw, CheckCircle2, Cpu, AlertTriangle, Key, Eye, EyeOff, Plus, Trash2, X,
@@ -16,6 +17,7 @@ import { Toggle } from '../components/ui/Toggle.jsx';
 import { RoleMatrix } from '../components/admin/RoleMatrix.jsx';
 import { roleLabel } from '../lib/permissions.js';
 import { ListPager } from '../components/observability/ListPager.jsx';
+import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
 import './AdministrationPage.css';
 
 const ADMIN_SECTIONS = [
@@ -38,7 +40,7 @@ const FRESH_MS = 6 * 3600 * 1000; // telemetry "flowing" = last success within 6
 const isAdminRole = () => {
   try {
     const u = JSON.parse(localStorage.getItem('quantum_user') || 'null');
-    return ['Admin', 'PlatformAdmin', 'QuantumOpsAdmin', 'SecurityAdmin'].includes(u?.role);
+    return ['SuperAdmin', 'Admin', 'PlatformAdmin', 'QuantumOpsAdmin', 'SecurityAdmin'].includes(u?.role);
   } catch { return false; }
 };
 const fmtTime = (t) => (t ? new Date(t).toLocaleString() : '—');
@@ -191,22 +193,15 @@ function Integrations({ providers, health, verification, setVerification, canEdi
         )}
       </div>
 
-      <div className="card admin-pad" style={{ marginBottom: 14 }}>
-        <h3 className="admin-card-title">Directory login (LDAP)</h3>
-        {!ldap || !ldap.enabled ? (
+      {ldap?.enabled && (
+        <div className="card admin-pad" style={{ marginBottom: 14 }}>
+          <h3 className="admin-card-title">Directory login (LDAP)</h3>
           <p className="page-hint">
-            LDAP is off. Set <code>LDAP_URL</code> and <code>LDAP_USER_DN</code> (example <code>uid={'{username}'},ou=people,dc=example,dc=com</code>) then restart the API.
-            Optional <code>LDAP_DEFAULT_ROLE</code> and <code>LDAP_GROUP_ROLE_MAP</code> as <code>cn=ops=OpsEngineer;cn=sec=SecurityAdmin</code>.
-            Install <code>ldap3</code>. This is directory bind, not SSO/SAML.
+            Bind against <strong>{ldap.host}</strong> ({ldap.mode}
+            {ldap.library ? '' : ' — ldap3 missing'}). Default role {ldap.default_role}. Local accounts tried first.
           </p>
-        ) : (
-          <p className="page-hint">
-            LDAP bind against <strong>{ldap.host}</strong> ({ldap.mode}
-            {ldap.library ? '' : ' — ldap3 missing, logins will 503'}).
-            Default role {ldap.default_role}. Local accounts are tried first.
-          </p>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="card" style={{ padding: 0 }} data-tour="page-admin-providers">
         <div className="table-container" style={{ border: 'none' }}>
@@ -343,21 +338,32 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
   const [collectorConfirm, setCollectorConfirm] = useState(null);
   const [executions, setExecutions] = useState([]);
   const [qualityReports, setQualityReports] = useState([]);
+  const [telemetryApiErr, setTelemetryApiErr] = useState('');
   const reason = canEdit ? undefined : 'Admin role required';
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const [ex, iq] = await Promise.all([api.getCollectorExecutions(50), api.getIngestionQuality(25)]);
+        const [ex, iq] = await Promise.all([
+          api.getCollectorExecutions({ limit: 50 }),
+          api.getIngestionQuality(25),
+        ]);
         if (!cancelled) {
           setExecutions(ex?.executions || []);
           setQualityReports(iq?.reports || []);
+          setTelemetryApiErr('');
         }
-      } catch {
+      } catch (e) {
         if (!cancelled) {
           setExecutions([]);
           setQualityReports([]);
+          const status = e?.status;
+          setTelemetryApiErr(
+            status === 404
+              ? 'Collector history APIs missing on this API build — restart the backend from the latest repo (admin collector-executions / ingestion-quality).'
+              : (e?.message || 'Could not load collector telemetry tables.'),
+          );
         }
       }
     })();
@@ -485,8 +491,12 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
         </div>
       </div>
 
+      {telemetryApiErr && (
+        <Notice note={{ type: 'error', text: telemetryApiErr }} />
+      )}
+
       <div className="card" style={{ padding: 0 }}>
-        <h3 className="admin-card-title admin-pad">Run history (last 50)</h3>
+        <h3 className="admin-card-title admin-pad">Run history (30-day window, newest 50)</h3>
         <div className="table-container" style={{ border: 'none' }}>
           <table className="custom-table admin-table">
             <thead><tr><th>Time</th><th>Provider</th><th>Trigger</th><th>Status</th><th>Backends</th><th>Duration</th><th>Lineage</th></tr></thead>
@@ -547,7 +557,7 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
           <p className="page-hint admin-pad">Circuit breakers: {breakers.map(([k, v]) => `${k}: ${v?.state || v?.status || JSON.stringify(v)}`).join(' · ')}</p>
         )}
         <div className="admin-pad admin-actions" style={{ paddingTop: 0 }}>
-          <button type="button" className="btn btn-secondary btn--xs" disabled={!canEdit || purgingDlq || failures.length === 0} title={reason} onClick={() => setCollectorConfirm('purge')}>
+          <button type="button" className="btn btn-secondary" disabled={!canEdit || purgingDlq || failures.length === 0} title={reason} onClick={() => setCollectorConfirm('purge')}>
             {purgingDlq ? 'Clearing…' : 'Clear DLQ history'}
           </button>
           <span className="admin-sub">Removes local failure log (SQLite lock errors from old runs, etc.). Does not replay jobs.</span>
@@ -766,6 +776,7 @@ function UsersDirectory({ canEdit }) {
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(null);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 300);
   const [sortKey, setSortKey] = useState('username');
   const [page, setPage] = useState(1);
   const USER_PAGE = 20;
@@ -788,10 +799,12 @@ function UsersDirectory({ canEdit }) {
 
   const onRole = async (username, role) => {
     setBusy(username);
+    const prev = rows;
+    setRows((list) => list.map((u) => (u.username === username ? { ...u, role } : u)));
     try {
       await api.assignUserRole(username, role);
-      await load();
     } catch (e) {
+      setRows(prev);
       setErr(errText(e));
     } finally {
       setBusy(null);
@@ -799,7 +812,7 @@ function UsersDirectory({ canEdit }) {
   };
 
   const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
+    const q = debouncedSearch.trim().toLowerCase();
     let list = rows;
     if (q) {
       list = list.filter((u) => (
@@ -820,8 +833,8 @@ function UsersDirectory({ canEdit }) {
       return String(a.username).localeCompare(String(b.username));
     });
     return sorted;
-  }, [rows, search, sortKey]);
-  useEffect(() => { setPage(1); }, [search, sortKey]);
+  }, [rows, debouncedSearch, sortKey]);
+  useEffect(() => { setPage(1); }, [debouncedSearch, sortKey]);
   const userPages = Math.max(1, Math.ceil(visible.length / USER_PAGE));
   const userPage = Math.min(page, userPages);
   const pageUsers = visible.slice((userPage - 1) * USER_PAGE, userPage * USER_PAGE);
@@ -908,6 +921,26 @@ function isoWindow(hours, anchorIso) {
   return { since: start.toISOString(), until: end.toISOString() };
 }
 
+function AdminClientVitals() {
+  const vitals = useMemo(() => readClientVitals(), []);
+  if (!vitals) return null;
+  return (
+    <div className="card admin-kv-card" data-tour="page-admin-client-vitals">
+      <h3 className="admin-card-title">Client performance (this browser)</h3>
+      <p className="page-hint" style={{ marginBottom: 8 }}>
+        Navigation timing from the loaded SPA — complement API <code>Server-Timing</code> headers in app logs.
+      </p>
+      <dl className="admin-kv-dl">
+        <div><dt>TTFB</dt><dd>{vitals.ttfbMs} ms</dd></div>
+        <div><dt>DOM ready</dt><dd>{vitals.domContentLoadedMs} ms</dd></div>
+        <div><dt>Load</dt><dd>{vitals.loadMs} ms</dd></div>
+        <div><dt>FCP</dt><dd>{vitals.fcpMs != null ? `${vitals.fcpMs} ms` : '—'}</dd></div>
+        <div><dt>Transfer</dt><dd>{vitals.transferKb != null ? `${vitals.transferKb} KB` : '—'}</dd></div>
+      </dl>
+    </div>
+  );
+}
+
 function AdminAuditLog() {
   const [params] = useSearchParams();
   const [source, setSource] = useState(params.get('source') === 'audit' ? 'audit' : 'app');
@@ -945,7 +978,10 @@ function AdminAuditLog() {
         setRows(res?.events || []);
       }
     } catch (e) {
-      setErr(e?.message || 'Search failed');
+      const msg = e?.status === 404
+        ? 'Application log API not available on this backend — restart API from the latest codebase.'
+        : (e?.message || 'Search failed');
+      setErr(msg);
       setRows([]);
     } finally {
       setBusy(false);
@@ -1062,11 +1098,16 @@ export const AdministrationPage = ({ section = 'integrations', onNavigateSection
   return (
     <div className="admin-container page-stack">
       {!canEdit && <Notice note={{ type: 'info', text: 'Read-only: Admin role required to change configuration.' }} />}
-      {data.miss.length > 0 && <Notice note={{ type: 'error', text: `Some data failed to load: ${data.miss.join(', ')}.` }} />}
+      {data.miss.length > 0 && <Notice note={{ type: 'error', text: `Unable to load: ${data.miss.join(', ')}. Refresh the page or check Platform health.` }} />}
       {active === 'users' && <UsersDirectory canEdit={canEdit} />}
       {active === 'integrations' && <Integrations navigate={navigate} providers={data.providers} health={data.health} verification={verification} setVerification={setVerification} canEdit={canEdit} reload={load} />}
       {active === 'collectors' && <Collectors {...data} canEdit={canEdit} reload={load} />}
-      {active === 'logs' && <AdminAuditLog />}
+      {active === 'logs' && (
+        <>
+          <AdminClientVitals />
+          <AdminAuditLog />
+        </>
+      )}
       {active === 'rules' && <Rules rules={data.rules} canEdit={canEdit} reload={load} />}
     </div>
   );

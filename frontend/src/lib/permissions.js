@@ -61,8 +61,9 @@ const AUDITOR = new Set([
   'audit:read', 'audit:export', 'users:read', 'alerts:read', 'incidents:read', 'reports:read',
 ]);
 
-/** null = full platform (Admin / PlatformAdmin). */
+/** null = full platform (SuperAdmin / Admin / PlatformAdmin). */
 const ROLE_PERMS = {
+  SuperAdmin: null,
   Admin: null,
   PlatformAdmin: null,
   Operator: new Set([...OPS, ...DEV_STUDIO]),
@@ -85,6 +86,7 @@ export const ROLE_DEFINITIONS = [
   { id: 'IncidentCommander', label: 'Incident commander', summary: 'Full ops response including incident assignment and closure.' },
   { id: 'QuantumOpsAdmin', label: 'Quantum operations administrator', summary: 'Fleet configuration, alert rules, providers, and platform settings.' },
   { id: 'SecurityAdmin', label: 'Security administrator', summary: 'Users, roles, MFA policy, sessions, and audit exports.' },
+  { id: 'SuperAdmin', label: 'Super administrator', summary: 'Unrestricted platform capabilities; can assign SuperAdmin.' },
   { id: 'PlatformAdmin', label: 'Platform administrator', summary: 'Unrestricted platform capabilities.' },
   { id: 'Admin', label: 'Platform administrator (legacy)', summary: 'Unrestricted platform capabilities.' },
 ];
@@ -100,7 +102,7 @@ export const RBAC_CAPABILITY_COLUMNS = [
   { id: 'studio', label: 'Developer studio', permission: 'studio:read' },
 ];
 
-const FULL_ACCESS_ROLES = new Set(['Admin', 'PlatformAdmin']);
+const FULL_ACCESS_ROLES = new Set(['SuperAdmin', 'Admin', 'PlatformAdmin']);
 
 export function permissionsForRole(role) {
   const set = ROLE_PERMS[role];

@@ -122,7 +122,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 | S11 | LDAP / SSO reviewed | PARTIAL | LDAP bind only |
 | S12 | RBAC matrix vs API | PARTIAL | Tests exist; not full matrix |
 | S13 | Audit privileged actions | PARTIAL | Partial event coverage |
-| S14 | Dependency scans | NOT_VERIFIED | |
+| S14 | Dependency scans | PARTIAL | `scripts/run-dependency-audit.sh` (pip-audit + npm audit) |
 
 ---
 

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { ArrowLeft } from 'lucide-react';
 import { api, fetchApi } from '../services/api';
@@ -12,10 +12,11 @@ import { useAppScope } from '../hooks/useAppScope.js';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
-import { baseTooltip, getChartTheme } from '../components/observability/chartTheme.js';
+import { baseTooltip, getChartTheme, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { BACKEND_WORKSPACE_TABS } from '../lib/investigationLinks.js';
 import { STATES, STATE_GLYPH, STATE_LABEL, ageMinutes, formatAge, isStale, lineageOf, median, modalityName, num, providerName, scopeSearch, useProviderLineage } from './backendUtils.js';
 import { LineageTag, Sparkline, StateBar, StatusText } from './backendCommon.jsx';
+import { unableToLoad, unableToLoadLabel } from '../constants/messages.js';
 import './BackendDetails.css';
 
 const TAB_LABEL = { overview: 'Overview', qubits: 'Qubits', calibration: 'Calibration', connectivity: 'Connectivity', execution: 'Execution' };
@@ -46,17 +47,21 @@ function GateHistogram({ title, values }) {
   const th = getChartTheme(resolved === 'dark');
   const h = useMemo(() => histogram(values), [values]);
   const flat = h && h.counts.filter(Boolean).length === 1;
-  const option = useMemo(() => h && ({
-    grid: { left: 44, right: 12, top: 12, bottom: 44 },
-    tooltip: { ...baseTooltip(resolved === 'dark'), trigger: 'axis', axisPointer: { type: 'shadow' } },
-    xAxis: {
-      type: 'category', name: 'Error rate', nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: th.textColor },
-      data: h.counts.map((_, i) => `${((h.lo + h.w * i) * 100).toFixed(2)}%`),
-      axisLabel: { color: th.textColor, fontSize: 10, interval: 3 }, axisLine: { lineStyle: { color: th.axisLine } },
-    },
-    yAxis: { type: 'value', name: 'Qubits', nameTextStyle: { color: th.textColor }, minInterval: 1, axisLabel: { color: th.textColor }, splitLine: { lineStyle: { color: th.splitColor } } },
-    series: [{ type: 'bar', data: h.counts, itemStyle: { color: '#38bdf8' }, barCategoryGap: '8%' }],
-  }), [h, th, resolved]);
+  const option = useMemo(() => {
+    if (!h) return null;
+    const sem = getChartSemanticColors();
+    return {
+      grid: { left: 44, right: 12, top: 12, bottom: 44 },
+      tooltip: { ...baseTooltip(resolved === 'dark'), trigger: 'axis', axisPointer: { type: 'shadow' } },
+      xAxis: {
+        type: 'category', name: 'Error rate', nameLocation: 'middle', nameGap: 30, nameTextStyle: { color: th.textColor },
+        data: h.counts.map((_, i) => `${((h.lo + h.w * i) * 100).toFixed(2)}%`),
+        axisLabel: { color: th.textColor, fontSize: 10, interval: 3 }, axisLine: { lineStyle: { color: th.axisLine } },
+      },
+      yAxis: { type: 'value', name: 'Qubits', nameTextStyle: { color: th.textColor }, minInterval: 1, axisLabel: { color: th.textColor }, splitLine: { lineStyle: { color: th.splitColor } } },
+      series: [{ type: 'bar', data: h.counts, itemStyle: { color: sem.accent }, barCategoryGap: '8%' }],
+    };
+  }, [h, th, resolved]);
   return (
     <ChartPanel
       title={title}
@@ -74,6 +79,7 @@ function GateHistogram({ title, values }) {
 }
 
 export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspaceTabChange, onBack }) => {
+  const nav = useNavigate();
   const activeTab = BACKEND_WORKSPACE_TABS.includes(workspaceTab) ? workspaceTab : 'overview';
   const { hours } = useAppScope();
   const scope = scopeSearch(backendId, hours);
@@ -122,11 +128,14 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
     const hv = (hvAll?.backends || []).find((b) => b.backend_id === forId) || null;
     const infra = backend.provider_id === 'cdac_quantum'
       ? await api.getClassicalInfra(forId).catch(() => null) : null;
+    const iq = await api.getIngestionQuality(5, backend.provider_id).catch(() => null);
+    const ingestionQuality = iq?.reports?.[0] ?? null;
     setD({
       backend, status, qubits: qubits || [], calibration, calHist: calHist || [], conn: conn || [], jobs: jobs || [],
       queue, telemetry: telemetry || [], hv, infra, failed,
       alerts: (alerts || []).filter((a) => a.backend_id === forId),
       alertsOk: !!alerts,
+      ingestionQuality,
     });
     if (forId !== backendId) return;
     setLastRefresh(new Date());
@@ -160,7 +169,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
   }
   if (state === 'loading') return <BoneyardSkeleton layout="dashboard" />;
   if (state === 'notfound') return <EmptyState variant="panel" title={`Backend “${backendId}” not found`} message="It is not in the registry." action={<Link className="btn btn-primary" to="/app/backends/inventory">Back to inventory</Link>} />;
-  if (state === 'error' || !d) return <ErrorState variant="panel" message="Backend failed to load." onRetry={load} />;
+  if (state === 'error' || !d) return <ErrorState variant="panel" message={unableToLoad('this backend workspace')} onRetry={load} />;
 
   const { backend, status, calibration, conn, jobs, queue, telemetry, hv, infra, alerts } = d;
   const src = lineageOf(lineage.map, backend.provider_id);
@@ -230,6 +239,17 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
             {backend.quantum_volume ? ` · QV ${backend.quantum_volume}` : ''}{backend.clops ? ` · CLOPS ${backend.clops}` : ''}
           </p>
           <div className="bd-badges">
+            {d.ingestionQuality && (
+              <button
+                type="button"
+                className="btn btn-secondary btn--xs"
+                title="Latest provider collector quality snapshot"
+                onClick={() => nav('/app/admin/collectors')}
+              >
+                Ingestion {d.ingestionQuality.quality_outcome || d.ingestionQuality.status}
+                {d.ingestionQuality.completeness_pct != null ? ` · ${d.ingestionQuality.completeness_pct}%` : ''}
+              </button>
+            )}
             <StatusText status={backend.operational_status} />
             {hv && (
               <span className="bd-health" data-s={hv.router} title={`Advisory router: ${hv.recommended_action || 'n/a'}`}>
@@ -243,9 +263,8 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
           </div>
         </div>
         <nav className="bd-actions" aria-label="Related views">
-          <Link className="btn btn-secondary" to={link('/app/telemetry/live')}>Live telemetry</Link>
+          <Link className="btn btn-primary" to={link('/app/investigate/timeline')}>Ops timeline</Link>
           <Link className="btn btn-secondary" to={link('/app/telemetry/drift')}>Drift</Link>
-          <Link className="btn btn-secondary" to={link('/app/investigate/timeline')}>Timeline</Link>
         </nav>
       </header>
 
@@ -297,7 +316,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
               <div className="bk-kpi">
                 <div className="bk-kpi__label">Calibration age</div>
                 <div className="bk-kpi__value">{calAgeH != null ? `${num(calAgeH, 1)} h` : '—'}</div>
-                <div className="bk-kpi__sub">{calibration?.freshness_status || (secErr('calibration') ? 'Failed to load' : 'No calibration record')}</div>
+                <div className="bk-kpi__sub">{calibration?.freshness_status || (secErr('calibration') ? unableToLoadLabel('calibration') : 'No calibration record')}</div>
               </div>
               <div className={`bk-kpi${activeAlerts.length ? ' bk-kpi--warn' : ''}`}>
                 <div className="bk-kpi__label">Active alerts</div>
@@ -309,7 +328,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
             <div className="bd-grid">
               <section className="card bd-panel" aria-label="Active alerts">
                 <h3>Active alerts <Link className="bd-link" to={link('/app/alerts')}>All alerts</Link></h3>
-                {!d.alertsOk ? <ErrorState variant="inline" message="Alerts failed to load." onRetry={load} />
+                {!d.alertsOk ? <ErrorState variant="inline" message={unableToLoad('alerts for this backend')} onRetry={load} />
                   : activeAlerts.length === 0 ? <p className="page-hint">No active alerts for this backend.</p> : (
                     <ul className="bd-list">
                       {activeAlerts.slice(0, 6).map((a) => (
@@ -356,7 +375,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
 
               <section className="card bd-panel" aria-label="Qubit health">
                 <h3>Qubit health <Link className="bd-link" to={link('/app/resources/health')}>Resource health</Link></h3>
-                {hv?.counts ? <StateBar counts={hv.counts} label={backend.backend_name} /> : <p className="page-hint">{secErr('qubit health') ? 'Health vector failed to load.' : 'No health vector for this backend.'}</p>}
+                {hv?.counts ? <StateBar counts={hv.counts} label={backend.backend_name} /> : <p className="page-hint">{secErr('qubit health') ? unableToLoad('qubit health scores') : 'No health vector for this backend.'}</p>}
                 {infra && (
                   <dl className="bd-props" style={{ marginTop: 14 }}>
                     <dt>CPU</dt><dd>{infra.cpu_util_pct}% · {infra.mpi_ranks_active} MPI ranks</dd>
@@ -371,7 +390,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
 
         {activeTab === 'qubits' && (
           d.qubits.length === 0 ? (
-            <EmptyState variant="panel" title={secErr('qubits') ? 'Qubits failed to load' : 'No qubit records'} message={secErr('qubits') ? 'Retry with refresh.' : 'This backend has no qubit telemetry (e.g. simulators may not report per-qubit data).'} />
+            <EmptyState variant="panel" title={secErr('qubits') ? unableToLoadLabel('qubit records') : 'No qubit records'} message={secErr('qubits') ? 'Use Refresh on the page header.' : 'This backend has no qubit telemetry (simulators may not report per-qubit data).'} />
           ) : (
             <>
               <section className="card bd-panel" aria-label="Qubit map">
@@ -445,7 +464,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
                 </dl>
               </section>
             ) : (
-              <EmptyState variant="panel" title={secErr('calibration') ? 'Calibration failed to load' : 'No calibration record'} message={secErr('calibration') ? 'Retry with refresh.' : 'Collectors have not stored a calibration for this backend.'} />
+              <EmptyState variant="panel" title={secErr('calibration') ? unableToLoadLabel('calibration') : 'No calibration record'} message={secErr('calibration') ? 'Use Refresh on the page header.' : 'Collectors have not stored a calibration for this backend.'} />
             )}
             <div className="bd-grid">
               <GateHistogram title="1-qubit gate error distribution" values={err1} />
@@ -474,7 +493,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
           <section className="card bd-panel" aria-label="Connectivity">
             <h3>Coupling map</h3>
             {conn.length === 0 ? (
-              <EmptyState variant="inline" compact title={secErr('connectivity') ? 'Connectivity failed to load' : 'No coupling edges'} message={backend.topology_type === 'all_to_all' ? 'All-to-all topology: every qubit pair is coupled, edges are not stored.' : 'The registry has no edges for this backend.'} />
+              <EmptyState variant="inline" compact title={secErr('connectivity') ? unableToLoadLabel('coupling edges') : 'No coupling edges'} message={backend.topology_type === 'all_to_all' ? 'All-to-all topology: every qubit pair is coupled, edges are not stored.' : 'The registry has no edges for this backend.'} />
             ) : (
               <dl className="bd-props">
                 <dt>Topology</dt><dd>{label(backend.topology_type || '—')}</dd>
@@ -505,7 +524,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
                 <Link className="btn btn-secondary" style={{ textDecoration: 'none' }} to={link('/app/execution/queues')}>Queues</Link>
               </div>
               {jobs.length === 0 ? (
-                <EmptyState variant="panel" compact title={secErr('jobs') ? 'Jobs failed to load' : 'No jobs'} message={secErr('jobs') ? 'Retry with refresh.' : 'No job records for this backend.'} />
+                <EmptyState variant="panel" compact title={secErr('jobs') ? unableToLoadLabel('jobs') : 'No jobs'} message={secErr('jobs') ? 'Use Refresh on the page header.' : 'No job records for this backend.'} />
               ) : (
                 <div className="bk-tablewrap">
                   <table className="bk-table">

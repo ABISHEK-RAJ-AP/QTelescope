@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { unableToLoad } from '../constants/messages.js';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
@@ -55,7 +56,7 @@ export const DeviceCapabilities = () => {
         return devices[0]?.backend_id || null;
       });
     } catch (e) {
-      setErr(e?.message || 'Failed to load device capabilities');
+      setErr(e?.message || unableToLoad('device capabilities'));
       setPayload(null);
     } finally {
       setLoading(false);
@@ -79,7 +80,7 @@ export const DeviceCapabilities = () => {
 
   if (loading && !payload) {
     return (
-      <div className="dc-page">
+      <div className="page-stack dc-page">
         <BoneyardSkeleton layout="dashboard" />
       </div>
     );
@@ -87,7 +88,7 @@ export const DeviceCapabilities = () => {
 
   if (err && !payload) {
     return (
-      <div className="dc-page">
+      <div className="page-stack dc-page">
         <ErrorState message={err} onRetry={load} />
       </div>
     );
@@ -95,7 +96,7 @@ export const DeviceCapabilities = () => {
 
   if (!devices.length) {
     return (
-      <div className="dc-page">
+      <div className="page-stack dc-page">
         <EmptyState
           title="No fleet backends"
           message="Discover or configure providers first, then revisit device capabilities."
@@ -105,20 +106,20 @@ export const DeviceCapabilities = () => {
   }
 
   return (
-    <div className="dc-page">
-      <header className="dc-hero">
+    <div className="page-stack dc-page" data-tour="page-device-capabilities">
+      <header className="card dc-hero" style={{ padding: '1rem 1.15rem' }}>
         <div>
           <p className="dc-eyebrow">Resources</p>
           <h2 className="dc-title">
             Device capabilities
             <InfoTooltip label="About device capabilities">
-              Normalized sheet of status, queue depth, coherence, gates, and coupling for each
-              backend — for operators and JSON export.
+              Tables and coupling map for each backend — no charts. Export JSON for automation,
+              audits, or offline review (machine-readable snapshot of the same API payload).
             </InfoTooltip>
           </h2>
           <p className="dc-sub">
-            {payload?.schema || 'device-capabilities/1.0'} · {devices.length} device
-            {devices.length === 1 ? '' : 's'}
+            Provider and backend metric coverage matrix · {payload?.schema || 'device-capabilities/1.0'} ·{' '}
+            {devices.length} device{devices.length === 1 ? '' : 's'}
           </p>
         </div>
         <div className="dc-hero__actions">
@@ -129,12 +130,14 @@ export const DeviceCapabilities = () => {
           >
             Export JSON
           </button>
-          <RefreshButton onClick={load} label="Refresh capabilities" />
         </div>
+        <p className="dc-export-hint" style={{ flexBasis: '100%', marginTop: '0.5rem' }}>
+          Export downloads the full fleet payload as JSON for scripts and evidence — not an API import.
+        </p>
       </header>
 
       <div className="dc-layout">
-        <aside className="dc-list" aria-label="Backends">
+        <aside className="card dc-list" aria-label="Backends">
           {devices.map((d) => {
             const st = d.device?.status || '—';
             const tone = STATUS_TONE[st] || 'muted';
@@ -301,24 +304,29 @@ export const DeviceCapabilities = () => {
         </section>
       </div>
 
-      <footer className="dc-compat">
-        <div>
-          <h4>Included</h4>
-          <ul>
-            {covered.slice(0, 10).map((c) => (
-              <li key={c}>{c}</li>
-            ))}
-          </ul>
+      <details className="dc-schema">
+        <summary>API schema coverage (operator reference)</summary>
+        <div className="dc-compat">
+          <div>
+            <h4>Included</h4>
+            <ul>
+              {covered.map((c) => (
+                <li key={c}>{c}</li>
+              ))}
+            </ul>
+          </div>
+          {planned.length > 0 && (
+            <div>
+              <h4>Planned (not in UI)</h4>
+              <ul>
+                {planned.map((c) => (
+                  <li key={c}>{c}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
-        <div>
-          <h4>Planned</h4>
-          <ul>
-            {planned.slice(0, 6).map((c) => (
-              <li key={c}>{c}</li>
-            ))}
-          </ul>
-        </div>
-      </footer>
+      </details>
     </div>
   );
 };

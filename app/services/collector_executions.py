@@ -5,7 +5,7 @@ import json
 import os
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 _LOCK = threading.RLock()
@@ -15,10 +15,42 @@ _PATH = os.path.join(
     "collector_executions.jsonl",
 )
 _MAX_BYTES = int(os.getenv("COLLECTOR_EXECUTIONS_MAX_BYTES", str(5 * 1024 * 1024)))
+_RETENTION_DAYS = int(os.getenv("COLLECTOR_EXECUTIONS_RETENTION_DAYS", "30"))
+_DEFAULT_QUERY_DAYS = int(os.getenv("COLLECTOR_EXECUTIONS_QUERY_DAYS", "30"))
 
 
 def _ensure_dir() -> None:
     os.makedirs(os.path.dirname(_PATH), exist_ok=True)
+
+
+def default_since_iso() -> str:
+    return (datetime.now(timezone.utc) - timedelta(days=_DEFAULT_QUERY_DAYS)).isoformat()
+
+
+def _trim_by_retention() -> None:
+    if not os.path.isfile(_PATH) or _RETENTION_DAYS <= 0:
+        return
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=_RETENTION_DAYS)).isoformat()
+    try:
+        with open(_PATH, encoding="utf-8") as fh:
+            lines = fh.readlines()
+        keep: List[str] = []
+        for line in lines:
+            raw = line.strip()
+            if not raw:
+                continue
+            try:
+                rec = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            ts = rec.get("timestamp") or ""
+            if ts >= cutoff:
+                keep.append(line if line.endswith("\n") else f"{raw}\n")
+        if len(keep) < len(lines):
+            with open(_PATH, "w", encoding="utf-8") as fh:
+                fh.writelines(keep if keep else [])
+    except OSError:
+        pass
 
 
 def _trim_if_needed() -> None:
@@ -67,6 +99,7 @@ def append_execution(
         _ensure_dir()
         with open(_PATH, "a", encoding="utf-8") as fh:
             fh.write(json.dumps(row, default=str) + "\n")
+        _trim_by_retention()
         _trim_if_needed()
     return row
 

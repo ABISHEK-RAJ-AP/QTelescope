@@ -20,6 +20,7 @@ import {
 import { buildDriftInvestigationLocation } from './lib/investigationLinks.js';
 import { parseScopeSearch } from './lib/appScopeQuery.js';
 import cdacLogo from './assets/cdaclogo.png';
+import { LazyImage } from './components/ui/LazyImage.jsx';
 import { IstClock } from './components/shell/IstClock.jsx';
 import { LoginPage } from './pages/LoginPage.jsx';
 import {
@@ -37,6 +38,7 @@ import { useTheme } from './components/ui/ThemeProvider';
 import { PageHeader } from './components/observability/PageHeader.jsx';
 import { resolvePageContext } from './utils/pageContext.js';
 import { PageActionsProvider, usePageActions } from './context/PageActionsContext.jsx';
+import { AlertsSummaryProvider, useAlertsSummary } from './context/AlertsSummaryContext.jsx';
 import { A11yPreheader } from './components/shell/A11yPreheader.jsx';
 import { ProductTour } from './components/onboarding/ProductTour.jsx';
 import { ConfirmDialog } from './components/observability/ConfirmDialog.jsx';
@@ -77,9 +79,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
   // Sidebar Head Topics
   const [mainTopic, setMainTopic] = useState('home');
 
-  // Dynamic active alerts count for live sidebar badge increment
-  const [activeAlertsCount, setActiveAlertsCount] = useState(0);
-  const [criticalAlertsCount, setCriticalAlertsCount] = useState(0);
+  const { activeCount: activeAlertsCount, criticalCount: criticalAlertsCount } = useAlertsSummary();
   // Sub-view selectors for each Head Topic
   const [backendSubTab, setBackendSubTab] = useState('inventory');
   const [telemetrySubTab, setTelemetrySubTab] = useState('live');
@@ -225,28 +225,6 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
   const onNavigateTimeline = useCallback(() => go({ mainTopic: 'investigate', investigateSubTab: 'timeline' }), [go]);
   const onNavigateCompare = useCallback(() => go({ mainTopic: 'telemetry', telemetrySubTab: 'compare' }), [go]);
   const onNavigateResourceHealth = useCallback(() => go({ mainTopic: 'resources', resourceSubTab: 'health' }), [go]);
-
-  // Poll active alerts periodically so the sidebar badge reflects additions/resolutions in real time
-  useEffect(() => {
-    const pollAlerts = async () => {
-      try {
-        const summary = await api.getAlertsSummary();
-        setActiveAlertsCount(summary?.active ?? 0);
-        setCriticalAlertsCount(summary?.critical ?? 0);
-      } catch (err) {
-        console.error('Failed to poll alert count', err);
-      }
-    };
-    const interval = setInterval(() => {
-      if (typeof document !== 'undefined' && document.hidden) return;
-      pollAlerts();
-    }, 20000);
-    const kick = setTimeout(pollAlerts, 400);
-    return () => {
-      clearInterval(interval);
-      clearTimeout(kick);
-    };
-  }, []);
 
   useEffect(() => {
     try {
@@ -727,7 +705,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
         }}
       >
         <Link to="/" className="sidebar-header" title="Q-TeleScope home">
-          <img src={cdacLogo} alt="C-DAC" className="sidebar-logo-img" />
+          <LazyImage src={cdacLogo} alt="C-DAC" className="sidebar-logo-img" />
           {!effectiveCollapsed && (
             <div>
               <div className="sidebar-title">Q-TeleScope</div>
@@ -921,9 +899,11 @@ export const App = () => {
   }
 
   return (
-    <PageActionsProvider>
-      <AppShell currentUser={currentUser} onLogout={endSession} onUserUpdate={setCurrentUser} />
-    </PageActionsProvider>
+    <AlertsSummaryProvider>
+      <PageActionsProvider>
+        <AppShell currentUser={currentUser} onLogout={endSession} onUserUpdate={setCurrentUser} />
+      </PageActionsProvider>
+    </AlertsSummaryProvider>
   );
 };
 

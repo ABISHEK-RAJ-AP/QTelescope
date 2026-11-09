@@ -1,4 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { AlertTriangle } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
@@ -9,13 +11,13 @@ import { useTheme } from '../components/ui/ThemeProvider';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
-import { getChartTheme, baseTooltip } from '../components/observability/chartTheme.js';
+import { getChartTheme, baseTooltip, getFleetStateChartColors, getModalityChartPalette } from '../components/observability/chartTheme.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { useProviderLineage, LineageBadge } from './useLineage.jsx';
 import './BackendComparison.css';
 
-const PALETTE = ['#38bdf8', '#a78bfa', '#34d399', '#fbbf24'];
-const STATE_COLORS = { GREEN: '#34d399', YELLOW: '#fbbf24', RED: '#fb7185', UNKNOWN: '#64748b' };
+const chartPalette = () => getModalityChartPalette();
+const stateColors = () => getFleetStateChartColors();
 
 // qubit: per-qubit distribution from compare.qubits[key]; sensitive = value scale differs by modality (never plot together).
 const DIST_METRICS = [
@@ -102,6 +104,7 @@ function RangeCell({ s, sensitive, mixed }) {
 }
 
 export const BackendComparison = () => {
+  const navigate = useNavigate();
   const { resolved } = useTheme();
   const dark = resolved === 'dark';
   const lineage = useProviderLineage();
@@ -177,7 +180,7 @@ export const BackendComparison = () => {
   const selMod = selMods.length === 1 ? selMods[0] : null;
 
   const rows = useMemo(() => (result?.backends || []).map((b, i) => ({
-    ...b, name: b.backend_name || b.backend_id, short: (b.backend_name || b.backend_id).replace(/\s*\(.*\)/, ''), color: PALETTE[i % PALETTE.length], idx: i,
+    ...b, name: b.backend_name || b.backend_id, short: (b.backend_name || b.backend_id).replace(/\s*\(.*\)/, ''), color: chartPalette()[i % chartPalette().length], idx: i,
   })), [result]);
 
   const queueRows = useMemo(() => rows.map((b) => ({ b, pending: num(queues[b.backend_id]?.pending_jobs) })), [rows, queues]);
@@ -216,7 +219,7 @@ export const BackendComparison = () => {
 
   const stateSeries = {
     names: rows.map((r) => r.short),
-    series: ['GREEN', 'YELLOW', 'RED', 'UNKNOWN'].map((s) => ({ name: s, data: rows.map((r) => num(r.counts?.[s])), itemStyle: { color: STATE_COLORS[s] }, label: { show: false } })),
+    series: ['GREEN', 'YELLOW', 'RED', 'UNKNOWN'].map((s) => ({ name: s, data: rows.map((r) => num(r.counts?.[s])), itemStyle: { color: stateColors()[s] }, label: { show: false } })),
   };
   const queueData = queueRows.filter((q) => q.pending != null);
 
@@ -236,7 +239,6 @@ export const BackendComparison = () => {
             return (
               <button key={b.backend_id} type="button" className="bc-chip" aria-pressed={on} disabled={full}
                 data-mismatch={mismatch || undefined} onClick={() => toggle(b.backend_id)}>
-                <span className="bc-chip__check" aria-hidden>{on ? '✓' : ''}</span>
                 <span className="bc-chip__body">
                   <span className="bc-chip__name">{b.backend_name || b.backend_id}</span>
                   <span className="bc-chip__meta">{mod.replace('_', ' ')} · {b.qubit_count ?? '?'}Q</span>
@@ -276,7 +278,7 @@ export const BackendComparison = () => {
                 <ChartPanel key={`${m.id}-${g.title}`} title={`${m.label}${m.unit ? ` (${m.unit})` : ''}${g.title ? ` · ${g.title}` : ''}`}
                   question="Per-qubit distribution: box = Q1–Q3, line = median, whiskers = min/max."
                   sourceKind="derived" minHeight={320} state={plotted.length ? 'ready' : 'empty'}
-                  emptyTitle="No data" emptyMessage="No per-qubit values for these backends."
+                  emptyTitle="No measurements" emptyMessage="No per-qubit values for these backends."
                   tableAlternative={(
                     <table className="custom-table custom-table--dense"><thead><tr><th>Backend</th><th>Min</th><th>Median</th><th>Max</th><th>n</th></tr></thead>
                       <tbody>{g.list.map((r) => { const s = distStats(r, m); return <tr key={r.backend_id}><td>{r.name}</td><td>{fmt(s?.min) ?? 'missing'}</td><td>{fmt(s?.med) ?? 'missing'}</td><td>{fmt(s?.max) ?? 'missing'}</td><td>{s?.n ?? 0}</td></tr>; })}</tbody></table>
@@ -290,7 +292,7 @@ export const BackendComparison = () => {
             {vectorRows.map((vr) => (
               <ChartPanel key={vr.label} title={`Vector · ${vr.label}`} question="Backend-level mean from health vector (not cross-modality rank)." sourceKind="derived" minHeight={320}
                 state={vr.series[0].data.some((d) => d?.value != null) ? 'ready' : 'empty'}
-                emptyTitle="No data" emptyMessage="Health vector field not reported for these backends."
+                emptyTitle="No measurements" emptyMessage="Health vector field not reported for these backends."
                 tableAlternative={(
                   <table className="custom-table custom-table--dense"><thead><tr><th>Backend</th><th>{vr.label}</th></tr></thead>
                     <tbody>{rows.map((r) => <tr key={r.backend_id}><td>{r.name}</td><td>{fmt(num(r.vector?.[vr.key])) ?? 'missing'}</td></tr>)}</tbody></table>
@@ -310,7 +312,7 @@ export const BackendComparison = () => {
             </ChartPanel>
 
             <ChartPanel title="Queue depth" question="Pending jobs now." sourceKind="cached" minHeight={320}
-              state={queueData.length ? 'ready' : 'empty'} emptyTitle="No data" emptyMessage="No queue snapshot for selected backends."
+              state={queueData.length ? 'ready' : 'empty'} emptyTitle="No measurements" emptyMessage="No queue snapshot for selected backends."
               tableAlternative={(
                 <table className="custom-table custom-table--dense"><thead><tr><th>Backend</th><th>Pending jobs</th></tr></thead>
                   <tbody>{queueRows.map(({ b, pending }) => <tr key={b.backend_id}><td>{b.name}</td><td>{pending ?? 'missing'}</td></tr>)}</tbody></table>
@@ -333,7 +335,14 @@ export const BackendComparison = () => {
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr key={r.backend_id}>
+                    <tr
+                      key={r.backend_id}
+                      className="bc-row-click"
+                      tabIndex={0}
+                      role="link"
+                      onClick={() => navigate(buildBackendDetailsPath(r.backend_id))}
+                      onKeyDown={(e) => { if (e.key === 'Enter') navigate(buildBackendDetailsPath(r.backend_id)); }}
+                    >
                       <td><span className="bc-dot" style={{ borderColor: r.color }} aria-hidden /> {r.name}</td>
                       <td>{(r.qpu_modality || 'unknown').replace('_', ' ')}</td>
                       <td><span className={`badge badge-${r.router === 'GREEN' ? 'healthy' : r.router === 'YELLOW' ? 'warning' : r.router === 'RED' ? 'critical' : 'info'}`}>{r.router}</span></td>

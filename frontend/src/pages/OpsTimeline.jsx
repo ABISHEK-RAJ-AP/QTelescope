@@ -5,27 +5,28 @@ import { X } from 'lucide-react';
 import { ContextBar } from '../components/observability/ContextBar.jsx';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { DetailDrawer } from '../components/observability/DetailDrawer.jsx';
-import { DetailModalBody, DetailModalSection, DetailModalRelated } from '../components/observability/DetailModalLayout.jsx';
+import { DetailModalBody, DetailModalSection } from '../components/observability/DetailModalLayout.jsx';
 import { TableEmpty } from '../components/observability/EmptyState.jsx';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
-import { getChartTheme, baseTooltip } from '../components/observability/chartTheme.js';
+import { getChartTheme, baseTooltip, getSeverityChartColors, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { useAppScope } from '../hooks/useAppScope.js';
 import { fetchApi } from '../services/api';
 import { formatIST } from '../utils/time';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
+import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
 import { SevBadge, StatusBadge } from './opsShared.jsx';
-import { sevRank, toMs, healthTo } from './opsHelpers.js';
+import { sevRank, toMs } from './opsHelpers.js';
 import { DataPanelToolbar, SortableTh } from '../components/observability/DataViewToolbar.jsx';
+import { ListPager } from '../components/observability/ListPager.jsx';
 import './OpsTimeline.css';
 
 const LIMIT = 500; // alerts/incidents/collector failures are each capped server-side by this
 const KINDS = ['alert', 'incident', 'collector_failure'];
 const KIND_SYMBOL = { alert: 'circle', incident: 'diamond', collector_failure: 'triangle' };
-const SEV_COLOR = { CRITICAL: '#e11d48', WARNING: '#d97706', INFO: '#0284c7' };
 const ROWS = 25;
 
 export const OpsTimeline = () => {
@@ -45,8 +46,9 @@ export const OpsTimeline = () => {
   const [kinds, setKinds] = useState(() => new Set(KINDS));
   const [sev, setSev] = useState('ALL');
   const [query, setQuery] = useState('');
+  const debouncedQuery = useDebouncedValue(query, 300);
   const [selected, setSelected] = useState(null); // lane|at bucket key
-  const [shown, setShown] = useState(ROWS);
+  const [page, setPage] = useState(1);
   const [layout, setLayout] = useState('table');
   const [sort, setSort] = useState({ key: 'at', dir: 'desc' });
 
@@ -62,10 +64,10 @@ export const OpsTimeline = () => {
     setActions(<RefreshButton onClick={load} lastRefreshAt={lastRefresh} label="Refresh timeline" />);
     return () => clearActions();
   }, [load, lastRefresh, setActions, clearActions]);
-  useEffect(() => setShown(ROWS), [kinds, sev, query, scopeBackend, alertId]);
+  useEffect(() => setPage(1), [kinds, sev, debouncedQuery, scopeBackend, alertId]);
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = debouncedQuery.trim().toLowerCase();
     return events.filter((e) => (
       kinds.has(e.kind)
       && (sev === 'ALL' || e.severity === sev)
@@ -73,7 +75,7 @@ export const OpsTimeline = () => {
       && (!alertId || e.id === alertId || e.correlation_id === alertId)
       && (!q || [e.title, e.summary, e.id, e.backend_id].some((f) => String(f || '').toLowerCase().includes(q)))
     ));
-  }, [events, kinds, sev, scopeBackend, alertId, query]);
+  }, [events, kinds, sev, scopeBackend, alertId, debouncedQuery]);
 
   const sorted = useMemo(() => {
     const list = filtered.slice();
@@ -88,6 +90,10 @@ export const OpsTimeline = () => {
     });
     return list;
   }, [filtered, sort]);
+
+  const eventPages = Math.max(1, Math.ceil(sorted.length / ROWS));
+  const eventPage = Math.min(page, eventPages);
+  const pageEvents = sorted.slice((eventPage - 1) * ROWS, eventPage * ROWS);
 
   // lanes = backend · kind; events at identical timestamp share a bucket (batch detections)
   const { lanes, buckets } = useMemo(() => {
@@ -117,7 +123,10 @@ export const OpsTimeline = () => {
     return { min: lo - pad, max: hi + pad };
   }, [buckets]);
 
-  const option = useMemo(() => ({
+  const option = useMemo(() => {
+    const sevColor = getSeverityChartColors();
+    const sem = getChartSemanticColors();
+    return {
     grid: { left: 230, right: 28, top: 16, bottom: 56 },
     tooltip: {
       ...baseTooltip(isDark), trigger: 'item',
@@ -136,11 +145,12 @@ export const OpsTimeline = () => {
         bucket: b,
         symbol: KIND_SYMBOL[b.kind] || 'circle',
         symbolSize: Math.min(36, 12 + Math.sqrt(b.items.length) * 4),
-        itemStyle: { color: SEV_COLOR[b.worst] || SEV_COLOR.INFO, borderColor: b.key === selected ? t.tooltipText : 'transparent', borderWidth: 2, opacity: 0.9 },
+        itemStyle: { color: sevColor[b.worst] || sevColor.INFO, borderColor: b.key === selected ? t.tooltipText : 'transparent', borderWidth: 2, opacity: 0.9 },
       })),
-      markLine: atMs ? { silent: true, symbol: 'none', lineStyle: { color: '#7c3aed', type: 'dashed' }, label: { formatter: 'focus', color: t.textColor }, data: [{ xAxis: atMs }] } : undefined,
+      markLine: atMs ? { silent: true, symbol: 'none', lineStyle: { color: sem.info, type: 'dashed' }, label: { formatter: 'focus', color: t.textColor }, data: [{ xAxis: atMs }] } : undefined,
     }],
-  }), [buckets, lanes, selected, atMs, isDark, t, span]);
+  };
+  }, [buckets, lanes, selected, atMs, isDark, t, span]);
 
   const toggleKind = (k) => setKinds((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; });
   const clearAt = () => setSp((p) => { const n = new URLSearchParams(p); n.delete('at'); return n; }, { replace: true });
@@ -212,12 +222,12 @@ export const OpsTimeline = () => {
         />
       </ChartPanel>
       <section className="card ot-table dvt-panel" aria-label="Events">
-        <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${Math.min(shown, sorted.length)} of ${sorted.length} events`} />
+        <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${sorted.length} event${sorted.length === 1 ? '' : 's'}`} />
         {layout === 'grid' ? (
           <div className="dvt-grid">
             {sorted.length === 0 ? (
               <div style={{ gridColumn: '1 / -1', padding: '8px 14px' }}><TableEmpty colSpan={1} title={events.length === 0 ? 'Timeline empty' : 'No matching events'} message={events.length === 0 ? 'Nothing recorded yet.' : 'Adjust filters.'} /></div>
-            ) : sorted.slice(0, shown).map((e) => {
+            ) : pageEvents.map((e) => {
               const key = `${e.backend_id || 'fleet'} · ${e.kind.replace('_', ' ')}|${e.at}`;
               return (
                 <article key={`${e.kind}-${e.id}`} className="dvt-card" data-selected={selected === key || undefined}>
@@ -253,7 +263,7 @@ export const OpsTimeline = () => {
               <tbody>
                 {sorted.length === 0 ? (
                   <TableEmpty colSpan={7} title={events.length === 0 ? 'Timeline empty' : 'No matching events'} message={events.length === 0 ? 'Nothing recorded yet.' : 'Adjust filters.'} />
-                ) : sorted.slice(0, shown).map((e) => {
+                ) : pageEvents.map((e) => {
                   const key = `${e.backend_id || 'fleet'} · ${e.kind.replace('_', ' ')}|${e.at}`;
                   return (
                     <tr key={`${e.kind}-${e.id}`} className={selected === key ? 'ot-row--sel' : undefined}>
@@ -271,9 +281,7 @@ export const OpsTimeline = () => {
             </table>
           </div>
         )}
-        {sorted.length > shown && (
-          <div className="ot-more"><button type="button" className="btn btn-secondary btn--xs" onClick={() => setShown(shown + ROWS)}>Show {Math.min(ROWS, sorted.length - shown)} more ({sorted.length - shown} hidden)</button></div>
-        )}
+        <ListPager page={eventPage} pages={eventPages} onPage={setPage} label="Page" />
       </section>
 
       <DetailDrawer
@@ -301,10 +309,9 @@ export const OpsTimeline = () => {
               </ul>
             </DetailModalSection>
             {sel.items[0].backend_id && (
-              <DetailModalRelated>
-                <button type="button" className="btn btn-secondary" onClick={() => nav(healthTo(sel.items[0].backend_id))}>Resource health</button>
-                <button type="button" className="btn btn-secondary" onClick={() => nav(buildBackendDetailsPath(sel.items[0].backend_id, 'qubits'))}>Backend qubits</button>
-              </DetailModalRelated>
+              <DetailModalSection title="Investigate">
+                <button type="button" className="btn btn-primary" onClick={() => nav(buildBackendDetailsPath(sel.items[0].backend_id))}>Open backend workspace</button>
+              </DetailModalSection>
             )}
           </DetailModalBody>
         )}

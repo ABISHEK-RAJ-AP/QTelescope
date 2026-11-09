@@ -140,7 +140,14 @@ export function LoginPage({ onLoginSuccess }) {
               <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
                 Demo accounts
               </span>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setUsername('superadmin'); setPassword('quantum2026'); setError('') }}
+                  className="rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                >
+                  SuperAdmin
+                </button>
                 <button
                   type="button"
                   onClick={() => { setUsername('admin'); setPassword('quantum2026'); setError('') }}
@@ -153,7 +160,7 @@ export function LoginPage({ onLoginSuccess }) {
                   onClick={() => { setUsername('user_researcher'); setPassword('quantum2026'); setError('') }}
                   className="rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
                 >
-                  Researcher
+                  Operator
                 </button>
               </div>
             </div>
@@ -225,7 +232,7 @@ export function LoginPage({ onLoginSuccess }) {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className={`${fieldClass} pl-9`}
-              placeholder="admin or user_researcher"
+              placeholder="superadmin, admin, or user_researcher"
             />
           </div>
         </Field>

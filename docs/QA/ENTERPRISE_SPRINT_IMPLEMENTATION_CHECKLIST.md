@@ -23,7 +23,7 @@
 - [x] `ENTERPRISE_IMPLEMENTATION_BACKLOG.md`
 - [x] `ENTERPRISE_DEPENDENCY_GRAPH.md`
 - [ ] Full capability inventory CSV (93+ matrix rows) — **ongoing in backlog rows**
-- [ ] Re-run Playwright for E25/E26 evidence
+- [x] Re-run Playwright for E25/E26 evidence — `27 passed, 3 skipped, 0 failed` ([E2E_TELESCOPE_EVIDENCE.md](E2E_TELESCOPE_EVIDENCE.md))
 
 ---
 
@@ -49,7 +49,7 @@
 | 2.2 | Durable saved queries | 🔧 | localStorage |
 | 2.3 | Resource catalogue | 🔧 | `backend_catalog.py` |
 | 2.4 | Dependency map | 🔧 | Platform Health `dependency_links` v1 |
-| 2.5 | EnterpriseDataTable rollout | 🔧 | Platform Health only + audit |
+| 2.5 | EnterpriseDataTable rollout | 🔧 | Platform Health, Calibration, Jobs, Incidents (table layout) |
 
 ---
 
@@ -57,7 +57,9 @@
 
 | # | Requirement | Status |
 | --- | --- | --- |
-| 3.1–3.6 | B6–B9 | ⬜ |
+| 3.1 | B6 SLI hourly | 🔧 | collector success SLI + JSONL snapshots |
+| 3.2 | B8 synthetic probe | 🔧 | DB probe on platform-health |
+| 3.3–3.6 | B7, B9 OTel, visual | ⬜ |
 
 ---
 
@@ -103,8 +105,8 @@
 | ID | Journey | Status |
 | --- | --- | --- |
 | E01–E24 | Core | ✅ documented gate |
-| E25 | Audit log | 🔧 spec added; re-run |
-| E26 | Metrics save/restore | 🔧 spec added; re-run |
+| E25 | Audit log | ✅ gate 2026-11-09 |
+| E26 | Metrics save/restore | ✅ gate 2026-11-09 |
 | E27 | Backend→evidence (full) | ⬜ proposed north-star |
 | E28 | Collector failure recovery | ⬜ |
 | E29 | Facility auth | ⬜ |

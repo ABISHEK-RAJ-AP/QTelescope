@@ -1,5 +1,18 @@
 import React from 'react';
+import { AnimatedNumber } from '../ui/AnimatedNumber.jsx';
 import { InfoTooltip } from './InfoTooltip.jsx';
+
+function StatValue({ value, tone }) {
+  const n = Number(value);
+  if (Number.isFinite(n)) {
+    return (
+      <span className={`dashboard-exception-stat__val dashboard-exception-stat__val--${tone}`}>
+        <AnimatedNumber value={n} />
+      </span>
+    );
+  }
+  return <span className={`dashboard-exception-stat__val dashboard-exception-stat__val--${tone}`}>{value}</span>;
+}
 
 /**
  * Severity-first exception metrics — shared by Fleet Overview and Operator Console.
@@ -17,9 +30,7 @@ export function ExceptionStrip({ items, ariaLabel = 'Operational exceptions', cl
         const tone = item.tone || (item.emphasis === 'critical' ? 'critical' : 'neutral');
         const body = (
           <>
-            <span className={`dashboard-exception-stat__val dashboard-exception-stat__val--${tone}`}>
-              {item.value}
-            </span>
+            <StatValue value={item.value} tone={tone} />
             <span className="dashboard-exception-stat__lbl">{item.label}</span>
             {item.sub ? <span className="dashboard-exception-stat__sub">{item.sub}</span> : null}
           </>

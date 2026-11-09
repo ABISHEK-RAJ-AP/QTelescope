@@ -15,6 +15,7 @@ import { baseTooltip, getChartTheme } from '../components/observability/chartThe
 import { useAppScope } from '../hooks/useAppScope.js';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
 import { STATES, STATE_GLYPH, STATE_LABEL, ageMinutes, formatAge, isStale, scopeSearch } from './backendUtils.js';
+import { unableToLoad } from '../constants/messages.js';
 import './QubitMonitoring.css';
 
 const PAGE_SIZE = 40;
@@ -139,7 +140,7 @@ export const QubitMonitoring = () => {
   );
 
   if (backends === null && phase !== 'error') return <BoneyardSkeleton layout="table" />;
-  if (phase === 'error') return <ErrorState variant="panel" message="Qubit data failed to load." onRetry={() => { setPhase('loading'); load(); }} />;
+  if (phase === 'error') return <ErrorState variant="panel" message={unableToLoad('qubit telemetry')} onRetry={() => { setPhase('loading'); load(); }} />;
   if (!backends.length) return <EmptyState variant="panel" title="No backends" message="Add a backend before opening qubit monitoring." />;
 
   const newest = rows.reduce((m, r) => (r.ts && (!m || r.ts > m) ? r.ts : m), null);
@@ -172,7 +173,7 @@ export const QubitMonitoring = () => {
           <Link className="btn btn-secondary" to={`/app/resources/health${scopeSearch(backend, hours)}`}>Resource health</Link>
         </div>
       </section>
-      {!data.hvOk && <p className="bk-note" role="status">Health scoring failed to load; all qubits show Unknown health.</p>}
+      {!data.hvOk && <p className="bk-note" role="status">{unableToLoad('health scores')}. All qubits show Unknown health.</p>}
 
       <div className="qubit-layout-grid">
         <section className="card" style={{ padding: 0, minWidth: 0 }}>
@@ -226,7 +227,7 @@ export const QubitMonitoring = () => {
           state={selected == null ? 'empty' : hist.state === 'loading' ? 'loading' : hist.state === 'error' ? 'error' : hist.rows.length > 1 ? 'ready' : 'empty'}
           emptyTitle={selected == null ? 'No qubit selected' : 'Not enough samples'}
           emptyMessage={selected == null ? 'Select a qubit row to load its history.' : 'Fewer than two stored samples; no trend to draw.'}
-          errorMessage="History failed to load."
+          errorMessage={unableToLoad('qubit history')}
           onRetry={() => setSelected((s) => { setHist({ rows: [], state: 'loading' }); return s; })}
           minHeight={280}
         >

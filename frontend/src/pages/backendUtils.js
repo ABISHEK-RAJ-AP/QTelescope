@@ -31,7 +31,7 @@ export function ageMinutes(ts) {
 }
 
 export function formatAge(min) {
-  if (min == null) return 'No data';
+  if (min == null) return 'Not available';
   if (min < 1) return '<1 min';
   if (min < 90) return `${Math.round(min)} min`;
   if (min < 48 * 60) return `${(min / 60).toFixed(1)} h`;

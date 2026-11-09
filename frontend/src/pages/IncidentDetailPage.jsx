@@ -6,6 +6,7 @@ import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { usePermissions } from '../hooks/usePermissions.js';
+import { unableToLoad } from '../constants/messages.js';
 import { formatIST } from '../utils/time';
 import { SevBadge, StatusBadge } from './opsShared.jsx';
 import { sevRank, qubitOf } from './opsHelpers.js';
@@ -46,7 +47,7 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
       setInc(data);
       setError(null);
     } catch (e) {
-      setError(e?.message || 'Failed to load incident');
+      setError(e?.message || unableToLoad('this incident'));
     } finally {
       setLoading(false);
     }

@@ -16,6 +16,7 @@ import {
   completeOnboarding,
   markConsoleTourPending,
 } from '@/lib/onboardingState';
+import { isPlatformAdmin } from '@/lib/permissions.js';
 import { OnboardingShell, STEP_IDS } from '@/components/onboarding/OnboardingChrome';
 import '@/components/onboarding/onboarding.css';
 
@@ -68,7 +69,7 @@ function WizardFooter({ hint, left, right }) {
 export function OnboardingFlow({ currentUser }) {
   const navigate = useNavigate();
   const username = currentUser?.username;
-  const isAdmin = currentUser?.role === 'Admin' || currentUser?.role === 'PlatformAdmin' || currentUser?.role === 'QuantumOpsAdmin';
+  const isAdmin = isPlatformAdmin(currentUser) || currentUser?.role === 'QuantumOpsAdmin';
 
   const [step, setStep] = useState('welcome');
   const [maxReachable, setMaxReachable] = useState(0);

@@ -3,8 +3,9 @@ import { fetchApi } from '../services/api';
 /** /alerts defaults to limit=100 — that truncation is why the sidebar (100) and
  *  server aggregate (106) disagreed. 500 is the API max. */
 export const ALERT_LIST_LIMIT = 500;
-export const fetchActiveAlerts = () =>
-  fetchApi(`/alerts?status=ACTIVE&limit=${ALERT_LIST_LIMIT}`);
+/** @param {number} [limit] default 500 — use ~200 on operator console for faster loads */
+export const fetchActiveAlerts = (limit = ALERT_LIST_LIMIT) =>
+  fetchApi(`/alerts?status=ACTIVE&limit=${Math.min(limit, ALERT_LIST_LIMIT)}`);
 
 export const STALE_MIN = 30;
 

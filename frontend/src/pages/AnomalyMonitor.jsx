@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { api } from '../services/api';
+import { unableToLoad } from '../constants/messages.js';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { TableEmpty } from '../components/observability/EmptyState.jsx';
@@ -15,22 +16,31 @@ import {
   DetailModalCallout,
 } from '../components/observability/DetailModalLayout.jsx';
 import { ContextBar } from '../components/observability/ContextBar.jsx';
-import { getChartTheme, baseTooltip } from '../components/observability/chartTheme.js';
+import { getChartTheme, baseTooltip, getChartSemanticColors, getAnomalySeverityChartColors, getChartInkColor } from '../components/observability/chartTheme.js';
 import { useAppScope } from '../hooks/useAppScope.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { formatISTTime } from '../utils/time';
 import { buildBackendDetailsPath, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
 import { METRICS, METRIC_KEYS, normMetric, fmtMetric, fmtNum, isStale, modalityOf, healthLink, timelineLink } from './telemetryPageUtils.js';
 import { DataPanelToolbar, SortableTh } from '../components/observability/DataViewToolbar.jsx';
+import { BoneyardSkeleton } from '../components/ui/Skeleton';
+import { AnimatedNumber } from '../components/ui/AnimatedNumber.jsx';
 import './TelemetryPages.css';
 
 // rank: higher = worse. Letter shown in heatmap cell so status is never color alone.
-const SEV = {
-  ANOMALY: { rank: 3, letter: 'A', badge: 'badge-critical', color: '#fb7185' },
-  WARNING: { rank: 2, letter: 'W', badge: 'badge-warning', color: '#fbbf24' },
-  CHANGE_POINT: { rank: 1, letter: 'C', badge: 'badge-info', color: '#38bdf8' },
+function anomalySeverityMeta() {
+  const c = getAnomalySeverityChartColors();
+  return {
+    ANOMALY: { rank: 3, letter: 'A', badge: 'badge-critical', color: c.ANOMALY },
+    WARNING: { rank: 2, letter: 'W', badge: 'badge-warning', color: c.WARNING },
+    CHANGE_POINT: { rank: 1, letter: 'C', badge: 'badge-info', color: c.CHANGE_POINT },
+  };
+}
+const sevOf = (s) => {
+  const SEV = anomalySeverityMeta();
+  const fallback = getAnomalySeverityChartColors().default;
+  return SEV[s] || { rank: 0, letter: '?', badge: 'badge-info', color: fallback };
 };
-const sevOf = (s) => SEV[s] || { rank: 0, letter: '?', badge: 'badge-info', color: '#64748b' };
 const deviation = (h) => (h.latest_value != null && h.latest_ewma ? ((h.latest_value - h.latest_ewma) / Math.abs(h.latest_ewma)) * 100 : null);
 
 function QubitDrawerBody({ hit, metric, modality, nav }) {
@@ -51,13 +61,14 @@ function QubitDrawerBody({ hit, metric, modality, nav }) {
   const series = useMemo(() => [...(state.hist || [])].reverse().filter((h) => h[metric] != null), [state.hist, metric]);
   const cpTs = state.detail?.change_point_timestamp;
   const option = useMemo(() => {
+    const sem = getChartSemanticColors();
     const labels = series.map((h) => formatISTTime(h.timestamp, false));
     const marks = [];
     if (cpTs) {
       const l = formatISTTime(cpTs, false);
-      marks.push({ xAxis: labels.includes(l) ? l : labels[0], name: 'change point', label: { formatter: 'change point', color: th.textColor }, lineStyle: { color: '#fb7185', type: 'dashed' } });
+      marks.push({ xAxis: labels.includes(l) ? l : labels[0], name: 'change point', label: { formatter: 'change point', color: th.textColor }, lineStyle: { color: sem.critical, type: 'dashed' } });
     }
-    if (state.detail?.latest_ewma != null) marks.push({ yAxis: state.detail.latest_ewma, name: 'EWMA', label: { formatter: 'EWMA', color: th.textColor }, lineStyle: { color: '#a78bfa', type: 'dotted' } });
+    if (state.detail?.latest_ewma != null) marks.push({ yAxis: state.detail.latest_ewma, name: 'EWMA', label: { formatter: 'EWMA', color: th.textColor }, lineStyle: { color: sem.info, type: 'dotted' } });
     return {
       backgroundColor: 'transparent',
       grid: { left: 8, right: 16, top: 24, bottom: 8, containLabel: true },
@@ -77,7 +88,7 @@ function QubitDrawerBody({ hit, metric, modality, nav }) {
       {modality && modality !== 'superconducting' && (
         <DetailModalCallout>Modality {modality}: values use different scales than superconducting backends. Do not compare across modalities.</DetailModalCallout>
       )}
-      {state.err && <ErrorState compact variant="inline" message="Qubit detail failed to load." />}
+      {state.err && <ErrorState compact variant="inline" message={unableToLoad('qubit detail')} />}
       {state.detail?.flags?.length > 0 && <p className="page-hint" style={{ margin: 0 }}>Flags: {state.detail.flags.join(', ')}</p>}
       <DetailModalSection title={`${METRICS[metric].label} history (${series.length} stored samples)`}>
         {state.loading ? <p className="page-hint">Loading…</p> : series.length < 2 ? (
@@ -186,16 +197,16 @@ export const AnomalyMonitor = () => {
         xAxis: { type: 'category', data: cols.map((c) => `Q${c}`), splitArea: { show: true }, axisLabel: { color: th.textColor }, axisLine: { lineStyle: { color: th.axisLine } } },
         yAxis: { type: 'category', data: ys, axisLabel: { color: th.textColor, width: 150, overflow: 'truncate' } },
         visualMap: { type: 'piecewise', orient: 'horizontal', left: 'center', bottom: 0, textStyle: { color: th.textColor }, pieces: [
-          { value: 1, label: 'C change point', color: SEV.CHANGE_POINT.color },
-          { value: 2, label: 'W warning', color: SEV.WARNING.color },
-          { value: 3, label: 'A anomaly', color: SEV.ANOMALY.color }], dimension: 2 },
+          { value: 1, label: 'C change point', color: sevOf('CHANGE_POINT').color },
+          { value: 2, label: 'W warning', color: sevOf('WARNING').color },
+          { value: 3, label: 'A anomaly', color: sevOf('ANOMALY').color }], dimension: 2 },
         series: [{
           type: 'heatmap',
           data: hits.map((h, i) => {
             const y = rows.findIndex((b) => b.backend_id === h.backend_id);
             return y < 0 ? null : [cols.indexOf(h.qubit_index), y, sevOf(h.status).rank, i];
           }).filter(Boolean),
-          label: { show: true, color: '#0b1220', fontWeight: 700, formatter: (p) => ['', 'C', 'W', 'A'][p.data[2]] },
+          label: { show: true, color: getChartInkColor(), fontWeight: 700, formatter: (p) => ['', 'C', 'W', 'A'][p.data[2]] },
           itemStyle: { borderColor: th.splitColor, borderWidth: 2 },
         }],
       },
@@ -204,6 +215,15 @@ export const AnomalyMonitor = () => {
 
   const onHeatClick = (p) => { const h = hits[p.data?.[3]]; if (h) setSelected(h); };
   const modOf = (id) => modalityOf(backends, id);
+
+  if (loading && !data && !error) {
+    return (
+      <div className="page-stack">
+        <ContextBar backend={scopeBackend} backends={backends} onBackendChange={setBackend} />
+        <BoneyardSkeleton layout="grid" />
+      </div>
+    );
+  }
 
   return (
     <div className="page-stack">
@@ -221,14 +241,14 @@ export const AnomalyMonitor = () => {
         {scopeBackend && <button type="button" className="btn btn-secondary" onClick={() => setBackend('')}>All backends</button>}
       </div>
 
-      {error && <ErrorState variant="panel" message="Anomaly summary failed to load." onRetry={load} />}
+      {error && <ErrorState variant="panel" message={unableToLoad('anomaly summary')} onRetry={load} />}
       {!error && (
         <>
           <div className="tm-kpis">
-            <div className="tm-kpi"><div className="tm-kpi__label">Series scanned</div><div className="tm-kpi__value">{loading && !data ? '…' : data?.series_scanned ?? '—'}</div><div className="tm-kpi__sub">{data?.backends_scanned ?? '—'} backends</div></div>
-            <div className="tm-kpi"><div className="tm-kpi__label">Anomalies</div><div className="tm-kpi__value" style={{ color: count('ANOMALY') ? 'var(--accent-rose)' : undefined }}>{count('ANOMALY')}</div><div className="tm-kpi__sub">in view</div></div>
-            <div className="tm-kpi"><div className="tm-kpi__label">Warnings</div><div className="tm-kpi__value" style={{ color: count('WARNING') ? 'var(--accent-amber)' : undefined }}>{count('WARNING')}</div><div className="tm-kpi__sub">in view</div></div>
-            <div className="tm-kpi"><div className="tm-kpi__label">Change points</div><div className="tm-kpi__value">{count('CHANGE_POINT')}</div><div className="tm-kpi__sub">in view</div></div>
+            <div className="tm-kpi"><div className="tm-kpi__label">Series scanned</div><div className="tm-kpi__value">{Number.isFinite(data?.series_scanned) ? <AnimatedNumber value={data.series_scanned} /> : '—'}</div><div className="tm-kpi__sub">{data?.backends_scanned ?? '—'} backends</div></div>
+            <div className="tm-kpi"><div className="tm-kpi__label">Anomalies</div><div className="tm-kpi__value" style={{ color: count('ANOMALY') ? 'var(--accent-rose)' : undefined }}><AnimatedNumber value={count('ANOMALY')} /></div><div className="tm-kpi__sub">in view</div></div>
+            <div className="tm-kpi"><div className="tm-kpi__label">Warnings</div><div className="tm-kpi__value" style={{ color: count('WARNING') ? 'var(--accent-amber)' : undefined }}><AnimatedNumber value={count('WARNING')} /></div><div className="tm-kpi__sub">in view</div></div>
+            <div className="tm-kpi"><div className="tm-kpi__label">Change points</div><div className="tm-kpi__value"><AnimatedNumber value={count('CHANGE_POINT')} /></div><div className="tm-kpi__sub">in view</div></div>
           </div>
 
           <ChartPanel
@@ -293,9 +313,8 @@ export const AnomalyMonitor = () => {
                       <div><dt>Dev %</dt><dd>{h.dev == null ? '—' : `${h.dev > 0 ? '+' : ''}${fmtNum(h.dev, 1)}%`}</dd></div>
                     </dl>
                     <footer className="dvt-card__foot dvt-actions">
-                      <button type="button" className="btn btn-secondary btn--xs" onClick={() => setSelected(h)}>Series</button>
-                      <button type="button" className="btn btn-secondary btn--xs" onClick={() => navigate(healthLink(h.backend_id, h.qubit_index))}>Health</button>
-                      <button type="button" className="btn btn-secondary btn--xs" onClick={() => navigate(buildDriftInvestigationLocation({ backendId: h.backend_id }))}>Drift</button>
+                      <button type="button" className="btn btn-primary btn--xs" onClick={() => setSelected(h)}>Open series</button>
+                      <button type="button" className="btn btn-secondary btn--xs" onClick={() => navigate(healthLink(h.backend_id, h.qubit_index))}>Workspace</button>
                     </footer>
                   </article>
                 ))}
@@ -331,9 +350,8 @@ export const AnomalyMonitor = () => {
                         <td className="tm-num">{h.change_point_index ?? '—'}</td>
                         <td>
                           <div className="dvt-actions tm-actions">
-                            <button type="button" className="btn btn-secondary btn--xs" onClick={() => navigate(healthLink(h.backend_id, h.qubit_index))}>Health</button>
-                            <button type="button" className="btn btn-secondary btn--xs" onClick={() => navigate(buildDriftInvestigationLocation({ backendId: h.backend_id }))}>Drift</button>
-                            <button type="button" className="btn btn-secondary btn--xs" onClick={() => navigate(timelineLink(h.backend_id))}>Timeline</button>
+                            <button type="button" className="btn btn-primary btn--xs" onClick={() => setSelected(h)}>Series</button>
+                            <button type="button" className="btn btn-secondary btn--xs" onClick={() => navigate(healthLink(h.backend_id, h.qubit_index))}>Workspace</button>
                           </div>
                         </td>
                       </tr>

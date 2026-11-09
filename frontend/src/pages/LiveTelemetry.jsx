@@ -2,18 +2,16 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { Radio } from 'lucide-react';
 import { formatISTTime } from '../utils/time';
-import { BASE_URL } from '../services/api';
+import { BASE_URL, fetchApi } from '../services/api';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { ContextBar } from '../components/observability/ContextBar.jsx';
 import { useAppScope } from '../hooks/useAppScope.js';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
-import { baseTooltip, getChartTheme } from '../components/observability/chartTheme.js';
+import { baseTooltip, getChartTheme, getChartSemanticColors, getModalityChartPalette } from '../components/observability/chartTheme.js';
 import './LiveTelemetry.css';
 import './TelemetryPages.css';
-
-const MODALITY_COLORS = ['#059669', '#7c3aed', '#0284c7', '#d97706', '#64748b'];
 
 const fmtT1 = (v) => {
   const n = Number(v);
@@ -39,20 +37,34 @@ export const LiveTelemetry = () => {
   const [reconnecting, setReconnecting] = useState(false);
 
   useEffect(() => {
-    let streamUrl = `${BASE_URL}/events/stream`;
-    try {
-      const raw = localStorage.getItem('quantum_user');
-      const token = raw ? JSON.parse(raw)?.token : null;
-      if (token) streamUrl += `?access_token=${encodeURIComponent(token)}`;
-    } catch {
-      /* ignore */
-    }
     let eventSource;
     let reconnectTimer;
     let delayMs = 2000;
-    const connect = () => {
+    let streamUrl = `${BASE_URL}/events/stream`;
+    let ticketExpiresAt = 0;
+    let cancelled = false;
+
+    const resolveStreamUrl = async () => {
+      if (Date.now() < ticketExpiresAt - 8000) return streamUrl;
+      try {
+        const raw = localStorage.getItem('quantum_user');
+        const token = raw ? JSON.parse(raw)?.token : null;
+        if (!token) return `${BASE_URL}/events/stream`;
+        const r = await fetchApi('/auth/stream-ticket', { method: 'POST' });
+        ticketExpiresAt = Date.now() + (r.expires_in || 180) * 1000;
+        streamUrl = `${BASE_URL}/events/stream?stream_ticket=${encodeURIComponent(r.stream_ticket)}`;
+        return streamUrl;
+      } catch {
+        return `${BASE_URL}/events/stream`;
+      }
+    };
+
+    const connect = async () => {
+      if (cancelled) return;
       setReconnecting(false);
-      eventSource = new EventSource(streamUrl);
+      const url = await resolveStreamUrl();
+      if (cancelled) return;
+      eventSource = new EventSource(url);
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
@@ -67,6 +79,7 @@ export const LiveTelemetry = () => {
         setIsConnected(false);
         setReconnecting(true);
         eventSource.close();
+        ticketExpiresAt = 0;
         reconnectTimer = window.setTimeout(() => {
           delayMs = Math.min(delayMs * 1.5, 15000);
           connect();
@@ -75,6 +88,7 @@ export const LiveTelemetry = () => {
     };
     connect();
     return () => {
+      cancelled = true;
       if (reconnectTimer) window.clearTimeout(reconnectTimer);
       eventSource?.close();
     };
@@ -113,54 +127,59 @@ export const LiveTelemetry = () => {
 
   // Ops only — never mix counts with µs-scale T1 on one plot.
   const opsChartOption = useMemo(
-    () => ({
-      backgroundColor: 'transparent',
-      tooltip: baseTooltip(isDark),
-      legend: { bottom: 0, textStyle: { fontSize: 11, color: theme.textColor } },
-      grid: { left: 8, right: 8, top: 16, bottom: 36, containLabel: true },
-      xAxis: {
-        type: 'category',
-        data: xLabels,
-        axisLine: { lineStyle: { color: theme.axisLine } },
-        axisLabel: { color: theme.textColor, fontSize: 10 },
-      },
-      yAxis: {
-        type: 'value',
-        name: 'count',
-        minInterval: 1,
-        axisLabel: { color: theme.textColor, fontSize: 10 },
-        splitLine: { lineStyle: { color: theme.splitColor } },
-      },
-      series: [
-        {
-          name: 'Active alerts',
-          type: 'line',
-          smooth: true,
-          data: chrono.map((l) => l.active_alerts ?? 0),
-          itemStyle: { color: '#e11d48' },
+    () => {
+      const sem = getChartSemanticColors();
+      return {
+        backgroundColor: 'transparent',
+        tooltip: baseTooltip(isDark),
+        legend: { bottom: 0, textStyle: { fontSize: 11, color: theme.textColor } },
+        grid: { left: 8, right: 8, top: 16, bottom: 36, containLabel: true },
+        xAxis: {
+          type: 'category',
+          data: xLabels,
+          axisLine: { lineStyle: { color: theme.axisLine } },
+          axisLabel: { color: theme.textColor, fontSize: 10 },
         },
-        {
-          name: 'Pending jobs',
-          type: 'line',
-          smooth: true,
-          data: chrono.map((l) => l.pending_jobs ?? l.queued_jobs ?? 0),
-          itemStyle: { color: '#0284c7' },
+        yAxis: {
+          type: 'value',
+          name: 'count',
+          minInterval: 1,
+          axisLabel: { color: theme.textColor, fontSize: 10 },
+          splitLine: { lineStyle: { color: theme.splitColor } },
         },
-        {
-          name: 'Running jobs',
-          type: 'line',
-          smooth: true,
-          data: chrono.map((l) => l.running_jobs ?? 0),
-          itemStyle: { color: '#059669' },
-        },
-      ],
-    }),
+        series: [
+          {
+            name: 'Active alerts',
+            type: 'line',
+            smooth: true,
+            data: chrono.map((l) => l.active_alerts ?? 0),
+            itemStyle: { color: sem.critical },
+          },
+          {
+            name: 'Pending jobs',
+            type: 'line',
+            smooth: true,
+            data: chrono.map((l) => l.pending_jobs ?? l.queued_jobs ?? 0),
+            itemStyle: { color: sem.accent },
+          },
+          {
+            name: 'Running jobs',
+            type: 'line',
+            smooth: true,
+            data: chrono.map((l) => l.running_jobs ?? 0),
+            itemStyle: { color: sem.healthy },
+          },
+        ],
+      };
+    },
     [chrono, isDark, theme.axisLine, theme.splitColor, theme.textColor, xLabels],
   );
 
   // T1 alone, log axis — superconducting (~1e2 µs) and trapped-ion (~1e7 µs) share log scale.
   const t1ChartOption = useMemo(
-    () => ({
+    () => {
+      const modalityColors = getModalityChartPalette();
+      return {
       backgroundColor: 'transparent',
       tooltip: {
         ...baseTooltip(isDark),
@@ -204,14 +223,17 @@ export const LiveTelemetry = () => {
           // log axis rejects ≤0
           return v != null && Number(v) > 0 ? Number(v) : null;
         }),
-        itemStyle: { color: MODALITY_COLORS[idx % MODALITY_COLORS.length] },
+        itemStyle: { color: modalityColors[idx % modalityColors.length] },
       })),
-    }),
+    };
+    },
     [chrono, isDark, modalityKeys, theme.axisLine, theme.splitColor, theme.textColor, xLabels],
   );
 
   const cadenceChartOption = useMemo(
-    () => ({
+    () => {
+      const sem = getChartSemanticColors();
+      return {
       backgroundColor: 'transparent',
       tooltip: {
         ...baseTooltip(isDark),
@@ -240,7 +262,7 @@ export const LiveTelemetry = () => {
           name: 'SSE tick gap',
           type: 'bar',
           data: tickGaps,
-          itemStyle: { color: '#64748b' },
+          itemStyle: { color: sem.unknown },
           barMaxWidth: 14,
         },
         {
@@ -251,11 +273,12 @@ export const LiveTelemetry = () => {
               ? Number(l.staleness_seconds)
               : null,
           ),
-          itemStyle: { color: '#d97706' },
+          itemStyle: { color: sem.warn },
         },
       ],
       legend: { bottom: 0, textStyle: { fontSize: 11, color: theme.textColor } },
-    }),
+    };
+    },
     [chrono, isDark, theme.axisLine, theme.splitColor, theme.textColor, tickGaps, xLabels],
   );
 

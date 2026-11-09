@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Download, FileText, Upload, Copy, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { notifyError, notifySuccess } from '../lib/toast.js';
+import { unableToLoad } from '../constants/messages.js';
 import { api, fetchApi } from '../services/api';
 import { formatIST } from '../utils/time';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
@@ -16,6 +17,7 @@ import {
 import { EmptyState, TableEmpty } from '../components/observability/EmptyState.jsx';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { ConfirmDialog } from '../components/observability/ConfirmDialog.jsx';
+import { rowsToCsv } from '../lib/csvExport.js';
 import './ReportsPage.css';
 
 const REPORTS = [
@@ -34,12 +36,6 @@ const saveBlob = (name, text, mime) => {
   const a = document.createElement('a');
   a.href = url; a.download = name; a.click();
   URL.revokeObjectURL(url);
-};
-const csvCell = (v) => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-const toCsv = (rows) => {
-  if (!rows.length) return '';
-  const cols = Object.keys(rows[0]);
-  return [cols.join(','), ...rows.map((r) => cols.map((c) => csvCell(r[c])).join(','))].join('\n');
 };
 const kb = (n) => (n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`);
 const short = (h) => (h ? `${h.slice(0, 10)}…${h.slice(-4)}` : '—');
@@ -117,7 +113,7 @@ export const ReportsPage = () => {
         const all = fresh?.records || [];
         const out = scope ? all.filter((x) => (report.prefix ? String(report.scopeKey(x) || '').startsWith(`${scope}_`) : report.scopeKey(x) === scope)) : all;
         if (!out.length) throw new Error('No records for this scope — nothing to export.');
-        const text = format === 'csv' ? toCsv(out) : JSON.stringify({ kind: type, scope: scopeLabel, exported_at: new Date().toISOString(), records: out }, null, 2);
+        const text = format === 'csv' ? rowsToCsv(out) : JSON.stringify({ kind: type, scope: scopeLabel, exported_at: new Date().toISOString(), records: out }, null, 2);
         count = out.length; size = text.length;
         saveBlob(`${type}_${scopeLabel}_${stamp}.${format}`, text, format === 'csv' ? 'text/csv' : 'application/json');
       }
@@ -171,7 +167,10 @@ export const ReportsPage = () => {
     e.target.value = '';
     if (!file) return;
     try {
+      const { assertImportSize } = await import('../lib/clientVitals.js');
+      assertImportSize(file.size);
       const text = await file.text();
+      assertImportSize(text.length);
       setImportConfirm({ name: file.name, text });
     } catch (err) {
       notifyError(`Could not read file: ${err?.message || err}`);
@@ -299,7 +298,7 @@ export const ReportsPage = () => {
             <thead><tr><th>Created (IST)</th><th>Label</th><th>Scope</th><th>Period</th><th>By</th><th>Manifest SHA-256</th><th>Package SHA-256</th><th>Actions</th></tr></thead>
             <tbody>
               {snapshots == null ? (
-                <TableEmpty colSpan={8} title="History unavailable" message="Evidence list failed to load. Use Refresh." />
+                <TableEmpty colSpan={8} title="History unavailable" message={`${unableToLoad('evidence history', 'Use Refresh.')}`} />
               ) : snapshots.length === 0 ? (
                 <TableEmpty colSpan={8} title="No snapshots" message="Generate a snapshot above; entries appear here with checksums." />
               ) : snapshots.map((s) => (
@@ -341,7 +340,12 @@ export const ReportsPage = () => {
           <p className="rp-desc">Backends, alerts, calibrations, rules, credential flags (no secrets), environment samples. Import overwrites matching records.</p>
           <div className="rp-btns">
             <button type="button" className="btn btn-primary" onClick={async () => {
-              try { saveBlob('qtelescope_bundle.json', JSON.stringify(await api.exportBundle(), null, 2), 'application/json'); setFlash({ kind: 'ok', text: 'Bundle exported as qtelescope_bundle.json.' }); } catch (e) { setFlash({ kind: 'err', text: `Bundle export failed: ${e?.message || e}` }); }
+              try {
+                saveBlob('qtelescope_bundle.json', JSON.stringify(await api.exportBundle(), null, 2), 'application/json');
+                notifySuccess('Bundle exported as qtelescope_bundle.json.');
+              } catch (e) {
+                notifyError(`Bundle export failed: ${e?.message || e}`);
+              }
             }}><Download size={14} /> Export bundle</button>
             <button type="button" className="btn btn-secondary" onClick={() => fileRef.current?.click()}><Upload size={14} /> Import JSON…</button>
             <input ref={fileRef} type="file" accept="application/json" hidden onChange={onImport} />

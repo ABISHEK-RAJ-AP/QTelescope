@@ -356,6 +356,12 @@
   margin: 0;
 }
 
+.context-bar__field .input-control,
+.context-bar select.input-control {
+  min-width: min(100%, 16rem);
+  max-width: 22rem;
+}
+
 .context-bar__field--range {
   flex: 1;
   min-width: 200px;

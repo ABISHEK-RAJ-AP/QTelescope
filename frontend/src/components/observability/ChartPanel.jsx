@@ -7,6 +7,7 @@ import { EmptyState } from './EmptyState.jsx';
 import { ErrorState } from './ErrorState.jsx';
 import { BoneyardSkeleton } from '../ui/Skeleton.jsx';
 import { ChartExpandModal } from './ChartExpandModal.jsx';
+import { EMPTY_CHART } from '../../constants/messages.js';
 
 /**
  * Chart container with honest loading / empty / error states (Sprint 1).
@@ -85,8 +86,8 @@ export function ChartPanel({
           <EmptyState
             variant="panel"
             compact
-            title={emptyTitle || 'No series'}
-            message={emptyMessage || 'No data for this selection.'}
+            title={emptyTitle || EMPTY_CHART.title}
+            message={emptyMessage || EMPTY_CHART.message}
           />
         )}
         {state === 'ready' && !presentOpen && children}
@@ -98,7 +99,7 @@ export function ChartPanel({
       </div>
       {tableAlternative && state === 'ready' && (
         <details className="chart-panel__table-alt">
-          <summary>View underlying data</summary>
+          <summary>Show data table</summary>
           {tableAlternative}
         </details>
       )}

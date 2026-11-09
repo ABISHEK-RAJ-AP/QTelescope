@@ -11,6 +11,90 @@ export function scaledFont(px) {
   return Math.round(px * getFontScale());
 }
 
+/** Status / series colors from design tokens (read at call time for theme changes). */
+export function getChartSemanticColors() {
+  if (typeof document === 'undefined') {
+    return {
+      healthy: '#059669', critical: '#e11d48', warn: '#d97706', info: '#2563eb', unknown: '#64748b',
+      accent: '#0891b2', series: '#0891b2',
+    };
+  }
+  const root = getComputedStyle(document.documentElement);
+  const v = (name, fallback) => {
+    const c = root.getPropertyValue(name).trim();
+    return c || fallback;
+  };
+  return {
+    healthy: v('--ds-status-healthy', '#059669'),
+    critical: v('--ds-status-critical', '#e11d48'),
+    warn: v('--ds-status-warn', '#d97706'),
+    info: v('--ds-status-info', '#2563eb'),
+    unknown: v('--ds-status-unknown', '#64748b'),
+    accent: v('--ds-accent', '#0891b2'),
+    series: v('--ds-accent', '#0891b2'),
+  };
+}
+
+/** Router / qubit health stacks (GREEN · YELLOW · RED · UNKNOWN). */
+export function getFleetStateChartColors() {
+  const sem = getChartSemanticColors();
+  return { GREEN: sem.healthy, YELLOW: sem.warn, RED: sem.critical, UNKNOWN: sem.unknown };
+}
+
+/** Heatmap / graph labels on tinted cells — stays readable in light and dark. */
+export function getChartInkColor() {
+  if (typeof document === 'undefined') return '#0b1220';
+  return document.documentElement.classList.contains('dark') ? '#f1f5f9' : '#0b1220';
+}
+
+/** Distinct series colors when multiple modalities share one chart (stable order). */
+export function getModalityChartPalette() {
+  const sem = getChartSemanticColors();
+  return [sem.healthy, sem.info, sem.accent, sem.warn, sem.unknown];
+}
+
+/** Alert/event severity markers on timeline scatter charts. */
+export function getSeverityChartColors() {
+  const sem = getChartSemanticColors();
+  return { CRITICAL: sem.critical, WARNING: sem.warn, INFO: sem.info };
+}
+
+/** Job execution states (Job monitoring badges / charts). */
+export function getJobStatusChartColors() {
+  const sem = getChartSemanticColors();
+  return {
+    COMPLETED: sem.healthy,
+    FAILED: sem.critical,
+    CANCELLED: sem.warn,
+    RUNNING: sem.accent,
+    QUEUED: sem.unknown,
+  };
+}
+
+/** Calibration freshness buckets (Calibration status page). */
+export function getCalibrationStatusChartColors() {
+  const sem = getChartSemanticColors();
+  return {
+    Fresh: sem.healthy,
+    Recent: sem.info,
+    Aging: sem.warn,
+    Stale: sem.critical,
+    None: sem.unknown,
+  };
+}
+
+/** Anomaly heatmap severities (maps to alert semantic colors). */
+export function getAnomalySeverityChartColors() {
+  const sev = getSeverityChartColors();
+  const sem = getChartSemanticColors();
+  return {
+    ANOMALY: sev.CRITICAL,
+    WARNING: sev.WARNING,
+    CHANGE_POINT: sev.INFO,
+    default: sem.unknown,
+  };
+}
+
 export function getChartTheme(isDark) {
   return {
     splitColor: isDark ? '#1e293b' : '#f1f5f9',

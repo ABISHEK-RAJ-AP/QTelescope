@@ -15,6 +15,7 @@ export function DetailDrawer({
   tourId,
 }) {
   const closeRef = useRef(null);
+  const panelRef = useRef(null);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -22,6 +23,20 @@ export function DetailDrawer({
     closeRef.current?.focus();
     const onKey = (e) => {
       if (e.key === 'Escape') onClose?.();
+      if (e.key !== 'Tab' || !panelRef.current) return;
+      const nodes = panelRef.current.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (!nodes.length) return;
+      const first = nodes[0];
+      const last = nodes[nodes.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
@@ -39,6 +54,7 @@ export function DetailDrawer({
   return createPortal(
     <div className="detail-drawer-backdrop" role="presentation" onClick={onClose}>
       <div
+        ref={panelRef}
         className={panelClass}
         role="dialog"
         aria-modal="true"

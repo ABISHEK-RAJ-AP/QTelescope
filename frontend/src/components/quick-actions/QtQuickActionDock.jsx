@@ -13,6 +13,7 @@ import {
   Key,
 } from 'lucide-react';
 import { markOnboardingPending, getOnboardingRecord } from '@/lib/onboardingState';
+import { isPlatformAdmin } from '@/lib/permissions.js';
 import { api } from '@/services/api';
 import './qt-quick-dock.css';
 
@@ -53,7 +54,7 @@ export function QtQuickActionDock({
   const [tourPanelOpen, setTourPanelOpen] = useState(false);
   const [discoverBusy, setDiscoverBusy] = useState(false);
 
-  const isAdmin = currentUser?.role === 'Admin' || currentUser?.role === 'PlatformAdmin' || currentUser?.role === 'QuantumOpsAdmin';
+  const isAdmin = isPlatformAdmin(currentUser) || currentUser?.role === 'QuantumOpsAdmin';
   const username = currentUser?.username;
   const onboardingRec = getOnboardingRecord(username);
   const tourSpotlight = onboardingRec?.status === 'completed' && !sessionStorage.getItem('qts_tour_dock_nudge');

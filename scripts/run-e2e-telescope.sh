@@ -11,6 +11,11 @@ export E2E_TELESCOPE_URL="${E2E_TELESCOPE_URL:-http://127.0.0.1:5173}"
 export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH="${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-/usr/bin/chromium}"
 export PW_WORKERS="${PW_WORKERS:-1}"
 
+if [[ "${SKIP_DEP_AUDIT:-0}" != "1" ]] && [[ -x "$ROOT/scripts/run-dependency-audit.sh" ]]; then
+  echo "== dependency audit (set SKIP_DEP_AUDIT=1 to skip) =="
+  "$ROOT/scripts/run-dependency-audit.sh" || exit 1
+fi
+
 if [[ ! -d node_modules ]]; then
   npm install
 fi

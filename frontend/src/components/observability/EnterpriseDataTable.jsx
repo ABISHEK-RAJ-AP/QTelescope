@@ -66,6 +66,8 @@ export function EnterpriseDataTable({
   initialSort = null,
   stickyHeader = true,
   ariaLabel = 'Data table',
+  onRowClick = null,
+  rowClassName = '',
 }) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState(initialSort || { key: null, dir: 'asc' });
@@ -156,7 +158,23 @@ export function EnterpriseDataTable({
             )}
             {!loading &&
               pageRows.map((row, idx) => (
-                <tr key={row.id ?? row.key ?? `${idx}-${columns[0]?.key}`}>
+                <tr
+                  key={row.id ?? row.key ?? `${idx}-${columns[0]?.key}`}
+                  className={[onRowClick ? 'edt-row--click al-row-clickable' : '', rowClassName].filter(Boolean).join(' ') || undefined}
+                  tabIndex={onRowClick ? 0 : undefined}
+                  role={onRowClick ? 'button' : undefined}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  onKeyDown={
+                    onRowClick
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onRowClick(row);
+                          }
+                        }
+                      : undefined
+                  }
+                >
                   {columns.map((col) => (
                     <td key={col.key} className={col.className}>
                       {col.render ? col.render(row) : row[col.key] ?? '—'}

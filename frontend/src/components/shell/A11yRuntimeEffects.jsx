@@ -5,17 +5,24 @@ import { loadA11yPrefs } from '../../lib/accessibilityPrefs.js';
  * Persistent a11y behaviors that must keep running after the options panel closes.
  * (Reading line, TTS, big-cursor overlay.)
  */
+const systemReducedMotion = () => (
+  typeof window !== 'undefined'
+  && window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+);
+
 export function A11yRuntimeEffects() {
   useEffect(() => {
     let prefs = loadA11yPrefs();
     const syncPrefs = (e) => {
       prefs = e?.detail ? { ...prefs, ...e.detail } : loadA11yPrefs();
-      document.documentElement.classList.toggle('a11y-big-cursor-on', Boolean(prefs.bigCursor));
+      const reduced = systemReducedMotion();
+      document.documentElement.classList.toggle('a11y-big-cursor-on', Boolean(prefs.bigCursor) && !reduced);
     };
     window.addEventListener('qtelescope-a11y-changed', syncPrefs);
     syncPrefs();
 
     const onMove = (e) => {
+      if (systemReducedMotion()) return;
       if (prefs.adhdMode) {
         document.documentElement.style.setProperty('--mouse-y', `${e.clientY}px`);
       }

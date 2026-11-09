@@ -152,6 +152,9 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
+.fo-shift__charts--single {
+  grid-template-columns: 1fr;
+}
 @media (max-width: 900px) {
   .fo-shift__charts { grid-template-columns: 1fr; }
 }
@@ -539,11 +542,11 @@
 .fo-name:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; }
 .fo-meta { margin-top: 3px; font-size: 11px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 .fo-adv, .fo-alerts { display: flex; flex-direction: column; gap: 2px; font-variant-numeric: tabular-nums; }
-.fo-sev { display: flex; gap: 10px; margin-bottom: 12px; }
-.fo-sev__item { flex: 1; display: flex; flex-direction: column; gap: 4px; align-items: flex-start; padding: 8px 10px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card-hover); }
-.fo-sev__n { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fo-sev { display: flex; gap: 8px; margin-bottom: 10px; }
+.fo-sev__item { flex: 1; display: flex; flex-direction: column; gap: 2px; align-items: flex-start; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-card-hover); }
+.fo-sev__n { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .fo-list, .fo-events { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.fo-list li { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; padding: 7px 0; border-top: 1px solid var(--border-color); font-size: 12.5px; align-items: center; }
+.fo-list li { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; padding: 5px 0; border-top: 1px solid var(--border-color); font-size: 12px; align-items: center; }
 .fo-events li { display: grid; grid-template-columns: 90px 84px minmax(0, 1fr) auto; gap: 12px; padding: 8px 0; border-top: 1px solid var(--border-color); font-size: 12.5px; align-items: center; }
 .fo-events__title { overflow-wrap: anywhere; }
 @media (max-width: 800px) { .fo-events li { grid-template-columns: 1fr; gap: 4px; } }

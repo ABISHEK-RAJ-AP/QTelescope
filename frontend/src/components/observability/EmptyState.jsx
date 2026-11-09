@@ -1,9 +1,10 @@
 import React from 'react';
 import { Inbox } from 'lucide-react';
+import { EMPTY_DEFAULTS } from '../../constants/messages.js';
 
 export function EmptyState({
-  title = 'No data',
-  message = 'Nothing to show yet.',
+  title = EMPTY_DEFAULTS.title,
+  message = EMPTY_DEFAULTS.message,
   hint,
   action,
   icon: Icon = Inbox,

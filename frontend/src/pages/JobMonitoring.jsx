@@ -20,24 +20,43 @@ import {
   DetailModalCallout,
 } from '../components/observability/DetailModalLayout.jsx';
 import { TableEmpty } from '../components/observability/EmptyState.jsx';
-import { getChartTheme, baseTooltip } from '../components/observability/chartTheme.js';
+import { getChartTheme, baseTooltip, getChartSemanticColors, getJobStatusChartColors } from '../components/observability/chartTheme.js';
 import { buildBackendDetailsPath, buildTimelineInvestigationLocation, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { formatIST } from '../utils/time';
-import { DataPanelToolbar, SortableTh } from '../components/observability/DataViewToolbar.jsx';
+import { DataPanelToolbar } from '../components/observability/DataViewToolbar.jsx';
+import { EnterpriseDataTable } from '../components/observability/EnterpriseDataTable.jsx';
+import { unableToLoad } from '../constants/messages.js';
 import './JobMonitoring.css';
 
 const POLL_MS = 15000;
 const PAGE_SIZE = 12;
-const STATUS_META = {
-  COMPLETED: { label: 'Completed', color: '#34d399', Icon: CheckCircle2, terminal: true },
-  FAILED: { label: 'Failed', color: '#fb7185', Icon: XCircle, terminal: true },
-  CANCELLED: { label: 'Cancelled', color: '#fbbf24', Icon: Ban, terminal: true },
-  RUNNING: { label: 'Running', color: '#22d3ee', Icon: PlayCircle, terminal: false },
-  QUEUED: { label: 'Queued', color: '#94a3b8', Icon: Clock, terminal: false },
-};
 const STATUS_ORDER = ['COMPLETED', 'FAILED', 'CANCELLED', 'RUNNING', 'QUEUED'];
-const meta = (s) => STATUS_META[s] || { label: s, color: '#64748b', Icon: Clock, terminal: true };
+const STATUS_ICONS = {
+  COMPLETED: CheckCircle2,
+  FAILED: XCircle,
+  CANCELLED: Ban,
+  RUNNING: PlayCircle,
+  QUEUED: Clock,
+};
+const STATUS_LABELS = {
+  COMPLETED: 'Completed',
+  FAILED: 'Failed',
+  CANCELLED: 'Cancelled',
+  RUNNING: 'Running',
+  QUEUED: 'Queued',
+};
+const STATUS_TERMINAL = { COMPLETED: true, FAILED: true, CANCELLED: true, RUNNING: false, QUEUED: false };
+const meta = (s) => {
+  const colors = getJobStatusChartColors();
+  const color = colors[s] || getChartSemanticColors().unknown;
+  return {
+    label: STATUS_LABELS[s] || s,
+    color,
+    Icon: STATUS_ICONS[s] || Clock,
+    terminal: STATUS_TERMINAL[s] ?? true,
+  };
+};
 const isFail = (s) => s !== 'COMPLETED' && meta(s).terminal;
 
 const ts = (v) => (v ? new Date(v.endsWith('Z') ? v : `${v}Z`) : null);
@@ -103,7 +122,6 @@ export const JobMonitoring = () => {
   const [status, setStatus] = useState('ALL');
   const backend = params.get('backend') || 'ALL';
   const [search, setSearch] = useState('');
-  const [sort, setSort] = useState({ key: 'submitted_at', dir: 'desc' });
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState(null);
   const [layout, setLayout] = useState('table');
@@ -121,7 +139,7 @@ export const JobMonitoring = () => {
       setError(null);
       setLastRefresh(new Date());
     } catch (e) {
-      setError(e.message || 'Failed to load jobs.');
+      setError(e.message || unableToLoad('the job list'));
     }
   }, []);
 
@@ -191,15 +209,56 @@ export const JobMonitoring = () => {
       && (backend === 'ALL' || j.backend_id === backend)
       && (!q || j.job_id.toLowerCase().includes(q) || (j.calibration_identifier || '').toLowerCase().includes(q)
         || (j.failure_reason || '').toLowerCase().includes(q)));
-    const dir = sort.dir === 'asc' ? 1 : -1;
-    return rows.sort((a, b) => {
-      const x = a[sort.key]; const y = b[sort.key];
-      if (x == null && y == null) return 0;
-      if (x == null) return 1; // nulls always last
-      if (y == null) return -1;
-      return (x < y ? -1 : x > y ? 1 : 0) * dir;
-    });
-  }, [jobs, status, backend, search, sort]);
+    return rows;
+  }, [jobs, status, backend, search]);
+
+  const jobTableRows = useMemo(
+    () => filtered.map((j) => ({
+      id: j.job_id,
+      job_id: j.job_id,
+      backend_id: j.backend_id,
+      backend_label: label(j.backend_id),
+      status: j.status,
+      status_rank: STATUS_ORDER.indexOf(j.status) >= 0 ? STATUS_ORDER.indexOf(j.status) : 99,
+      submitted_at: fmtTs(j.submitted_at),
+      submitted_sort: ts(j.submitted_at)?.getTime() ?? 0,
+      runtime: j.runtime ?? -1,
+      runtime_label: fmtDur(j.runtime),
+      failure_reason: j.failure_reason || '—',
+      _job: j,
+    })),
+    [filtered, label],
+  );
+
+  const jobTableColumns = useMemo(
+    () => [
+      {
+        key: 'job_id',
+        label: 'Job',
+        render: (row) => (
+          <button type="button" className="jm-link" onClick={() => setSelectedId(row.job_id)} aria-label={`Open job ${row.job_id}`}>
+            {row.job_id}
+          </button>
+        ),
+      },
+      { key: 'backend_label', label: 'Backend' },
+      {
+        key: 'status_rank',
+        label: 'Status',
+        defaultSortDir: 'asc',
+        render: (row) => <StatusBadge status={row.status} />,
+      },
+      { key: 'submitted_sort', label: 'Submitted', defaultSortDir: 'desc', render: (row) => row.submitted_at },
+      {
+        key: 'runtime',
+        label: 'Runtime',
+        defaultSortDir: 'desc',
+        render: (row) => <span className="jm-num">{row.runtime_label}</span>,
+      },
+      { key: 'failure_reason', label: 'Failure reason', className: 'jm-reason' },
+    ],
+    [],
+  );
 
   const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const cur = Math.min(page, pages);
@@ -223,22 +282,28 @@ export const JobMonitoring = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [stats.per, dark, label]);
 
-  const histOption = useMemo(() => ({
-    grid, tooltip: { ...baseTooltip(dark), axisPointer: { type: 'shadow' } },
-    xAxis: { type: 'category', name: 'runtime (s)', nameLocation: 'middle', nameGap: 28, data: histogram.map((b) => `${b.lo}–${b.hi}`), ...axis() },
-    yAxis: { type: 'value', minInterval: 1, name: 'jobs', ...axis() },
-    series: [{ type: 'bar', data: histogram.map((b) => b.n), itemStyle: { color: '#22d3ee' }, barCategoryGap: '12%' }],
+  const histOption = useMemo(() => {
+    const sem = getChartSemanticColors();
+    return {
+      grid, tooltip: { ...baseTooltip(dark), axisPointer: { type: 'shadow' } },
+      xAxis: { type: 'category', name: 'runtime (s)', nameLocation: 'middle', nameGap: 28, data: histogram.map((b) => `${b.lo}–${b.hi}`), ...axis() },
+      yAxis: { type: 'value', minInterval: 1, name: 'jobs', ...axis() },
+      series: [{ type: 'bar', data: histogram.map((b) => b.n), itemStyle: { color: sem.series }, barCategoryGap: '12%' }],
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [histogram, dark]);
+  }, [histogram, dark]);
 
   const cats = failures?.by_category || [];
-  const failOption = useMemo(() => ({
-    grid, tooltip: { ...baseTooltip(dark), axisPointer: { type: 'shadow' } },
-    xAxis: { type: 'value', minInterval: 1, ...axis() },
-    yAxis: { type: 'category', inverse: true, data: cats.map((c) => c.label), ...axis({ splitLine: { show: false } }) },
-    series: [{ type: 'bar', data: cats.map((c) => c.count), itemStyle: { color: '#fb7185' }, label: { show: true, position: 'right', color: t.textColor } }],
+  const failOption = useMemo(() => {
+    const sem = getChartSemanticColors();
+    return {
+      grid, tooltip: { ...baseTooltip(dark), axisPointer: { type: 'shadow' } },
+      xAxis: { type: 'value', minInterval: 1, ...axis() },
+      yAxis: { type: 'category', inverse: true, data: cats.map((c) => c.label), ...axis({ splitLine: { show: false } }) },
+      series: [{ type: 'bar', data: cats.map((c) => c.count), itemStyle: { color: sem.critical }, label: { show: true, position: 'right', color: t.textColor } }],
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [cats, dark]);
+  }, [cats, dark]);
 
   if (!jobs && !error) return <BoneyardSkeleton layout="table" />;
   if (!jobs) return <div className="page-stack"><ErrorState variant="panel" message={error} onRetry={load} /></div>;
@@ -317,7 +382,13 @@ export const JobMonitoring = () => {
       </section>
 
       <section className="card jm-table-card dvt-panel" data-tour="page-jobs">
-        <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${filtered.length} job${filtered.length === 1 ? '' : 's'} · page ${cur} of ${pages}`}>
+        <DataPanelToolbar
+          layout={layout}
+          onLayoutChange={setLayout}
+          countLabel={layout === 'grid'
+            ? `${filtered.length} job${filtered.length === 1 ? '' : 's'} · page ${cur} of ${pages}`
+            : `${filtered.length} job${filtered.length === 1 ? '' : 's'}`}
+        >
           <span className="jm-chips" role="group" aria-label="Filter by status">
             {['ALL', ...STATUS_ORDER].map((s) => (
               <button key={s} type="button" className="jm-chip" aria-pressed={status === s} onClick={() => { setStatus(s); setPage(1); }}>
@@ -360,40 +431,26 @@ export const JobMonitoring = () => {
             ))}
           </div>
         ) : (
-          <div className="jm-scroll">
-            <table className="jm-table">
-              <thead>
-                <tr>
-                  <SortableTh sort={sort} sortKey="job_id" onToggle={setSort} defaultDir="asc">Job</SortableTh>
-                  <SortableTh sort={sort} sortKey="backend_id" onToggle={setSort} defaultDir="asc">Backend</SortableTh>
-                  <SortableTh sort={sort} sortKey="status" onToggle={setSort} defaultDir="asc">Status</SortableTh>
-                  <SortableTh sort={sort} sortKey="submitted_at" onToggle={setSort} defaultDir="desc">Submitted</SortableTh>
-                  <SortableTh sort={sort} sortKey="runtime" onToggle={setSort} defaultDir="desc">Runtime</SortableTh>
-                  <th scope="col">Failure reason</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shown.length === 0 ? <TableEmpty colSpan={6} title="No jobs match" message="Adjust filters or search." /> : shown.map((j) => (
-                  <tr key={j.job_id} data-selected={j.job_id === selectedId}>
-                    <td><button type="button" className="jm-link" onClick={() => setSelectedId(j.job_id)} aria-label={`Open job ${j.job_id}`}>{j.job_id}</button></td>
-                    <td>{label(j.backend_id)}</td>
-                    <td><StatusBadge status={j.status} /></td>
-                    <td>{fmtTs(j.submitted_at)}</td>
-                    <td className="jm-num">{fmtDur(j.runtime)}</td>
-                    <td className="jm-reason">{j.failure_reason || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <EnterpriseDataTable
+            rows={jobTableRows}
+            columns={jobTableColumns}
+            searchKeys={['job_id', 'backend_id', 'backend_label', 'status', 'failure_reason']}
+            searchPlaceholder="Search jobs…"
+            pageSize={15}
+            initialSort={{ key: 'submitted_sort', dir: 'desc' }}
+            ariaLabel="Jobs"
+            tableClassName="jm-table custom-table custom-table--dense"
+          />
+        )}
+        {layout === 'grid' && (
+          <div className="jm-pager">
+            <span>{filtered.length} job{filtered.length === 1 ? '' : 's'} · page {cur} of {pages}</span>
+            <span>
+              <button type="button" className="btn btn-secondary" disabled={cur <= 1} onClick={() => setPage(cur - 1)}>Previous</button>{' '}
+              <button type="button" className="btn btn-secondary" disabled={cur >= pages} onClick={() => setPage(cur + 1)}>Next</button>
+            </span>
           </div>
         )}
-        <div className="jm-pager">
-          <span>{filtered.length} job{filtered.length === 1 ? '' : 's'} · page {cur} of {pages}</span>
-          <span>
-            <button type="button" className="btn btn-secondary" disabled={cur <= 1} onClick={() => setPage(cur - 1)}>Previous</button>{' '}
-            <button type="button" className="btn btn-secondary" disabled={cur >= pages} onClick={() => setPage(cur + 1)}>Next</button>
-          </span>
-        </div>
       </section>
 
       <DetailDrawer
