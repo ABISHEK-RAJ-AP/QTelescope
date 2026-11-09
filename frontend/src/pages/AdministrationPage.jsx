@@ -340,6 +340,7 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
   const [runNote, setRunNote] = useState(null);
   const [running, setRunning] = useState(false);
   const [purgingDlq, setPurgingDlq] = useState(false);
+  const [collectorConfirm, setCollectorConfirm] = useState(null);
   const reason = canEdit ? undefined : 'Admin role required';
 
   const runCollectionNow = async () => {
@@ -396,7 +397,7 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
         </dl>
         {mqtt?.note && <p className="page-hint admin-kv__note" style={{ marginBottom: 8 }}>{mqtt.note}</p>}
         <div className="admin-actions admin-kv__note" style={{ marginTop: 0 }}>
-          <button type="button" className="btn btn-primary btn--xs" disabled={!canEdit || running} title={reason} onClick={runCollectionNow}>
+          <button type="button" className="btn btn-primary btn--xs" disabled={!canEdit || running} title={reason} onClick={() => setCollectorConfirm('run')}>
             {running ? 'Collecting…' : 'Run collection now'}
           </button>
           <span className="admin-sub">Polls configured providers and refreshes telemetry (includes demo catalog when enabled).</span>
@@ -480,12 +481,43 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
           <p className="page-hint admin-pad">Circuit breakers: {breakers.map(([k, v]) => `${k}: ${v?.state || v?.status || JSON.stringify(v)}`).join(' · ')}</p>
         )}
         <div className="admin-pad admin-actions" style={{ paddingTop: 0 }}>
-          <button type="button" className="btn btn-secondary btn--xs" disabled={!canEdit || purgingDlq || failures.length === 0} title={reason} onClick={purgeDlq}>
+          <button type="button" className="btn btn-secondary btn--xs" disabled={!canEdit || purgingDlq || failures.length === 0} title={reason} onClick={() => setCollectorConfirm('purge')}>
             {purgingDlq ? 'Clearing…' : 'Clear DLQ history'}
           </button>
           <span className="admin-sub">Removes local failure log (SQLite lock errors from old runs, etc.). Does not replay jobs.</span>
         </div>
       </div>
+      {collectorConfirm === 'run' && (
+        <ConfirmDialog
+          dlg={{
+            title: 'Run collection now?',
+            body: 'Polls every configured provider and refreshes backend telemetry. This can add load on vendor APIs.',
+            confirm: 'Yes, run now',
+            onConfirm: async () => {
+              setCollectorConfirm(null);
+              await runCollectionNow();
+            },
+          }}
+          busy={running}
+          onCancel={() => !running && setCollectorConfirm(null)}
+        />
+      )}
+      {collectorConfirm === 'purge' && (
+        <ConfirmDialog
+          danger
+          dlg={{
+            title: 'Clear DLQ history?',
+            body: 'Removes stored collector failure records on this server. You cannot undo this.',
+            confirm: 'Yes, clear',
+            onConfirm: async () => {
+              setCollectorConfirm(null);
+              await purgeDlq();
+            },
+          }}
+          busy={purgingDlq}
+          onCancel={() => !purgingDlq && setCollectorConfirm(null)}
+        />
+      )}
     </>
   );
 }
@@ -639,11 +671,16 @@ function Rules({ rules, canEdit, reload }) {
         />
       )}
       {deleting && (
-        <Modal title="Delete alert rule" onClose={() => setDeleting(null)}
-          footer={<><button type="button" className="btn btn-secondary" onClick={() => setDeleting(null)}>Cancel</button>
-            <button type="button" className="btn btn-primary admin-danger" onClick={doDelete}>Delete</button></>}>
-          <p>Rule <strong className="admin-mono">{deleting}</strong> will be permanently removed. This cannot be undone.</p>
-        </Modal>
+        <ConfirmDialog
+          danger
+          dlg={{
+            title: 'Delete alert rule?',
+            body: `Rule ${deleting} will be permanently removed. This cannot be undone.`,
+            confirm: 'Yes, delete',
+            onConfirm: doDelete,
+          }}
+          onCancel={() => setDeleting(null)}
+        />
       )}
     </>
   );

@@ -8,6 +8,7 @@ import { useTheme } from '../components/ui/ThemeProvider';
 import { writeDensity } from '../utils/uiPreferences.js';
 import { listPermissionsForRole, roleLabel } from '../lib/permissions.js';
 import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
+import { ConfirmDialog } from '../components/observability/ConfirmDialog.jsx';
 import './UserSettings.css';
 
 const THEME_OPTIONS = [
@@ -42,6 +43,7 @@ export function UserSettings({ currentUser, onUserUpdate }) {
   const [backups, setBackups] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [sessionsBusy, setSessionsBusy] = useState(false);
+  const [sessionConfirm, setSessionConfirm] = useState(null);
   const [pwCurrent, setPwCurrent] = useState('');
   const [pwNew, setPwNew] = useState('');
   const [pwConfirm, setPwConfirm] = useState('');
@@ -355,18 +357,7 @@ export function UserSettings({ currentUser, onUserUpdate }) {
                         type="button"
                         className="btn btn-secondary btn--xs"
                         disabled={sessionsBusy}
-                        onClick={async () => {
-                          setSessionsBusy(true);
-                          try {
-                            await api.revokeSession(s.session_id);
-                            notifySuccess('Session revoked.');
-                            await load();
-                          } catch (e) {
-                            notifyError(e?.message || 'Revoke failed.');
-                          } finally {
-                            setSessionsBusy(false);
-                          }
-                        }}
+                        onClick={() => setSessionConfirm({ type: 'one', sessionId: s.session_id })}
                       >
                         Revoke
                       </button>
@@ -379,18 +370,7 @@ export function UserSettings({ currentUser, onUserUpdate }) {
                   type="button"
                   className="btn btn-secondary"
                   disabled={sessionsBusy}
-                  onClick={async () => {
-                    setSessionsBusy(true);
-                    try {
-                      const res = await api.revokeOtherSessions();
-                      notifySuccess(`Revoked ${res.revoked || 0} other session(s).`);
-                      await load();
-                    } catch (e) {
-                      notifyError(e?.message || 'Revoke failed.');
-                    } finally {
-                      setSessionsBusy(false);
-                    }
-                  }}
+                  onClick={() => setSessionConfirm({ type: 'all' })}
                 >
                   Sign out all other sessions
                 </button>
@@ -505,6 +485,56 @@ export function UserSettings({ currentUser, onUserUpdate }) {
       )}
         </div>
       </div>
+      {sessionConfirm?.type === 'one' && (
+        <ConfirmDialog
+          danger
+          busy={sessionsBusy}
+          dlg={{
+            title: 'Revoke this session?',
+            body: 'That device will be signed out immediately and must sign in again.',
+            confirm: 'Yes, revoke',
+            onConfirm: async () => {
+              setSessionsBusy(true);
+              try {
+                await api.revokeSession(sessionConfirm.sessionId);
+                notifySuccess('Session revoked.');
+                setSessionConfirm(null);
+                await load();
+              } catch (e) {
+                notifyError(e?.message || 'Revoke failed.');
+              } finally {
+                setSessionsBusy(false);
+              }
+            },
+          }}
+          onCancel={() => !sessionsBusy && setSessionConfirm(null)}
+        />
+      )}
+      {sessionConfirm?.type === 'all' && (
+        <ConfirmDialog
+          danger
+          busy={sessionsBusy}
+          dlg={{
+            title: 'Sign out all other sessions?',
+            body: 'Every other browser or client using your account will lose access. This device stays signed in.',
+            confirm: 'Yes, sign them out',
+            onConfirm: async () => {
+              setSessionsBusy(true);
+              try {
+                const res = await api.revokeOtherSessions();
+                notifySuccess(`Revoked ${res.revoked || 0} other session(s).`);
+                setSessionConfirm(null);
+                await load();
+              } catch (e) {
+                notifyError(e?.message || 'Revoke failed.');
+              } finally {
+                setSessionsBusy(false);
+              }
+            },
+          }}
+          onCancel={() => !sessionsBusy && setSessionConfirm(null)}
+        />
+      )}
     </div>
   );
 }

@@ -39,6 +39,7 @@ import { resolvePageContext } from './utils/pageContext.js';
 import { PageActionsProvider, usePageActions } from './context/PageActionsContext.jsx';
 import { A11yPreheader } from './components/shell/A11yPreheader.jsx';
 import { ProductTour } from './components/onboarding/ProductTour.jsx';
+import { ConfirmDialog } from './components/observability/ConfirmDialog.jsx';
 import { QtQuickActionDock } from './components/quick-actions/QtQuickActionDock.jsx';
 import { readDensity } from './utils/uiPreferences.js';
 import { OnScreenKeyboard } from './components/shell/OnScreenKeyboard.jsx';
@@ -46,6 +47,8 @@ import { ToastHost } from './components/ui/ToastHost.jsx';
 import { filterConsoleTourSteps } from './lib/consoleTour.js';
 import { consumeConsoleTourPending, shouldRunOnboarding } from './lib/onboardingState.js';
 import { canManageFleet, canSeeNavItem, visibleAdminNav } from './lib/permissions.js';
+import { clearSession } from './lib/sessionAuth.js';
+import { useSessionGuard } from './hooks/useSessionGuard.js';
 
 const SIDEBAR_COLLAPSE_KEY = 'qtelescope_sidebar_collapsed';
 
@@ -94,6 +97,8 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [productTourOpen, setProductTourOpen] = useState(false);
+  const [logoutDlg, setLogoutDlg] = useState(false);
+  const [logoutBusy, setLogoutBusy] = useState(false);
   const [expandedBranches, setExpandedBranches] = useState(
     () => new Set(['telemetry', 'execution', 'resources', 'alerts', 'admin']),
   );
@@ -257,14 +262,17 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
     }
   }, [mainTopic]);
 
-  const handleLogout = async () => {
+  const performLogout = async () => {
+    setLogoutBusy(true);
     try {
       await api.logout();
     } catch {
       /* session may already be invalid */
     }
-    localStorage.removeItem('quantum_user');
+    clearSession();
+    setLogoutDlg(false);
     onLogout?.();
+    setLogoutBusy(false);
   };
 
   const tourSidebarOpen = productTourOpen;
@@ -769,8 +777,8 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
                 role="button"
                 tabIndex={0}
                 className="sidebar-footer__logout"
-                onClick={(e) => { e.stopPropagation(); handleLogout(); }}
-                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); handleLogout(); } }}
+                onClick={(e) => { e.stopPropagation(); setLogoutDlg(true); }}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); setLogoutDlg(true); } }}
                 aria-label="Sign out"
                 title="Sign out"
               >
@@ -835,6 +843,19 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
       activeAlertsCount={activeAlertsCount}
       criticalAlertsCount={criticalAlertsCount}
     />
+    {logoutDlg && (
+      <ConfirmDialog
+        danger
+        busy={logoutBusy}
+        dlg={{
+          title: 'Sign out?',
+          body: 'Your session on this device will end. Unsaved work in open forms may be lost.',
+          confirm: 'Yes, sign out',
+        }}
+        onCancel={() => !logoutBusy && setLogoutDlg(false)}
+        onConfirm={performLogout}
+      />
+    )}
     </>
   );
 }
@@ -843,13 +864,22 @@ export const App = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem('quantum_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('quantum_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
 
   const handleLoginSuccess = (userObj) => {
     setCurrentUser(userObj);
   };
+
+  const endSession = useCallback(() => setCurrentUser(null), []);
+  const refreshSession = useCallback((user) => setCurrentUser(user), []);
+
+  useSessionGuard(currentUser, { onEnd: endSession, onRefresh: refreshSession });
 
   useEffect(() => {
     if (!currentUser) return;
@@ -861,39 +891,27 @@ export const App = () => {
     }
   }, [currentUser, location.pathname, navigate]);
 
-  useEffect(() => {
-    if (!currentUser?.token) return;
-    api.getMe()
-      .then((me) => {
-        if (!me?.authenticated) return;
-        const merged = {
-          ...currentUser,
-          username: me.username ?? currentUser.username,
-          role: me.role ?? currentUser.role,
-          role_label: me.role_label,
-          permissions: me.permissions,
-          full_name: me.full_name ?? currentUser.full_name,
-          email: me.email ?? currentUser.email,
-          org: me.org ?? currentUser.org,
-        };
-        localStorage.setItem('quantum_user', JSON.stringify(merged));
-        setCurrentUser(merged);
-      })
-      .catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh permissions once per session token
-  }, [currentUser?.token]);
-
   if (!currentUser) {
-    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+    return (
+      <>
+        <ToastHost />
+        <LoginPage onLoginSuccess={handleLoginSuccess} />
+      </>
+    );
   }
 
   if (location.pathname.startsWith('/app/onboarding')) {
-    return <OnboardingFlow currentUser={currentUser} />;
+    return (
+      <>
+        <ToastHost />
+        <OnboardingFlow currentUser={currentUser} />
+      </>
+    );
   }
 
   return (
     <PageActionsProvider>
-      <AppShell currentUser={currentUser} onLogout={() => setCurrentUser(null)} onUserUpdate={setCurrentUser} />
+      <AppShell currentUser={currentUser} onLogout={endSession} onUserUpdate={setCurrentUser} />
     </PageActionsProvider>
   );
 };

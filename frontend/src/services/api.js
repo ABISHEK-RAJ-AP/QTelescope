@@ -1,4 +1,6 @@
 /** Same-origin /api/v1 — Vite dev server proxies to the FastAPI backend. */
+import { emitSessionExpired, isPublicAuthEndpoint } from '../lib/sessionAuth.js';
+
 export const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
 function sessionAuthHeaders() {
@@ -35,6 +37,9 @@ export async function fetchApi(endpoint, options) {
       }
     } catch {
       /* keep status text */
+    }
+    if (res.status === 401 && !isPublicAuthEndpoint(endpoint)) {
+      emitSessionExpired('unauthorized');
     }
     throw new Error(detail);
   }
