@@ -36,6 +36,7 @@ export const LiveTelemetry = () => {
   const isDark = resolved === 'dark';
   const [streamLogs, setStreamLogs] = useState([]);
   const [isConnected, setIsConnected] = useState(true);
+  const [reconnecting, setReconnecting] = useState(false);
 
   useEffect(() => {
     let streamUrl = `${BASE_URL}/events/stream`;
@@ -46,21 +47,37 @@ export const LiveTelemetry = () => {
     } catch {
       /* ignore */
     }
-    const eventSource = new EventSource(streamUrl);
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        setStreamLogs((prev) => [data, ...prev].slice(0, 40));
-        setIsConnected(true);
-      } catch (err) {
-        console.error('SSE Parse Error', err);
-      }
+    let eventSource;
+    let reconnectTimer;
+    let delayMs = 2000;
+    const connect = () => {
+      setReconnecting(false);
+      eventSource = new EventSource(streamUrl);
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          setStreamLogs((prev) => [data, ...prev].slice(0, 40));
+          setIsConnected(true);
+          delayMs = 2000;
+        } catch (err) {
+          console.error('SSE Parse Error', err);
+        }
+      };
+      eventSource.onerror = () => {
+        setIsConnected(false);
+        setReconnecting(true);
+        eventSource.close();
+        reconnectTimer = window.setTimeout(() => {
+          delayMs = Math.min(delayMs * 1.5, 15000);
+          connect();
+        }, delayMs);
+      };
     };
-    eventSource.onerror = () => {
-      setIsConnected(false);
-      eventSource.close();
+    connect();
+    return () => {
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      eventSource?.close();
     };
-    return () => eventSource.close();
   }, []);
 
   const chrono = useMemo(() => [...streamLogs].reverse(), [streamLogs]);
@@ -251,12 +268,15 @@ export const LiveTelemetry = () => {
   return (
     <div className="page-stack">
       {scopeBackend && <ContextBar backend={scopeBackend} readOnly />}
-      {!isConnected && streamLogs.length === 0 && (
+      {!isConnected && streamLogs.length === 0 && !reconnecting && (
         <EmptyState
           variant="panel"
           title="Stream disconnected"
-          message="Reload the page to reconnect. Session token must be valid for SSE."
+          message="Reconnecting automatically. Session token must be valid for SSE."
         />
+      )}
+      {reconnecting && (
+        <p className="live-sse-banner" role="status">Stream reconnecting… charts keep the last received data.</p>
       )}
       <div className="page-kpi-grid">
         <div className="card">

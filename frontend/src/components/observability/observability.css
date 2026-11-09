@@ -491,6 +491,23 @@
   font-size: 13px;
 }
 
+.obs-error__meta {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.obs-error__meta code {
+  font-size: 10px;
+}
+
+.obs-error__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .obs-empty__message,
 .obs-error__message {
   font-size: 12.5px;

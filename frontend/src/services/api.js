@@ -1,5 +1,6 @@
 /** Same-origin /api/v1 — Vite dev server proxies to the FastAPI backend. */
 import { emitSessionExpired, isPublicAuthEndpoint } from '../lib/sessionAuth.js';
+import { attachApiError, parseApiFailure } from '../lib/apiErrors.js';
 
 export const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
@@ -29,19 +30,22 @@ export async function fetchApi(endpoint, options) {
   });
 
   if (!res.ok) {
-    let detail = `API Error ${res.status}: ${res.statusText}`;
+    let body = null;
     try {
-      const body = await res.json();
-      if (body?.detail) {
-        detail = typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail);
-      }
+      body = await res.json();
     } catch {
-      /* keep status text */
+      body = null;
     }
+    const requestId = res.headers.get('X-Request-Id') || '';
+    const parsed = parseApiFailure(res.status, body, requestId);
     if (res.status === 401 && !isPublicAuthEndpoint(endpoint)) {
       emitSessionExpired('unauthorized');
     }
-    throw new Error(detail);
+    throw attachApiError(new Error(parsed.message), {
+      status: res.status,
+      requestId: parsed.requestId,
+      code: parsed.code,
+    });
   }
 
   return res.json();

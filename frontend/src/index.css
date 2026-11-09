@@ -3,6 +3,7 @@
 @import "./components/observability/observability.css";
 @import "./styles/a11y-shell.css";
 @import "./styles/scrollbars.css";
+@import "./styles/design-tokens.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 

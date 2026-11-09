@@ -49,6 +49,7 @@ import { consumeConsoleTourPending, shouldRunOnboarding } from './lib/onboarding
 import { canManageFleet, canSeeNavItem, visibleAdminNav } from './lib/permissions.js';
 import { clearSession } from './lib/sessionAuth.js';
 import { useSessionGuard } from './hooks/useSessionGuard.js';
+import { CommandPalette, useCommandPaletteShortcut } from './components/shell/CommandPalette.jsx';
 
 const SIDEBAR_COLLAPSE_KEY = 'qtelescope_sidebar_collapsed';
 
@@ -99,6 +100,9 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
   const [productTourOpen, setProductTourOpen] = useState(false);
   const [logoutDlg, setLogoutDlg] = useState(false);
   const [logoutBusy, setLogoutBusy] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+
+  useCommandPaletteShortcut(() => setCommandOpen(true));
   const [expandedBranches, setExpandedBranches] = useState(
     () => new Set(['telemetry', 'execution', 'resources', 'alerts', 'admin']),
   );
@@ -842,6 +846,12 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
       onStartTour={() => setProductTourOpen(true)}
       activeAlertsCount={activeAlertsCount}
       criticalAlertsCount={criticalAlertsCount}
+    />
+    <CommandPalette
+      open={commandOpen}
+      onClose={() => setCommandOpen(false)}
+      currentUser={currentUser}
+      onStartTour={() => setProductTourOpen(true)}
     />
     {logoutDlg && (
       <ConfirmDialog

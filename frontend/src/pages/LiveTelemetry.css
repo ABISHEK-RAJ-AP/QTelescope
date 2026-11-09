@@ -8,6 +8,15 @@
   border-radius: 0 6px 6px 0;
 }
 
+.live-sse-banner {
+  margin: 0 0 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  border-left: 3px solid var(--accent-amber);
+  background: var(--bg-card-hover);
+}
+
 .live-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr);

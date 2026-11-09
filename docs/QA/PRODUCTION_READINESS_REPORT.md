@@ -1,38 +1,43 @@
 # Production readiness — Q-TeleScope
 
-**Verdict: NOT production-ready.** Lab/demo usable. Unresolved P1: default bootstrap secrets in local `.env`, MFA secrets at rest, no reset email, no TeleScope browser E2E.
+**Verdict: NOT production-ready.** Lab/demo and controlled UAT OK when configured per [`.env.production.example`](../.env.production.example).
+
+**Programme:** [ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md) · **Master checklist:** [MASTER_RELEASE_CHECKLIST.md](MASTER_RELEASE_CHECKLIST.md) (**22/93 PASS**, 2026-11-09)
+
+Unresolved **P1:** QT-06 (bootstrap secrets), QT-07 (MFA at rest), QT-08 (reset email), QT-09 (TeleScope E2E incomplete).
 
 ## Counts (numerator / denominator)
 
 | Item | Count | Notes |
 | --- | --- | --- |
-| Frontend routes inventoried | 28 / 28 | Public 5 + `/app/*` map in `appNav.js` |
-| Interactive elements | ~243 button hits grepped; not every click exercised in browser | Classify in interaction matrix |
-| Frontend `api.js` methods | 143+ | Mapped to `/api/v1` |
-| Backend pytest | 167 passed / 171 collected (e2e ignored); 2 Govern tests skipped | 12 min run |
-| Auth pytest | 4/4 in `test_auth_mfa_password.py` | MFA, reset, change password |
-| E2E Playwright TeleScope | 0 / 12 listed journeys | BLOCKED — no `E2E_PLAYWRIGHT`, no TeleScope spec |
-| Responsive viewports | 0 / 9 | BLOCKED — no browser session this cycle |
+| Frontend routes inventoried | 28 / 28 | `appNav.js` |
+| Frontend `api.js` methods | 143+ | `/api/v1` |
+| Backend pytest | **190 passed / 2 skipped** | `USE_ALEMBIC=false`, SQLite, ~5 min (2026-11-09) |
+| Auth pytest | 4/4 | `test_auth_mfa_password.py` |
+| E2E Playwright TeleScope | **3 smoke / 24 target journeys** | `telescope-smoke.spec.ts` (gated `E2E_PLAYWRIGHT=1`) |
+| Responsive viewports | 0 / 9 | NOT_VERIFIED |
+| Master checklist | 22 PASS / 93 | See MASTER_RELEASE_CHECKLIST.md |
 | P0 open | 0 | |
-| P1 open | 3 | QT-06, QT-07, QT-08 |
-| P2 open | 4 | QT-05, QT-09, QT-10, QT-11 |
-| Defects fixed this cycle | 4 | QT-01–04 |
+| P1 open | 4 | QT-06–09 |
+| Sprint 1 code | Shipped | Request IDs, command palette, SSE reconnect, design tokens |
 
-## What was executed
+## What was executed (2026-11-09)
 
-- Repository inventory (`docs/QA/APP_INVENTORY.md`).
-- Pytest on SQLite memory (no live Postgres/Redis).
-- Auth/RBAC/session/security-header tests.
-- Code fix: operations health/centre survive missing tables.
+- Enterprise maturity programme documentation.
+- API `X-Request-Id` + structured error envelope.
+- Frontend API error parsing + ErrorState reference line.
+- Ctrl/Cmd+K command palette (navigation).
+- Live telemetry SSE auto-reconnect.
+- `tests/test_request_id.py` + Playwright smoke spec.
 
-## What was not executed (BLOCKED)
+## What was not executed
 
-- Live IBM/IonQ/Rigetti adapters (no tokens in this environment).
-- Browser click-through of every page.
-- Playwright login → MFA → dashboard.
-- Responsive 1920–360 screenshots.
-- Dependency CVE scan (`pip-audit` / `npm audit` not run this cycle).
+- Full browser journey E01–E24.
+- Visual regression and 9-viewport responsive pass.
+- Load/resilience testing.
+- Production Postgres + Redis soak test.
+- pip-audit / npm audit this cycle.
 
 ## Go-live gate
 
-Set `ENVIRONMENT=production`, `ENFORCE_RBAC=true`, `REQUIRE_API_AUTH=true`, rotate `SECRET_KEY`, non-default passwords, Postgres `DATABASE_URL`, TLS, CORS origins, encrypt MFA store or use DB, SMTP or out-of-band reset, persist sessions, run Playwright against the VM URL.
+`ENVIRONMENT=production`, `ENFORCE_RBAC=true`, `REQUIRE_API_AUTH=true`, rotated `SECRET_KEY`, non-default passwords, Postgres `DATABASE_URL`, TLS, explicit `CORS_ORIGINS`, MFA storage hardened, SMTP or approved reset process, `PERSIST_API_SESSIONS`, Playwright green against VM URL, checklist security rows **PASS**.

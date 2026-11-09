@@ -1,0 +1,25 @@
+/**
+ * Enterprise design tokens — canonical aliases for Q-TeleScope.
+ * Light defaults align with blueprint (#F8FAFC surface, #172554 primary family).
+ * Dark mode overrides remain in index.css (.dark).
+ */
+
+:root {
+  --ds-surface-page: var(--bg-dark, #f8fafc);
+  --ds-surface-card: var(--bg-card, #ffffff);
+  --ds-primary: #172554;
+  --ds-accent: var(--accent-cyan, #0891b2);
+
+  --ds-status-healthy: var(--accent-emerald, #059669);
+  --ds-status-warn: var(--accent-amber, #d97706);
+  --ds-status-critical: var(--accent-rose, #e11d48);
+  --ds-status-info: var(--accent-blue, #2563eb);
+  --ds-status-unknown: var(--text-muted, #64748b);
+
+  --ds-radius-card: 12px;
+  --ds-radius-control: 10px;
+  --ds-space-page: 16px;
+  --ds-shadow-card: 0 8px 24px -12px rgba(15, 23, 42, 0.18);
+  --ds-motion-fast: 150ms;
+  --ds-motion-modal: 200ms;
+}

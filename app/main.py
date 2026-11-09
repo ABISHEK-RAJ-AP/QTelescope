@@ -1,7 +1,9 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
 
@@ -9,6 +11,7 @@ _startup_log = logging.getLogger("app.startup")
 
 from app.core.config import settings
 from app.core.api_auth import ApiAuthMiddleware
+from app.core.request_id import RequestIdMiddleware, request_id_for
 from app.core.security_headers import SecurityHeadersMiddleware
 from app.core.env_profile import is_production_profile
 from app.core.database import Base, engine, SessionLocal
@@ -105,6 +108,19 @@ _docs_url = None if is_production_profile() else "/docs"
 _redoc_url = None if is_production_profile() else "/redoc"
 _openapi_url = None if is_production_profile() else f"{settings.API_V1_STR}/openapi.json"
 
+def _error_body(request: Request, status: int, message: str, code: str | None = None, details=None) -> dict:
+    body = {
+        "error": {
+            "code": code or f"HTTP_{status}",
+            "message": message,
+            "request_id": request_id_for(request),
+        }
+    }
+    if details is not None:
+        body["error"]["details"] = details
+    return body
+
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -114,6 +130,40 @@ app = FastAPI(
     description="Quantum Runtime Telemetry, Multi-Hardware Auto-Discovery, and Monitoring Platform",
     lifespan=lifespan
 )
+
+
+@app.exception_handler(HTTPException)
+async def _http_exception_handler(request: Request, exc: HTTPException):
+    detail = exc.detail
+    if isinstance(detail, str):
+        message = detail
+        details = None
+    else:
+        message = "Request could not be completed."
+        details = detail
+    payload = _error_body(request, exc.status_code, message, details=details)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=payload,
+        headers={"X-Request-Id": request_id_for(request)},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def _validation_exception_handler(request: Request, exc: RequestValidationError):
+    payload = _error_body(
+        request,
+        422,
+        "Validation failed.",
+        code="VALIDATION_ERROR",
+        details=exc.errors(),
+    )
+    return JSONResponse(
+        status_code=422,
+        content=payload,
+        headers={"X-Request-Id": request_id_for(request)},
+    )
+
 
 # Outermost → innermost: SecurityHeaders wraps responses after CORS/Auth.
 app.add_middleware(SecurityHeadersMiddleware)
@@ -151,8 +201,9 @@ app.add_middleware(
     allow_origins=_cors_origins,
     allow_credentials=_cors_credentials,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "X-User-Role", "X-User-Name", "X-QRE-Dev-Ack", "Accept"],
+    allow_headers=["Authorization", "Content-Type", "X-User-Role", "X-User-Name", "X-QRE-Dev-Ack", "Accept", "X-Request-Id"],
 )
+app.add_middleware(RequestIdMiddleware)
 
 # Include API Routers
 app.include_router(backends.router, prefix=settings.API_V1_STR)

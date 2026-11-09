@@ -6,6 +6,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from app.core.config import settings
+from app.core.request_id import request_id_for
 from app.core.sessions import get_session, require_api_auth
 
 _PUBLIC_SUFFIXES = (
@@ -48,9 +49,17 @@ class ApiAuthMiddleware(BaseHTTPMiddleware):
         token = _extract_token(request)
         session = get_session(token) if token else None
         if not session:
+            rid = request_id_for(request)
             return JSONResponse(
                 status_code=401,
-                content={"detail": "Authentication required. Send Authorization: Bearer <session token>."},
+                content={
+                    "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Authentication required. Send Authorization: Bearer <session token>.",
+                        "request_id": rid,
+                    }
+                },
+                headers={"X-Request-Id": rid},
             )
         request.state.session = session
         request.state.username = session.get("username")

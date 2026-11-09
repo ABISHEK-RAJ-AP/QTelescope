@@ -336,6 +336,8 @@ Role ↔ permission detail: [RBAC_AND_IDENTITY.md](RBAC_AND_IDENTITY.md), `front
 
 | Artifact | Location |
 | --- | --- |
+| Enterprise programme (sprints 1–6) | [ENTERPRISE_MATURITY_PROGRAM.md](ENTERPRISE_MATURITY_PROGRAM.md) |
+| Master release checklist (93 items) | [QA/MASTER_RELEASE_CHECKLIST.md](QA/MASTER_RELEASE_CHECKLIST.md) |
 | Route inventory | [QA/APP_INVENTORY.md](QA/APP_INVENTORY.md) |
 | Production gate | [QA/PRODUCTION_READINESS_REPORT.md](QA/PRODUCTION_READINESS_REPORT.md) |
 | Defect register | [QA/DEFECT_REGISTER.md](QA/DEFECT_REGISTER.md) |
@@ -347,6 +349,7 @@ Role ↔ permission detail: [RBAC_AND_IDENTITY.md](RBAC_AND_IDENTITY.md), `front
 ```bash
 cd /path/to/QTeleScope
 USE_ALEMBIC=false PYTHONPATH=. pytest tests/ -q --ignore=tests/e2e
+# Last full run: 190 passed, 2 skipped (2026-11-09)
 ```
 
 ---

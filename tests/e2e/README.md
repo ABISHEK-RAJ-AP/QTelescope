@@ -1,6 +1,6 @@
 # E2E tests (Playwright)
 
-Optional browser smoke for Govern / Build. **Default CI uses API smoke only:** `tests/test_govern_pilot_smoke.py`.
+Optional browser smoke for **Q-TeleScope** and Govern / Build. **Default CI uses API pytest only.**
 
 ## Prerequisites
 
@@ -11,6 +11,24 @@ npx playwright install chromium
 ```
 
 API and Govern dev servers must be reachable (or use `webServer` in config).
+
+## Run Q-TeleScope smoke
+
+```bash
+# Terminal 1
+cd /path/to/repo && PYTHONPATH=. uvicorn app.main:app --port 8000
+
+# Terminal 2
+cd frontend && npm run dev
+
+# Terminal 3
+cd tests/e2e
+E2E_PLAYWRIGHT=1 E2E_API_URL=http://127.0.0.1:8000 E2E_TELESCOPE_URL=http://127.0.0.1:5173 npx playwright test telescope-smoke.spec.ts
+```
+
+| Variable | Default |
+| --- | --- |
+| `E2E_TELESCOPE_URL` | `http://127.0.0.1:5173` |
 
 ## Run Govern smoke
 
