@@ -3,7 +3,7 @@
 **Tracker only — not a production score.** A single critical **FAIL** in security still blocks release.
 
 **Last updated:** 2026-11-09  
-**Summary:** **22 PASS** · **31 PARTIAL** · **8 FAIL** · **32 NOT VERIFIED**
+**Summary:** **24 PASS** · **32 PARTIAL** · **7 FAIL** · **30 NOT VERIFIED**
 
 Programme: [../ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md)
 
@@ -22,6 +22,8 @@ Programme: [../ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md
 ---
 
 ## Frontend foundation (6 / 15 PASS)
+
+_Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared `EnterpriseDataTable`, `AppFormField`.
 
 | ID | Item | Status | Notes |
 | --- | --- | --- | --- |
@@ -51,7 +53,7 @@ Programme: [../ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md
 | U02 | Dropdowns / selects work | NOT_VERIFIED | |
 | U03 | Tabs load correct content | PARTIAL | App shell routing |
 | U04 | Modals validate correctly | PARTIAL | ConfirmDialog pattern |
-| U05 | Table sort/filter expectations | PARTIAL | Per-page implementations |
+| U05 | Table sort/filter expectations | PARTIAL | `EnterpriseDataTable` + per-page tables |
 | U06 | Bulk actions permissioned | PARTIAL | Alerts bulk |
 | U07 | Search + pagination | PARTIAL | Alerts, jobs |
 | U08 | Filter persistence | PARTIAL | URL scope on some pages |
@@ -146,9 +148,9 @@ Programme: [../ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md
 
 | ID | Item | Status | Notes |
 | --- | --- | --- | --- |
-| T01 | Frontend unit tests | FAIL | No Vitest script |
+| T01 | Frontend unit tests | PASS | `npm test` — Vitest (apiErrors, useTableKit, EnterpriseDataTable) |
 | T02 | Backend pytest | PASS | 190 passed, 2 skipped (2026-11-09) |
-| T03 | Playwright E2E suite | PARTIAL | `telescope-smoke.spec.ts`; not E01–E24 |
+| T03 | Playwright E2E suite | PARTIAL | `telescope-journeys.spec.ts` E01–E06 + smoke; E07–E24 open |
 | T04 | Permission combination tests | PARTIAL | RBAC tests partial |
 | T05 | Visual regression | NOT_VERIFIED | |
 | T06 | Responsive screenshots | NOT_VERIFIED | |

@@ -2,7 +2,7 @@
 
 **Verdict: NOT production-ready.** Lab/demo and controlled UAT OK when configured per [`.env.production.example`](../.env.production.example).
 
-**Programme:** [ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md) · **Master checklist:** [MASTER_RELEASE_CHECKLIST.md](MASTER_RELEASE_CHECKLIST.md) (**22/93 PASS**, 2026-11-09)
+**Programme:** [ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md) · **Master checklist:** [MASTER_RELEASE_CHECKLIST.md](MASTER_RELEASE_CHECKLIST.md) (**24/93 PASS**, 2026-11-09)
 
 Unresolved **P1:** QT-06 (bootstrap secrets), QT-07 (MFA at rest), QT-08 (reset email), QT-09 (TeleScope E2E incomplete).
 
@@ -14,12 +14,13 @@ Unresolved **P1:** QT-06 (bootstrap secrets), QT-07 (MFA at rest), QT-08 (reset 
 | Frontend `api.js` methods | 143+ | `/api/v1` |
 | Backend pytest | **190 passed / 2 skipped** | `USE_ALEMBIC=false`, SQLite, ~5 min (2026-11-09) |
 | Auth pytest | 4/4 | `test_auth_mfa_password.py` |
-| E2E Playwright TeleScope | **3 smoke / 24 target journeys** | `telescope-smoke.spec.ts` (gated `E2E_PLAYWRIGHT=1`) |
+| E2E Playwright TeleScope | **E01–E06 + smoke / 24 journeys** | `telescope-journeys.spec.ts` (needs `E2E_CAPTCHA_BYPASS=1` on API) |
+| Frontend Vitest | **7 tests** | `cd frontend && npm test` |
 | Responsive viewports | 0 / 9 | NOT_VERIFIED |
-| Master checklist | 22 PASS / 93 | See MASTER_RELEASE_CHECKLIST.md |
+| Master checklist | 24 PASS / 93 | See MASTER_RELEASE_CHECKLIST.md |
 | P0 open | 0 | |
 | P1 open | 4 | QT-06–09 |
-| Sprint 1 code | Shipped | Request IDs, command palette, SSE reconnect, design tokens |
+| Sprint 1–2 code | In progress | S1: request IDs, palette, SSE. S2: Vitest, EnterpriseDataTable, E01–E06 |
 
 ## What was executed (2026-11-09)
 
@@ -32,7 +33,7 @@ Unresolved **P1:** QT-06 (bootstrap secrets), QT-07 (MFA at rest), QT-08 (reset 
 
 ## What was not executed
 
-- Full browser journey E01–E24.
+- Full browser journey E07–E24.
 - Visual regression and 9-viewport responsive pass.
 - Load/resilience testing.
 - Production Postgres + Redis soak test.

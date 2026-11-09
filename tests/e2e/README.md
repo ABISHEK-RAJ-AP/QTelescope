@@ -16,19 +16,23 @@ API and Govern dev servers must be reachable (or use `webServer` in config).
 
 ```bash
 # Terminal 1
-cd /path/to/repo && PYTHONPATH=. uvicorn app.main:app --port 8000
+cd /path/to/repo && E2E_CAPTCHA_BYPASS=1 PYTHONPATH=. uvicorn app.main:app --port 8000
 
 # Terminal 2
 cd frontend && npm run dev
 
 # Terminal 3
 cd tests/e2e
-E2E_PLAYWRIGHT=1 E2E_API_URL=http://127.0.0.1:8000 E2E_TELESCOPE_URL=http://127.0.0.1:5173 npx playwright test telescope-smoke.spec.ts
+E2E_PLAYWRIGHT=1 E2E_CAPTCHA_BYPASS=1 E2E_API_URL=http://127.0.0.1:8000 E2E_TELESCOPE_URL=http://127.0.0.1:5173 npx playwright test --project=telescope
 ```
 
 | Variable | Default |
 | --- | --- |
 | `E2E_TELESCOPE_URL` | `http://127.0.0.1:5173` |
+| `E2E_CAPTCHA_BYPASS` | unset — login journeys **skipped** without `1` on API |
+| `E2E_TELESCOPE_USER` / `E2E_TELESCOPE_PASSWORD` | `admin` / `quantum2026` (lab only) |
+
+Login journeys type captcha code **`BYPASS`** when API has `E2E_CAPTCHA_BYPASS=1` and profile is not production.
 
 ## Run Govern smoke
 

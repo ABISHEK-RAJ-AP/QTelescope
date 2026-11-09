@@ -14,6 +14,7 @@ from fastapi import APIRouter, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.core.config import settings
+from app.core.env_profile import env_flag, is_production_profile
 from app.core.sessions import create_session, get_session, revoke_session
 from app.core.rate_limit import check_auth_rate_limit
 from app.core.bootstrap_security import bootstrap_security_report, reject_if_default_bootstrap_password
@@ -142,9 +143,19 @@ def generate_captcha_image(code: str) -> str:
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
 
 
+E2E_CAPTCHA_BYPASS_CODE = "BYPASS"
+
+
+def e2e_captcha_bypass_enabled() -> bool:
+    """Playwright-only: never enabled on production profile."""
+    return env_flag("E2E_CAPTCHA_BYPASS", default=False) and not is_production_profile()
+
+
 def _consume_captcha(captcha_id: str, captcha_code: str) -> None:
     if not captcha_id or not captcha_code:
         raise HTTPException(status_code=400, detail="Image verification is required.")
+    if e2e_captcha_bypass_enabled() and captcha_code.strip().upper() == E2E_CAPTCHA_BYPASS_CODE:
+        return
     with _LOCK:
         _cleanup_expired_captchas()
         stored = _CAPTCHA_STORE.get(captcha_id)

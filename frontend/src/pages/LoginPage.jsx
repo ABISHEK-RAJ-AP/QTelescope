@@ -259,12 +259,15 @@ export function LoginPage({ onLoginSuccess }) {
         />
 
         {error && (
-          <div className="rounded-md border border-rose-300 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400">
+          <div
+            data-testid="login-error"
+            className="rounded-md border border-rose-300 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400"
+          >
             {error}
           </div>
         )}
 
-        <Button type="submit" className="h-11 w-full gap-2 text-sm font-semibold" disabled={loading}>
+        <Button type="submit" data-testid="login-submit" className="h-11 w-full gap-2 text-sm font-semibold" disabled={loading}>
           {loading ? <Loader2 className="size-4 animate-spin" /> : null}
           Sign in <ArrowRight className="size-4" />
         </Button>

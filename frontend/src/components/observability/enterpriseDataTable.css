@@ -1,0 +1,87 @@
+.edt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.edt-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 200px;
+  max-width: 320px;
+  padding: 6px 10px;
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+}
+
+.edt-search input {
+  border: none;
+  outline: none;
+  width: 100%;
+  font-size: 13px;
+  background: transparent;
+  color: inherit;
+}
+
+.edt-toolbar__count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted, #64748b);
+}
+
+.edt-wrap--sticky thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface, #fff);
+}
+
+.edt-skel {
+  display: block;
+  height: 12px;
+  width: 70%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: edt-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes edt-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edt-skel {
+    animation: none;
+    background: #e2e8f0;
+  }
+}
+
+.edt-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.edt-pager__btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edt-pager__meta {
+  color: var(--text-muted, #64748b);
+}

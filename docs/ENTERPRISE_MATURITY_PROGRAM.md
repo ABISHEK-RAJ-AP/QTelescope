@@ -16,7 +16,7 @@
 
 | Milestone | Target | Current (2026-11-09) |
 | --- | --- | --- |
-| Enterprise UI/ops polish | Phase 1–3 complete | **Sprint 1 in progress** (~25% of master checklist) |
+| Enterprise UI/ops polish | Phase 1–3 complete | **Sprint 2 in progress** (~28% of master checklist) |
 | Production security gate | Phase 2 complete | **Open P1s** (secrets, MFA at rest, reset mail, E2E) |
 | Quantum differentiation | Phase 4 | **Partial** (provenance hooks exist; quality states incomplete) |
 | Go-live rehearsal | Phase 5 | **Not started** |
@@ -54,10 +54,20 @@
 | TeleScope Playwright smoke spec | `tests/e2e/telescope-smoke.spec.ts` |
 | Request ID pytest | `tests/test_request_id.py` |
 
+### Sprint 2 — in progress
+
+| Item | Evidence |
+| --- | --- |
+| Vitest + RTL | `frontend/vitest.config.js`, `npm test` |
+| Shared enterprise table | `EnterpriseDataTable.jsx` |
+| Shared form field chrome | `AppFormField.jsx` |
+| Route audit (28 routes) | [QA/SPRINT2_ROUTE_AUDIT.md](QA/SPRINT2_ROUTE_AUDIT.md) |
+| Playwright E01–E06 | `telescope-journeys.spec.ts` (+ smoke) |
+| E2E captcha bypass (non-prod) | `E2E_CAPTCHA_BYPASS=1`, code `BYPASS`, `test_e2e_captcha_bypass.py` |
+
 ### Sprint 1 backlog (still open)
 
-- Vitest + React Testing Library scaffold (`frontend/package.json` has no `test` script).
-- Full Playwright journeys E01–E24 (only smoke + partial E22).
+- Full Playwright journeys E07–E24.
 - Saved table views, notification centre, shift handover.
 - Metric-level provenance and quality enums end-to-end.
 - TanStack Query adoption / `api.js` split (optional refactor).

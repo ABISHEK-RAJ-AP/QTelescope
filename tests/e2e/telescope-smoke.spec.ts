@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test';
 
 const api = process.env.E2E_API_URL || 'http://127.0.0.1:8000';
-const telescope = process.env.E2E_TELESCOPE_URL || 'http://127.0.0.1:5173';
 
 test.describe('Q-TeleScope smoke', () => {
   test.beforeEach(() => {
@@ -9,7 +8,7 @@ test.describe('Q-TeleScope smoke', () => {
   });
 
   test('E01 login page loads captcha challenge', async ({ page }) => {
-    await page.goto(`${telescope}/login`);
+    await page.goto('/login');
     await expect(page.getByRole('heading', { name: /sign in/i })).toBeVisible();
     await expect(page.getByLabel(/captcha|verification/i).or(page.locator('img[alt*="captcha" i], img[alt*="verification" i]'))).toBeVisible();
   });
