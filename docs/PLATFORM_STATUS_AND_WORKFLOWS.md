@@ -16,7 +16,7 @@
 | **Primary database** | PostgreSQL recommended | SQLAlchemy ORM; Alembic migrations; SQLite for lightweight tests |
 | **Redis** | Optional | Speeds alert/health reads + auth rate limits; **app runs without Redis** (Postgres-only fallback) |
 | **Live providers** | Config-dependent | IBM / IonQ / Rigetti / on-prem adapters; mock/demo when `ENABLE_MOCK_DATA=true` or keys empty |
-| **Automated tests** | Strong API coverage | 167+ pytest cases cited in readiness report; TeleScope browser E2E still sparse |
+| **Automated tests** | Strong API coverage | **190 passed / 2 skipped** (`USE_ALEMBIC=false`, 2026-11-09, ~5 min); TeleScope browser E2E still sparse |
 | **Identity** | Bearer sessions + captcha + MFA + LDAP bind | Sessions in `app/core/sessions.py`; client auto sign-out on TTL/401 |
 
 ---
