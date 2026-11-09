@@ -47,11 +47,14 @@ def apply_schema(engine: Engine) -> None:
     head = script.get_current_head()
     with engine.connect() as conn:
         current = MigrationContext.configure(conn).get_current_revision()
-    if current == head:
-        logger.debug("Alembic already at head (%s)", head)
-    else:
-        command.upgrade(cfg, "head")
-        logger.info("Alembic upgrade head complete")
+        if current == head:
+            logger.debug("Alembic already at head (%s)", head)
+        else:
+            # ponytail: sqlite :memory: — Alembic must share app engine connection or schema vanishes
+            cfg.attributes["connection"] = conn
+            command.upgrade(cfg, "head")
+            logger.info("Alembic upgrade head complete")
+        conn.commit()
     _ensure_new_tables(engine)
 
 

@@ -1,0 +1,47 @@
+.landing-scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 60;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--accent-cyan, #0891b2) 12%, transparent);
+}
+
+.landing-scroll-progress__bar {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--accent-cyan, #0891b2), var(--accent-blue, #2563eb));
+  transition: transform 0.12s ease-out;
+}
+
+.landing-back-top {
+  position: fixed;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1.25rem, env(safe-area-inset-bottom));
+  z-index: 55;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color, #cbd5e1);
+  background: var(--bg-card, #fff);
+  color: var(--text-primary, #0f172a);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.landing-back-top:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.16);
+}
+
+.dark .landing-back-top {
+  background: var(--bg-card, #0d121d);
+  border-color: var(--border-color, #1e293b);
+}

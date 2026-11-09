@@ -19,6 +19,8 @@ import { Button } from '@/components/ui/Button'
 import { QuantumBackground } from '@/components/ui/quantum-background'
 import { PublicMarketingHeader } from '@/components/marketing/PublicMarketingHeader'
 import { PublicMarketingFooter } from '@/components/marketing/PublicMarketingFooter'
+import { LandingChrome } from '@/components/marketing/LandingChrome'
+import '@/components/marketing/landing-chrome.css'
 import { cn } from '@/lib/utils'
 
 const CAPABILITIES = [
@@ -135,6 +137,7 @@ export function LandingPage() {
   return (
     <div className="relative min-h-screen flex flex-col justify-between bg-[#f8fafc] text-neutral-900 dark:bg-[#070a0f] dark:text-neutral-100 transition-colors duration-200">
       <QuantumBackground />
+      <LandingChrome />
 
       <PublicMarketingHeader />
 

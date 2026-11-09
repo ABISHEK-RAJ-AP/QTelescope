@@ -97,7 +97,7 @@ export function PublicMarketingHeader({ className = '' }) {
           <button
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300"
+            className="md:hidden flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 active:bg-neutral-100 dark:active:bg-neutral-800"
             aria-label="Toggle navigation menu"
           >
             {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}

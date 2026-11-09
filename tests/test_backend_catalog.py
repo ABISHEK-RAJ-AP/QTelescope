@@ -6,7 +6,7 @@ from app.main import app
 from app.services.backend_catalog import get_catalog_entry, upsert_catalog
 
 P = settings.API_V1_STR
-ADMIN = {"X-User-Role": "Admin", "X-User-Name": "admin"}
+ADMIN = {"X-User-Role": "Admin", "X-User-Name": "admin", "X-QRE-Dev-Ack": "1"}
 
 
 def test_catalog_service_defaults_and_upsert(monkeypatch, tmp_path):
@@ -21,6 +21,7 @@ def test_catalog_service_defaults_and_upsert(monkeypatch, tmp_path):
 
 
 def test_backends_include_catalog_fields(monkeypatch, tmp_path):
+    monkeypatch.setenv("ENFORCE_RBAC", "false")
     monkeypatch.setattr("app.services.backend_catalog._PATH", str(tmp_path / "catalog.json"))
     with TestClient(app) as client:
         r = client.get(f"{P}/backends")
