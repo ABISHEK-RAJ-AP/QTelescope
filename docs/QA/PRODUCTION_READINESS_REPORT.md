@@ -2,7 +2,7 @@
 
 **Verdict: NOT production-ready.** Lab/demo and controlled UAT OK when configured per [`.env.production.example`](../.env.production.example).
 
-**Programme:** [ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md) · **Master checklist:** [MASTER_RELEASE_CHECKLIST.md](MASTER_RELEASE_CHECKLIST.md) (**33/93 PASS**, 2026-11-09)
+**Programme:** [ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md) · **Benchmark / gap:** [../benchmark/INDEX.md](../benchmark/INDEX.md) · **Master checklist:** [MASTER_RELEASE_CHECKLIST.md](MASTER_RELEASE_CHECKLIST.md) (**33/93 PASS**, 2026-11-09)
 
 Unresolved **P1:** QT-06 (demo secrets / rotation on internet-facing hosts). **QT-07–09** closed in lab; **QT-08** needs real SMTP on VM; **QT-09** re-run on deployment URL before go-live.
 

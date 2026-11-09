@@ -4,7 +4,8 @@
 **Evidence date:** 2026-11-09  
 **Scope:** `frontend/` + `app/` only (not QRP, Govern, qniverse unless shared API)  
 **Authoritative architecture:** [PLATFORM_STATUS_AND_WORKFLOWS.md](PLATFORM_STATUS_AND_WORKFLOWS.md)  
-**Release gate:** [QA/MASTER_RELEASE_CHECKLIST.md](QA/MASTER_RELEASE_CHECKLIST.md)
+**Release gate:** [QA/MASTER_RELEASE_CHECKLIST.md](QA/MASTER_RELEASE_CHECKLIST.md)  
+**Big-tech benchmark & gap programme:** [benchmark/INDEX.md](benchmark/INDEX.md) (Releases A–E, sprints S4–S14)
 
 ## Guiding principles (non-negotiable)
 
@@ -36,6 +37,19 @@
 | **S5** | 4 | 8–10 | Quantum depth | Provenance, calibration revisions, modality profiles, topology accuracy, workload epoch |
 | **S6** | 5 | 11–12 | Release validation | Full E2E, visual regression, a11y, load/resilience, UAT sign-off |
 
+### Extended roadmap (benchmark Releases B–E)
+
+See [benchmark/IMPLEMENTATION_ROADMAP.md](benchmark/IMPLEMENTATION_ROADMAP.md).
+
+| Sprint | Release | Theme |
+| --- | --- | --- |
+| **S4–S6** | B | Logs Explorer, metrics explorer, SLO, OTel, synthetics |
+| **S7–S9** | C | Composite alerts, notifications, on-call, change/policy |
+| **S10–S11** | D | Calibration diff, benchmarks, readiness scorecards |
+| **S12–S14** | E | Multi-facility, developer centre, UAT |
+
+**S1–S3** = Release A (foundation — shipped in lab per checklist 33/93 PASS).
+
 ---
 
 ## Sprint 1 — deliverables (this repo wave)
@@ -54,7 +68,7 @@
 | TeleScope Playwright smoke spec | `tests/e2e/telescope-smoke.spec.ts` |
 | Request ID pytest | `tests/test_request_id.py` |
 
-### Sprint 2 — in progress
+### Sprint 2 — shipped
 
 | Item | Evidence |
 | --- | --- |
@@ -67,7 +81,7 @@
 | Platform Health table | `PlatformHealth.jsx` → `EnterpriseDataTable` |
 | E2E captcha bypass (non-prod) | `E2E_CAPTCHA_BYPASS=1`, code `BYPASS`, `test_e2e_captcha_bypass.py` |
 
-### Sprint 3 — in progress (security)
+### Sprint 3 — shipped (security)
 
 | Item | Evidence |
 | --- | --- |
@@ -77,13 +91,18 @@
 | Playwright lab green (serial) | 22 pass / 6 skip — [QA/E2E_TELESCOPE_EVIDENCE.md](QA/E2E_TELESCOPE_EVIDENCE.md) |
 | Sprint 3 notes | [QA/SPRINT3_SECURITY.md](QA/SPRINT3_SECURITY.md) |
 
-### Sprint 1 backlog (still open)
+### Sprint 4+ backlog (Release B — start here)
 
-- Playwright green run on VM (all specs; E21 needs session persist).
-- Saved table views, notification centre, shift handover.
-- Metric-level provenance and quality enums end-to-end.
-- TanStack Query adoption / `api.js` split (optional refactor).
-- Live readiness scorecard page (admin).
+Prioritized from [benchmark/FEATURE_GAP_MATRIX.md](benchmark/FEATURE_GAP_MATRIX.md):
+
+1. Unified **Logs Explorer** + alert drill-down.
+2. **Collector execution history** (B07) + data quality report.
+3. **Metrics Explorer** v1 + saved queries.
+4. **Resource catalogue** (owner, facility, tags).
+5. **Composite alert** rules + notification routing.
+6. VM Playwright re-run + production secret rotation (QT-06).
+
+Do **not** bulk-build net-new pages before interconnecting existing flows (benchmark § recommendation).
 
 ---
 
@@ -115,6 +134,7 @@
 
 ## Related documents
 
+- [benchmark/INDEX.md](benchmark/INDEX.md) — competitive benchmark + 10 gap reports + roadmap.
 - [QA/MASTER_RELEASE_CHECKLIST.md](QA/MASTER_RELEASE_CHECKLIST.md) — 93-item master QA list with live status.
 - [QA/PRODUCTION_READINESS_REPORT.md](QA/PRODUCTION_READINESS_REPORT.md) — go-live verdict.
 - [QA/FRONTEND_INTERACTION_MATRIX.md](QA/FRONTEND_INTERACTION_MATRIX.md) — control-level QA.
