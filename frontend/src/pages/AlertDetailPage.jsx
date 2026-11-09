@@ -13,7 +13,8 @@ import { notifyError, notifySuccess } from '../lib/toast.js';
 import { ConfirmDialog } from '../components/observability/ConfirmDialog.jsx';
 import { CollapsibleSection } from '../components/observability/CollapsibleSection.jsx';
 import { DiscussionModal } from '../components/observability/DiscussionModal.jsx';
-import { buildBackendDetailsPath, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
+import { buildBackendDetailsPath, buildDriftInvestigationLocation, buildLogsExplorerLocation } from '../lib/investigationLinks.js';
+import { can, canManageFleet } from '../lib/permissions.js';
 import './IncidentDetailPage.css';
 
 const num = (v) => (v == null || !Number.isFinite(Number(v)) ? '—' : Number(v).toFixed(1));
@@ -73,6 +74,7 @@ export function AlertDetailPage({
   const [discOpen, setDiscOpen] = useState(false);
   const [dlg, setDlg] = useState(null);
   const actorName = currentUser?.username || currentUser?.full_name || 'operator';
+  const showLogs = canManageFleet(currentUser) || can(currentUser, 'platform:read');
 
   const load = useCallback(async () => {
     if (!alertId) return;
@@ -223,6 +225,21 @@ export function AlertDetailPage({
           >
             Timeline
           </button>
+          {showLogs && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => nav(buildLogsExplorerLocation({
+                backendId: alert.backend_id,
+                q: alert.backend_id || alert.alert_id,
+                hours: 6,
+                anchorAt: alert.detected_at,
+                source: 'app',
+              }))}
+            >
+              Related logs
+            </button>
+          )}
           <button
             type="button"
             className="btn btn-secondary"

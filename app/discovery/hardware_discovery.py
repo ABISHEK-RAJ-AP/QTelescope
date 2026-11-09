@@ -68,7 +68,7 @@ class HardwareDiscoveryEngine:
         return detected_providers
 
     @classmethod
-    def run_auto_discovery(cls, db: Session) -> Dict[str, Any]:
+    def run_auto_discovery(cls, db: Session, *, trigger_type: str = "scheduled") -> Dict[str, Any]:
         """
         Executes full auto-discovery cycle across all detected providers and
         registers live telemetry into the database.
@@ -113,6 +113,7 @@ class HardwareDiscoveryEngine:
                 lineage=lineage,
                 error=err_msg,
                 backend_names=[b["backend_name"] for b in backends],
+                trigger_type=trigger_type,
             )
             circuit_record(prov_id, status)
             if status != "OK":

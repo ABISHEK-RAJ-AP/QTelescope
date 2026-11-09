@@ -38,6 +38,29 @@ export function buildTimelineInvestigationLocation({ backendId, alertId } = {}) 
   };
 }
 
+/** Operator logs explorer (audit + structured app logs). */
+export function buildLogsExplorerLocation({
+  backendId,
+  requestId,
+  q,
+  hours = 24,
+  anchorAt,
+  source = 'app',
+} = {}) {
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (requestId) params.set('requestId', requestId);
+  if (backendId) params.set('backend', backendId);
+  if (hours) params.set('hours', String(hours));
+  if (anchorAt) params.set('at', anchorAt);
+  if (source) params.set('source', source);
+  const search = params.toString();
+  return {
+    pathname: '/app/admin/logs',
+    search: search ? `?${search}` : '',
+  };
+}
+
 export function buildDriftInvestigationLocation({ backendId, hours = 24 } = {}) {
   const search = mergeScopeSearch('', {
     backend: backendId || '',

@@ -26,8 +26,8 @@
 
 | ID | Criterion | Verification | Status (2026-11-09) |
 | --- | --- | --- | --- |
-| B1 | Logs Explorer: search by `request_id`, backend, time | Playwright + manual | **OPEN** — audit-only search |
-| B2 | Collector executions queryable 30d | API test + Platform Health UI | **PARTIAL** — JSONL + UI; no 30d contract |
+| B1 | Logs Explorer: search by `request_id`, backend, time | Playwright + manual | **PARTIAL** — audit + app JSONL; collector emits logs |
+| B2 | Collector executions queryable 30d | API test + Platform Health UI | **PARTIAL** — since/until filters; file retention not 30d SLA |
 | B3 | Data quality report after collection | pytest fixture ingest | **PARTIAL** — heuristic quality JSONL |
 | B4 | Metrics Explorer saves/restores one query | E2E journey | **PARTIAL** — localStorage; E26 spec |
 | B5 | Resource row shows owner + facility fields | API + inventory UI | **PARTIAL** — v1 catalogue; pytest |

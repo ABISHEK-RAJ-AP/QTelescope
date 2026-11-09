@@ -97,6 +97,26 @@ export const api = {
     if (q) qs.set('q', q);
     return fetchApi(`/admin/audit-log?${qs}`);
   },
+  getAppLogs: ({
+    limit = 100,
+    q = '',
+    requestId = '',
+    backendId = '',
+    providerId = '',
+    severity = '',
+    since = '',
+    until = '',
+  } = {}) => {
+    const qs = new URLSearchParams({ limit: String(limit) });
+    if (q) qs.set('q', q);
+    if (requestId) qs.set('request_id', requestId);
+    if (backendId) qs.set('backend_id', backendId);
+    if (providerId) qs.set('provider_id', providerId);
+    if (severity) qs.set('severity', severity);
+    if (since) qs.set('since', since);
+    if (until) qs.set('until', until);
+    return fetchApi(`/admin/app-logs?${qs}`);
+  },
   getCollectorDlq: (limit = 30) => fetchApi(`/admin/collector-dlq?limit=${limit}`),
   getAdapterVerification: () => fetchApi('/admin/adapters/verification'),
   getFacilityMqttStatus: () => fetchApi('/admin/facility/mqtt-status'),

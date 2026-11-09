@@ -39,7 +39,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 | F08 | Confirm dialogs for destructive actions | PARTIAL | Logout, admin, alerts; gaps remain |
 | F09 | Toast consistency | PASS | `ToastHost` + react-toastify |
 | F10 | Breadcrumbs / deep links | PASS | `appNav.js`, `PageHeader` |
-| F11 | Global search / command palette | PARTIAL | Ctrl+K nav + entity search (backends, alerts, incidents); jobs/collectors backlog |
+| F11 | Global search / command palette | PARTIAL | Entity search: backends, alerts, incidents, jobs, collectors |
 | F12 | Keyboard nav / focus | PARTIAL | Modals; full app not audited |
 | F13 | Light/dark themes | PASS | `ThemeProvider` |
 | F14 | Responsive 9 viewports | NOT_VERIFIED | Matrix exists; no screenshots |

@@ -44,11 +44,18 @@ def append_execution(
     lineage: Optional[str] = None,
     error: Optional[str] = None,
     backend_names: Optional[List[str]] = None,
+    trigger_type: str = "scheduled",
+    request_id: Optional[str] = None,
 ) -> Dict[str, Any]:
+    from app.core.log_context import request_id_ctx
+
+    rid = request_id or request_id_ctx.get() or None
     row = {
         "execution_id": f"cex_{uuid.uuid4().hex[:12]}",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "provider_id": provider_id,
+        "trigger_type": (trigger_type or "scheduled")[:32],
+        "request_id": rid,
         "status": status,
         "duration_ms": round(duration_ms, 2),
         "backends_detected": backends_detected,
@@ -64,8 +71,15 @@ def append_execution(
     return row
 
 
-def list_executions(*, limit: int = 50, provider_id: Optional[str] = None) -> List[Dict[str, Any]]:
-    limit = max(1, min(limit, 200))
+def list_executions(
+    *,
+    limit: int = 50,
+    provider_id: Optional[str] = None,
+    since: Optional[str] = None,
+    until: Optional[str] = None,
+    status: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    limit = max(1, min(limit, 500))
     if not os.path.isfile(_PATH):
         return []
     rows: List[Dict[str, Any]] = []
@@ -79,7 +93,14 @@ def list_executions(*, limit: int = 50, provider_id: Optional[str] = None) -> Li
                     rec = json.loads(line)
                 except json.JSONDecodeError:
                     continue
+                ts = rec.get("timestamp") or ""
+                if since and ts < since:
+                    continue
+                if until and ts > until:
+                    continue
                 if provider_id and rec.get("provider_id") != provider_id:
+                    continue
+                if status and rec.get("status") != status:
                     continue
                 rows.append(rec)
     except OSError:

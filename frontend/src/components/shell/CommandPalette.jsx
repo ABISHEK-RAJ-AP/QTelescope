@@ -74,10 +74,12 @@ export function CommandPalette({ open, onClose, currentUser, onStartTour }) {
     const timer = setTimeout(async () => {
       setEntityBusy(true);
       try {
-        const [rawBackends, rawAlerts, rawIncidents] = await Promise.all([
+        const [rawBackends, rawAlerts, rawIncidents, rawJobs, rawColl] = await Promise.all([
           api.getBackends().catch(() => []),
           canSeeNavItem(currentUser, 'alerts') ? api.getAlerts('ACTIVE').catch(() => []) : Promise.resolve([]),
           canSeeNavItem(currentUser, 'alerts') ? api.getIncidents('OPEN').catch(() => []) : Promise.resolve([]),
+          canSeeNavItem(currentUser, 'execution') ? api.getJobs().catch(() => []) : Promise.resolve([]),
+          canManageFleet(currentUser) ? api.getCollectorHealth().catch(() => ({})) : Promise.resolve({}),
         ]);
         const backends = Array.isArray(rawBackends) ? rawBackends : (rawBackends?.items || rawBackends?.backends || []);
         const alerts = Array.isArray(rawAlerts) ? rawAlerts : (rawAlerts?.alerts || rawAlerts?.items || []);
@@ -113,7 +115,29 @@ export function CommandPalette({ open, onClose, currentUser, onStartTour }) {
             group: 'Incident',
           });
         });
-        if (!cancelled) setEntityHits(hits.slice(0, 15));
+        const jobs = Array.isArray(rawJobs) ? rawJobs : (rawJobs?.jobs || []);
+        jobs.slice(0, 30).forEach((j) => {
+          const id = j.job_id || j.id;
+          if (!id || !matchHay(q, id, j.backend_id, j.status)) return;
+          hits.push({
+            id: `job-${id}`,
+            label: `Job ${id}`,
+            path: '/app/execution/jobs',
+            group: 'Job',
+          });
+        });
+        const providers = rawColl?.providers || [];
+        providers.forEach((p) => {
+          const id = p.provider_id;
+          if (!id || !matchHay(q, id, p.status)) return;
+          hits.push({
+            id: `col-${id}`,
+            label: `Collector ${id}`,
+            path: '/app/admin/collectors',
+            group: 'Collector',
+          });
+        });
+        if (!cancelled) setEntityHits(hits.slice(0, 18));
       } catch {
         if (!cancelled) setEntityHits([]);
       } finally {

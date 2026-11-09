@@ -20,6 +20,12 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
         incoming = (request.headers.get("x-request-id") or "").strip()
         rid = incoming if incoming else f"req-{uuid.uuid4().hex[:16]}"
         request.state.request_id = rid
-        response = await call_next(request)
+        from app.core.log_context import request_id_ctx
+
+        token = request_id_ctx.set(rid)
+        try:
+            response = await call_next(request)
+        finally:
+            request_id_ctx.reset(token)
         response.headers["X-Request-Id"] = rid
         return response

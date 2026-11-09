@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Save, RefreshCw, CheckCircle2, Cpu, AlertTriangle, Key, Eye, EyeOff, Plus, Trash2, X,
   Compass, Pencil, ShieldCheck,
@@ -489,19 +489,20 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
         <h3 className="admin-card-title admin-pad">Run history (last 50)</h3>
         <div className="table-container" style={{ border: 'none' }}>
           <table className="custom-table admin-table">
-            <thead><tr><th>Time</th><th>Provider</th><th>Status</th><th>Backends</th><th>Duration</th><th>Lineage</th></tr></thead>
+            <thead><tr><th>Time</th><th>Provider</th><th>Trigger</th><th>Status</th><th>Backends</th><th>Duration</th><th>Lineage</th></tr></thead>
             <tbody>
               {executions.map((e) => (
                 <tr key={e.execution_id}>
                   <td className="admin-sub">{fmtTime(e.timestamp)}</td>
                   <td>{e.provider_id}</td>
+                  <td className="admin-sub">{e.trigger_type || 'scheduled'}</td>
                   <td><Stage ok={e.status === 'OK'} label={e.status} /></td>
                   <td>{e.backends_detected ?? '—'}</td>
                   <td>{e.duration_ms != null ? `${e.duration_ms} ms` : '—'}</td>
                   <td className="admin-sub">{e.lineage || '—'}</td>
                 </tr>
               ))}
-              {executions.length === 0 && <TableEmpty colSpan={6} title="No execution history" message="Runs are recorded after discovery or scheduled collection." />}
+              {executions.length === 0 && <TableEmpty colSpan={7} title="No execution history" message="Runs are recorded after discovery or scheduled collection." />}
             </tbody>
           </table>
         </div>
@@ -899,11 +900,21 @@ function UsersDirectory({ canEdit }) {
   );
 }
 
-/* ----------------------------- Audit log ----------------------------- */
+/* ----------------------------- Logs explorer ----------------------------- */
+function isoWindow(hours, anchorIso) {
+  const end = anchorIso ? new Date(anchorIso.includes('Z') ? anchorIso : `${anchorIso}Z`) : new Date();
+  const start = new Date(end.getTime() - (Number(hours) || 24) * 3.6e6);
+  return { since: start.toISOString(), until: end.toISOString() };
+}
+
 function AdminAuditLog() {
-  const [q, setQ] = useState('');
+  const [params] = useSearchParams();
+  const [source, setSource] = useState(params.get('source') === 'audit' ? 'audit' : 'app');
+  const [q, setQ] = useState(params.get('q') || '');
   const [action, setAction] = useState('');
   const [actor, setActor] = useState('');
+  const [requestId, setRequestId] = useState(params.get('requestId') || '');
+  const [backendId, setBackendId] = useState(params.get('backend') || '');
   const [rows, setRows] = useState([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -912,39 +923,76 @@ function AdminAuditLog() {
     setBusy(true);
     setErr('');
     try {
-      const res = await api.getAuditLog({
-        limit: 150,
-        q: q.trim() || undefined,
-        action: action.trim() || undefined,
-        actor: actor.trim() || undefined,
-      });
-      setRows(res?.events || []);
+      if (source === 'audit') {
+        const res = await api.getAuditLog({
+          limit: 150,
+          q: q.trim() || undefined,
+          action: action.trim() || undefined,
+          actor: actor.trim() || undefined,
+        });
+        setRows(res?.events || []);
+      } else {
+        const { since, until } = isoWindow(params.get('hours') || 24, params.get('at') || undefined);
+        const res = await api.getAppLogs({
+          limit: 150,
+          q: q.trim() || undefined,
+          requestId: requestId.trim() || undefined,
+          backendId: backendId.trim() || undefined,
+          since,
+          until,
+        });
+        setRows(res?.events || []);
+      }
     } catch (e) {
       setErr(e?.message || 'Search failed');
       setRows([]);
     } finally {
       setBusy(false);
     }
-  }, [q, action, actor]);
+  }, [source, q, action, actor, requestId, backendId, params]);
 
   useEffect(() => { search(); }, [search]);
 
   return (
     <div className="card admin-kv-card" data-tour="page-admin-audit-log">
-      <h3 className="admin-card-title">Operator audit log</h3>
-      <p className="page-hint" style={{ marginBottom: 12 }}>Privileged actions and security events from append-only audit storage. Does not include provider secrets.</p>
+      <h3 className="admin-card-title">Logs explorer</h3>
+      <p className="page-hint" style={{ marginBottom: 12 }}>
+        Audit events and structured application logs (collector runs, API correlation). Secrets are redacted at ingest.
+      </p>
       <div className="admin-actions" style={{ flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-        <input className="input-control" placeholder="Search text" value={q} onChange={(e) => setQ(e.target.value)} style={{ minWidth: 160 }} />
-        <input className="input-control" placeholder="Action prefix" value={action} onChange={(e) => setAction(e.target.value)} style={{ width: 140 }} />
-        <input className="input-control" placeholder="Actor" value={actor} onChange={(e) => setActor(e.target.value)} style={{ width: 120 }} />
+        <label className="admin-form-field">
+          <span className="admin-form-label">Source</span>
+          <select className="input-control" value={source} onChange={(e) => setSource(e.target.value)}>
+            <option value="app">Application</option>
+            <option value="audit">Audit</option>
+          </select>
+        </label>
+        <input className="input-control" placeholder="Search text" value={q} onChange={(e) => setQ(e.target.value)} style={{ minWidth: 140 }} />
+        {source === 'audit' ? (
+          <>
+            <input className="input-control" placeholder="Action prefix" value={action} onChange={(e) => setAction(e.target.value)} style={{ width: 130 }} />
+            <input className="input-control" placeholder="Actor" value={actor} onChange={(e) => setActor(e.target.value)} style={{ width: 110 }} />
+          </>
+        ) : (
+          <>
+            <input className="input-control" placeholder="Request ID" value={requestId} onChange={(e) => setRequestId(e.target.value)} style={{ width: 150 }} />
+            <input className="input-control" placeholder="Backend ID" value={backendId} onChange={(e) => setBackendId(e.target.value)} style={{ width: 130 }} />
+          </>
+        )}
         <button type="button" className="btn btn-primary btn--xs" disabled={busy} onClick={search}>{busy ? 'Loading…' : 'Search'}</button>
       </div>
       {err && <Notice note={{ type: 'error', text: err }} />}
       <div className="table-container" style={{ border: 'none' }}>
         <table className="custom-table admin-table">
-          <thead><tr><th>Time</th><th>Action</th><th>Actor</th><th>Resource</th><th>Detail</th></tr></thead>
+          <thead>
+            <tr>
+              {source === 'audit'
+                ? <><th>Time</th><th>Action</th><th>Actor</th><th>Resource</th><th>Detail</th></>
+                : <><th>Time</th><th>Severity</th><th>Component</th><th>Request</th><th>Message</th></>}
+            </tr>
+          </thead>
           <tbody>
-            {rows.map((ev, i) => (
+            {source === 'audit' ? rows.map((ev, i) => (
               <tr key={`${ev.timestamp}-${ev.action}-${i}`}>
                 <td className="admin-sub">{fmtTime(ev.timestamp)}</td>
                 <td><code>{ev.action}</code></td>
@@ -952,8 +1000,16 @@ function AdminAuditLog() {
                 <td className="admin-sub">{ev.resource_type ? `${ev.resource_type}:${ev.resource_id || ''}` : '—'}</td>
                 <td className="admin-sub admin-err-cell" style={{ maxWidth: 280 }}>{ev.detail && Object.keys(ev.detail).length ? JSON.stringify(ev.detail) : '—'}</td>
               </tr>
+            )) : rows.map((ev, i) => (
+              <tr key={`${ev.timestamp}-${ev.event_code}-${i}`}>
+                <td className="admin-sub">{fmtTime(ev.timestamp)}</td>
+                <td>{ev.severity}</td>
+                <td><code>{ev.component}</code>{ev.provider_id ? <span className="admin-sub"> · {ev.provider_id}</span> : null}</td>
+                <td className="admin-sub">{ev.request_id || '—'}</td>
+                <td className="admin-sub" style={{ maxWidth: 320 }}>{ev.message}</td>
+              </tr>
             ))}
-            {rows.length === 0 && !busy && <TableEmpty colSpan={5} title="No events" message="No audit entries match the filter." />}
+            {rows.length === 0 && !busy && <TableEmpty colSpan={5} title="No events" message="No entries match the filter." />}
           </tbody>
         </table>
       </div>

@@ -1,7 +1,7 @@
 import logging
 import os
 import uuid
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
@@ -488,11 +488,52 @@ def get_collector_health():
 def get_collector_executions(
     limit: int = 50,
     provider_id: str | None = None,
+    since: str | None = None,
+    until: str | None = None,
+    status: str | None = None,
     _: str = Depends(require_admin),
 ):
     from app.services.collector_executions import list_executions
 
-    return {"executions": list_executions(limit=limit, provider_id=provider_id or None)}
+    return {
+        "executions": list_executions(
+            limit=limit,
+            provider_id=provider_id or None,
+            since=since,
+            until=until,
+            status=status,
+        )
+    }
+
+
+@router.get("/app-logs")
+def get_app_structured_logs(
+    limit: int = 100,
+    q: str | None = None,
+    request_id: str | None = None,
+    backend_id: str | None = None,
+    provider_id: str | None = None,
+    severity: str | None = None,
+    service: str | None = None,
+    since: str | None = None,
+    until: str | None = None,
+    _: str = Depends(require_admin),
+):
+    from app.core.app_structured_log import search_app_logs
+
+    return {
+        "events": search_app_logs(
+            limit=limit,
+            q=q,
+            request_id=request_id,
+            backend_id=backend_id,
+            provider_id=provider_id,
+            severity=severity,
+            service=service,
+            since=since,
+            until=until,
+        )
+    }
 
 
 @router.get("/ingestion-quality")
@@ -573,9 +614,25 @@ def trigger_hardware_auto_discovery(db: Session = Depends(get_db), _: str = Depe
 
 
 @router.post("/run-collection")
-def trigger_collection_run(db: Session = Depends(get_db), _: str = Depends(require_admin)):
+def trigger_collection_run(
+    request: Request,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
     """Manual full fleet collection (same as auto-discover)."""
-    return trigger_hardware_auto_discovery(db)
+    from app.core.log_context import collector_trigger_ctx
+    from app.discovery.hardware_discovery import HardwareDiscoveryEngine
+    from app.core.request_id import request_id_for
+
+    request_id_ctx = request_id_for(request)
+    from app.core import log_context
+
+    log_context.request_id_ctx.set(request_id_ctx)
+    tok = collector_trigger_ctx.set("manual")
+    try:
+        return HardwareDiscoveryEngine.run_auto_discovery(db, trigger_type="manual")
+    finally:
+        collector_trigger_ctx.reset(tok)
 
 
 @router.delete("/collector-dlq")

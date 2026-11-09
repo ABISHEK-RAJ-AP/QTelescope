@@ -44,10 +44,14 @@ def record_provider_run(
     lineage: Optional[str] = None,
     error: Optional[str] = None,
     backend_names: Optional[List[str]] = None,
+    trigger_type: Optional[str] = None,
 ) -> None:
+    from app.core.app_structured_log import emit_app_log
+    from app.core.log_context import collector_trigger_ctx
     from app.services.collector_executions import append_execution
     from app.services.ingestion_quality import record_quality
 
+    trig = trigger_type or collector_trigger_ctx.get() or "scheduled"
     append_execution(
         provider_id,
         status=status,
@@ -56,6 +60,21 @@ def record_provider_run(
         lineage=lineage,
         error=error,
         backend_names=backend_names,
+        trigger_type=trig,
+    )
+    emit_app_log(
+        severity="ERROR" if status not in ("OK",) else "INFO",
+        service="qtelescope",
+        component="collector",
+        message=f"Collector run {status} for {provider_id}",
+        event_code="collector.run_finished",
+        provider_id=provider_id,
+        context={
+            "duration_ms": duration_ms,
+            "backends_detected": backends_detected,
+            "trigger_type": trig,
+            "error": error,
+        },
     )
     record_quality(
         provider_id,

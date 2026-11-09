@@ -16,6 +16,7 @@ def test_observability_admin_routes_require_admin(monkeypatch):
         f"{P}/admin/collector-executions",
         f"{P}/admin/ingestion-quality",
         f"{P}/admin/audit-log",
+        f"{P}/admin/app-logs",
     ):
         assert client.get(path).status_code == 403
         assert client.get(path, headers=OPS).status_code == 403
