@@ -3,7 +3,7 @@
 **Tracker only — not a production score.** A single critical **FAIL** in security still blocks release.
 
 **Last updated:** 2026-11-09  
-**Summary:** **24 PASS** · **32 PARTIAL** · **7 FAIL** · **30 NOT VERIFIED**
+**Summary:** **25 PASS** · **32 PARTIAL** · **7 FAIL** · **29 NOT VERIFIED**
 
 Programme: [../ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md)
 
@@ -28,7 +28,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 | ID | Item | Status | Notes |
 | --- | --- | --- | --- |
 | F01 | All 28 routes load without console errors | NOT_VERIFIED | No full browser sweep |
-| F02 | Unified design system / shared components | PARTIAL | `design-tokens.css`, observability shell; pages still mixed |
+| F02 | Unified design system / shared components | PARTIAL | `design-tokens.css`, `EnterpriseDataTable` on Platform Health |
 | F03 | Consistent typography, spacing, hierarchy | PARTIAL | `index.css` tokens; uneven page CSS |
 | F04 | Cards/grids align correctly | NOT_VERIFIED | Visual QA blocked |
 | F05 | Loading skeletons on API-driven UI | PARTIAL | `BoneyardSkeleton`, many pages |
@@ -150,7 +150,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 | --- | --- | --- | --- |
 | T01 | Frontend unit tests | PASS | `npm test` — Vitest (apiErrors, useTableKit, EnterpriseDataTable) |
 | T02 | Backend pytest | PASS | 190 passed, 2 skipped (2026-11-09) |
-| T03 | Playwright E2E suite | PARTIAL | `telescope-journeys.spec.ts` E01–E06 + smoke; E07–E24 open |
+| T03 | Playwright E2E suite | PARTIAL | E01–E10 (`telescope-journeys*.spec.ts`); E11–E24 open |
 | T04 | Permission combination tests | PARTIAL | RBAC tests partial |
 | T05 | Visual regression | NOT_VERIFIED | |
 | T06 | Responsive screenshots | NOT_VERIFIED | |

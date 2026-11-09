@@ -14,7 +14,7 @@ Legend: **OK** = uses shared shell/skeleton/error; **MIX** = partial; **GAP** = 
 | `/reset-password` | ResetPasswordPage | AuthShell | btn | inline | Field | |
 | `/app/overview` | DashboardHome | PageHeader | BoneyardSkeleton | ErrorState | cards | `data-tour=page-kpis` |
 | `/app/operate` | OperationsCentre | implicit | skeleton | partial | lane lists | |
-| `/app/platform/health` | PlatformHealth | implicit | skeleton | ErrorState | custom + SortableTh | candidate for EnterpriseDataTable |
+| `/app/platform/health` | PlatformHealth | implicit | skeleton | ErrorState | **EnterpriseDataTable** | provider adapter table migrated |
 | `/app/investigate/timeline` | OpsTimeline | implicit | skeleton | ErrorState | timeline | |
 | `/app/backends/inventory` | BackendInventory | implicit | skeleton | ErrorState | cards/table | `data-tour=page-inventory` |
 | `/app/backends/details/*` | BackendDetails | tabs | per-tab | ErrorState | mixed | workspace target |
