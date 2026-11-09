@@ -18,7 +18,7 @@ SKIP_TESTS="${SKIP_TESTS:-0}"
 
 echo "==> git pull ($BRANCH)"
 git fetch origin "$BRANCH"
-git pull --ff-only "origin/$BRANCH" || {
+git pull --ff-only origin "$BRANCH" || {
   echo "WARN: ff-only pull failed; resolve conflicts manually" >&2
   exit 1
 }
