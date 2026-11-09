@@ -87,7 +87,7 @@ fi
 
 log "API  http://$(hostname -I 2>/dev/null | awk '{print $1}'):${API_PORT}/healthz"
 log "QRP  http://$(hostname -I 2>/dev/null | awk '{print $1}'):${UI_PORT}/qrp"
-log "Login admin / quantum2026 (lab). MFA/LDAP/forgot-password use live TeleScope APIs."
+log "QRP stack only. Clone QuantumResourcePortal on the VM and run: bash scripts/vm-setup.sh"
 log "Logs: $ROOT/logs/api.log  $ROOT/logs/qrp-ui.log"
 echo
 echo "Manual equivalent:"
