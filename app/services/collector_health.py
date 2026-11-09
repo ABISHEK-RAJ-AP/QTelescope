@@ -45,6 +45,26 @@ def record_provider_run(
     error: Optional[str] = None,
     backend_names: Optional[List[str]] = None,
 ) -> None:
+    from app.services.collector_executions import append_execution
+    from app.services.ingestion_quality import record_quality
+
+    append_execution(
+        provider_id,
+        status=status,
+        duration_ms=duration_ms,
+        backends_detected=backends_detected,
+        lineage=lineage,
+        error=error,
+        backend_names=backend_names,
+    )
+    record_quality(
+        provider_id,
+        status=status,
+        backends_detected=backends_detected,
+        duration_ms=duration_ms,
+        lineage=lineage,
+        error=error,
+    )
     now = datetime.now(timezone.utc).isoformat()
     with _LOCK:
         _ensure_dir()

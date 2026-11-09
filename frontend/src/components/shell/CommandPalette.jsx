@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
 import { canSeeNavItem, canManageFleet } from '@/lib/permissions';
+import { buildBackendDetailsPath } from '@/lib/investigationLinks.js';
+import { api } from '@/services/api';
 import './commandPalette.css';
 
 const NAV_COMMANDS = [
@@ -23,12 +25,17 @@ const NAV_COMMANDS = [
   { id: 'admin-coll', label: 'Collectors', path: '/app/admin/collectors', nav: 'admin', group: 'Configure' },
   { id: 'admin-rules', label: 'Alert rules', path: '/app/admin/rules', nav: 'admin', group: 'Configure' },
   { id: 'admin-users', label: 'Users & roles', path: '/app/admin/users', nav: 'admin', group: 'Configure' },
+  { id: 'admin-logs', label: 'Audit log', path: '/app/admin/logs', nav: 'admin', group: 'Configure' },
 ];
+
+const matchHay = (q, ...parts) => parts.some((p) => String(p || '').toLowerCase().includes(q));
 
 export function CommandPalette({ open, onClose, currentUser, onStartTour }) {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
+  const [entityHits, setEntityHits] = useState([]);
+  const [entityBusy, setEntityBusy] = useState(false);
 
   const commands = useMemo(() => {
     const base = NAV_COMMANDS.filter((c) => canSeeNavItem(currentUser, c.nav));
@@ -52,13 +59,83 @@ export function CommandPalette({ open, onClose, currentUser, onStartTour }) {
     return base;
   }, [currentUser, onStartTour]);
 
+  useEffect(() => {
+    if (!open) {
+      setEntityHits([]);
+      return undefined;
+    }
+    const q = query.trim().toLowerCase();
+    if (q.length < 2) {
+      setEntityHits([]);
+      return undefined;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setEntityBusy(true);
+      try {
+        const [rawBackends, rawAlerts, rawIncidents] = await Promise.all([
+          api.getBackends().catch(() => []),
+          canSeeNavItem(currentUser, 'alerts') ? api.getAlerts('ACTIVE').catch(() => []) : Promise.resolve([]),
+          canSeeNavItem(currentUser, 'alerts') ? api.getIncidents('OPEN').catch(() => []) : Promise.resolve([]),
+        ]);
+        const backends = Array.isArray(rawBackends) ? rawBackends : (rawBackends?.items || rawBackends?.backends || []);
+        const alerts = Array.isArray(rawAlerts) ? rawAlerts : (rawAlerts?.alerts || rawAlerts?.items || []);
+        const incidents = Array.isArray(rawIncidents) ? rawIncidents : (rawIncidents?.incidents || rawIncidents?.items || []);
+        const hits = [];
+        backends.forEach((b) => {
+          const id = b.backend_id || b.id;
+          if (!id || !matchHay(q, id, b.name, b.provider_id)) return;
+          hits.push({
+            id: `be-${id}`,
+            label: `Backend ${b.name || id}`,
+            path: buildBackendDetailsPath(id),
+            group: 'Backend',
+          });
+        });
+        alerts.slice(0, 40).forEach((a) => {
+          const id = a.alert_id || a.id;
+          if (!id || !matchHay(q, id, a.rule_id, a.backend_id, a.message)) return;
+          hits.push({
+            id: `al-${id}`,
+            label: `Alert ${id}`,
+            path: `/app/alerts/detail/${encodeURIComponent(id)}`,
+            group: 'Alert',
+          });
+        });
+        incidents.slice(0, 40).forEach((inc) => {
+          const id = inc.incident_id || inc.id;
+          if (!id || !matchHay(q, id, inc.title, inc.summary)) return;
+          hits.push({
+            id: `in-${id}`,
+            label: `Incident ${inc.title || id}`,
+            path: `/app/alerts/incidents/${encodeURIComponent(id)}`,
+            group: 'Incident',
+          });
+        });
+        if (!cancelled) setEntityHits(hits.slice(0, 15));
+      } catch {
+        if (!cancelled) setEntityHits([]);
+      } finally {
+        if (!cancelled) setEntityBusy(false);
+      }
+    }, 280);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [open, query, currentUser]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return commands.slice(0, 12);
-    return commands.filter(
-      (c) => c.label.toLowerCase().includes(q) || c.group.toLowerCase().includes(q),
-    );
-  }, [commands, query]);
+    const navHits = q
+      ? commands.filter((c) => c.label.toLowerCase().includes(q) || c.group.toLowerCase().includes(q))
+      : commands.slice(0, 12);
+    if (q.length >= 2 && entityHits.length) {
+      const navFiltered = navHits.filter((c) => !entityHits.some((e) => e.path === c.path));
+      return [...entityHits, ...navFiltered].slice(0, 20);
+    }
+    return navHits;
+  }, [commands, query, entityHits]);
 
   useEffect(() => {
     if (!open) {
@@ -117,7 +194,7 @@ export function CommandPalette({ open, onClose, currentUser, onStartTour }) {
           <input
             type="search"
             autoFocus
-            placeholder="Search pages and commands…"
+            placeholder="Search pages, backends, alerts, incidents…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Search commands"
@@ -128,7 +205,7 @@ export function CommandPalette({ open, onClose, currentUser, onStartTour }) {
         </form>
         <ul className="cmdk__list" role="listbox">
           {filtered.length === 0 ? (
-            <li className="cmdk__empty">No matches for this search.</li>
+            <li className="cmdk__empty">{entityBusy ? 'Searching…' : 'No matches for this search.'}</li>
           ) : (
             filtered.map((cmd, i) => (
               <li key={cmd.id}>

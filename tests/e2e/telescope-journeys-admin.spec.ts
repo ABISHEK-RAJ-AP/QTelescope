@@ -103,6 +103,16 @@ test.describe('Q-TeleScope journeys E17–E24', () => {
     await expect(page).toHaveURL(new RegExp(`/app/backends/details/${backendId}`));
   });
 
+  test('E25 admin audit log search', async ({ page }) => {
+    await loginAsAdmin(page);
+    await page.goto('/app/admin/logs');
+    await expect(page.locator('[data-tour="page-admin-audit-log"]')).toBeVisible({ timeout: 20_000 });
+    const searchBtn = page.getByRole('button', { name: /^Search$/i });
+    await expect(searchBtn).toBeVisible();
+    await searchBtn.click();
+    await expect(page.locator('[data-tour="page-admin-audit-log"] table')).toBeVisible();
+  });
+
   test('E24 responsive navigation', async ({ page }) => {
     await page.setViewportSize({ width: 1024, height: 768 });
     await loginAsAdmin(page);

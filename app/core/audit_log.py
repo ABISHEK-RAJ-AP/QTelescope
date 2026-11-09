@@ -54,3 +54,46 @@ def record_audit(
                 db.close()
     except Exception:
         pass  # ponytail: jsonl remains source of truth if DB write fails
+
+
+def search_audit(
+    *,
+    limit: int = 100,
+    action: Optional[str] = None,
+    actor: Optional[str] = None,
+    resource_id: Optional[str] = None,
+    q: Optional[str] = None,
+) -> list:
+    """Read recent audit events from JSONL (newest first)."""
+    limit = max(1, min(limit, 500))
+    if not os.path.isfile(_AUDIT_PATH):
+        return []
+    needle = (q or "").strip().lower()
+    action_prefix = (action or "").strip()
+    actor_match = (actor or "").strip().lower()
+    resource_match = (resource_id or "").strip()
+    rows = []
+    try:
+        with open(_AUDIT_PATH, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rec = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if action_prefix and not str(rec.get("action") or "").startswith(action_prefix):
+                    continue
+                if actor_match and actor_match not in str(rec.get("actor") or "").lower():
+                    continue
+                if resource_match and resource_match not in str(rec.get("resource_id") or ""):
+                    continue
+                if needle:
+                    blob = json.dumps(rec, default=str).lower()
+                    if needle not in blob:
+                        continue
+                rows.append(rec)
+    except OSError:
+        return []
+    return rows[-limit:][::-1]

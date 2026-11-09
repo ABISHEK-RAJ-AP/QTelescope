@@ -3,7 +3,7 @@
 **Tracker only — not a production score.** A single critical **FAIL** in security still blocks release.
 
 **Last updated:** 2026-11-09  
-**Summary:** **33 PASS** · **26 PARTIAL** · **5 FAIL** · **29 NOT VERIFIED**  
+**Summary:** **34 PASS** · **26 PARTIAL** · **4 FAIL** · **29 NOT VERIFIED**  
 _Remaining PARTIAL = Sprint S4–S6 blueprint scope (notifications, provenance E2E, full UI sweep) unless row notes say otherwise._
 
 Programme: [../ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md)
@@ -65,7 +65,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 
 ---
 
-## Backend and APIs (8 / 13 PASS)
+## Backend and APIs (9 / 13 PASS)
 
 | ID | Item | Status | Notes |
 | --- | --- | --- | --- |
@@ -75,7 +75,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 | B04 | Pagination / query limits | PARTIAL | Many list endpoints |
 | B05 | Timeout / retry policies | FAIL | Client retry limited |
 | B06 | Worker health checks | PARTIAL | Platform health page |
-| B07 | Collector execution history | FAIL | DLQ only; no full history UI |
+| B07 | Collector execution history | PASS | JSONL history + quality; Admin Collectors + `test_collector_executions` |
 | B08 | DLQ / retry verified | PARTIAL | Admin collectors |
 | B09 | SSE reconnect | PARTIAL | LiveTelemetry reconnect; no Last-Event-ID |
 | B10 | Provider failure visibility | PARTIAL | Admin integrations |

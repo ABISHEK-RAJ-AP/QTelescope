@@ -80,6 +80,23 @@ export const api = {
   revokeSession: (sessionId) => fetchApi(`/users/me/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' }),
   getProvenance: () => fetchApi('/admin/provenance'),
   getCollectorHealth: () => fetchApi('/admin/collector-health'),
+  getCollectorExecutions: (limit = 50, providerId = '') => {
+    const qs = new URLSearchParams({ limit: String(limit) });
+    if (providerId) qs.set('provider_id', providerId);
+    return fetchApi(`/admin/collector-executions?${qs}`);
+  },
+  getIngestionQuality: (limit = 30, providerId = '') => {
+    const qs = new URLSearchParams({ limit: String(limit) });
+    if (providerId) qs.set('provider_id', providerId);
+    return fetchApi(`/admin/ingestion-quality?${qs}`);
+  },
+  getAuditLog: ({ limit = 100, action = '', actor = '', q = '' } = {}) => {
+    const qs = new URLSearchParams({ limit: String(limit) });
+    if (action) qs.set('action', action);
+    if (actor) qs.set('actor', actor);
+    if (q) qs.set('q', q);
+    return fetchApi(`/admin/audit-log?${qs}`);
+  },
   getCollectorDlq: (limit = 30) => fetchApi(`/admin/collector-dlq?limit=${limit}`),
   getAdapterVerification: () => fetchApi('/admin/adapters/verification'),
   getFacilityMqttStatus: () => fetchApi('/admin/facility/mqtt-status'),

@@ -17,7 +17,7 @@
 
 | Milestone | Target | Current (2026-11-09) |
 | --- | --- | --- |
-| Enterprise UI/ops polish | Phase 1–3 complete | **Sprint 1–3 shipped** (checklist **33/93 PASS**); S4+ backlog |
+| Enterprise UI/ops polish | Phase 1–3 complete | **Sprint 1–4 slice shipped** (checklist **34/93 PASS**); S4 remainder in backlog |
 | Production security gate | Phase 2 complete | **Sprint 3 shipped**; P1 **QT-06** (rotate demo secrets); SMTP relay on VM |
 | Quantum differentiation | Phase 4 | **Partial** (provenance hooks exist; quality states incomplete) |
 | Go-live rehearsal | Phase 5 | **Not started** |
@@ -91,13 +91,20 @@ See [benchmark/IMPLEMENTATION_ROADMAP.md](benchmark/IMPLEMENTATION_ROADMAP.md).
 | Playwright lab green (serial) | 22 pass / 6 skip — [QA/E2E_TELESCOPE_EVIDENCE.md](QA/E2E_TELESCOPE_EVIDENCE.md) |
 | Sprint 3 notes | [QA/SPRINT3_SECURITY.md](QA/SPRINT3_SECURITY.md) |
 
-### Sprint 4+ backlog (Release B — start here)
+### Sprint 4 — shipped (observability slice)
+
+| Item | Evidence |
+| --- | --- |
+| Collector execution history + ingestion quality | [QA/SPRINT4_OBSERVABILITY.md](QA/SPRINT4_OBSERVABILITY.md), B07 **PASS** |
+| Audit log search UI | Admin → Audit log (`/app/admin/logs`) |
+| APIs | `/admin/collector-executions`, `/ingestion-quality`, `/audit-log` |
+
+### Sprint 4+ backlog (Release B — continue)
 
 Prioritized from [benchmark/FEATURE_GAP_MATRIX.md](benchmark/FEATURE_GAP_MATRIX.md):
 
-1. Unified **Logs Explorer** + alert drill-down.
-2. **Collector execution history** (B07) + data quality report.
-3. **Metrics Explorer** v1 + saved queries.
+1. Unified **Logs Explorer** (app stdout + `request_id` join) + alert drill-down.
+2. **Metrics Explorer** v1 + saved queries.
 4. **Resource catalogue** (owner, facility, tags).
 5. **Composite alert** rules + notification routing.
 6. VM Playwright re-run + production secret rotation (QT-06).

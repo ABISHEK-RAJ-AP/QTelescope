@@ -17,7 +17,7 @@ Priority: **P0** foundation · **P1** enterprise ops · **P2** quantum depth · 
 | Resource catalogue | Datadog | **PARTIAL** | Inventory only | `resource_registry` model | P1 |
 | Ownership / escalation | Datadog/Grafana | **UNIMPLEMENTED** | — | Owner on backend/collector | P1 |
 | On-call rotation | Grafana IRM | **UNIMPLEMENTED** | — | Schedules + notify routes | P2 |
-| Logs explorer | Splunk | **UNIMPLEMENTED** | JSONL audit, no search UI | Unified log index + UI | P1 |
+| Logs explorer | Splunk | **PARTIAL** | Admin audit search on `audit_events.jsonl`; no app log index | Unified log index + UI | P1 |
 | Distributed tracing | OTel | **UNIMPLEMENTED** | `X-Request-Id` only | OTel SDK + Trace Explorer | P1 |
 | Notification routing | Grafana | **PARTIAL** | SMTP reset; no alert routing | Templates, Teams/Slack | P1 |
 | Change management | Azure | **UNIMPLEMENTED** | Audit partial | Change requests + windows | P2 |

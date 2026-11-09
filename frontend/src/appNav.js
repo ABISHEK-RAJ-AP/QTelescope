@@ -67,6 +67,7 @@ export function buildAppPath(state) {
       if (adminSubTab === 'rules') return '/app/admin/rules';
       if (adminSubTab === 'collectors') return '/app/admin/collectors';
       if (adminSubTab === 'users') return '/app/admin/users';
+      if (adminSubTab === 'logs') return '/app/admin/logs';
       return '/app/admin/integrations';
     default:
       return '/app/overview';
@@ -148,6 +149,7 @@ export function parseAppPath(pathname) {
     else if (sub === 'rules') out.adminSubTab = 'rules';
     else if (sub === 'collectors') out.adminSubTab = 'collectors';
     else if (sub === 'users') out.adminSubTab = 'users';
+    else if (sub === 'logs') out.adminSubTab = 'logs';
     else out.adminSubTab = 'integrations';
     return out;
   }

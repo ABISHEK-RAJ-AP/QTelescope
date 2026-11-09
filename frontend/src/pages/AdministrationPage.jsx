@@ -341,7 +341,28 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
   const [running, setRunning] = useState(false);
   const [purgingDlq, setPurgingDlq] = useState(false);
   const [collectorConfirm, setCollectorConfirm] = useState(null);
+  const [executions, setExecutions] = useState([]);
+  const [qualityReports, setQualityReports] = useState([]);
   const reason = canEdit ? undefined : 'Admin role required';
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [ex, iq] = await Promise.all([api.getCollectorExecutions(50), api.getIngestionQuality(25)]);
+        if (!cancelled) {
+          setExecutions(ex?.executions || []);
+          setQualityReports(iq?.reports || []);
+        }
+      } catch {
+        if (!cancelled) {
+          setExecutions([]);
+          setQualityReports([]);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [health, dlq, reload]);
 
   const runCollectionNow = async () => {
     setRunning(true);
@@ -459,6 +480,49 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
                 </tr>
               ))}
               {health.length === 0 && <TableEmpty colSpan={6} title="No collector runs" message="Run discovery from Integrations to populate run history." />}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card" style={{ padding: 0 }}>
+        <h3 className="admin-card-title admin-pad">Run history (last 50)</h3>
+        <div className="table-container" style={{ border: 'none' }}>
+          <table className="custom-table admin-table">
+            <thead><tr><th>Time</th><th>Provider</th><th>Status</th><th>Backends</th><th>Duration</th><th>Lineage</th></tr></thead>
+            <tbody>
+              {executions.map((e) => (
+                <tr key={e.execution_id}>
+                  <td className="admin-sub">{fmtTime(e.timestamp)}</td>
+                  <td>{e.provider_id}</td>
+                  <td><Stage ok={e.status === 'OK'} label={e.status} /></td>
+                  <td>{e.backends_detected ?? '—'}</td>
+                  <td>{e.duration_ms != null ? `${e.duration_ms} ms` : '—'}</td>
+                  <td className="admin-sub">{e.lineage || '—'}</td>
+                </tr>
+              ))}
+              {executions.length === 0 && <TableEmpty colSpan={6} title="No execution history" message="Runs are recorded after discovery or scheduled collection." />}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="card" style={{ padding: 0 }}>
+        <h3 className="admin-card-title admin-pad">Ingestion quality (recent)</h3>
+        <div className="table-container" style={{ border: 'none' }}>
+          <table className="custom-table admin-table">
+            <thead><tr><th>Time</th><th>Provider</th><th>Status</th><th>Completeness</th><th>Backends</th></tr></thead>
+            <tbody>
+              {qualityReports.map((r) => (
+                <tr key={r.report_id}>
+                  <td className="admin-sub">{fmtTime(r.timestamp)}</td>
+                  <td>{r.provider_id}</td>
+                  <td>{r.status}</td>
+                  <td>{r.completeness_pct != null ? `${r.completeness_pct}%` : '—'}</td>
+                  <td>{r.received_backends ?? '—'}</td>
+                </tr>
+              ))}
+              {qualityReports.length === 0 && <TableEmpty colSpan={5} title="No quality reports" message="Quality snapshots appear after collector runs." />}
             </tbody>
           </table>
         </div>
@@ -835,10 +899,73 @@ function UsersDirectory({ canEdit }) {
   );
 }
 
+/* ----------------------------- Audit log ----------------------------- */
+function AdminAuditLog() {
+  const [q, setQ] = useState('');
+  const [action, setAction] = useState('');
+  const [actor, setActor] = useState('');
+  const [rows, setRows] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const search = useCallback(async () => {
+    setBusy(true);
+    setErr('');
+    try {
+      const res = await api.getAuditLog({
+        limit: 150,
+        q: q.trim() || undefined,
+        action: action.trim() || undefined,
+        actor: actor.trim() || undefined,
+      });
+      setRows(res?.events || []);
+    } catch (e) {
+      setErr(e?.message || 'Search failed');
+      setRows([]);
+    } finally {
+      setBusy(false);
+    }
+  }, [q, action, actor]);
+
+  useEffect(() => { search(); }, [search]);
+
+  return (
+    <div className="card admin-kv-card" data-tour="page-admin-audit-log">
+      <h3 className="admin-card-title">Operator audit log</h3>
+      <p className="page-hint" style={{ marginBottom: 12 }}>Privileged actions and security events from append-only audit storage. Does not include provider secrets.</p>
+      <div className="admin-actions" style={{ flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+        <input className="input-control" placeholder="Search text" value={q} onChange={(e) => setQ(e.target.value)} style={{ minWidth: 160 }} />
+        <input className="input-control" placeholder="Action prefix" value={action} onChange={(e) => setAction(e.target.value)} style={{ width: 140 }} />
+        <input className="input-control" placeholder="Actor" value={actor} onChange={(e) => setActor(e.target.value)} style={{ width: 120 }} />
+        <button type="button" className="btn btn-primary btn--xs" disabled={busy} onClick={search}>{busy ? 'Loading…' : 'Search'}</button>
+      </div>
+      {err && <Notice note={{ type: 'error', text: err }} />}
+      <div className="table-container" style={{ border: 'none' }}>
+        <table className="custom-table admin-table">
+          <thead><tr><th>Time</th><th>Action</th><th>Actor</th><th>Resource</th><th>Detail</th></tr></thead>
+          <tbody>
+            {rows.map((ev, i) => (
+              <tr key={`${ev.timestamp}-${ev.action}-${i}`}>
+                <td className="admin-sub">{fmtTime(ev.timestamp)}</td>
+                <td><code>{ev.action}</code></td>
+                <td>{ev.actor || '—'}</td>
+                <td className="admin-sub">{ev.resource_type ? `${ev.resource_type}:${ev.resource_id || ''}` : '—'}</td>
+                <td className="admin-sub admin-err-cell" style={{ maxWidth: 280 }}>{ev.detail && Object.keys(ev.detail).length ? JSON.stringify(ev.detail) : '—'}</td>
+              </tr>
+            ))}
+            {rows.length === 0 && !busy && <TableEmpty colSpan={5} title="No events" message="No audit entries match the filter." />}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 /* ------------------------------- Page ------------------------------- */
 export const AdministrationPage = ({ section = 'integrations', onNavigateSection }) => {
   const navigate = useNavigate();
-  const active = section === 'hub' ? 'integrations' : (ADMIN_SECTIONS.some((s) => s.id === section) ? section : 'integrations');
+  const knownSection = new Set([...ADMIN_SECTIONS.map((s) => s.id), 'logs']);
+  const active = section === 'hub' ? 'integrations' : (knownSection.has(section) ? section : 'integrations');
   const go = useCallback((id) => (onNavigateSection ? onNavigateSection(id) : navigate(`/app/admin/${id === 'hub' ? 'integrations' : id}`)), [onNavigateSection, navigate]);
   const canEdit = isAdminRole();
 
@@ -882,6 +1009,7 @@ export const AdministrationPage = ({ section = 'integrations', onNavigateSection
       {active === 'users' && <UsersDirectory canEdit={canEdit} />}
       {active === 'integrations' && <Integrations navigate={navigate} providers={data.providers} health={data.health} verification={verification} setVerification={setVerification} canEdit={canEdit} reload={load} />}
       {active === 'collectors' && <Collectors {...data} canEdit={canEdit} reload={load} />}
+      {active === 'logs' && <AdminAuditLog />}
       {active === 'rules' && <Rules rules={data.rules} canEdit={canEdit} reload={load} />}
     </div>
   );

@@ -99,6 +99,8 @@ data/collector_circuit.json
 data/alert_comments.jsonl
 data/api_sessions.json
 data/audit_events.jsonl
+data/collector_executions.jsonl
+data/ingestion_quality.jsonl
 tests/e2e/test-results/
 data/federation_registry.json
 data/federation_snapshots/

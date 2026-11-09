@@ -453,6 +453,42 @@ def get_collector_health():
     }
 
 
+@router.get("/collector-executions")
+def get_collector_executions(
+    limit: int = 50,
+    provider_id: str | None = None,
+    _: str = Depends(require_admin),
+):
+    from app.services.collector_executions import list_executions
+
+    return {"executions": list_executions(limit=limit, provider_id=provider_id or None)}
+
+
+@router.get("/ingestion-quality")
+def get_ingestion_quality(
+    limit: int = 30,
+    provider_id: str | None = None,
+    _: str = Depends(require_admin),
+):
+    from app.services.ingestion_quality import list_quality
+
+    return {"reports": list_quality(limit=limit, provider_id=provider_id or None)}
+
+
+@router.get("/audit-log")
+def get_audit_log(
+    limit: int = 100,
+    action: str | None = None,
+    actor: str | None = None,
+    resource_id: str | None = None,
+    q: str | None = None,
+    _: str = Depends(require_admin),
+):
+    from app.core.audit_log import search_audit
+
+    return {"events": search_audit(limit=limit, action=action, actor=actor, resource_id=resource_id, q=q)}
+
+
 @router.get("/deployment/profile")
 def get_deployment_profile():
     """On-prem / air-gap vs connected deployment capabilities."""
