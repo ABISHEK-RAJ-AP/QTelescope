@@ -459,7 +459,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
       {alerts.length >= FETCH_LIMIT && <p className="al-banner al-banner--warn" role="note">Showing the newest {FETCH_LIMIT} alerts; older records are not loaded in this view.</p>}
 
       {view === 'incidents' ? (
-        <section className="al-inc-grid-wrap" aria-label="Incidents">
+        <section className="al-inc-grid-wrap" aria-label="Incidents" data-tour="page-incidents">
           <p className="page-hint al-inc-grid-hint">
             Each incident groups alerts for one backend and rule. Parentheses show alerts still ACTIVE now.
           </p>

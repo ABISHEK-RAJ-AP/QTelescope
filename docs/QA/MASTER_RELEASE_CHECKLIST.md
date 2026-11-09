@@ -53,7 +53,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 | U02 | Dropdowns / selects work | NOT_VERIFIED | |
 | U03 | Tabs load correct content | PARTIAL | App shell routing |
 | U04 | Modals validate correctly | PARTIAL | ConfirmDialog pattern |
-| U05 | Table sort/filter expectations | PARTIAL | `EnterpriseDataTable` + per-page tables |
+| U05 | Table sort/filter expectations | PARTIAL | `EnterpriseDataTable`; queue backend URL filter |
 | U06 | Bulk actions permissioned | PARTIAL | Alerts bulk |
 | U07 | Search + pagination | PARTIAL | Alerts, jobs |
 | U08 | Filter persistence | PARTIAL | URL scope on some pages |
@@ -150,7 +150,7 @@ _Sprint 2:_ route audit [SPRINT2_ROUTE_AUDIT.md](SPRINT2_ROUTE_AUDIT.md); shared
 | --- | --- | --- | --- |
 | T01 | Frontend unit tests | PASS | `npm test` — Vitest (apiErrors, useTableKit, EnterpriseDataTable) |
 | T02 | Backend pytest | PASS | 190 passed, 2 skipped (2026-11-09) |
-| T03 | Playwright E2E suite | PARTIAL | E01–E10 (`telescope-journeys*.spec.ts`); E11–E24 open |
+| T03 | Playwright E2E suite | PARTIAL | E01–E16 (`telescope-journeys*.spec.ts`); E17–E24 open |
 | T04 | Permission combination tests | PARTIAL | RBAC tests partial |
 | T05 | Visual regression | NOT_VERIFIED | |
 | T06 | Responsive screenshots | NOT_VERIFIED | |

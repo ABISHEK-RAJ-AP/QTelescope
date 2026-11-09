@@ -121,6 +121,14 @@ export const QueueMonitoring = () => {
   const [layout, setLayout] = useState('table');
   const [sort, setSort] = useState({ key: 'pending', dir: 'desc' });
   const selectedId = params.get('queue');
+  const backendFilter = params.get('backend') || 'ALL';
+
+  const setBackendFilter = (value) => {
+    const next = new URLSearchParams(params);
+    if (value === 'ALL') next.delete('backend');
+    else next.set('backend', value);
+    setParams(next, { replace: true });
+  };
 
   const load = useCallback(async () => {
     try {
@@ -165,7 +173,10 @@ export const QueueMonitoring = () => {
     || (b.estimated_wait_time || 0) - (a.estimated_wait_time || 0)), [queues]);
 
   const displayQueues = useMemo(() => {
-    const list = ranked.slice();
+    let list = ranked.slice();
+    if (backendFilter !== 'ALL') {
+      list = list.filter((q) => q.backend_id === backendFilter);
+    }
     const mul = sort.dir === 'asc' ? 1 : -1;
     list.sort((a, b) => {
       let c = 0;
@@ -175,7 +186,7 @@ export const QueueMonitoring = () => {
       return c * mul;
     });
     return list;
-  }, [ranked, sort]);
+  }, [ranked, sort, backendFilter]);
 
   const barOption = useMemo(() => ({
     grid: { left: 8, right: 24, top: 28, bottom: 8, containLabel: true },
@@ -274,8 +285,23 @@ export const QueueMonitoring = () => {
         </ChartPanel>
       </section>
 
-      <section className="card qm-table-card dvt-panel">
-        <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${displayQueues.length} queue${displayQueues.length === 1 ? '' : 's'}`} />
+      <section className="card qm-table-card dvt-panel" data-tour="page-queues">
+        <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${displayQueues.length} queue${displayQueues.length === 1 ? '' : 's'}`}>
+          <label>
+            Backend
+            <select
+              className="input-control"
+              aria-label="Filter queues by backend"
+              value={backendFilter}
+              onChange={(e) => setBackendFilter(e.target.value)}
+            >
+              <option value="ALL">All backends</option>
+              {(queues || []).map((q) => (
+                <option key={q.backend_id} value={q.backend_id}>{q.backend_name || q.backend_id}</option>
+              ))}
+            </select>
+          </label>
+        </DataPanelToolbar>
         {layout === 'grid' ? (
           <div className="dvt-grid" aria-label="Queues by backend">
             {displayQueues.length === 0 ? (

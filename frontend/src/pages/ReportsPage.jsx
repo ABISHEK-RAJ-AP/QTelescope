@@ -199,7 +199,7 @@ export const ReportsPage = () => {
 
   return (
     <div className="page-stack rp">
-      <section className="card rp-card" aria-labelledby="rp-export-h">
+      <section className="card rp-card" aria-labelledby="rp-export-h" data-tour="page-reports-export">
         <h3 id="rp-export-h" className="rp-h">1 · Export a report</h3>
         <div className="rp-export">
           <div>
@@ -277,7 +277,7 @@ export const ReportsPage = () => {
         )}
       </section>
 
-      <section className="card rp-card" aria-labelledby="rp-ev-h">
+      <section className="card rp-card" aria-labelledby="rp-ev-h" data-tour="page-evidence">
         <h3 id="rp-ev-h" className="rp-h">2 · Evidence snapshots</h3>
         <p className="rp-desc">Immutable ZIP of alerts, incidents, calibration and qubit summaries from the platform database, sealed with SHA-256 hashes so a later copy can be verified against what was recorded.</p>
         <div className="rp-snaprow">

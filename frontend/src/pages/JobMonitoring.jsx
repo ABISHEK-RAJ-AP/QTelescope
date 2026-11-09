@@ -398,6 +398,7 @@ export const JobMonitoring = () => {
 
       <DetailDrawer
         open={Boolean(selected)}
+        tourId={selected ? 'page-job-detail' : undefined}
         title={selected ? selected.job_id : ''}
         subtitle={selected ? `${label(selected.backend_id)}${selected.runtime != null ? ` · Runtime ${fmtDur(selected.runtime)}` : ''}` : undefined}
         headerAside={selected ? <StatusBadge status={selected.status} /> : null}

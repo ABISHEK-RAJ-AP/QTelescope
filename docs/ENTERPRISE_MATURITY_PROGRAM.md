@@ -62,7 +62,8 @@
 | Shared enterprise table | `EnterpriseDataTable.jsx` |
 | Shared form field chrome | `AppFormField.jsx` |
 | Route audit (28 routes) | [QA/SPRINT2_ROUTE_AUDIT.md](QA/SPRINT2_ROUTE_AUDIT.md) |
-| Playwright E01–E10 | `telescope-journeys.spec.ts`, `telescope-journeys-ops.spec.ts` |
+| Playwright E01–E16 | `telescope-journeys*.spec.ts` (auth, ops, record) |
+| Queue backend filter | `QueueMonitoring.jsx` `?backend=` |
 | Platform Health table | `PlatformHealth.jsx` → `EnterpriseDataTable` |
 | E2E captcha bypass (non-prod) | `E2E_CAPTCHA_BYPASS=1`, code `BYPASS`, `test_e2e_captcha_bypass.py` |
 

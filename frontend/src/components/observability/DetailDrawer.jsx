@@ -12,6 +12,7 @@ export function DetailDrawer({
   children,
   footer,
   size = 'md',
+  tourId,
 }) {
   const closeRef = useRef(null);
 
@@ -42,6 +43,7 @@ export function DetailDrawer({
         role="dialog"
         aria-modal="true"
         aria-labelledby="detail-drawer-title"
+        data-tour={tourId || undefined}
         onClick={(e) => e.stopPropagation()}
       >
         <header className="detail-drawer__head">
