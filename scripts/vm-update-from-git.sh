@@ -25,10 +25,6 @@ git pull --ff-only origin "$BRANCH" || {
 
 chmod +x scripts/*.sh 2>/dev/null || true
 
-if [[ "$RUN_DEMO_ENV" == "1" ]]; then
-  exec "${ROOT}/scripts/vm-demo-restart.sh"
-fi
-
 REQ="${ROOT}/backend/requirements.txt"
 if [[ -f "$REQ" ]]; then
   echo "==> Python deps ($REQ)"
@@ -66,30 +62,24 @@ if [[ "$SKIP_TESTS" != "1" ]]; then
   (cd frontend && npm run test) || true
 fi
 
+if [[ "$RUN_DEMO_ENV" == "1" ]]; then
+  # shellcheck source=scripts/vm-demo-env.sh
+  source "${ROOT}/scripts/vm-demo-env.sh"
+  echo "==> demo .env (mock data + bootstrap accounts)"
+  apply_vm_demo_env "$ROOT"
+fi
+
 if [[ "$RUN_NGINX" == "1" ]] && [[ -x "${ROOT}/scripts/setup-nginx-host.sh" ]]; then
   echo "==> nginx static + proxy"
   FORCE_FREE_PORT=1 "${ROOT}/scripts/setup-nginx-host.sh"
 fi
 
 echo "==> Restart API"
-pkill -f 'uvicorn app.main:app' 2>/dev/null || true
-sleep 1
-if [[ -f .env ]]; then
-  set -a
-  while IFS= read -r line || [[ -n "$line" ]]; do
-    [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*= ]] || continue
-    [[ "$line" == *'<'* || "$line" == *'`'* ]] && continue
-    export "$line"
-  done < .env
-  set +a
-fi
-export PYTHONPATH="${ROOT}"
-if [[ -d .venv ]]; then
-  # shellcheck disable=SC1091
-  source .venv/bin/activate
-fi
-nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 > "${ROOT}/.backend.log" 2>&1 &
-echo "API log: ${ROOT}/.backend.log"
+# shellcheck source=scripts/vm-demo-env.sh
+source "${ROOT}/scripts/vm-demo-env.sh"
+restart_uvicorn "$ROOT" || {
+  echo "WARN: API did not become healthy; see .backend.log" >&2
+}
 
 echo "==> Health check"
 sleep 2
