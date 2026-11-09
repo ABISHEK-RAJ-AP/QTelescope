@@ -2,7 +2,7 @@
 
 **Verdict: NOT production-ready.** Lab/demo and controlled UAT OK when configured per [`.env.production.example`](../.env.production.example).
 
-**Programme:** [ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md) · **Master checklist:** [MASTER_RELEASE_CHECKLIST.md](MASTER_RELEASE_CHECKLIST.md) (**24/93 PASS**, 2026-11-09)
+**Programme:** [ENTERPRISE_MATURITY_PROGRAM.md](../ENTERPRISE_MATURITY_PROGRAM.md) · **Master checklist:** [MASTER_RELEASE_CHECKLIST.md](MASTER_RELEASE_CHECKLIST.md) (**25/93 PASS**, 2026-11-09)
 
 Unresolved **P1:** QT-06 (bootstrap secrets), QT-07 (MFA at rest), QT-08 (reset email), QT-09 (TeleScope E2E incomplete).
 
@@ -17,7 +17,7 @@ Unresolved **P1:** QT-06 (bootstrap secrets), QT-07 (MFA at rest), QT-08 (reset 
 | E2E Playwright TeleScope | **E01–E10 + smoke / 24 journeys** | `telescope-journeys*.spec.ts` (needs `E2E_CAPTCHA_BYPASS=1` on API) |
 | Frontend Vitest | **7 tests** | `cd frontend && npm test` |
 | Responsive viewports | 0 / 9 | NOT_VERIFIED |
-| Master checklist | 24 PASS / 93 | See MASTER_RELEASE_CHECKLIST.md |
+| Master checklist | 25 PASS / 93 | See MASTER_RELEASE_CHECKLIST.md |
 | P0 open | 0 | |
 | P1 open | 4 | QT-06–09 |
 | Sprint 1–2 code | In progress | S1: request IDs, palette, SSE. S2: Vitest, EnterpriseDataTable, E01–E06 |
