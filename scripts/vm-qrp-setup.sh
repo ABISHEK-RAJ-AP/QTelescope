@@ -8,7 +8,7 @@ log() { printf '\033[1;36m[vm-qrp]\033[0m %s\n' "$*"; }
 die() { printf '\033[1;31m[vm-qrp]\033[0m %s\n' "$*" >&2; exit 1; }
 
 QRP_ROOT="${QRP_ROOT:-/home/cloud/QuantumResourcePortal}"
-if [[ ! -d "$QRP_ROOT/scripts/vm-setup.sh" && -d "$ROOT/../QuantumResourcePortal/scripts/vm-setup.sh" ]]; then
+if [[ ! -f "$QRP_ROOT/scripts/vm-setup.sh" && -f "$ROOT/../QuantumResourcePortal/scripts/vm-setup.sh" ]]; then
   QRP_ROOT="$(cd "$ROOT/../QuantumResourcePortal" && pwd)"
 fi
 if [[ ! -f "$QRP_ROOT/scripts/vm-setup.sh" ]]; then
