@@ -203,12 +203,7 @@
   background: var(--bg-card);
   box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
   transition: border-color 0.15s, box-shadow 0.15s;
-  border-left: 3px solid var(--border-color);
 }
-
-.oc-item--critical { border-left-color: var(--accent-rose); }
-.oc-item--warning { border-left-color: var(--accent-amber); }
-.oc-item--info { border-left-color: var(--accent-blue); }
 
 .oc-item:hover {
   border-color: var(--border-highlight);
@@ -235,6 +230,68 @@
   font-size: 0.9375rem;
   font-weight: 600;
   line-height: 1.4;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.oc-qubits {
+  display: inline-flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.oc-qubit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.5rem;
+  padding: 0 0.5rem;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.oc-qubit--red {
+  background: var(--accent-rose);
+  color: #fff;
+}
+
+.oc-qubit--yellow {
+  background: var(--accent-amber);
+  color: #1c1408;
+}
+
+.oc-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 8px 0 0;
+}
+
+.oc-fact {
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--bg-card-hover);
+}
+
+.oc-fact dt {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.oc-fact dd {
+  margin: 2px 0 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
   color: var(--text-primary);
   overflow-wrap: anywhere;
 }
@@ -282,8 +339,10 @@
 }
 
 .oc-item--grid {
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   align-items: stretch;
+  height: 100%;
   min-height: 100%;
 }
 
@@ -298,7 +357,7 @@
 .oc-item--grid .oc-item__cta {
   width: 100%;
   justify-content: center;
-  margin-top: 0.35rem;
+  margin-top: auto;
 }
 
 .oc-queue__controls {
@@ -359,8 +418,18 @@
 
 .oc-list--grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
-  gap: 0.85rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+
+@media (max-width: 1280px) {
+  .oc-list--grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 640px) {
+  .oc-list--grid { grid-template-columns: 1fr; }
+  .oc-facts { grid-template-columns: 1fr; }
 }
 
 .oc-list--grid .oc-item {

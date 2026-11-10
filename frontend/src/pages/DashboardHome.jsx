@@ -10,7 +10,6 @@ import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
-import { ExceptionStrip } from '../components/observability/ExceptionStrip.jsx';
 import { AnimatedNumber } from '../components/ui/AnimatedNumber.jsx';
 import {
   getChartTheme, baseTooltip, getChartSemanticColors, getFleetStateChartColors,
@@ -40,17 +39,19 @@ const fmtUs = (v) => {
 
 /** Widgets that still exist. Others from saved layouts are dropped (redundant/decorative). */
 const ACTIVE = [
-  WIDGET_IDS.exceptions, WIDGET_IDS.fleetSummary, WIDGET_IDS.alertQueue,
-  WIDGET_IDS.calChart, WIDGET_IDS.coherenceChart,
-  WIDGET_IDS.fleetTrend, WIDGET_IDS.modalityStrip, WIDGET_IDS.platformPanel,
-  WIDGET_IDS.opsTimeline,
+  WIDGET_IDS.fleetTrend, WIDGET_IDS.queueChart, WIDGET_IDS.calChart,
+  WIDGET_IDS.coherenceChart, WIDGET_IDS.modalityStrip,
+  WIDGET_IDS.platformPanel, WIDGET_IDS.fleetSummary, WIDGET_IDS.opsTimeline,
 ];
 const PLACEMENT = {
-  [WIDGET_IDS.exceptions]: 'top',
-  /* Full-width platform band — avoids orphan empty column in 2-col grid */
+  [WIDGET_IDS.fleetTrend]: 'top',
+  [WIDGET_IDS.queueChart]: 'top',
+  [WIDGET_IDS.calChart]: 'top',
+  [WIDGET_IDS.coherenceChart]: 'top',
+  [WIDGET_IDS.modalityStrip]: 'top',
   [WIDGET_IDS.platformPanel]: 'mid',
-  [WIDGET_IDS.opsTimeline]: 'bottom',
   [WIDGET_IDS.fleetSummary]: 'bottom',
+  [WIDGET_IDS.opsTimeline]: 'bottom',
 };
 const SOURCES = ['backends', 'alertsSummary', 'queues', 'calibrations', 'coherence', 'platform', 'health', 'centre', 'timeline'];
 const PRIMARY_SOURCES = ['backends', 'alertsSummary', 'health', 'centre'];
@@ -191,10 +192,6 @@ function DashboardHomeInner() {
     });
   }, [d.backends, d.health, d.queues, d.calibrations, alertSummary, lineage, providers.length]);
 
-  const crit = alertSummary?.critical ?? 0;
-  const warn = alertSummary?.warning ?? 0;
-  const total = alertSummary?.active ?? d.centre?.operations?.active_alerts ?? crit + warn;
-  const other = Math.max(0, total - crit - warn);
   const collectorBad = providers.filter((p) => {
     const age = ageMinutes(p.last_success_at);
     return p.status !== 'OK' || (age != null && age > STALE_MIN);
@@ -287,16 +284,7 @@ function DashboardHomeInner() {
     () => rows.reduce((sum, r) => sum + (Number(r.pending) || 0), 0),
     [rows],
   );
-  const calStale = useMemo(
-    () => (d.calibrations || []).filter((c) => {
-      const status = String(c.freshness_status || '').toLowerCase();
-      if (status === 'stale') return true;
-      const age = Number(c.calibration_age);
-      return Number.isFinite(age) && age >= 24;
-    }).length,
-    [d.calibrations],
-  );
-  /** Actionable: where alert load concentrates (replaces weak state-mix pie). */
+  /** Actionable: where alert load concentrates (replaces the duplicate count tiles). */
   const alertPressureRows = useMemo(
     () => rows
       .map((r) => ({ id: r.backend_id, name: shortName(r.backend_name || r.backend_id), crit: r.crit, warn: r.warn, total: r.crit + r.warn }))
@@ -389,68 +377,11 @@ function DashboardHomeInner() {
 
   const latestTelemetry = d.platform?.latest_backend_telemetry_at;
 
-  const go = (path) => () => navigate(path);
   const renderWidget = useCallback((id) => {
     if (CHART_WIDGETS.has(id) && !chartsReady) {
       return <div className="card fo-panel" style={{ minHeight: 280 }} aria-hidden><BoneyardSkeleton layout="grid" /></div>;
     }
     switch (id) {
-      case WIDGET_IDS.exceptions: {
-        const openInc = d.centre?.operations?.open_incidents;
-        const activeAlerts = (Number(crit) || 0) + (Number(warn) || 0);
-        const kpis = [
-          {
-            id: 'alerts', label: 'Active alerts', value: activeAlerts,
-            sub: crit ? `${crit} critical · ${warn} warning` : (warn ? `${warn} warning` : 'None open'),
-            tone: crit > 0 ? 'critical' : warn > 0 ? 'warn' : 'ok',
-            onClick: go('/app/alerts'),
-            help: 'CRITICAL + WARNING still ACTIVE. Open Alerts to acknowledge or resolve.',
-          },
-          {
-            id: 'inc', label: 'Open incidents', value: openInc ?? '—',
-            sub: openInc ? 'Triage required' : 'None open',
-            tone: openInc > 0 ? 'warn' : 'ok',
-            onClick: go('/app/alerts/incidents'),
-            help: 'Incidents in Open, Acknowledged, or Investigating.',
-          },
-          {
-            id: 'q', label: 'Pending jobs', value: totalPending,
-            sub: rows.length ? `${rows.length} backends` : 'No queue data',
-            tone: totalPending > 20 ? 'warn' : 'ok',
-            onClick: go('/app/execution/queues'),
-            help: 'Sum of pending_jobs across discovered backends.',
-          },
-          {
-            id: 'cal', label: 'Calibrations ≥24h', value: calStale,
-            sub: collectorBad ? `${collectorBad} collector(s) stale` : (greenPct != null ? `${greenPct}% qubits GREEN` : 'Age from last snapshot'),
-            tone: calStale > 0 || collectorBad > 0 ? 'warn' : 'ok',
-            onClick: go(collectorBad ? '/app/platform/health' : '/app/telemetry/calibration'),
-            help: 'Backends whose last calibration is stale or older than 24 hours. Subline flags stale collectors.',
-          },
-        ];
-        return (
-          <section className="card fo-shift" aria-label="Shift snapshot">
-            <ExceptionStrip data-tour="page-kpis" ariaLabel="Shift exceptions" className="fo-shift__kpis" items={kpis} />
-            <div className="fo-shift__charts fo-shift__charts--single" data-tour="page-charts">
-              <ChartPanel
-                title="Queue depth"
-                titleTo="/app/execution/queues"
-                question="Pending jobs per backend — click a bar to open that machine."
-                help="Fleet G/Y/R breakdown is in the backends table below; qubit rows live on Health vector."
-                state={queueRows.length ? 'ready' : 'empty'}
-                emptyMessage="No queue samples."
-                minHeight={240}
-              >
-                <QtECharts
-                  option={queueOption}
-                  style={{ height: 220, width: '100%' }}
-                  onEvents={{ click: (p) => { const q = queueRows[p.dataIndex]; if (q?.backend_id) navigate(`/app/execution/queues?backend=${encodeURIComponent(q.backend_id)}`); } }}
-                />
-              </ChartPanel>
-            </div>
-          </section>
-        );
-      }
       case WIDGET_IDS.fleetSummary:
         return (
           <section className="card fo-panel fo-panel--fleet" aria-labelledby="fo-health-h">
@@ -494,43 +425,6 @@ function DashboardHomeInner() {
                   </div>
                 ))}
               </div>
-            )}
-          </section>
-        );
-      case WIDGET_IDS.alertQueue:
-        return (
-          <section className="card fo-panel" aria-labelledby="fo-alert-h">
-            <div className="fo-panel__head">
-              <div>
-                <h2 id="fo-alert-h" className="fo-panel__title">Active alerts by severity</h2>
-                <p className="fo-panel__sub">{total} active (summary counts, not full export).</p>
-              </div>
-              <Link className="fs-link" to="/app/alerts">All alerts <ChevronRight size={12} aria-hidden /></Link>
-            </div>
-            {d.alertsSummary == null && failed.includes('alertsSummary') ? (
-              <EmptyState compact variant="panel" title="Alerts unavailable" message="Counts will appear after the next successful load." />
-            ) : total === 0 ? (
-              <EmptyState compact variant="panel" title="No active alerts" message="No alerts in Active status." />
-            ) : (
-              <>
-                <div className="fo-sev">
-                  {[['CRITICAL', crit], ['WARNING', warn], ['OTHER', other]].map(([s, n]) => (
-                    <div key={s} className="fo-sev__item">
-                      <span className="fo-sev__n">{n}</span>
-                      <span className={`badge ${sevBadge(s)}`}>{s}</span>
-                    </div>
-                  ))}
-                </div>
-                <ul className="fo-list">
-                  {rows.filter((r) => r.crit + r.warn > 0).map((r) => (
-                    <li key={r.backend_id}>
-                      <Link className="fs-link" to={buildBackendDetailsPath(r.backend_id)}>{shortName(r.backend_name || r.backend_id)}</Link>
-                      <span>{r.crit} critical · {r.warn} warning</span>
-                      <Link className="fs-link" to={buildTimelineInvestigationLocation({ backendId: r.backend_id })}>Timeline</Link>
-                    </li>
-                  ))}
-                </ul>
-              </>
             )}
           </section>
         );
@@ -703,7 +597,7 @@ function DashboardHomeInner() {
         return null;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [d, rows, alertSummary, crit, warn, collectorBad, calStale, qubitTotal,
+  }, [d, rows, alertSummary, collectorBad, qubitTotal,
     cohRows, cohOption, queueRows, queueOption, calRows, calOption, fleetStateTotals, greenPct, totalPending,
     alertPressureRows, alertPressureOption, workloadScatter, workloadOption, routerStackOption,
     events, failed, latestTelemetry, loadData, navigate, chartsReady]);
@@ -744,7 +638,11 @@ function DashboardHomeInner() {
         <DashboardBentoGrid widgets={widgets} customizing onReorder={persistOrder} onSpanChange={setWidgetSpan} renderWidget={renderWidget} />
       ) : (
         <>
-          {nodes('top')}
+          {zone('top').length > 0 && (
+            <div className="fo-charts-top" data-tour="page-charts">
+              {nodes('top')}
+            </div>
+          )}
           {zone('grid').length > 0 && <div className="fo-grid2">{nodes('grid')}</div>}
           {zone('mid').length > 0 && <div className="fo-mid">{nodes('mid')}</div>}
           {nodes('bottom')}

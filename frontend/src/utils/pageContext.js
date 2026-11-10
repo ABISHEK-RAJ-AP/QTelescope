@@ -79,12 +79,12 @@ export function resolvePageContext(state) {
     case 'home':
       breadcrumbs.push({ label: 'Fleet overview' });
       title = 'Fleet overview';
-      description = 'Backend health, calibration age, queues, and platform KPIs at a glance.';
+      description = 'Charts first, then backend health. Action queue is Operator console.';
       break;
     case 'operations':
       breadcrumbs.push({ label: 'Operator console' });
       title = 'Operator console';
-      description = 'Prioritized action queue: incidents, alerts, collectors, and backend advisories.';
+      description = 'What to do next: acknowledge, investigate, remediate. Not a second fleet dashboard.';
       break;
     case 'platform':
       breadcrumbs.push({ label: 'Platform health' });

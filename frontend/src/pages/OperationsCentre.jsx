@@ -49,16 +49,45 @@ function pickPrimaryLink(links = []) {
   return links[0];
 }
 
+/** Colour + number only. Words stay in the accessible name, not the visible title. */
+function QubitBeans({ counts }) {
+  const red = Number(counts?.RED) || 0;
+  const yellow = Number(counts?.YELLOW) || 0;
+  const qubitWord = (n) => (n === 1 ? 'qubit' : 'qubits');
+  return (
+    <span className="oc-qubits" aria-label={`${red} red ${qubitWord(red)}, ${yellow} yellow ${qubitWord(yellow)}`}>
+      <span className="oc-qubit oc-qubit--red" title="Red qubits">{red}</span>
+      <span className="oc-qubit oc-qubit--yellow" title="Yellow qubits">{yellow}</span>
+    </span>
+  );
+}
+
+function FactRow({ facts }) {
+  if (!facts?.length) return null;
+  return (
+    <dl className="oc-facts">
+      {facts.map((f) => (
+        <div key={f.label} className="oc-fact">
+          <dt>{f.label}</dt>
+          <dd>{f.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 function QueueRow({ item, laneLabel, layout, showLane }) {
   const sev = item.severity || 'INFO';
   const primary = pickPrimaryLink(item.links);
 
   return (
-    <li className={`oc-item oc-item--${sev.toLowerCase()}${layout === 'grid' ? ' oc-item--grid' : ''}`}>
+    <li className={`oc-item${layout === 'grid' ? ' oc-item--grid' : ''}`}>
       <div className="oc-item__main">
         <span className={`badge ${sevBadge(sev)} oc-item__badge`}>{sev}</span>
         <div className="oc-item__body">
           <div className="oc-item__title">{item.title}</div>
+          {item.counts && <QubitBeans counts={item.counts} />}
+          <FactRow facts={item.facts} />
           <div className="oc-item__meta">
             {showLane && <span className="oc-item__lane">{laneLabel}</span>}
             {item.backend && <code className="oc-item__backend">{item.backend}</code>}
@@ -149,7 +178,11 @@ export const OperationsCentre = () => {
       const unowned = i.status === 'OPEN' && !i.acknowledged_by;
       (unowned ? out.ack : out.inv).push({
         key: i.incident_id, severity: i.severity, title: i.title, backend: i.backend_id, lineage: lin(i.backend_id),
-        meta: `${i.status} · ${i.alert_count ?? '?'} alerts · last ${formatISTTime(i.last_detected_at)}`,
+        facts: [
+          { label: 'Status', value: i.status || '—' },
+          { label: 'Alerts', value: i.alert_count ?? '—' },
+          { label: 'Last', value: formatISTTime(i.last_detected_at) },
+        ],
         links: [
           { label: 'Incident', to: '/app/alerts/incidents' },
           { label: 'Backend', to: buildBackendDetailsPath(i.backend_id) },
@@ -179,7 +212,8 @@ export const OperationsCentre = () => {
       if (act && !['ALLOW', 'HOLD'].includes(act)) {
         out.fix.push({
           key: `fix-${h.backend_id}`, severity: h.router === 'RED' ? 'CRITICAL' : 'WARNING',
-          title: `${act.replace(/_/g, ' ')} — ${h.counts?.RED || 0} red, ${h.counts?.YELLOW || 0} yellow qubits`,
+          title: String(act).replace(/_/g, ' '),
+          counts: { RED: h.counts?.RED || 0, YELLOW: h.counts?.YELLOW || 0 },
           backend: h.backend_id, lineage: lin(h.backend_id), meta: 'Routing recommendation',
           links: [{ label: 'Qubit health', to: HEALTH_PATH }, { label: 'Backend', to: buildBackendDetailsPath(h.backend_id, 'calibration') }],
         });
@@ -313,6 +347,8 @@ export const OperationsCentre = () => {
         <section data-tour="page-ops-focus" className={`card oc-next${top.item.severity === 'CRITICAL' ? ' oc-next--critical' : ''}`}>
           <p className="oc-next__eyebrow">Next up</p>
           <h2 className="oc-next__title">{top.item.title}</h2>
+          {top.item.counts && <QubitBeans counts={top.item.counts} />}
+          <FactRow facts={top.item.facts} />
           <div className="oc-next__meta">
             <span className={`badge ${sevBadge(top.item.severity)}`}>{top.item.severity}</span>
             <span className="oc-next__lane">{laneMeta[top.lane]?.title}</span>
@@ -335,7 +371,7 @@ export const OperationsCentre = () => {
         <header className="oc-queue__head">
           <div>
             <h2 id="oc-queue-h" className="oc-queue__title">Action queue</h2>
-            <p className="oc-queue__sub">One list, filtered by lane. Primary button opens the usual investigation path.</p>
+            <p className="oc-queue__sub">Work queue. Fleet charts stay on Fleet overview.</p>
           </div>
           <div className="oc-queue__controls">
             <nav className="oc-lane-tabs" aria-label="Queue lanes">

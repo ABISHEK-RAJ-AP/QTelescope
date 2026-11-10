@@ -7,18 +7,16 @@ export const LAYOUT_PREFS_EVENT = 'qtelescope:page-layouts';
 
 export const DASHBOARD_PAGE_DEFAULT = {
   pageId: 'dashboard',
-  version: 3,
+  version: 4,
   widgets: [
-    { id: WIDGET_IDS.exceptions, span: 'full' },
-    { id: WIDGET_IDS.modalityStrip, span: 'medium' },
-    { id: WIDGET_IDS.alertQueue, span: 'medium' },
+    { id: WIDGET_IDS.fleetTrend, span: 'full' },
     { id: WIDGET_IDS.queueChart, span: 'medium' },
-    { id: WIDGET_IDS.fleetTrend, span: 'medium' },
-    { id: WIDGET_IDS.coherenceChart, span: 'medium' },
     { id: WIDGET_IDS.calChart, span: 'medium' },
+    { id: WIDGET_IDS.coherenceChart, span: 'medium' },
+    { id: WIDGET_IDS.modalityStrip, span: 'medium' },
     { id: WIDGET_IDS.platformPanel, span: 'full' },
-    { id: WIDGET_IDS.opsTimeline, span: 'full' },
     { id: WIDGET_IDS.fleetSummary, span: 'full' },
+    { id: WIDGET_IDS.opsTimeline, span: 'full' },
   ],
 };
 

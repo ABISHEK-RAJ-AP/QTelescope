@@ -501,6 +501,18 @@
 
 /* Fleet Overview */
 .dashboard-home { display: flex; flex-direction: column; gap: 14px; }
+.fo-charts-top {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+}
+.fo-charts-top > :first-child { grid-column: 1 / -1; }
+.fo-charts-top > * { min-width: 0; }
+@media (max-width: 1000px) {
+  .fo-charts-top { grid-template-columns: 1fr; }
+  .fo-charts-top > :first-child { grid-column: auto; }
+}
 .fo-grid2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

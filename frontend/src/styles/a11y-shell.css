@@ -112,7 +112,7 @@
 }
 
 .fd-ceg-popover--wide {
-  width: min(360px, calc(100vw - 16px));
+  width: min(520px, calc(100vw - 16px));
   max-height: 80vh;
   overflow-y: auto;
   /* Panel chrome stays fixed size when user changes global --font-scale */
@@ -189,16 +189,22 @@
 }
 
 .fd-ceg-a11y__grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
   align-items: stretch;
 }
 
+@media (max-width: 480px) {
+  .fd-ceg-a11y__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .fd-ceg-a11y__btn {
-  flex: 1 1 76px;
-  min-width: 76px;
-  max-width: 108px;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
   display: flex;
   flex-direction: column;
   align-items: center;
