@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import './InsightModal.css';
 
 /** Centered glass modal for qubit / metric drill-down (replaces narrow side drawer). */
-export function InsightModal({ open, title, subtitle, onClose, children, footer }) {
+export function InsightModal({ open, title, subtitle, onClose, children, footer, size = 'md' }) {
   const closeRef = useRef(null);
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export function InsightModal({ open, title, subtitle, onClose, children, footer 
     <div className="insight-modal" role="presentation">
       <button type="button" className="insight-modal__backdrop" aria-label="Close" onClick={onClose} />
       <div
-        className="insight-modal__panel"
+        className={`insight-modal__panel${size === 'xl' ? ' insight-modal__panel--xl' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby="insight-modal-title"

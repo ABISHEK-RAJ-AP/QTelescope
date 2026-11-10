@@ -37,6 +37,7 @@ import { OpsMonthCalendar } from '../components/observability/OpsMonthCalendar.j
 import { ListPager } from '../components/observability/ListPager.jsx';
 import { CollapsibleSection } from '../components/observability/CollapsibleSection.jsx';
 import { DiscussionModal } from '../components/observability/DiscussionModal.jsx';
+import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
 import './AlertsEvents.css';
 
 const FETCH_LIMIT = 500; // API max for /alerts
@@ -651,7 +652,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
         </section>
       ) : (
         <>
-          <CollapsibleSection id="al-chart-h" title="Alert detections · last 24 hours" help="New alerts created per hour (IST), stacked by severity. Not the same as how many are still ACTIVE." className="card al-card al-pad al-chart-card" defaultOpen={false}>
+          <CollapsibleSection id="al-chart-h" title="Alert detections · last 24 hours" help="New alerts created per hour (IST), stacked by severity. Not the same as how many are still ACTIVE." className="card al-card al-pad al-chart-card" defaultOpen>
             <p className="page-hint al-chart-hint">New detections per hour by severity — not the same as currently active count.</p>
             <QtECharts option={trendOption} style={{ height: 220, width: '100%' }} />
           </CollapsibleSection>
@@ -1026,15 +1027,17 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                 </DetailModalDl>
               </DetailModalSection>
               <DetailModalRelated>
-                <button type="button" className="btn btn-secondary" onClick={() => nav(timelineTo({ backendId: a.backend_id, alertId: a.alert_id, at: a.detected_at }))}>Timeline</button>
-                <button type="button" className="btn btn-secondary" onClick={() => nav(healthTo(a.backend_id))}>Resource health</button>
-                <button type="button" className="btn btn-secondary" onClick={() => openBackend(a.backend_id)}>Backend qubits</button>
-                <button type="button" className="btn btn-secondary" onClick={() => nav(buildDriftInvestigationLocation({ backendId: a.backend_id }))}>Drift</button>
-                {onOpenAlert && <button type="button" className="btn btn-primary" onClick={() => { closeDrawer(); onOpenAlert(a.alert_id); }}>Open full workspace</button>}
-                <button type="button" className="btn btn-secondary" onClick={() => setAlertDiscOpen(true)}>Discussion ({(alertDetail?.comments || []).length})</button>
+                <PageRelatedLink onClick={() => nav(timelineTo({ backendId: a.backend_id, alertId: a.alert_id, at: a.detected_at }))}>Timeline</PageRelatedLink>
+                <PageRelatedLink onClick={() => nav(healthTo(a.backend_id))}>Resource health</PageRelatedLink>
+                <PageRelatedLink onClick={() => openBackend(a.backend_id)}>Backend qubits</PageRelatedLink>
+                <PageRelatedLink onClick={() => nav(buildDriftInvestigationLocation({ backendId: a.backend_id }))}>Drift</PageRelatedLink>
+                <PageRelatedLink onClick={() => setAlertDiscOpen(true)}>Discussion ({(alertDetail?.comments || []).length})</PageRelatedLink>
               </DetailModalRelated>
               <DetailModalSection title="Respond">
                 <div className="al-actions">
+                  {onOpenAlert && (
+                    <button type="button" className="btn btn-primary" onClick={() => { closeDrawer(); onOpenAlert(a.alert_id); }}>Open full workspace</button>
+                  )}
                   {a.status === 'ACTIVE' && perms.canAckAlerts && (
                     <button type="button" className="btn btn-secondary" onClick={() => bulk('acknowledge', [a])}><Eye size={14} /> Acknowledge</button>
                   )}
@@ -1085,11 +1088,15 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                   <DetailModalRow label="Resolution">{inc.resolution_notes || '—'}</DetailModalRow>
                 </DetailModalDl>
               </DetailModalSection>
+              {onOpenIncident && (
+                <DetailModalSection title="Workspace">
+                  <button type="button" className="btn btn-primary" onClick={() => { setIncDrawerId(null); onOpenIncident(inc.incident_id); }}>Open full workspace</button>
+                </DetailModalSection>
+              )}
               <DetailModalRelated>
-                {onOpenIncident && <button type="button" className="btn btn-primary" onClick={() => { setIncDrawerId(null); onOpenIncident(inc.incident_id); }}>Open full workspace</button>}
-                <button type="button" className="btn btn-secondary" onClick={() => nav(timelineTo({ backendId: inc.backend_id, at: inc.last_detected_at }))}>Timeline</button>
-                <button type="button" className="btn btn-secondary" onClick={() => { setIncDrawerId(null); setBackend(inc.backend_id); onViewChange?.('alerts'); }}>View its alerts</button>
-                <button type="button" className="btn btn-secondary" onClick={() => setIncDiscOpen(true)}>Discussion ({(inc.comments || []).length})</button>
+                <PageRelatedLink onClick={() => nav(timelineTo({ backendId: inc.backend_id, at: inc.last_detected_at }))}>Timeline</PageRelatedLink>
+                <PageRelatedLink onClick={() => { setIncDrawerId(null); setBackend(inc.backend_id); onViewChange?.('alerts'); }}>View its alerts</PageRelatedLink>
+                <PageRelatedLink onClick={() => setIncDiscOpen(true)}>Discussion ({(inc.comments || []).length})</PageRelatedLink>
               </DetailModalRelated>
             </DetailModalBody>
           );

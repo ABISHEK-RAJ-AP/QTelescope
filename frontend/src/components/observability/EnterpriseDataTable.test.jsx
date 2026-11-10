@@ -26,6 +26,13 @@ describe('EnterpriseDataTable', () => {
     expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
   });
 
+  it('shows range label and page size control when paginated', () => {
+    const many = Array.from({ length: 30 }, (_, i) => ({ id: String(i), name: `Row ${i}`, score: i }));
+    render(<EnterpriseDataTable rows={many} columns={columns} pageSize={10} />);
+    expect(screen.getByText(/1–10 of 30/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Rows per page')).toBeInTheDocument();
+  });
+
   it('shows empty state when no matches', async () => {
     const user = userEvent.setup();
     render(

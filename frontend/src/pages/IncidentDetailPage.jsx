@@ -203,7 +203,7 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
           </ol>
         </CollapsibleSection>
 
-        <CollapsibleSection id="inc-sev-h" title="Related alerts by severity" className="card inc-detail__panel" defaultOpen={false}>
+        <CollapsibleSection id="inc-sev-h" title="Related alerts by severity" className="card inc-detail__panel" defaultOpen>
           {sevChart ? <QtECharts option={sevChart} style={{ height: 200, width: '100%' }} /> : <p className="page-hint">No linked alerts loaded.</p>}
         </CollapsibleSection>
       </div>

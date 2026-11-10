@@ -206,6 +206,7 @@ export const OpsTimeline = () => {
 
       <ChartPanel
         title="Event swim-lanes"
+        titleTo="/app/alerts"
         question="Chronological view by backend and event type."
         help="One lane per backend and event type. Marker shape = type (circle alert, diamond incident, triangle collector failure); colour = worst severity in the marker; size = events at the same instant. Click a marker for details."
         sourceKind="live"

@@ -17,9 +17,11 @@ import { formatISTTime } from '../utils/time';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
 import { fmtNum, isStale, modalityOf, timelineLink } from './telemetryPageUtils.js';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
+import { ListPager } from '../components/observability/ListPager.jsx';
 import './TelemetryPages.css';
 
 const PLAY_MS = 700;
+const FRAME_TABLE_SIZE = 25;
 const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 // 2 = data present, 1 = present but not fresh, 0 = missing
@@ -33,6 +35,33 @@ const coverage = (f) => {
 };
 const ROWS = ['Queue', 'Coherence', 'Calibration'];
 const MARK = ['—', '!', '✓'];
+
+function PaginatedFrameTable({ frames, headers, renderRow }) {
+  const [page, setPage] = useState(1);
+  const pages = Math.max(1, Math.ceil(frames.length / FRAME_TABLE_SIZE));
+  const cur = Math.min(page, pages);
+  const slice = frames.slice((cur - 1) * FRAME_TABLE_SIZE, cur * FRAME_TABLE_SIZE);
+  const base = (cur - 1) * FRAME_TABLE_SIZE;
+  return (
+    <>
+      <div className="tm-table-wrap">
+        <table className="custom-table custom-table--dense">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Time</th>
+              {headers.map((h) => <th key={h}>{h}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {slice.map((f, i) => renderRow(f, base + i))}
+          </tbody>
+        </table>
+      </div>
+      <ListPager page={cur} pages={pages} onPage={setPage} label="Table page" />
+    </>
+  );
+}
 
 export const TemporalReplay = () => {
   const navigate = useNavigate();
@@ -179,27 +208,50 @@ export const TemporalReplay = () => {
 
           <div className="tm-split">
             <ChartPanel
-              title="Queue and wait across frames" question="Playhead marks the selected frame. Click to jump." sourceKind="cached" asOf={lastAt ? formatISTTime(lastAt) : undefined}
+              title="Queue and wait across frames"
+              titleTo={backendId ? `/app/execution/queues?backend=${encodeURIComponent(backendId)}` : '/app/execution/queues'}
+              question="Playhead marks the selected frame. Click to jump." sourceKind="cached" asOf={lastAt ? formatISTTime(lastAt) : undefined}
               minHeight={320}
               tableAlternative={(
-                <div className="tm-table-wrap"><table className="custom-table custom-table--dense"><thead><tr><th>#</th><th>Time</th><th>Pending</th><th>Wait s</th></tr></thead>
-                  <tbody>{frames.map((f, i) => <tr key={f.index ?? i}><td>{i + 1}</td><td>{formatISTTime(f.at)}</td><td>{f.panels?.queue?.pending_jobs ?? '—'}</td><td>{f.panels?.queue?.estimated_wait_time ?? '—'}</td></tr>)}</tbody></table></div>
+                <PaginatedFrameTable
+                  frames={frames}
+                  headers={['Pending', 'Wait s']}
+                  renderRow={(f, i) => (
+                    <tr key={f.index ?? i}>
+                      <td>{i + 1}</td>
+                      <td>{formatISTTime(f.at)}</td>
+                      <td>{f.panels?.queue?.pending_jobs ?? '—'}</td>
+                      <td>{f.panels?.queue?.estimated_wait_time ?? '—'}</td>
+                    </tr>
+                  )}
+                />
               )}
             ><QtECharts option={trendOption} className="tm-chart" onEvents={{ click: onChartClick }} /></ChartPanel>
             <ChartPanel
-              title="Data coverage per frame" question="Panels with data at each frame (missing counts are explicit)." sourceKind="cached" minHeight={320}
+              title="Data coverage per frame"
+              titleTo={backendId ? `/app/resources/health?backend=${encodeURIComponent(backendId)}` : '/app/resources/health'}
+              question="Panels with data at each frame (missing counts are explicit)." sourceKind="cached" minHeight={320}
               help="Per-qubit health is not stored per replay frame, so this map shows panel coverage. For qubit health open Resource health."
               tableAlternative={(
-                <div className="tm-table-wrap"><table className="custom-table custom-table--dense"><thead><tr><th>#</th><th>Time</th>{ROWS.map((r) => <th key={r}>{r}</th>)}</tr></thead>
-                  <tbody>{frames.map((f, i) => <tr key={f.index ?? i}><td>{i + 1}</td><td>{formatISTTime(f.at)}</td>{coverage(f).map((v, k) => <td key={k}>{['missing', 'not fresh', 'present'][v]}</td>)}</tr>)}</tbody></table></div>
+                <PaginatedFrameTable
+                  frames={frames}
+                  headers={ROWS}
+                  renderRow={(f, i) => (
+                    <tr key={f.index ?? i}>
+                      <td>{i + 1}</td>
+                      <td>{formatISTTime(f.at)}</td>
+                      {coverage(f).map((v, k) => <td key={k}>{['missing', 'not fresh', 'present'][v]}</td>)}
+                    </tr>
+                  )}
+                />
               )}
             ><QtECharts option={covOption} className="tm-chart" onEvents={{ click: onChartClick }} /></ChartPanel>
           </div>
 
-          <div className="tm-actions">
-            <button type="button" className="btn btn-secondary" onClick={() => navigate(buildBackendDetailsPath(backendId))}>Backend details</button>
-            <button type="button" className="btn btn-secondary" onClick={() => navigate(timelineLink(backendId))}>Investigation timeline</button>
-          </div>
+          <nav className="link-row tm-actions" aria-label="Related pages">
+            <button type="button" className="fs-link" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }} onClick={() => navigate(buildBackendDetailsPath(backendId))}>Backend details</button>
+            <button type="button" className="fs-link" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }} onClick={() => navigate(timelineLink(backendId))}>Investigation timeline</button>
+          </nav>
         </>
       )}
     </div>

@@ -13,6 +13,7 @@ import {
   DetailModalRow,
   DetailModalRelated,
 } from '../components/observability/DetailModalLayout.jsx';
+import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
 import { buildBackendDetailsPath, buildDriftInvestigationLocation, buildTimelineInvestigationLocation } from '../lib/investigationLinks.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { useProviderLineage, LineageBadge } from './useLineage.jsx';
@@ -182,11 +183,13 @@ export const MetricsCoverage = () => {
               </DetailModalDl>
               {openState === 'unsupported' && <p className="page-hint">Check modality: some metrics (e.g. frequency, gate duration) are not exposed by every adapter.</p>}
             </DetailModalSection>
-            <DetailModalRelated>
+            <DetailModalSection title="Workspace">
               <button type="button" className="btn btn-primary" onClick={() => nav(buildBackendDetailsPath(open.b.backend_id, 'telemetry'))}>Open backend workspace</button>
-              <button type="button" className="btn btn-secondary" onClick={() => nav(`/app/telemetry/explorer?backend=${encodeURIComponent(open.b.backend_id)}&metric=${encodeURIComponent(open.m.metric_id)}`)}>Metrics explorer</button>
-              <button type="button" className="btn btn-secondary" onClick={() => nav(buildTimelineInvestigationLocation({ backendId: open.b.backend_id }))}>Ops timeline</button>
-              <button type="button" className="btn btn-secondary" onClick={() => nav(buildDriftInvestigationLocation({ backendId: open.b.backend_id }))}>Drift analysis</button>
+            </DetailModalSection>
+            <DetailModalRelated>
+              <PageRelatedLink onClick={() => nav(`/app/telemetry/explorer?backend=${encodeURIComponent(open.b.backend_id)}&metric=${encodeURIComponent(open.m.metric_id)}`)}>Metrics explorer</PageRelatedLink>
+              <PageRelatedLink onClick={() => nav(buildTimelineInvestigationLocation({ backendId: open.b.backend_id }))}>Ops timeline</PageRelatedLink>
+              <PageRelatedLink onClick={() => nav(buildDriftInvestigationLocation({ backendId: open.b.backend_id }))}>Drift analysis</PageRelatedLink>
             </DetailModalRelated>
           </DetailModalBody>
         )}

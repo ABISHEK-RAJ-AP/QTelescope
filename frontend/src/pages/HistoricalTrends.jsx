@@ -14,6 +14,7 @@ import { usePageActions } from '../context/PageActionsContext.jsx';
 import { baseTooltip, getChartTheme, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { parseDate } from '../utils/time';
 import { readTelemetryWindowHours, writeTelemetryWindowHours } from '../utils/telemetryWindow';
+import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
 import './HistoricalTrends.css';
 import './TelemetryPages.css';
 
@@ -213,6 +214,7 @@ export const HistoricalTrends = () => {
       <div className="trends-chart-grid">
         <ChartPanel
           title="Historical queue length"
+          titleTo={selectedBackend ? `/app/execution/queues?backend=${encodeURIComponent(selectedBackend)}` : '/app/execution/queues'}
           sourceKind="cached"
           asOf={asOf}
           state={hasHistory ? 'ready' : 'empty'}
@@ -225,6 +227,7 @@ export const HistoricalTrends = () => {
 
         <ChartPanel
           title="Estimated wait time"
+          titleTo={selectedBackend ? `/app/execution/jobs?backend=${encodeURIComponent(selectedBackend)}` : '/app/execution/jobs'}
           sourceKind="cached"
           asOf={asOf}
           state={hasHistory ? 'ready' : 'empty'}
@@ -236,10 +239,9 @@ export const HistoricalTrends = () => {
         </ChartPanel>
       </div>
       {selectedBackend && (
-        <div className="tm-actions">
-          <button type="button" className="btn btn-secondary" onClick={() => navigate(`/app/execution/queues?backend=${encodeURIComponent(selectedBackend)}`)}>Queues</button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate(`/app/telemetry/compare?backends=${encodeURIComponent(selectedBackend)}`)}>Compare</button>
-        </div>
+        <nav className="link-row page-related-nav tm-actions" aria-label="Related">
+          <PageRelatedLink onClick={() => navigate(`/app/telemetry/compare?backends=${encodeURIComponent(selectedBackend)}`)}>Compare</PageRelatedLink>
+        </nav>
       )}
     </div>
   );

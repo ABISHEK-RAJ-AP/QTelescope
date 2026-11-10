@@ -356,7 +356,7 @@ export const ResourceHealth = () => {
         <div className="card" style={{ padding: 0 }}>
           <div className="hv-toolbar">
             <strong style={{ fontSize: 14 }}>{active.backend_name}</strong>
-            <button type="button" className="btn btn-secondary" style={{ marginLeft: 8 }} onClick={() => nav({ pathname: buildBackendDetailsPath(active.backend_id), search: `?backend=${encodeURIComponent(active.backend_id)}` })}>Backend details</button>
+            <button type="button" className="fs-link" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0, marginLeft: 8 }} onClick={() => nav({ pathname: buildBackendDetailsPath(active.backend_id), search: `?backend=${encodeURIComponent(active.backend_id)}` })}>Backend details</button>
             <label>Color by
               <select className="input-control" value={colorBy} onChange={(e) => setColorBy(e.target.value)}>
                 {Object.entries(COLOR_MODES).map(([k, m]) => <option key={k} value={k}>{m.label}</option>)}
@@ -428,6 +428,7 @@ export const ResourceHealth = () => {
 
         <ChartPanel
           title="Coherence vs readout error"
+          titleTo={active?.backend_id ? buildDriftInvestigationLocation({ backendId: active.backend_id }) : '/app/telemetry/drift'}
           question="T1 and readout outliers across the selected backend."
           sourceKind="derived"
           state={scatter.series.some((s) => s.data.length) ? 'ready' : 'empty'}
@@ -445,14 +446,17 @@ export const ResourceHealth = () => {
 
       <InsightModal
         open={selected != null && !!selectedQubit}
+        size="xl"
         title={selectedQubit ? `${active.backend_name} · Q${selectedQubit.qubit_index}` : ''}
         subtitle={selectedQubit ? STATE_MEANING[selectedQubit.state] : ''}
         onClose={() => selectQubit(null)}
         footer={selectedQubit && (
           <div className="hv-drawer-actions">
-            <button type="button" className="btn btn-secondary" onClick={() => nav(buildBackendDetailsPath(active.backend_id, 'qubits'))}>Backend qubits</button>
-            <button type="button" className="btn btn-secondary" onClick={() => nav(buildDriftInvestigationLocation({ backendId: active.backend_id }))}>Drift analysis</button>
-            <button type="button" className="btn btn-secondary" onClick={() => nav(buildBackendDetailsPath(active.backend_id, 'calibration'))}>Calibration</button>
+            <nav className="link-row" aria-label="Related workspaces">
+              <button type="button" className="fs-link" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }} onClick={() => nav(buildBackendDetailsPath(active.backend_id, 'qubits'))}>Backend qubits</button>
+              <button type="button" className="fs-link" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }} onClick={() => nav(buildDriftInvestigationLocation({ backendId: active.backend_id }))}>Drift analysis</button>
+              <button type="button" className="fs-link" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }} onClick={() => nav(buildBackendDetailsPath(active.backend_id, 'calibration'))}>Calibration</button>
+            </nav>
             <button type="button" className="btn btn-primary" onClick={toggleQuarantine}>
               {selectedQubit.status === 'QUARANTINED' ? 'Release advisory quarantine' : 'Advisory quarantine'}
             </button>

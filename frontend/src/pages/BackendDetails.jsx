@@ -264,7 +264,6 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
         </div>
         <nav className="bd-actions" aria-label="Related views">
           <Link className="btn btn-primary" to={link('/app/investigate/timeline')}>Ops timeline</Link>
-          <Link className="btn btn-secondary" to={link('/app/telemetry/drift')}>Drift</Link>
         </nav>
       </header>
 
@@ -502,9 +501,9 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
                 <dt>Degree (avg / max)</dt><dd className="bd-num">{num(degs.reduce((a, b) => a + b, 0) / (degs.length || 1), 2)} / {Math.max(...degs)}</dd>
               </dl>
             )}
-            <div className="bd-cta">
+            <div className="bd-cta link-row">
               <Link className="btn btn-primary" to={link('/app/telemetry/topology')}>Open topology map</Link>
-              <Link className="btn btn-secondary" to={link('/app/resources/health')}>Qubit health</Link>
+              <Link className="fs-link" to={link('/app/resources/health')}>Qubit health</Link>
             </div>
           </section>
         )}
@@ -518,10 +517,10 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
               <div className="bk-kpi"><div className="bk-kpi__label">Recent jobs</div><div className="bk-kpi__value">{jobs.length}</div><div className="bk-kpi__sub">{Object.entries(jobCounts).map(([k, n]) => `${n} ${k.toLowerCase()}`).join(' · ') || 'None'}</div></div>
             </section>
             <section className="card" style={{ padding: 0 }}>
-              <div className="bk-toolbar">
+              <div className="bk-toolbar link-row">
                 <strong style={{ fontSize: 13 }}>Jobs on this backend</strong>
-                <Link className="btn btn-secondary bk-toolbar__count" style={{ textDecoration: 'none' }} to={link('/app/execution/jobs')}>All jobs</Link>
-                <Link className="btn btn-secondary" style={{ textDecoration: 'none' }} to={link('/app/execution/queues')}>Queues</Link>
+                <Link className="fs-link" to={link('/app/execution/jobs')}>All jobs</Link>
+                <Link className="fs-link" to={link('/app/execution/queues')}>Queues</Link>
               </div>
               {jobs.length === 0 ? (
                 <EmptyState variant="panel" compact title={secErr('jobs') ? unableToLoadLabel('jobs') : 'No jobs'} message={secErr('jobs') ? 'Use Refresh on the page header.' : 'No job records for this backend.'} />

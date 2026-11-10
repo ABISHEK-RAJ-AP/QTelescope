@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { api } from '../services/api';
@@ -13,21 +13,10 @@ import { formatISTTime } from '../utils/time';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { DataPanelToolbar } from '../components/observability/DataViewToolbar.jsx';
 import { EnterpriseDataTable } from '../components/observability/EnterpriseDataTable.jsx';
-import { CollapsibleSection } from '../components/observability/CollapsibleSection.jsx';
+import { DependencyGraph } from '../components/visualizations/topology/DependencyGraph.jsx';
+import { summarizeOperatorError } from '../utils/operatorFault.js';
+import '../components/visualizations/shared/visualizations.css';
 import './PlatformHealth.css';
-
-const EXEC_LINES = (data) => {
-  const coll = data?.collectors || {};
-  const failed = coll.failed_count ?? 0;
-  const providers = coll.providers || [];
-  const ok = providers.length - failed;
-  return [
-    `Database ${data?.database?.reachable ? 'reachable' : 'unreachable'} · storage ${data?.database?.storage || '—'}`,
-    `Collectors ${ok}/${providers.length} OK${failed ? ` · ${failed} need attention` : ''}`,
-    `Latest backend telemetry ${data?.latest_backend_telemetry_at ? formatISTTime(data.latest_backend_telemetry_at) : 'none stored'}`,
-    `Data mode ${data?.data_platform?.platform_data_mode || '—'}${data?.data_platform?.enable_mock_data ? ' (demo telemetry on)' : ''}`,
-  ];
-};
 
 const STALE_MIN = 30;
 
@@ -189,70 +178,21 @@ export const PlatformHealth = () => {
   const breakers = (coll.circuit_breakers_open || []).length;
   const mode = data?.collection_scheduler?.mode;
   const telTone = telAge == null ? 'bad' : telAge > STALE_MIN ? 'warn' : 'ok';
-  const overallTone = !db.reachable || failed ? 'bad' : telTone === 'warn' || mode === 'on_demand' ? 'warn' : 'ok';
-
   return (
     <div className="page-stack">
-      <section className="ph-summary card page-panel">
-        <div className="ph-summary__head">
-          <h2 className="ph-summary__title">Platform status</h2>
-          <span className={`badge ${overallTone === 'ok' ? 'badge-healthy' : overallTone === 'warn' ? 'badge-warning' : 'badge-critical'}`}>
-            {overallTone === 'ok' ? 'Operational' : overallTone === 'warn' ? 'Attention' : 'Degraded'}
-          </span>
-        </div>
-        <p className="ph-summary__meta">
-          Generated {data?.generated_at ? formatISTTime(data.generated_at) : '—'}
-        </p>
-        <ul className="ph-exec-list">
-          {EXEC_LINES(data).map((line) => (
-            <li key={line}>{line}</li>
-          ))}
-        </ul>
-        <p className="page-hint ph-rbac-note">
-          <strong>Who can act:</strong> all signed-in roles can view this page. Changing collectors, credentials, or schedules requires an administrator role under Administration.
-        </p>
-      </section>
-
-      {(data?.synthetics || []).length > 0 && (
-        <CollapsibleSection id="ph-synth" title="Synthetic probes" defaultOpen={false} className="card page-panel ph-synth" data-tour="page-platform-synthetic">
-          <p className="page-hint">In-process checks on each platform-health refresh — not distributed synthetics.</p>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {(data.synthetics || []).map((p) => (
-              <li key={p.probe_id} style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'baseline', padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>
-                <strong>{p.name}</strong>
-                <span className={p.status === 'OK' ? 'badge badge-healthy' : 'badge badge-critical'}>{p.status}</span>
-                <span className="ph-timeline__meta">{p.latency_ms} ms · {p.target}{p.error ? ` · ${p.error}` : ''}</span>
-              </li>
-            ))}
-          </ul>
-        </CollapsibleSection>
-      )}
-
-      {(data?.slis || []).length > 0 && (
-        <CollapsibleSection id="ph-sli" title="Service level indicators" defaultOpen={false} className="card page-panel ph-slo" data-tour="page-platform-sli">
-          <p className="page-hint">Measured from stored collector execution history — not an external time-series backend.</p>
-          <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {(data.slis || []).map((s) => (
-              <li key={s.sli_id} style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'baseline', padding: '8px 0', borderBottom: '1px solid var(--border-color)' }}>
-                <strong>{s.name}</strong>
-                <span className={s.missing_data ? 'badge badge-info' : s.compliant ? 'badge badge-healthy' : 'badge badge-warning'}>
-                  {s.missing_data ? 'No data' : `${(s.value * 100).toFixed(1)}%`}
-                </span>
-                <span className="ph-timeline__meta">
-                  target {(s.target * 100).toFixed(0)}% · {s.numerator}/{s.denominator} in {s.window_hours}h · {s.data_source}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </CollapsibleSection>
-      )}
-
       <section className="ph-tiles" aria-label="Platform status" data-tour="page-platform">
-        <Tile title="Database" tone={db.reachable ? 'ok' : 'bad'} value={db.reachable ? 'Reachable' : 'Unreachable'} detail={`${db.storage || '—'}${db.error ? ` · ${db.error}` : ''}`} />
+        <Tile title="Database" tone={db.reachable ? 'ok' : 'bad'} value={db.reachable ? 'Connected' : 'Unreachable'} detail={db.error ? db.error : (db.reachable ? 'Queries OK' : 'Check deployment')} />
         <Tile title="Collectors" tone={failed ? 'bad' : 'ok'} value={failed ? `${failed} failing` : `${providers.length - failed} of ${providers.length} OK`} detail={`DLQ ${coll.dlq_recent_count ?? 0} · breakers open ${breakers} · run history in admin`} to="/app/admin/collectors" onOpen={nav} />
         <Tile title="Telemetry store" tone={telTone} value={ageText(telAge)} detail={data?.latest_backend_telemetry_at ? formatISTTime(data.latest_backend_telemetry_at) : 'No samples stored'} />
         <Tile title="Scheduler" tone={mode === 'on_demand' ? 'warn' : 'ok'} value={mode === 'on_demand' ? 'On demand' : (mode || '—')} detail={data?.collection_scheduler?.note || 'Collection cycle control'} to="/app/admin/collectors" onOpen={nav} />
         <Tile title="Event stream" tone="ok" value="Database aggregate SSE" detail={sse.stream_kind || 'Platform refresh ticks'} />
+      </section>
+
+      <section className="card page-panel ph-deps" data-tour="page-platform-dependencies">
+        <header className="chart-panel__head">
+          <h3 className="chart-panel__title">Infrastructure dependencies</h3>
+        </header>
+        <DependencyGraph platformData={data} />
       </section>
 
       <section className="ph-split">
@@ -273,7 +213,7 @@ export const PlatformHealth = () => {
                       <code className="dvt-card__title" style={{ fontSize: 13 }}>{p.provider_id}</code>
                       <span className={`badge ${p.status === 'OK' ? 'badge-healthy' : 'badge-critical'}`}>{p.status || '—'}</span>
                     </header>
-                    {p.error && <p className="dvt-card__body ph-err">{p.error}</p>}
+                    {p.error && <p className="dvt-card__body ph-err">{summarizeOperatorError(p.error)}</p>}
                     <dl className="dvt-card__stats">
                       <div><dt>Backends</dt><dd>{p.backends_detected ?? '—'}</dd></div>
                       <div><dt>Last success</dt><dd>{ageText(m)}</dd></div>
@@ -299,7 +239,7 @@ export const PlatformHealth = () => {
         </div>
 
         <div className="ph-charts-col">
-          <ChartPanel title="Last collection duration" question="Slowest adapter on the most recent run." sourceKind="derived"
+          <ChartPanel title="Last collection duration" titleTo="/app/admin/collectors" question="Slowest adapter on the most recent run." sourceKind="derived"
             state={providers.length ? 'ready' : 'empty'} emptyMessage="No collector runs yet." minHeight={220}
             tableAlternative={(
               <table className="custom-table custom-table--dense">
@@ -313,7 +253,7 @@ export const PlatformHealth = () => {
             )}>
             <QtECharts option={durationOption} style={{ height: Math.max(200, providers.length * 42) }} notMerge />
           </ChartPanel>
-          <ChartPanel title="Adapter health mix" question="OK versus attention required." sourceKind="derived"
+          <ChartPanel title="Adapter health mix" titleTo="/app/admin/collectors" question="OK versus attention required." sourceKind="derived"
             state={providers.length ? 'ready' : 'empty'} minHeight={260}>
             <QtECharts option={statusPieOption} style={{ height: 260 }} notMerge />
           </ChartPanel>
@@ -343,35 +283,6 @@ export const PlatformHealth = () => {
               ))}
             </tbody>
           </table>
-        </section>
-      )}
-
-      {(data?.dependency_links || []).length > 0 && (
-        <section className="card page-panel" data-tour="page-platform-dependencies">
-          <h3 className="chart-panel__title">Dependency map</h3>
-          <p className="page-hint">Collector status → registered backends → active alerts (counts from database).</p>
-          <ul className="ph-dep-list" style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-            {(data.dependency_links || []).map((row) => (
-              <li key={row.provider_id} style={{ marginBottom: 16, borderBottom: '1px solid var(--border-color)', paddingBottom: 12 }}>
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <strong>{row.provider_id}</strong>
-                  <span className="badge badge-info">collector {row.collector_status || '—'}</span>
-                  <Link className="fs-link" to="/app/admin/collectors">Run history</Link>
-                </div>
-                <ul style={{ margin: '8px 0 0', paddingLeft: 16 }}>
-                  {(row.backends || []).map((b) => (
-                    <li key={b.backend_id} style={{ marginTop: 4 }}>
-                      <Link to={buildBackendDetailsPath(b.backend_id)}>{b.backend_name || b.backend_id}</Link>
-                      <span className="ph-timeline__meta"> · {b.operational_status} · {b.active_alerts} active alert{b.active_alerts === 1 ? '' : 's'}</span>
-                      {b.active_alerts > 0 && (
-                        <Link className="fs-link" style={{ marginLeft: 8 }} to={`/app/alerts?backend=${encodeURIComponent(b.backend_id)}`}>Alerts</Link>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
         </section>
       )}
 

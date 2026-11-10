@@ -12,6 +12,7 @@ import { buildBackendDetailsPath, buildTimelineInvestigationLocation } from '../
 import { STALE_MIN, ageMinutes, fetchActiveAlerts, groupAlerts, lineageByProvider, sevBadge } from './fleetData.js';
 import { LayoutGrid, List } from 'lucide-react';
 import { LineageChip } from './fleetShared.jsx';
+import { collectorQueueTitle } from '../utils/operatorFault.js';
 import './OperationsCentre.css';
 
 const HEALTH_PATH = '/app/resources/health';
@@ -204,7 +205,7 @@ export const OperationsCentre = () => {
       if (bad || (age != null && age > STALE_MIN)) {
         out.inv.push({
           key: `col-${p.provider_id}`, severity: bad ? 'CRITICAL' : 'WARNING',
-          title: `Collector ${p.provider_id}: ${bad ? p.status : 'stale'}${p.error ? ` — ${p.error}` : ''}`,
+          title: collectorQueueTitle(p.provider_id, p, { stale: !bad && age != null && age > STALE_MIN }),
           meta: `last success ${age != null ? `${Math.round(age)} min ago` : 'unknown'}`, lineage: p.lineage,
           links: [{ label: 'Platform health', to: '/app/platform/health' }],
         });
@@ -322,8 +323,6 @@ export const OperationsCentre = () => {
             {topPrimary && (
               <Link className="btn btn-primary" to={topPrimary.to}>{topPrimary.label}</Link>
             )}
-            <Link className="btn btn-secondary" to="/app/alerts">Active alerts</Link>
-            <Link className="btn btn-secondary" to="/app/platform/health">Platform health</Link>
           </div>
         </section>
       )}

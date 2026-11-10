@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
 import { Maximize2 } from 'lucide-react';
 import { InfoTooltip } from './InfoTooltip.jsx';
-import { ProvenanceChip } from './ProvenanceChip.jsx';
 import { EmptyState } from './EmptyState.jsx';
 import { ErrorState } from './ErrorState.jsx';
 import { BoneyardSkeleton } from '../ui/Skeleton.jsx';
@@ -12,12 +12,13 @@ import { EMPTY_CHART } from '../../constants/messages.js';
 /**
  * Chart container with honest loading / empty / error states (Sprint 1).
  * children: chart when state === 'ready'
+ * titleTo: entire chart section navigates via the title (replaces separate "Open …" links).
  */
 export function ChartPanel({
   title,
+  titleTo,
   question,
   help,
-  sourceKind,
   asOf,
   provenanceDetail,
   state = 'ready',
@@ -41,40 +42,51 @@ export function ChartPanel({
     return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
   }, [presentOpen]);
 
+  const tooltipBody = [help || question, asOf ? `As of ${asOf}` : '', provenanceDetail || ''].filter(Boolean).join(' ');
+  const showTooltip = Boolean(tooltipBody);
+  const showQuestion = Boolean(question) && !titleTo;
+
   const stage = state === 'ready' && children ? (
     <div className="chart-expand__stage">{children}</div>
   ) : null;
+
+  const titleNode = title && (
+    titleTo ? (
+      <Link to={titleTo} className="chart-panel__title chart-panel__title--link">
+        {title}
+      </Link>
+    ) : (
+      <h3 className="chart-panel__title">{title}</h3>
+    )
+  );
 
   return (
     <section className="chart-panel card" aria-labelledby={title ? undefined : undefined}>
       <header className="chart-panel__head">
         <div className="chart-panel__titles">
-          {title && <h3 className="chart-panel__title">{title}</h3>}
-          {question && <p className="chart-panel__question">{question}</p>}
+          <div className="chart-panel__title-row">
+            {titleNode}
+            {showTooltip && (
+              <InfoTooltip label={`About ${title || 'this chart'}`}>
+                <div className="chart-panel__tooltip-body">{tooltipBody}</div>
+              </InfoTooltip>
+            )}
+          </div>
+          {showQuestion && <p className="chart-panel__question">{question}</p>}
         </div>
         <div className="chart-panel__meta">
-          {sourceKind && (
-            <ProvenanceChip kind={sourceKind} asOf={asOf} detail={provenanceDetail} compact />
-          )}
-          {(help || question) && (
-            <InfoTooltip label={`About ${title || 'this chart'}`}>
-              <div style={{ fontSize: '0.75rem', maxWidth: 280, lineHeight: 1.45 }}>
-                {help || question}
-              </div>
-            </InfoTooltip>
-          )}
+          {actions}
           {showExpand && (
             <button
               type="button"
               className="chart-panel__expand btn btn-secondary btn-icon-only"
               aria-label={`Expand chart: ${title || 'visualization'}`}
-              title="Expand for presentation"
+              title="Expand"
               onClick={() => setPresentOpen(true)}
             >
-              <Maximize2 size={16} aria-hidden />
+              <Maximize2 size={18} aria-hidden />
             </button>
           )}
-          {actions}
         </div>
       </header>
       <div className="chart-panel__body" style={{ minHeight }} aria-hidden={presentOpen}>

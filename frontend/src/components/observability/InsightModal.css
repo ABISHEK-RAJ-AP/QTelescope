@@ -35,6 +35,19 @@
     0 28px 80px -20px rgba(0, 0, 0, 0.5);
 }
 
+.insight-modal__panel--xl {
+  width: min(920px, 96vw);
+  max-height: min(92vh, 940px);
+}
+
+.insight-modal__panel--xl .insight-modal__title {
+  font-size: 1.25rem;
+}
+
+.insight-modal__panel--xl .insight-modal__body {
+  font-size: 0.9375rem;
+}
+
 .insight-modal__head {
   flex-shrink: 0;
   display: flex;

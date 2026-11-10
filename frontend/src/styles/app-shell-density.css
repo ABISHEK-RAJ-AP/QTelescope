@@ -1,0 +1,184 @@
+/* Cert-studio–aligned density for /app/* (readable ops UI). */
+
+.app-layout,
+.page-stack {
+  font-size: var(--font-size-body);
+  line-height: var(--line-height-body);
+}
+
+.page-panel,
+.card.page-panel {
+  padding: 16px 18px;
+}
+
+.chart-panel__title {
+  font-size: 1.0625rem;
+}
+
+.context-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+  padding: 12px 16px;
+}
+
+.context-bar--inline {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+}
+
+.context-bar__field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.page-toolbar-unified {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 14px;
+  padding: 12px 16px;
+}
+
+.page-toolbar-unified .input-control,
+.page-toolbar-unified select {
+  min-height: 2.35rem;
+  font-size: 0.9375rem;
+}
+
+.detail-drawer--xl {
+  width: min(920px, 96vw);
+  max-height: min(92vh, 940px);
+}
+
+.detail-drawer--xl .detail-drawer__title {
+  font-size: 1.125rem;
+}
+
+.topo-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px 14px;
+  margin: 0;
+}
+
+.topo-metric-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card-hover);
+}
+
+.topo-metric-row dt {
+  font-size: var(--font-size-micro-label);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.topo-metric-row dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.topo-nbr {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 3.5rem;
+  justify-content: center;
+}
+
+.topo-nbr__err {
+  font-size: 0.625rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.topo-workspace--wide {
+  grid-template-columns: 1fr;
+}
+
+.topo-workspace--wide .topo-side {
+  max-height: none;
+}
+
+.dvt-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 12px;
+  align-items: stretch;
+}
+
+.dvt-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  min-width: 0;
+}
+
+.admin-rbac-matrix .admin-card-title {
+  font-size: 1.0625rem;
+}
+
+.admin-rbac-matrix .custom-table {
+  font-size: 0.9375rem;
+}
+
+.admin-rbac-matrix th,
+.admin-rbac-matrix td {
+  padding: 10px 12px;
+}
+
+.fs-link {
+  color: var(--accent-cyan);
+  font-size: var(--font-size-label);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.fs-link:hover {
+  text-decoration: underline;
+}
+
+.fs-link:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+  font-size: var(--font-size-label);
+}
+
+.viz-pipeline__disclaimer {
+  display: none;
+}
+
+.viz-dependency-graph > .page-hint:first-of-type {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.oc-item--grid .oc-item__meta {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+}

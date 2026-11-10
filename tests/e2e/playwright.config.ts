@@ -19,13 +19,18 @@ export default defineConfig({
   projects: [
     {
       name: 'telescope',
-      testMatch: /telescope-.*\.spec\.ts/,
+      testMatch: /telescope-(?!ui-audit-capture).*\.spec\.ts/,
       use: { browserName: 'chromium', baseURL: telescope },
     },
     {
       name: 'govern',
       testMatch: /govern-.*\.spec\.ts/,
       use: { browserName: 'chromium', baseURL: govern },
+    },
+    {
+      name: 'audit-capture',
+      testMatch: /telescope-ui-audit-capture\.spec\.ts/,
+      use: { browserName: 'chromium', baseURL: telescope },
     },
   ],
   metadata: { e2eApiUrl: api },

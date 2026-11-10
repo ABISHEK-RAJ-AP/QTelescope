@@ -21,28 +21,77 @@ function TableSkeleton({ columns, rows = 5 }) {
   );
 }
 
-function Pagination({ page, totalPages, totalCount, pageSize, onPage }) {
-  if (totalCount <= pageSize) return null;
+const DEFAULT_PAGE_SIZES = [10, 15, 25, 50, 100];
+
+function Pagination({
+  page,
+  totalPages,
+  totalCount,
+  pageSize,
+  pageSizeOptions = DEFAULT_PAGE_SIZES,
+  onPage,
+  onPageSize,
+}) {
+  if (totalCount === 0) return null;
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, totalCount);
+  const showPager = totalCount > pageSize || pageSizeOptions.length > 1;
+
   return (
     <footer className="edt-pager" role="navigation" aria-label="Table pagination">
       <span className="edt-pager__count" role="status">
-        {totalCount} row{totalCount === 1 ? '' : 's'}
+        {start}–{end} of {totalCount}
       </span>
       <div className="edt-pager__btns">
-        <button type="button" className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>
-          Previous
-        </button>
-        <span className="edt-pager__meta">
-          Page {page} of {totalPages}
-        </span>
-        <button
-          type="button"
-          className="btn btn-secondary btn-sm"
-          disabled={page >= totalPages}
-          onClick={() => onPage(page + 1)}
-        >
-          Next
-        </button>
+        {pageSizeOptions.length > 1 && (
+          <label className="edt-pager__size">
+            <span className="sr-only">Rows per page</span>
+            <select
+              className="input-control input-control--compact"
+              value={pageSize}
+              aria-label="Rows per page"
+              onChange={(e) => {
+                onPageSize(Number(e.target.value));
+                onPage(1);
+              }}
+            >
+              {pageSizeOptions.map((n) => (
+                <option key={n} value={n}>
+                  {n} / page
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {showPager && (
+          <>
+            <button type="button" className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => onPage(1)}>
+              First
+            </button>
+            <button type="button" className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>
+              Previous
+            </button>
+            <span className="edt-pager__meta">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              disabled={page >= totalPages}
+              onClick={() => onPage(page + 1)}
+            >
+              Next
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              disabled={page >= totalPages}
+              onClick={() => onPage(totalPages)}
+            >
+              Last
+            </button>
+          </>
+        )}
       </div>
     </footer>
   );
@@ -58,7 +107,8 @@ export function EnterpriseDataTable({
   loading = false,
   searchPlaceholder = 'Search…',
   searchKeys = [],
-  pageSize = 15,
+  pageSize: initialPageSize = 15,
+  pageSizeOptions = DEFAULT_PAGE_SIZES,
   emptyTitle = 'No rows',
   emptyMessage = 'Nothing matched the current filters.',
   toolbarExtra = null,
@@ -71,6 +121,7 @@ export function EnterpriseDataTable({
 }) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState(initialSort || { key: null, dir: 'asc' });
+  const [pageSize, setPageSize] = useState(initialPageSize);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -185,7 +236,15 @@ export function EnterpriseDataTable({
           </tbody>
         </table>
       </div>
-      <Pagination page={page} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPage={setPage} />
+      <Pagination
+        page={page}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        pageSize={pageSize}
+        pageSizeOptions={pageSizeOptions}
+        onPage={setPage}
+        onPageSize={setPageSize}
+      />
     </div>
   );
 }

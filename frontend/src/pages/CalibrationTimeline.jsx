@@ -36,6 +36,8 @@ export const CalibrationTimeline = () => {
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [layout, setLayout] = useState('table');
+  const [eventPage, setEventPage] = useState(0);
+  const EVENT_PAGE_SIZE = 25;
   const { setActions, clearActions } = usePageActions();
 
   useEffect(() => {
@@ -61,6 +63,10 @@ export const CalibrationTimeline = () => {
   }, [backendId, windowHours]);
 
   useEffect(() => { loadTimeline(); }, [loadTimeline]);
+
+  useEffect(() => {
+    setEventPage(0);
+  }, [backendId, windowHours, payload?.calibration_events?.length]);
 
   useEffect(() => {
     setActions(<RefreshButton onClick={loadTimeline} lastRefreshAt={lastRefresh} label="Refresh cal timeline" />);
@@ -152,18 +158,23 @@ export const CalibrationTimeline = () => {
       )}
 
       {backendId && (
-        <div className="page-hint" style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate(buildBackendDetailsPath(backendId, 'calibration'))}>Calibration workspace</button>
-        </div>
+        <p className="link-row" style={{ margin: 0 }}>
+          <button type="button" className="fs-link" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }} onClick={() => navigate(buildBackendDetailsPath(backendId, 'calibration'))}>Calibration workspace</button>
+        </p>
       )}
 
-      {(payload?.calibration_events || []).length > 0 && (
+      {(payload?.calibration_events || []).length > 0 && (() => {
+        const events = payload.calibration_events || [];
+        const totalPages = Math.max(1, Math.ceil(events.length / EVENT_PAGE_SIZE));
+        const page = Math.min(eventPage, totalPages - 1);
+        const slice = events.slice(page * EVENT_PAGE_SIZE, page * EVENT_PAGE_SIZE + EVENT_PAGE_SIZE);
+        return (
         <div className="card page-panel dvt-panel">
-          <h3 className="dvt-panel__title">Calibration events ({payload.calibration_events.length})</h3>
-          <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${payload.calibration_events.length} events`} />
+          <h3 className="dvt-panel__title">Calibration events ({events.length})</h3>
+          <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${events.length} events · page ${page + 1}/${totalPages}`} />
           {layout === 'grid' ? (
             <div className="dvt-grid">
-              {payload.calibration_events.map((e, i) => (
+              {slice.map((e, i) => (
                 <article key={`${e.calibration_timestamp}-${i}`} className="dvt-card">
                   <h4 className="dvt-card__title">{e.calibration_timestamp ? formatISTTime(e.calibration_timestamp) : '—'}</h4>
                   <p className="dvt-card__meta">{e.calibration_identifier || '—'}</p>
@@ -182,7 +193,7 @@ export const CalibrationTimeline = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {payload.calibration_events.map((e, i) => (
+                  {slice.map((e, i) => (
                     <tr key={`${e.calibration_timestamp}-${i}`}>
                       <td>{e.calibration_timestamp ? formatISTTime(e.calibration_timestamp) : '—'}</td>
                       <td>{e.calibration_identifier || '—'}</td>
@@ -193,8 +204,14 @@ export const CalibrationTimeline = () => {
               </table>
             </div>
           )}
+          <div className="link-row" style={{ padding: '12px 16px', justifyContent: 'flex-end' }}>
+            <button type="button" className="btn btn-secondary btn--xs" disabled={page <= 0} onClick={() => setEventPage((p) => Math.max(0, p - 1))}>Previous</button>
+            <span className="page-hint" style={{ margin: 0 }}>{page + 1} / {totalPages}</span>
+            <button type="button" className="btn btn-secondary btn--xs" disabled={page >= totalPages - 1} onClick={() => setEventPage((p) => Math.min(totalPages - 1, p + 1))}>Next</button>
+          </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 };

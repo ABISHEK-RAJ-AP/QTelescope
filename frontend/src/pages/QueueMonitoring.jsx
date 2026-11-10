@@ -16,6 +16,7 @@ import {
   DetailModalRelated,
   DetailModalProvenance,
 } from '../components/observability/DetailModalLayout.jsx';
+import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
 import { TableEmpty } from '../components/observability/EmptyState.jsx';
 import { getChartTheme, baseTooltip, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { buildBackendDetailsPath, buildTimelineInvestigationLocation } from '../lib/investigationLinks.js';
@@ -23,9 +24,11 @@ import { usePageActions } from '../context/PageActionsContext.jsx';
 import { unableToLoad } from '../constants/messages.js';
 import { formatIST } from '../utils/time';
 import { DataPanelToolbar, SortableTh } from '../components/observability/DataViewToolbar.jsx';
+import { ListPager } from '../components/observability/ListPager.jsx';
 import './QueueMonitoring.css';
 
 const POLL_MS = 15000;
+const HISTORY_PAGE_SIZE = 25;
 const COND_MARK = { OPTIMAL: '●', MODERATE: '▲', HEAVY: '■', CONGESTED: '■' };
 
 const toDate = (v) => new Date(v.endsWith('Z') ? v : `${v}Z`);
@@ -94,10 +97,12 @@ function QueueDrawerBody({ q, an, hist, jobs, nav }) {
           </DetailModalProvenance>
         )}
       </DetailModalSection>
-      <DetailModalRelated>
+      <DetailModalSection title="Workspace">
         <button type="button" className="btn btn-primary" onClick={() => nav(`/app/execution/jobs?backend=${encodeURIComponent(q.backend_id)}`)}>Jobs on this backend</button>
-        <button type="button" className="btn btn-secondary" onClick={() => nav(buildBackendDetailsPath(q.backend_id, 'execution'))}>Backend execution</button>
-        <button type="button" className="btn btn-secondary" onClick={() => nav(buildTimelineInvestigationLocation({ backendId: q.backend_id }))}>Timeline</button>
+      </DetailModalSection>
+      <DetailModalRelated>
+        <PageRelatedLink onClick={() => nav(buildBackendDetailsPath(q.backend_id, 'execution'))}>Backend execution</PageRelatedLink>
+        <PageRelatedLink onClick={() => nav(buildTimelineInvestigationLocation({ backendId: q.backend_id }))}>Timeline</PageRelatedLink>
       </DetailModalRelated>
     </DetailModalBody>
   );
@@ -121,6 +126,7 @@ export const QueueMonitoring = () => {
   const [drawerJobs, setDrawerJobs] = useState(null);
   const [layout, setLayout] = useState('table');
   const [sort, setSort] = useState({ key: 'pending', dir: 'desc' });
+  const [historyPage, setHistoryPage] = useState(0);
   const selectedId = params.get('queue');
   const backendFilter = params.get('backend') || 'ALL';
 
@@ -208,6 +214,27 @@ export const QueueMonitoring = () => {
   }, [ranked, dark, t]);
 
   const withHist = (queues || []).filter((q) => (history[q.backend_id] || []).length > 0);
+
+  const historyRows = useMemo(
+    () => withHist.flatMap((q) => (history[q.backend_id] || []).map((h) => ({
+      backend_id: q.backend_id,
+      backend_name: q.backend_name,
+      ...h,
+    }))),
+    [withHist, history],
+  );
+
+  const historyPageCount = Math.max(1, Math.ceil(historyRows.length / HISTORY_PAGE_SIZE));
+  const historyPageSafe = Math.min(historyPage, historyPageCount - 1);
+  const historySlice = historyRows.slice(
+    historyPageSafe * HISTORY_PAGE_SIZE,
+    historyPageSafe * HISTORY_PAGE_SIZE + HISTORY_PAGE_SIZE,
+  );
+
+  useEffect(() => {
+    setHistoryPage(0);
+  }, [historyRows.length, metric]);
+
   const lineOption = useMemo(() => ({
     grid: { left: 8, right: 16, top: 32, bottom: 8, containLabel: true },
     tooltip: baseTooltip(dark),
@@ -250,6 +277,7 @@ export const QueueMonitoring = () => {
       <section className="qm-charts">
         <ChartPanel
           title="Queue depth and wait by backend"
+          titleTo="/app/execution/jobs"
           question="Current snapshot — longest wait and depth first."
           sourceKind="cached" asOf={asOf}
           provenanceDetail="Latest collected backend telemetry; may differ from vendor portal."
@@ -266,6 +294,7 @@ export const QueueMonitoring = () => {
 
         <ChartPanel
           title="Queue history"
+          titleTo="/app/telemetry/trends"
           question="Trend over the selected time window."
           sourceKind="derived" asOf={asOf}
           provenanceDetail="Stored telemetry samples; irregular spacing. Lines connect samples, not continuous measurement."
@@ -277,12 +306,29 @@ export const QueueMonitoring = () => {
             </span>
           )}
           tableAlternative={(
-            <table className="qm-alt">
-              <thead><tr><th scope="col">Backend</th><th scope="col">Time</th><th scope="col">Pending</th><th scope="col">Est. wait</th></tr></thead>
-              <tbody>{withHist.flatMap((q) => history[q.backend_id].map((h) => (
-                <tr key={`${q.backend_id}${h.timestamp}`}><th scope="row">{q.backend_name}</th><td>{formatIST(toDate(h.timestamp))}</td><td>{h.pending_jobs}</td><td>{fmtWait(h.estimated_wait_time)}</td></tr>
-              )))}</tbody>
-            </table>
+            <div>
+              <table className="qm-alt custom-table custom-table--dense">
+                <thead><tr><th scope="col">Backend</th><th scope="col">Time</th><th scope="col">Pending</th><th scope="col">Est. wait</th></tr></thead>
+                <tbody>
+                  {historySlice.map((h) => (
+                    <tr key={`${h.backend_id}${h.timestamp}`}>
+                      <th scope="row">{h.backend_name}</th>
+                      <td>{formatIST(toDate(h.timestamp))}</td>
+                      <td>{h.pending_jobs}</td>
+                      <td>{fmtWait(h.estimated_wait_time)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {historyRows.length > HISTORY_PAGE_SIZE && (
+                <ListPager
+                  page={historyPageSafe + 1}
+                  pages={historyPageCount}
+                  label="History"
+                  onPage={(p) => setHistoryPage(p - 1)}
+                />
+              )}
+            </div>
           )}
         >
           <QtECharts option={lineOption} style={{ height: 260 }} />

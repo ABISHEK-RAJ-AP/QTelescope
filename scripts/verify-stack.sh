@@ -26,7 +26,7 @@ else
   if command -v pg_isready >/dev/null 2>&1; then
     pg_isready -h localhost -p 5432 -U postgres >/dev/null || fail "PostgreSQL not ready (run scripts/start-local-infra.sh)"
   else
-  fail "pg_isready not found — install Postgres client or set DATABASE_URL=sqlite:///./data/qtelescope.db"
+    fail "pg_isready not found — install Postgres client or set DATABASE_URL=sqlite:///./data/qtelescope.db"
   fi
   redis-cli ping 2>/dev/null | grep -q PONG || fail "Redis not responding"
 fi

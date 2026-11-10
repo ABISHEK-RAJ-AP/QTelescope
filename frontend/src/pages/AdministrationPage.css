@@ -15,6 +15,33 @@
   margin-bottom: 8px;
 }
 
+.admin-rbac-matrix__tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.admin-rbac-matrix__pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px dashed var(--border-color);
+  font-size: 0.8125rem;
+}
+
+.admin-rbac-matrix__pick-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
 .admin-rbac-matrix__scroll {
   overflow-x: auto;
 }

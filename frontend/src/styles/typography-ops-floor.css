@@ -1,0 +1,93 @@
+/**
+ * /app readability floor — wins over legacy 10–12px page CSS inside main shell.
+ * Pair with design-tokens.css; do not use !important.
+ */
+
+.main-content {
+  font-size: var(--font-size-body);
+}
+
+.main-content :is(
+  .page-hint,
+  .page-status-msg,
+  .fo-panel__sub,
+  .fo-prov,
+  .card-subtitle,
+  .chart-panel__table-alt,
+  .dm-detail__provenance,
+  .dm-detail__callout,
+  .obs-empty__message,
+  .obs-error__message
+) {
+  font-size: var(--font-size-helper);
+  line-height: var(--line-height-body);
+}
+
+.main-content :is(
+  .page-section-title,
+  .fo-panel__title,
+  .dvt-panel__title
+) {
+  font-size: var(--font-size-section-title);
+  line-height: var(--line-height-heading);
+}
+
+.main-content .page-title {
+  font-size: var(--font-size-page-title);
+}
+
+.main-content :is(
+  .custom-table th,
+  .custom-table td,
+  .fo-row,
+  .fo-list li,
+  .fo-events li,
+  .fo-sev__item,
+  .dm-detail__dl,
+  .dm-detail__note,
+  .dm-detail__timeline li
+) {
+  font-size: var(--font-size-table);
+}
+
+.main-content .custom-table th {
+  font-size: var(--font-size-table-header);
+}
+
+.main-content :is(
+  .fo-meta,
+  .fo-table--compact .fo-meta,
+  .fo-row--head,
+  .card-title,
+  .tm-kpi__label,
+  .qm-kpi__label,
+  .jm-kpi__label,
+  .fo-platform-kpi__lbl,
+  .dm-detail__section-title,
+  .page-header__crumb-list,
+  .page-header__kicker
+) {
+  font-size: var(--font-size-micro-label);
+}
+
+.main-content :is(.tm-kpi__sub, .qm-kpi__sub, .jm-kpi__sub) {
+  font-size: var(--font-size-helper);
+}
+
+.main-content .badge {
+  font-size: var(--font-size-badge);
+}
+
+.main-content :is(.btn, .tab-btn, .input-control, select.input-control) {
+  font-size: var(--font-size-control);
+}
+
+.main-content .btn-sm,
+.main-content .btn--xs {
+  font-size: var(--font-size-helper);
+}
+
+.main-content .fs-link,
+.main-content .link-row {
+  font-size: var(--font-size-label);
+}

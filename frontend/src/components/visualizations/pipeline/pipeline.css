@@ -1,0 +1,74 @@
+/* Pipeline layout tweaks — tokens live in visualizations.css */
+
+.viz-pipeline-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.viz-pipeline--interactive {
+  overflow-x: auto;
+  padding-bottom: 4px;
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+.viz-pipeline__stage-btn {
+  text-align: left;
+  cursor: pointer;
+  min-width: 140px;
+  max-width: 180px;
+  flex: 0 0 auto;
+}
+
+.viz-pipeline__stage-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.viz-pipeline__stage-num {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+.viz-pipeline__stage-icon {
+  color: var(--text-secondary);
+}
+
+.viz-pipeline__stage-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.viz-pipeline__stage-status {
+  font-size: 11px;
+}
+
+.viz-pipeline__stage-metric {
+  margin-top: 4px;
+}
+
+.viz-pipeline__disclaimer {
+  margin: 0;
+  font-size: 12px;
+}
+
+.viz-pipeline__table-wrapper {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .viz-pipeline--interactive {
+    display: none;
+  }
+
+  .viz-pipeline__table-wrapper {
+    display: block;
+  }
+}

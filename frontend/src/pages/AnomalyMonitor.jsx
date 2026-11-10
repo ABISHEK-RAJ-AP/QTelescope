@@ -15,6 +15,7 @@ import {
   DetailModalRelated,
   DetailModalCallout,
 } from '../components/observability/DetailModalLayout.jsx';
+import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
 import { ContextBar } from '../components/observability/ContextBar.jsx';
 import { getChartTheme, baseTooltip, getChartSemanticColors, getAnomalySeverityChartColors, getChartInkColor } from '../components/observability/chartTheme.js';
 import { useAppScope } from '../hooks/useAppScope.js';
@@ -105,10 +106,10 @@ function QubitDrawerBody({ hit, metric, modality, nav }) {
         </p>
       </DetailModalSection>
       <DetailModalRelated>
-        <button type="button" className="btn btn-secondary" onClick={() => nav(healthLink(hit.backend_id, hit.qubit_index))}>Resource health</button>
-        <button type="button" className="btn btn-secondary" onClick={() => nav(buildBackendDetailsPath(hit.backend_id, 'qubits'))}>Backend qubits</button>
-        <button type="button" className="btn btn-secondary" onClick={() => nav(buildDriftInvestigationLocation({ backendId: hit.backend_id }))}>Drift</button>
-        <button type="button" className="btn btn-secondary" onClick={() => nav(timelineLink(hit.backend_id))}>Timeline</button>
+        <PageRelatedLink onClick={() => nav(healthLink(hit.backend_id, hit.qubit_index))}>Resource health</PageRelatedLink>
+        <PageRelatedLink onClick={() => nav(buildBackendDetailsPath(hit.backend_id, 'qubits'))}>Backend qubits</PageRelatedLink>
+        <PageRelatedLink onClick={() => nav(buildDriftInvestigationLocation({ backendId: hit.backend_id }))}>Drift</PageRelatedLink>
+        <PageRelatedLink onClick={() => nav(timelineLink(hit.backend_id))}>Timeline</PageRelatedLink>
       </DetailModalRelated>
     </DetailModalBody>
   );
@@ -253,6 +254,7 @@ export const AnomalyMonitor = () => {
 
           <ChartPanel
             title="Backend × qubit anomaly map"
+            titleTo={scopeBackend ? `/app/telemetry/drift?backend=${encodeURIComponent(scopeBackend)}` : '/app/telemetry/drift'}
             question="Flagged qubits from the latest scan — select a cell for the series."
             sourceKind="cached"
             asOf={lastRefresh ? lastRefresh.toLocaleTimeString() : undefined}

@@ -80,7 +80,12 @@
   justify-content: space-between;
   gap: 8px;
   margin-top: 10px;
-  font-size: 12px;
+  font-size: var(--font-size-helper);
+}
+
+.edt-pager__size select {
+  min-height: 2rem;
+  font-size: var(--font-size-control);
 }
 
 .edt-pager__btns {

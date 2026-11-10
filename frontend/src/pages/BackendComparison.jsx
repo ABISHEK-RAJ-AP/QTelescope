@@ -301,7 +301,7 @@ export const BackendComparison = () => {
               </ChartPanel>
             ))}
 
-            <ChartPanel title="Qubits by health state" question="Count per router state (advisory)." sourceKind="derived" minHeight={320}
+            <ChartPanel title="Qubits by health state" titleTo="/app/resources/health" question="Count per router state (advisory)." sourceKind="derived" minHeight={320}
               state={rows.some((r) => r.counts) ? 'ready' : 'empty'}
               tableAlternative={(
                 <table className="custom-table custom-table--dense"><thead><tr><th>Backend</th><th>Green</th><th>Yellow</th><th>Red</th><th>Unknown</th></tr></thead>
@@ -311,7 +311,7 @@ export const BackendComparison = () => {
               <p className="page-hint bc-note">Counts use modality-specific rules; compare within one modality only.</p>
             </ChartPanel>
 
-            <ChartPanel title="Queue depth" question="Pending jobs now." sourceKind="cached" minHeight={320}
+            <ChartPanel title="Queue depth" titleTo="/app/execution/queues" question="Pending jobs now." sourceKind="cached" minHeight={320}
               state={queueData.length ? 'ready' : 'empty'} emptyTitle="No measurements" emptyMessage="No queue snapshot for selected backends."
               tableAlternative={(
                 <table className="custom-table custom-table--dense"><thead><tr><th>Backend</th><th>Pending jobs</th></tr></thead>

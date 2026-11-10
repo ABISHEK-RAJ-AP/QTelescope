@@ -434,13 +434,12 @@ function DashboardHomeInner() {
             <div className="fo-shift__charts fo-shift__charts--single" data-tour="page-charts">
               <ChartPanel
                 title="Queue depth"
+                titleTo="/app/execution/queues"
                 question="Pending jobs per backend — click a bar to open that machine."
                 help="Fleet G/Y/R breakdown is in the backends table below; qubit rows live on Health vector."
-                sourceKind="stored"
                 state={queueRows.length ? 'ready' : 'empty'}
                 emptyMessage="No queue samples."
                 minHeight={240}
-                actions={<Link className="fs-link" to="/app/execution/queues">Queues</Link>}
               >
                 <QtECharts
                   option={queueOption}
@@ -539,12 +538,11 @@ function DashboardHomeInner() {
         return (
           <ChartPanel
             title="Queue depth by backend"
+            titleTo="/app/execution/queues"
             question="Pending jobs from the latest queue snapshot."
-            sourceKind="cached"
             state={queueRows.length ? 'ready' : 'empty'}
             emptyMessage="No queue snapshots in storage."
             minHeight={300}
-            actions={<Link className="fs-link" to="/app/execution/queues">Queues</Link>}
           >
             <QtECharts
               option={queueOption}
@@ -557,12 +555,11 @@ function DashboardHomeInner() {
         return (
           <ChartPanel
             title="Calibration age by backend"
+            titleTo="/app/telemetry/calibration"
             question="Hours since last calibration snapshot (oldest first)."
-            sourceKind="cached"
             state={calRows.length ? 'ready' : 'empty'}
             emptyMessage="No calibration records on file."
             minHeight={300}
-            actions={<Link className="fs-link" to="/app/telemetry/calibration">Calibration status</Link>}
           >
             <QtECharts
               option={calOption}
@@ -575,12 +572,11 @@ function DashboardHomeInner() {
         return (
           <ChartPanel
             title="Alert pressure by backend"
+            titleTo="/app/alerts"
             question="Where active critical/warning load concentrates — click a bar to open that backend."
-            sourceKind="derived"
             state={alertPressureRows.length ? 'ready' : 'empty'}
             emptyMessage="No backends currently carrying active alerts."
             minHeight={300}
-            actions={<Link className="fs-link" to="/app/alerts">All alerts</Link>}
           >
             <QtECharts
               option={alertPressureOption}
@@ -598,12 +594,11 @@ function DashboardHomeInner() {
         return (
           <ChartPanel
             title="Workload vs coherence"
+            titleTo="/app/telemetry/compare"
             question="Pending jobs vs mean T1 per backend (same modality only)."
-            sourceKind="derived"
             state={workloadScatter.length ? 'ready' : 'empty'}
             emptyMessage="Requires queue depth and T1 on overlapping backends."
             minHeight={300}
-            actions={<Link className="fs-link" to="/app/telemetry/compare">Compare backends</Link>}
           >
             <QtECharts
               option={workloadOption}
@@ -642,11 +637,10 @@ function DashboardHomeInner() {
             </div>
             <ChartPanel
               title="Router state on lowest-ranked backends"
+              titleTo={HEALTH_PATH}
               question="Advisory router state counts on lowest-ranked backends."
-              sourceKind="derived"
               state={rows.length ? 'ready' : 'empty'}
               minHeight={260}
-              actions={<Link className="fs-link" to={HEALTH_PATH}>Open health vector</Link>}
             >
               <QtECharts
                 option={routerStackOption}
@@ -660,16 +654,15 @@ function DashboardHomeInner() {
         return (
           <ChartPanel
             title="T1 relaxation vs threshold"
+            titleTo="/app/telemetry/drift"
             question="Mean and minimum T1 per backend (log scale). Compare within the same modality."
             help="Latest stored qubit telemetry. Red dashed line: health-model T1 floor for superconducting backends."
-            sourceKind="stored"
             asOf={latestTelemetry ? formatISTTime(latestTelemetry) : undefined}
             state={d.coherence == null && failed.includes('coherence') ? 'error' : cohRows.length === 0 ? 'empty' : 'ready'}
             errorMessage={unableToLoad('coherence aggregates')}
             onRetry={loadData}
             emptyMessage="No stored T1 samples for any backend."
             minHeight={320}
-            actions={<Link className="fs-link" to="/app/telemetry/drift">Drift analysis</Link>}
           >
             <QtECharts
               option={cohOption}

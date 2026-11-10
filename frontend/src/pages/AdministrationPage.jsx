@@ -17,6 +17,7 @@ import { Toggle } from '../components/ui/Toggle.jsx';
 import { RoleMatrix } from '../components/admin/RoleMatrix.jsx';
 import { roleLabel } from '../lib/permissions.js';
 import { ListPager } from '../components/observability/ListPager.jsx';
+import { CollapsibleSection } from '../components/observability/CollapsibleSection.jsx';
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
 import './AdministrationPage.css';
 
@@ -925,19 +926,21 @@ function AdminClientVitals() {
   const vitals = useMemo(() => readClientVitals(), []);
   if (!vitals) return null;
   return (
-    <div className="card admin-kv-card" data-tour="page-admin-client-vitals">
-      <h3 className="admin-card-title">Client performance (this browser)</h3>
-      <p className="page-hint" style={{ marginBottom: 8 }}>
-        Navigation timing from the loaded SPA — complement API <code>Server-Timing</code> headers in app logs.
-      </p>
-      <dl className="admin-kv-dl">
+    <CollapsibleSection
+      id="admin-client-vitals"
+      title="Client performance (this browser)"
+      help="SPA navigation timings for this session. For API latency, use audit logs Server-Timing."
+      defaultOpen
+      className="card admin-kv-card"
+    >
+      <dl className="admin-kv-dl" data-tour="page-admin-client-vitals">
         <div><dt>TTFB</dt><dd>{vitals.ttfbMs} ms</dd></div>
         <div><dt>DOM ready</dt><dd>{vitals.domContentLoadedMs} ms</dd></div>
         <div><dt>Load</dt><dd>{vitals.loadMs} ms</dd></div>
         <div><dt>FCP</dt><dd>{vitals.fcpMs != null ? `${vitals.fcpMs} ms` : '—'}</dd></div>
         <div><dt>Transfer</dt><dd>{vitals.transferKb != null ? `${vitals.transferKb} KB` : '—'}</dd></div>
       </dl>
-    </div>
+    </CollapsibleSection>
   );
 }
 

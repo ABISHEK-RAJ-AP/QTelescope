@@ -23,6 +23,7 @@ Maps the operator “harden everything” list to **status**, **owner**, and **n
 | Optimistic UI before server | **P1→DONE (slice)** | Alert ack/resolve + admin role assign |
 | Lazy-load below-fold images | **DONE** | `LazyImage` component (`loading=lazy`) |
 | Split JS by route | **DONE** | React lazy routes in `App.jsx` |
+| Lazy-load ECharts runtime | **P0→DONE** | `QtECharts` Suspense + dynamic `echarts-for-react` (~1.1MB async chunk) |
 | Virtualize long lists | **P1→DONE (EDT)** | Client paginate via `EnterpriseDataTable`; alerts server load-more |
 | Prevent unnecessary re-renders | **OPEN** | Profile hot paths after OTel; OperationsCentre hooks + staged load fixed 2026-11-09 |
 | Self-host fonts / limit weights | **P1→DONE (weights)** | Trimmed Google Fonts weights in `index.css`; full self-host = INFRA |

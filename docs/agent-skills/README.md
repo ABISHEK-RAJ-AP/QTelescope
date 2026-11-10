@@ -13,6 +13,9 @@ Curated skills/rules for Cursor on this repo. Upstream clones live under `.vendo
 | [Cloudflare security-audit](https://github.com/cloudflare/security-audit-skill) | `.cursor/skills/security-audit/` | Full security audit / pen-test |
 | [obra/superpowers](https://github.com/obra/superpowers) (subset) | `.cursor/skills/using-superpowers`, `test-driven-development`, `systematic-debugging`, `writing-plans`, `verification-before-completion` | Non-trivial features / debug |
 | [UI UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | `.cursor/skills/ui-ux-pro-max/` | UI polish, design system, density |
+| [antislop](https://github.com/miqdadbadjuber/anti-slop) | `.cursor/skills/antislop/`, `antislop-ui/` | Anti-slop filter + UI rules; pair with `docs/product/DESIGN.md` |
+| [code-humanizer](https://github.com/LeonardNJU/code-humanizer) | `.cursor/skills/code-humanizer/` | Structural code-slop scan (duplication, try-import, narrating comments) |
+| [code-slop](https://github.com/benjaming/ai-skills) | `.cursor/skills/code-slop/` | Branch diff slop suggestions (comments, `any`, defensive noise) |
 | [brag](https://github.com/latent-spaces/brag) | `.cursor/skills/brag/` | Optional launch / promo video from repo |
 
 Full categorization (install vs defer: Lenis, whiteboard, taste-skill, EUI, …): [`SKILL_CATALOG.md`](./SKILL_CATALOG.md).

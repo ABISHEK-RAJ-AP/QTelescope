@@ -28,9 +28,16 @@
 .al-inc-card__head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
 .al-inc-card__title { border: 0; background: transparent; padding: 0; font: inherit; font-size: 16px; font-weight: 700; color: var(--accent-cyan); text-align: left; cursor: pointer; text-decoration: underline; overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }
 .al-inc-card__badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
-.al-inc-card__stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin: 0; font-size: 12px; }
-.al-inc-card__stats dt { color: var(--text-muted); margin: 0; }
-.al-inc-card__stats dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; word-break: break-word; min-width: 0; }
+.al-inc-card__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 16px;
+  margin: 0;
+  font-size: 0.8125rem;
+}
+.al-inc-card__stats > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.al-inc-card__stats dt { color: var(--text-muted); margin: 0; font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.al-inc-card__stats dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; word-break: break-word; min-width: 0; font-variant-numeric: tabular-nums; }
 .al-inc-card__head > div:first-child { min-width: 0; flex: 1; }
 .al-inc-card__foot { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; border-top: 1px solid var(--border-color); padding-top: 10px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

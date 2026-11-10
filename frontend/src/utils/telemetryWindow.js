@@ -11,7 +11,7 @@ export const TELEMETRY_WINDOW_OPTIONS = [
   { hours: 168, label: '7 days' },
   { hours: 336, label: '14 days' },
   { hours: 720, label: '30 days' },
-  { hours: TELEMETRY_CUSTOM_SENTINEL, label: 'Custom range…' },
+  { hours: TELEMETRY_CUSTOM_SENTINEL, label: 'Custom hours…' },
 ];
 
 export function clampTelemetryHours(n) {

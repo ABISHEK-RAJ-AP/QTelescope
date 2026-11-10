@@ -177,10 +177,16 @@ export const CalibrationStatus = () => {
         ))}
       </section>
 
-      <ChartPanel title="Calibration age, oldest first" question="Backends with the oldest snapshots listed first." sourceKind="cached"
-        minHeight={Math.max(320, plotted.length * 34 + 60)} state={plotted.length ? 'ready' : 'empty'}
-        emptyTitle="No snapshots" emptyMessage="No calibration snapshots on file; age cannot be computed."
-        tableAlternative={null}>
+      <ChartPanel
+        title="Calibration age, oldest first"
+        titleTo="/app/telemetry/cal-timeline"
+        question="Backends with the oldest snapshots listed first."
+        minHeight={Math.max(320, plotted.length * 34 + 60)}
+        state={plotted.length ? 'ready' : 'empty'}
+        emptyTitle="No snapshots"
+        emptyMessage="No calibration snapshots on file; age cannot be computed."
+        tableAlternative={null}
+      >
         <QtECharts option={option} style={{ height: Math.max(180, plotted.length * 34 + 60) }} notMerge />
         {plotted.length < rows.length && <p className="page-hint cs-note">No snapshot age (omitted, not plotted as zero): {ranked.filter((r) => r.age == null).map((r) => r.b.backend_name || r.b.backend_id).join(', ')}</p>}
       </ChartPanel>
@@ -191,10 +197,22 @@ export const CalibrationStatus = () => {
         {layout === 'grid' ? (
           <div className="dvt-grid" aria-label="Calibration by backend">
             {ranked.map(({ b, c, age, status }) => (
-              <article key={b.backend_id} className="dvt-card">
+              <article
+                key={b.backend_id}
+                className="dvt-card dvt-card--action"
+                role="button"
+                tabIndex={0}
+                onClick={() => nav(buildBackendDetailsPath(b.backend_id, 'calibration'))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    nav(buildBackendDetailsPath(b.backend_id, 'calibration'));
+                  }
+                }}
+              >
                 <header className="dvt-card__head">
                   <div>
-                    <h4 className="dvt-card__title">{b.backend_name || b.backend_id}</h4>
+                    <h4 className="dvt-card__title dvt-card__title--link">{b.backend_name || b.backend_id}</h4>
                     <p className="dvt-card__meta">{(b.qpu_modality || 'unknown').replace('_', ' ')} · <LineageBadge lineage={lineage?.[b.provider_id]} /></p>
                   </div>
                   <Badge status={status} />
@@ -204,10 +222,16 @@ export const CalibrationStatus = () => {
                   <div><dt>Calibrated</dt><dd>{c?.calibration_timestamp ? formatIST(c.calibration_timestamp) : 'missing'}</dd></div>
                 </dl>
                 <p className="dvt-card__body">{(STATUS[status] || STATUS.None).action}</p>
-                <footer className="dvt-card__foot">
-                  <button type="button" className="btn btn-secondary btn--xs" onClick={() => nav(buildBackendDetailsPath(b.backend_id, 'calibration'))}>Calibration</button>
-                  <button type="button" className="btn btn-secondary btn--xs" onClick={() => nav(buildDriftInvestigationLocation({ backendId: b.backend_id }))}>Drift</button>
-                </footer>
+                <p className="dvt-card__hint">
+                  <button
+                    type="button"
+                    className="fs-link"
+                    style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }}
+                    onClick={(e) => { e.stopPropagation(); nav(buildDriftInvestigationLocation({ backendId: b.backend_id })); }}
+                  >
+                    Drift analysis
+                  </button>
+                </p>
               </article>
             ))}
           </div>

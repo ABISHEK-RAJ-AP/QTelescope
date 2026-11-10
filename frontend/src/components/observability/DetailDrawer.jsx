@@ -49,7 +49,7 @@ export function DetailDrawer({
 
   if (!open) return null;
 
-  const panelClass = ['detail-drawer', size === 'lg' ? 'detail-drawer--lg' : ''].filter(Boolean).join(' ');
+  const panelClass = ['detail-drawer', size === 'lg' ? 'detail-drawer--lg' : '', size === 'xl' ? 'detail-drawer--xl' : ''].filter(Boolean).join(' ');
 
   return createPortal(
     <div className="detail-drawer-backdrop" role="presentation" onClick={onClose}>

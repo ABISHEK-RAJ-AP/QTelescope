@@ -376,6 +376,7 @@ export const LiveTelemetry = () => {
 
         <ChartPanel
           title="Alerts & queue depth"
+          titleTo="/app/alerts"
           question="How are active alerts and pending/running jobs moving across platform refresh ticks?"
           sourceKind="cached"
           state={chrono.length > 0 ? 'ready' : 'empty'}
@@ -390,6 +391,7 @@ export const LiveTelemetry = () => {
       <div className="live-charts-row" data-tour="page-live-chart">
         <ChartPanel
           title="T1 by modality"
+          titleTo="/app/backends/qubits"
           question="Mean T1 over time per modality (log scale — ion vs superconducting differ by orders of magnitude)."
           sourceKind="cached"
           state={modalityKeys.length && chrono.length ? 'ready' : 'empty'}
@@ -402,6 +404,7 @@ export const LiveTelemetry = () => {
 
         <ChartPanel
           title="Refresh cadence & measurement age"
+          titleTo="/app/platform/health"
           question="SSE tick gap (should ~5s) vs age of latest stored qubit/backend telemetry."
           sourceKind="cached"
           state={chrono.length > 1 ? 'ready' : 'empty'}

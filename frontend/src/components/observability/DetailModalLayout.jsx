@@ -53,7 +53,9 @@ export function DetailModalTimeline({ items }) {
 export function DetailModalRelated({ children }) {
   return (
     <DetailModalSection title="Related">
-      <div className="dm-detail__related">{children}</div>
+      <nav className="link-row page-related-nav dm-detail__related" aria-label="Related">
+        {children}
+      </nav>
     </DetailModalSection>
   );
 }

@@ -221,6 +221,7 @@ export const QubitMonitoring = () => {
 
         <ChartPanel
           title={selRow ? `Q${selRow.qubit_index} coherence & readout` : 'Qubit history'}
+          titleTo={backend ? `/app/resources/health?backend=${encodeURIComponent(backend)}` : '/app/resources/health'}
           question={selRow ? `${STATE_GLYPH[selRow.state]} ${STATE_LABEL[selRow.state]} health · stored samples` : 'Select a qubit row'}
           sourceKind="cached"
           asOf={histAsOf}

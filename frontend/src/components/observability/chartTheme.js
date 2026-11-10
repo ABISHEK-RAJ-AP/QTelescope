@@ -170,9 +170,9 @@ export function polishChartOption(option, isDark, { legendPosition } = {}) {
       itemGap: scaledFont(12),
       itemWidth: scaledFont(12),
       itemHeight: scaledFont(8),
-      textStyle: chartLabelStyle(isDark, 10),
-      pageTextStyle: chartLabelStyle(isDark, 9),
-      pageIconSize: scaledFont(10),
+      textStyle: chartLabelStyle(isDark, 11),
+      pageTextStyle: chartLabelStyle(isDark, 11),
+      pageIconSize: scaledFont(11),
       ...(typeof out.legend === 'object' ? out.legend : {}),
     };
     if (legPos === 'bottom') {

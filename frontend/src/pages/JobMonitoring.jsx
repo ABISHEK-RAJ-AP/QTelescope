@@ -19,6 +19,7 @@ import {
   DetailModalProvenance,
   DetailModalCallout,
 } from '../components/observability/DetailModalLayout.jsx';
+import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
 import { TableEmpty } from '../components/observability/EmptyState.jsx';
 import { getChartTheme, baseTooltip, getChartSemanticColors, getJobStatusChartColors } from '../components/observability/chartTheme.js';
 import { buildBackendDetailsPath, buildTimelineInvestigationLocation, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
@@ -95,10 +96,10 @@ function JobDrawerBody({ job, nav }) {
         <DetailModalProvenance>Source: stored job records in platform DB (not a live vendor query).</DetailModalProvenance>
       </DetailModalSection>
       <DetailModalRelated>
-        <button type="button" className="btn btn-secondary" onClick={() => nav(buildBackendDetailsPath(job.backend_id, 'execution'))}>Backend execution</button>
-        <button type="button" className="btn btn-secondary" onClick={() => nav(`/app/execution/queues?backend=${encodeURIComponent(job.backend_id)}`)}>Backend queue</button>
-        <button type="button" className="btn btn-secondary" onClick={() => nav(buildTimelineInvestigationLocation({ backendId: job.backend_id }))}>Timeline</button>
-        <button type="button" className="btn btn-secondary" onClick={() => nav(buildDriftInvestigationLocation({ backendId: job.backend_id }))}>Drift</button>
+        <PageRelatedLink onClick={() => nav(buildBackendDetailsPath(job.backend_id, 'execution'))}>Backend execution</PageRelatedLink>
+        <PageRelatedLink onClick={() => nav(`/app/execution/queues?backend=${encodeURIComponent(job.backend_id)}`)}>Backend queue</PageRelatedLink>
+        <PageRelatedLink onClick={() => nav(buildTimelineInvestigationLocation({ backendId: job.backend_id }))}>Timeline</PageRelatedLink>
+        <PageRelatedLink onClick={() => nav(buildDriftInvestigationLocation({ backendId: job.backend_id }))}>Drift</PageRelatedLink>
       </DetailModalRelated>
     </DetailModalBody>
   );
@@ -327,6 +328,7 @@ export const JobMonitoring = () => {
       <section className="jm-charts">
         <ChartPanel
           title="Jobs by backend and status"
+          titleTo="/app/execution/jobs"
           question="Job volume and failure rate by backend."
           sourceKind="cached" asOf={lastRefresh ? formatIST(lastRefresh) : undefined}
           state={stats.per.length ? 'ready' : 'empty'} emptyTitle="No jobs" minHeight={Math.max(200, stats.per.length * 44 + 60)}
@@ -344,6 +346,7 @@ export const JobMonitoring = () => {
 
         <ChartPanel
           title="Runtime distribution"
+          titleTo="/app/execution/queues"
           question="Runtime distribution for completed jobs."
           sourceKind="derived" detail="Completed jobs with a recorded runtime only."
           state={histogram.length ? 'ready' : 'empty'} emptyTitle="No completed runtimes" minHeight={240}
@@ -359,6 +362,7 @@ export const JobMonitoring = () => {
 
         <ChartPanel
           title="Failure categories"
+          titleTo="/app/investigate/timeline"
           question="Failure categories in the selected window."
           sourceKind="derived" asOf={undefined}
           provenanceDetail={failures ? `Classified over latest 500 jobs (${failures.total_failed} failed/cancelled).` : undefined}

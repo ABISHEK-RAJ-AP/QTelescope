@@ -6,7 +6,6 @@ import { parseDate } from '../utils/time';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
-import { ContextBar } from '../components/observability/ContextBar.jsx';
 import { useAppScope } from '../hooks/useAppScope.js';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
@@ -196,18 +195,24 @@ export const MetricsExplorer = () => {
 
   return (
     <div className="page-stack" data-tour="page-metrics-explorer">
-      <ContextBar
-        backend={selectedBackend}
-        backends={backends}
-        onBackendChange={setBackend}
-        hours={windowHours}
-        onHoursChange={setWindowHours}
-        showTimeRange
-        timeRangeAffectsQuery
-      />
-
       <section className="card page-panel" aria-label="Metrics explorer controls">
-        <div className="admin-actions" style={{ flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
+        <div className="page-toolbar-unified" aria-label="Scope and metrics">
+          <label className="context-bar__field">
+            <span className="admin-form-label">Backend</span>
+            <select className="input-control" value={selectedBackend || ''} onChange={(e) => setBackend(e.target.value)} aria-label="Backend scope">
+              {backends.map((b) => (
+                <option key={b.backend_id} value={b.backend_id}>{b.backend_name || b.backend_id}</option>
+              ))}
+            </select>
+          </label>
+          <div className="context-bar__field context-bar__field--range">
+            <span className="admin-form-label">Lookback</span>
+            <select className="input-control" value={windowHours} onChange={(e) => setWindowHours(Number(e.target.value))} aria-label="Lookback hours">
+              {[6, 12, 24, 48, 168].map((h) => (
+                <option key={h} value={h}>{h} hours</option>
+              ))}
+            </select>
+          </div>
           <label className="admin-form-field">
             <span className="admin-form-label">Metric</span>
             <select className="input-control" value={metricId} onChange={(e) => setMetricId(e.target.value)}>
@@ -269,6 +274,7 @@ export const MetricsExplorer = () => {
 
       <ChartPanel
         title={`${metricDef.label}${compareBackend ? ' · compare' : ''}`}
+        titleTo={selectedBackend ? `/app/resources/health?backend=${encodeURIComponent(selectedBackend)}` : '/app/resources/health'}
         sourceKind="cached"
         asOf={asOf}
         state={hasPoints ? 'ready' : 'empty'}

@@ -22,4 +22,26 @@
   --ds-shadow-card: 0 8px 24px -12px rgba(15, 23, 42, 0.18);
   --ds-motion-fast: 150ms;
   --ds-motion-modal: 200ms;
+
+  /* Typography — canonical app scale (ops density, Cert-readable; no sub-12px body) */
+  --font-size-body: 1rem;
+  --font-size-page-title: 1.375rem;
+  --font-size-section-title: 1.125rem;
+  --font-size-card-title: 1.0625rem;
+  --font-size-table: 1rem;
+  --font-size-table-header: 0.9375rem;
+  --font-size-label: 0.9375rem;
+  --font-size-control: 1rem;
+  --font-size-helper: 0.875rem;
+  --font-size-metadata: 0.8125rem;
+  --font-size-micro-label: 0.75rem;
+  --font-size-badge: 0.75rem;
+  --font-size-chart: 0.8125rem;
+  --line-height-body: 1.5;
+  --line-height-heading: 1.28;
+  --line-height-table: 1.45;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
 }

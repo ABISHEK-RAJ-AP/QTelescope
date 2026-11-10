@@ -19,6 +19,7 @@ import { baseTooltip, getChartTheme, getChartSemanticColors } from '../component
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
 import { fmtMetric, healthLink, timelineLink, modalityOf } from './telemetryPageUtils.js';
 import { DataPanelToolbar, SortableTh } from '../components/observability/DataViewToolbar.jsx';
+import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
 import './DriftAnalysis.css';
 import './TelemetryPages.css';
 
@@ -341,6 +342,7 @@ export const DriftAnalysis = () => {
 
       <ChartPanel
         title={`${metric} drift · Q${qubitIndex}${mod ? ` · ${mod}` : ''}`}
+        titleTo={selectedBackend ? healthLink(selectedBackend, qubitIndex) : undefined}
         question="Rolling statistics from stored qubit telemetry."
         sourceKind="cached"
         state={hasSeries ? 'ready' : 'empty'}
@@ -354,11 +356,10 @@ export const DriftAnalysis = () => {
         <QtECharts option={chartOption} style={{ height: 'min(420px, 50vh)', minHeight: 320, width: '100%' }} />
       </ChartPanel>
       {selectedBackend && (
-        <div className="tm-actions" style={{ marginTop: 4 }}>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate(healthLink(selectedBackend, qubitIndex))}>Qubit health</button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate(`/app/telemetry/anomalies?backend=${encodeURIComponent(selectedBackend)}&metric=${metricApi}`)}>Anomalies</button>
-          <button type="button" className="btn btn-secondary" onClick={() => navigate(`/app/telemetry/compare?backends=${encodeURIComponent(selectedBackend)}`)}>Compare</button>
-        </div>
+        <nav className="link-row page-related-nav tm-actions" style={{ marginTop: 4 }} aria-label="Related">
+          <PageRelatedLink onClick={() => navigate(`/app/telemetry/anomalies?backend=${encodeURIComponent(selectedBackend)}&metric=${metricApi}`)}>Anomalies</PageRelatedLink>
+          <PageRelatedLink onClick={() => navigate(`/app/telemetry/compare?backends=${encodeURIComponent(selectedBackend)}`)}>Compare</PageRelatedLink>
+        </nav>
       )}
     </div>
   );
