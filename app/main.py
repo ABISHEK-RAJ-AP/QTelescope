@@ -25,7 +25,7 @@ import app.models.development  # noqa: F401 — Build workspace tables
 from app.discovery.hardware_discovery import HardwareDiscoveryEngine
 from app.workers.collection_scheduler import collection_scheduler_loop, scheduler_enabled
 from app.api import (
-    backends, qubits, calibration, drift, queues, jobs, health, alerts, admin,
+    backends, qubits, calibration, drift, queues, jobs, health, alerts, fleet, admin,
     reports, events, auth, environment, incidents, operations, topology, evidence, metrics, infra,
     federated,
     anomalies,
@@ -236,6 +236,7 @@ app.include_router(queues.router, prefix=settings.API_V1_STR)
 app.include_router(jobs.router, prefix=settings.API_V1_STR)
 app.include_router(health.router, prefix=settings.API_V1_STR)
 app.include_router(alerts.router, prefix=settings.API_V1_STR)
+app.include_router(fleet.router, prefix=settings.API_V1_STR)
 app.include_router(incidents.router, prefix=settings.API_V1_STR)
 app.include_router(operations.router, prefix=settings.API_V1_STR)
 app.include_router(admin.router, prefix=settings.API_V1_STR)

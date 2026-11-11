@@ -29,10 +29,10 @@ export function DetailModalDl({ children, className = '' }) {
 
 export function DetailModalRow({ label, children }) {
   return (
-    <>
+    <div className="dm-detail__field">
       <dt>{label}</dt>
       <dd>{children}</dd>
-    </>
+    </div>
   );
 }
 

@@ -306,7 +306,7 @@ export const JobMonitoring = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cats, dark]);
 
-  if (!jobs && !error) return <BoneyardSkeleton layout="table" />;
+  if (!jobs && !error) return <BoneyardSkeleton layout="table-plain" />;
   if (!jobs) return <div className="page-stack"><ErrorState variant="panel" message={error} onRetry={load} /></div>;
 
   const stale = lastRefresh && now - lastRefresh.getTime() > POLL_MS * 2.5;

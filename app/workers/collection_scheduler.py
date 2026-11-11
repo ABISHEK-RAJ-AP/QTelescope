@@ -61,9 +61,11 @@ def run_due_collections() -> Optional[dict]:
 
 
 async def collection_scheduler_loop(stop: asyncio.Event) -> None:
+    from app.scheduling.neutral_driver import run_driver_tick
+
     while not stop.is_set():
         try:
-            await asyncio.to_thread(run_due_collections)
+            await asyncio.to_thread(run_driver_tick)
         except Exception:
             logger.exception("Collection scheduler tick failed")
         try:

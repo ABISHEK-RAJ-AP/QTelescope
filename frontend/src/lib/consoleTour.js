@@ -26,7 +26,7 @@ export const CONSOLE_TOUR_STEPS = [
     path: '/app/overview',
     nav: 'home',
     title: 'Fleet overview',
-    body: 'Charts first: where alerts sit, queue depth, calibration age. The backend table is under them.',
+    body: 'KPIs and charts show fleet health, queue depth, and calibration age. Open a backend from the table below.',
   },
   {
     target: 'page-charts',
@@ -40,7 +40,7 @@ export const CONSOLE_TOUR_STEPS = [
     path: '/app/operate',
     nav: 'operations',
     title: 'Operator console',
-    body: 'Work queue: acknowledge, investigate, then remediate. Not a second fleet dashboard.',
+    body: 'Work queue: acknowledge, investigate, then remediate — prioritized by lane.',
   },
   {
     target: 'page-ops-kpis',
@@ -124,8 +124,8 @@ export const CONSOLE_TOUR_STEPS = [
     nav: 'alerts',
     branch: 'alerts',
     title: 'Triage list',
-    body: 'Group by backend + rule. Expand a group to ack or resolve members. Calendar is another layout of the same set.',
-    lesson: 'Grouped view is the default because one rule can fire on many qubits.',
+    body: 'Filter the list, then open a card for the alert. Calendar is another layout of the same set.',
+    lesson: 'Each card is one alert. Ack or resolve from the card or the detail view.',
   },
   {
     target: 'nav-platform',

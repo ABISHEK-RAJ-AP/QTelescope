@@ -3,16 +3,20 @@ import { Link } from 'react-router-dom';
 import { notifyError, notifyWarn } from '../lib/toast.js';
 import { api } from '../services/api';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
-import { RefreshButton } from '../components/ui/RefreshButton.jsx';
+import { PageRefreshCluster } from '../components/ui/PageRefreshCluster.jsx';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
+import { CollapsibleSection } from '../components/observability/CollapsibleSection.jsx';
 import { ExceptionStrip } from '../components/observability/ExceptionStrip.jsx';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { formatISTTime } from '../utils/time';
 import { buildBackendDetailsPath, buildTimelineInvestigationLocation } from '../lib/investigationLinks.js';
 import { STALE_MIN, ageMinutes, fetchActiveAlerts, groupAlerts, lineageByProvider, sevBadge } from './fleetData.js';
 import { LayoutGrid, List } from 'lucide-react';
+import { OpsMonthCalendar } from '../components/observability/OpsMonthCalendar.jsx';
+import { toMs } from './opsHelpers.js';
 import { LineageChip } from './fleetShared.jsx';
 import { collectorQueueTitle } from '../utils/operatorFault.js';
+import { parseIncidentTitle } from '../lib/incidentUi.js';
 import './OperationsCentre.css';
 
 const HEALTH_PATH = '/app/resources/health';
@@ -62,23 +66,16 @@ function QubitBeans({ counts }) {
   );
 }
 
-function FactRow({ facts }) {
+function factLine(facts) {
   if (!facts?.length) return null;
-  return (
-    <dl className="oc-facts">
-      {facts.map((f) => (
-        <div key={f.label} className="oc-fact">
-          <dt>{f.label}</dt>
-          <dd>{f.value}</dd>
-        </div>
-      ))}
-    </dl>
-  );
+  return facts.map((f) => `${f.label} ${f.value}`).join(' · ');
 }
 
 function QueueRow({ item, laneLabel, layout, showLane }) {
   const sev = item.severity || 'INFO';
   const primary = pickPrimaryLink(item.links);
+  const facts = factLine(item.facts);
+  const titleHasBackend = item.backend && item.title?.includes(item.backend);
 
   return (
     <li className={`oc-item${layout === 'grid' ? ' oc-item--grid' : ''}`}>
@@ -86,33 +83,22 @@ function QueueRow({ item, laneLabel, layout, showLane }) {
         <span className={`badge ${sevBadge(sev)} oc-item__badge`}>{sev}</span>
         <div className="oc-item__body">
           <div className="oc-item__title">{item.title}</div>
+          {item.detail ? <p className="oc-item__detail">{item.detail}</p> : null}
           {item.counts && <QubitBeans counts={item.counts} />}
-          <FactRow facts={item.facts} />
           <div className="oc-item__meta">
             {showLane && <span className="oc-item__lane">{laneLabel}</span>}
-            {item.backend && <code className="oc-item__backend">{item.backend}</code>}
+            {item.backend && !titleHasBackend ? <code className="oc-item__backend">{item.backend}</code> : null}
+            {facts && <span className="oc-item__facts">{facts}</span>}
             {item.lineage && <LineageChip lineage={item.lineage} />}
             {item.meta && <span className="oc-item__time">{item.meta}</span>}
           </div>
         </div>
       </div>
       {primary && (
-        <Link className="btn btn-primary oc-item__cta" to={primary.to}>{primary.label}</Link>
+        <Link className="btn btn-secondary oc-item__cta" to={primary.to}>{primary.label}</Link>
       )}
     </li>
   );
-}
-
-function pickTopItem(lanes) {
-  const order = ['ack', 'inv', 'fix', 'info'];
-  for (const id of order) {
-    const crit = lanes[id].find((i) => i.severity === 'CRITICAL');
-    if (crit) return { lane: id, item: crit };
-  }
-  for (const id of order) {
-    if (lanes[id][0]) return { lane: id, item: lanes[id][0] };
-  }
-  return null;
 }
 
 export const OperationsCentre = () => {
@@ -159,7 +145,7 @@ export const OperationsCentre = () => {
   }, [load]);
 
   useEffect(() => {
-    setActions(<RefreshButton onClick={load} lastRefreshAt={lastRefresh} label="Refresh operator console" />);
+    setActions(<PageRefreshCluster onClick={load} lastRefreshAt={lastRefresh} label="Refresh operator console" />);
     return () => clearActions();
   }, [load, lastRefresh, setActions, clearActions]);
 
@@ -176,12 +162,14 @@ export const OperationsCentre = () => {
     incidents.filter((i) => !['RESOLVED', 'CLOSED'].includes(i.status)).forEach((i) => {
       incBackends.add(i.backend_id);
       const unowned = i.status === 'OPEN' && !i.acknowledged_by;
+      const { backendLabel, rule } = parseIncidentTitle(i.title);
+      const incTitle = rule ? `${backendLabel || i.backend_id} · ${rule}` : i.title;
       (unowned ? out.ack : out.inv).push({
-        key: i.incident_id, severity: i.severity, title: i.title, backend: i.backend_id, lineage: lin(i.backend_id),
+        key: i.incident_id, severity: i.severity, title: incTitle, backend: i.backend_id, lineage: lin(i.backend_id),
         facts: [
           { label: 'Status', value: i.status || '—' },
           { label: 'Alerts', value: i.alert_count ?? '—' },
-          { label: 'Last', value: formatISTTime(i.last_detected_at) },
+          { label: 'Updated', value: formatISTTime(i.last_detected_at) },
         ],
         links: [
           { label: 'Incident', to: '/app/alerts/incidents' },
@@ -197,8 +185,9 @@ export const OperationsCentre = () => {
       if (!lane) return;
       out[lane].push({
         key: g.key, severity: g.severity, backend: g.backend_id, lineage: lin(g.backend_id),
-        title: `${g.count} × ${g.alert_type}${g.count > 1 ? ' alerts' : ' alert'} — ${g.sample}`,
-        meta: `latest ${formatISTTime(g.latest)} · ${g.unacked} unacknowledged`,
+        title: g.count > 1 ? `${g.alert_type} · ${g.count} alerts` : g.alert_type,
+        detail: g.sample,
+        meta: `${g.backend_id} · ${formatISTTime(g.latest)} · ${g.unacked} unacked`,
         links: [
           { label: 'Alerts', to: '/app/alerts' },
           { label: 'Backend', to: buildBackendDetailsPath(g.backend_id) },
@@ -250,7 +239,6 @@ export const OperationsCentre = () => {
     return out;
   }, [d, providers]);
 
-  const top = useMemo(() => pickTopItem(lanes), [lanes]);
   const critCount = useMemo(
     () => Object.values(lanes).flat().filter((i) => i.severity === 'CRITICAL').length,
     [lanes],
@@ -278,6 +266,35 @@ export const OperationsCentre = () => {
     [lanes],
   );
 
+  const calEvents = useMemo(() => {
+    const alerts = Array.isArray(d.alerts) ? d.alerts : [];
+    const incidents = Array.isArray(d.incidents) ? d.incidents : (d.centre?.incidents || []);
+  const alertEv = alerts.map((a) => ({
+      id: a.alert_id,
+      at: a.detected_at,
+      title: `${a.backend_id} ${a.alert_type}`,
+      subtitle: a.alert_id,
+      groupKey: `alert|${a.backend_id}|${a.alert_type}`,
+      kind: 'Alert',
+      severity: a.severity,
+      status: a.status,
+      open: () => window.location.assign(`/app/alerts?alert=${encodeURIComponent(a.alert_id)}`),
+      // URL ?alert= opens list drawer (AlertsEvents + useAppScope), not /alerts/detail/*
+    }));
+    const incEv = incidents.map((inc) => ({
+      id: inc.incident_id,
+      at: inc.first_detected_at || inc.created_at,
+      title: inc.title || inc.incident_id,
+      subtitle: inc.incident_id,
+      groupKey: `incident|${inc.incident_id}`,
+      kind: 'Incident',
+      severity: inc.severity,
+      status: inc.status,
+      open: () => window.location.assign(`/app/alerts/incidents/${encodeURIComponent(inc.incident_id)}`),
+    }));
+    return [...alertEv, ...incEv].filter((e) => toMs(e.at));
+  }, [d]);
+
   const staleCollectors = useMemo(() => (providers || []).filter((p) => {
     const age = ageMinutes(p.last_success_at);
     return p.status !== 'OK' || (age != null && age > STALE_MIN);
@@ -302,9 +319,7 @@ export const OperationsCentre = () => {
     else notifyWarn(msg, { toastId: 'ops-load' });
   }, [loading, failed, noData, lastRefresh]);
 
-  if (loading) return <div className="page-stack"><BoneyardSkeleton layout="dashboard" /></div>;
-
-  const topPrimary = top ? pickPrimaryLink(top.item.links) : null;
+  if (loading) return <BoneyardSkeleton layout="ops" />;
 
   return (
     <div className="ops-page page-stack" data-tour="page-operations-centre">
@@ -343,27 +358,24 @@ export const OperationsCentre = () => {
         ]}
       />
 
-      {top && (
-        <section data-tour="page-ops-focus" className={`card oc-next${top.item.severity === 'CRITICAL' ? ' oc-next--critical' : ''}`}>
-          <p className="oc-next__eyebrow">Next up</p>
-          <h2 className="oc-next__title">{top.item.title}</h2>
-          {top.item.counts && <QubitBeans counts={top.item.counts} />}
-          <FactRow facts={top.item.facts} />
-          <div className="oc-next__meta">
-            <span className={`badge ${sevBadge(top.item.severity)}`}>{top.item.severity}</span>
-            <span className="oc-next__lane">{laneMeta[top.lane]?.title}</span>
-            {top.item.backend && <code>{top.item.backend}</code>}
-            {top.item.meta && <span>{top.item.meta}</span>}
-          </div>
-          <div className="oc-next__actions">
-            {topPrimary && (
-              <Link className="btn btn-primary" to={topPrimary.to}>{topPrimary.label}</Link>
-            )}
-          </div>
-        </section>
-      )}
+      <CollapsibleSection
+        id="oc-cal-section"
+        title="Activity calendar"
+        help="Day-level alerts and incidents. Primary triage stays in the action queue below."
+        className="card oc-cal-embed oc-cal-panel"
+        defaultOpen={false}
+      >
+        <OpsMonthCalendar
+          layout="stacked"
+          variant="default"
+          dayDetailMode="modal"
+          title="Alerts and incidents"
+          events={calEvents}
+          onOpenEvent={(ev) => ev.open?.()}
+        />
+      </CollapsibleSection>
 
-      {!top && !noData && actionable === 0 && (
+      {!noData && actionable === 0 && (
         <EmptyState compact variant="panel" title="Action queue empty" message="No items pending acknowledgement, investigation, or remediation." />
       )}
 
@@ -437,6 +449,7 @@ export const OperationsCentre = () => {
           )}
         </div>
       </section>
+
     </div>
   );
 };

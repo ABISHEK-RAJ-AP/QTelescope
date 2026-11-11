@@ -18,25 +18,35 @@
 
   --ds-radius-card: 12px;
   --ds-radius-control: 10px;
+  --ds-space-2xs: 4px;
+  --ds-space-xs: 8px;
+  --ds-space-sm: 12px;
+  --ds-space-md: 16px;
+  --ds-space-lg: 24px;
+  --ds-space-xl: 32px;
+  --ds-space-2xl: 40px;
+  --ds-space-3xl: 48px;
   --ds-space-page: 16px;
   --ds-shadow-card: 0 8px 24px -12px rgba(15, 23, 42, 0.18);
+  --ds-glass-bg: color-mix(in srgb, var(--bg-card) 88%, transparent);
+  --ds-glass-border: color-mix(in srgb, var(--border-color) 72%, transparent);
   --ds-motion-fast: 150ms;
   --ds-motion-modal: 200ms;
 
-  /* Typography — canonical app scale (ops density, Cert-readable; no sub-12px body) */
-  --font-size-body: 1rem;
-  --font-size-page-title: 1.375rem;
-  --font-size-section-title: 1.125rem;
-  --font-size-card-title: 1.0625rem;
-  --font-size-table: 1rem;
-  --font-size-table-header: 0.9375rem;
-  --font-size-label: 0.9375rem;
-  --font-size-control: 1rem;
-  --font-size-helper: 0.875rem;
-  --font-size-metadata: 0.8125rem;
-  --font-size-micro-label: 0.75rem;
-  --font-size-badge: 0.75rem;
-  --font-size-chart: 0.8125rem;
+  /* Typography — canonical app scale (+1 step for ops readability) */
+  --font-size-body: 1.0625rem;
+  --font-size-page-title: 1.625rem;
+  --font-size-section-title: 1.1875rem;
+  --font-size-card-title: 1.125rem;
+  --font-size-table: 1.0625rem;
+  --font-size-table-header: 1rem;
+  --font-size-label: 1rem;
+  --font-size-control: 1.0625rem;
+  --font-size-helper: 0.9375rem;
+  --font-size-metadata: 0.875rem;
+  --font-size-micro-label: 0.8125rem;
+  --font-size-badge: 0.8125rem;
+  --font-size-chart: 0.875rem;
   --line-height-body: 1.5;
   --line-height-heading: 1.28;
   --line-height-table: 1.45;

@@ -27,7 +27,15 @@ KNOWN_PROVIDER_IDS = frozenset(
 def _fleet_query(db: Session):
     q = db.query(BackendModel).filter(BackendModel.provider_id.in_(KNOWN_PROVIDER_IDS))
     if settings.ENABLE_MOCK_DATA:
-        q = q.filter(BackendModel.backend_id.in_(MOCK_BACKEND_IDS))
+        hardware_ids = {
+            row[0]
+            for row in db.query(BackendModel.backend_id).filter(
+                BackendModel.provider_id.in_(KNOWN_PROVIDER_IDS),
+                BackendModel.backend_type != "simulator",
+            ).all()
+        }
+        allowed = set(MOCK_BACKEND_IDS) | hardware_ids
+        q = q.filter(BackendModel.backend_id.in_(allowed))
     return q
 
 

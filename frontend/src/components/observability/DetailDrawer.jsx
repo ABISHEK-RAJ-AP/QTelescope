@@ -68,6 +68,7 @@ export function DetailDrawer({
               <h2 id="detail-drawer-title" className="detail-drawer__title">{title}</h2>
               {subtitle ? <p className="detail-drawer__subtitle">{subtitle}</p> : null}
             </div>
+            {headerAside ? <div className="detail-drawer__aside">{headerAside}</div> : null}
             <button
               type="button"
               ref={closeRef}
@@ -78,7 +79,6 @@ export function DetailDrawer({
               <X size={16} />
             </button>
           </div>
-          {headerAside ? <div className="detail-drawer__aside">{headerAside}</div> : null}
         </header>
         <div className="detail-drawer__body">{children}</div>
         {footer ? <footer className="detail-drawer__foot">{footer}</footer> : null}

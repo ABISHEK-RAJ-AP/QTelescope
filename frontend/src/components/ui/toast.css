@@ -1,33 +1,205 @@
-.qts-toast-root {
-  z-index: 11000 !important;
-  padding: max(12px, env(safe-area-inset-top)) 12px 12px !important;
+/* Toast stack — above quick dock, clear of header / bell chrome */
+
+.qts-toast-root.Toastify__toast-container {
+  z-index: 10900 !important;
+  width: min(400px, calc(100vw - 28px)) !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
 
-.qts-toast {
+.qts-toast-root.Toastify__toast-container--bottom-right {
+  top: auto !important;
+  left: auto !important;
+  right: max(16px, env(safe-area-inset-right)) !important;
+  bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+@media (max-width: 720px) {
+  .qts-toast-root.Toastify__toast-container--bottom-right {
+    left: max(12px, env(safe-area-inset-left)) !important;
+    right: max(12px, env(safe-area-inset-right)) !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}
+
+.qts-toast-root .Toastify__toast {
   font-family: inherit;
-  font-size: 0.875rem;
-  border-radius: 12px !important;
-  border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  -webkit-backdrop-filter: blur(20px) saturate(1.5);
-  backdrop-filter: blur(20px) saturate(1.5);
-  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.35) !important;
+  font-size: var(--font-size-helper, 0.875rem);
+  border-radius: 14px !important;
+  border: 1px solid color-mix(in srgb, var(--border-color) 90%, transparent) !important;
+  background: color-mix(in srgb, var(--bg-card) 98%, transparent) !important;
+  color: var(--text-primary) !important;
+  box-shadow:
+    0 16px 40px -14px rgba(15, 23, 42, 0.28),
+    0 0 0 1px color-mix(in srgb, var(--text-primary) 4%, transparent) !important;
+  backdrop-filter: blur(14px);
   min-height: unset !important;
-  padding: 12px 14px !important;
+  margin-bottom: 10px !important;
+  padding: 0 !important;
+  overflow: hidden;
+  max-width: 100%;
 }
 
-.qts-toast .Toastify__toast-body {
+.qts-toast-root .Toastify__toast:last-child {
+  margin-bottom: 0 !important;
+}
+
+.qts-toast-root .Toastify__toast-theme--light,
+.qts-toast-root .Toastify__toast-theme--colored {
+  background: color-mix(in srgb, var(--bg-card) 98%, transparent) !important;
+  color: var(--text-primary) !important;
+}
+
+.qts-toast-root .qts-toast__body--rich {
   padding: 0;
-  margin: 0;
-  line-height: 1.45;
 }
 
-.qts-toast .Toastify__close-button {
-  opacity: 0.65;
-  align-self: center;
+.qts-toast-root .qts-toast__body,
+.qts-toast-root .Toastify__toast-body {
+  padding: 14px 40px 14px 16px;
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: var(--font-size-helper, 0.875rem);
+  line-height: 1.45;
+  align-items: flex-start;
+}
+
+.qts-toast-root .Toastify__toast-icon {
+  display: none;
+}
+
+.qts-toast-root .Toastify__close-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  align-self: auto;
+  margin: 0;
+  opacity: 0.5;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.qts-toast-root .Toastify__close-button:hover {
+  opacity: 1;
 }
 
 .qts-toast__progress {
-  height: 3px;
+  height: 3px !important;
+  opacity: 0.85;
+}
+
+.qts-toast--simple.qts-toast--success .qts-toast__progress {
+  background: var(--accent-emerald) !important;
+}
+
+.qts-toast--simple.qts-toast--error .qts-toast__progress {
+  background: var(--accent-rose) !important;
+}
+
+.qts-toast--simple.qts-toast--warn .qts-toast__progress {
+  background: var(--accent-amber) !important;
+}
+
+.qts-toast--simple.qts-toast--info .qts-toast__progress {
+  background: var(--accent-cyan) !important;
+}
+
+.qts-toast--simple {
+  border-left: 3px solid var(--border-color) !important;
+}
+
+.qts-toast--simple.qts-toast--success {
+  border-left-color: var(--accent-emerald) !important;
+}
+
+.qts-toast--simple.qts-toast--error {
+  border-left-color: var(--accent-rose) !important;
+}
+
+.qts-toast--simple.qts-toast--warn {
+  border-left-color: var(--accent-amber) !important;
+}
+
+.qts-toast--simple.qts-toast--info {
+  border-left-color: var(--accent-cyan) !important;
+}
+
+.qts-toast--operator {
+  border-left-width: 3px !important;
+}
+
+.qts-toast--operator-warn {
+  border-left-color: var(--accent-amber) !important;
+}
+
+.qts-toast--operator-crit {
+  border-left-color: var(--accent-rose) !important;
+}
+
+.qts-toast--operator-info {
+  border-left-color: var(--accent-cyan) !important;
+}
+
+.qts-toast-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 14px 12px 16px;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.qts-toast-root .qts-toast-notice {
+  padding-right: 28px;
+}
+
+.qts-toast-notice__title {
+  margin: 0;
+  font-size: var(--font-size-micro-label, 0.75rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.qts-toast-notice__body {
+  margin: 0;
+  font-size: var(--font-size-helper, 0.875rem);
+  line-height: 1.5;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.qts-toast-notice__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.qts-toast-notice__foot .btn {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: var(--font-size-helper, 0.875rem);
+}
+
+.qts-toast-notice__cta {
+  order: -1;
+}
+
+.qts-toast-notice__later {
+  margin-left: auto;
+  color: var(--text-muted);
+  border-color: transparent;
+  background: transparent;
+}
+
+.qts-toast-notice__later:hover {
+  color: var(--text-primary);
+  background: var(--bg-card-hover);
 }
 
 .qts-toast-undo {
@@ -35,23 +207,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 4px 0;
+  min-width: 0;
 }
 
 .qts-toast-undo__btn {
   flex-shrink: 0;
   border: 0;
-  border-radius: 6px;
-  padding: 4px 10px;
+  border-radius: 8px;
+  padding: 6px 10px;
   font: inherit;
   font-size: 0.8125rem;
   font-weight: 700;
   cursor: pointer;
-  background: color-mix(in srgb, var(--accent-cyan, #0891b2) 18%, transparent);
+  background: var(--bg-card-hover);
   color: var(--text-primary, inherit);
-}
-
-.dark .qts-toast.Toastify__toast--default,
-.dark .qts-toast.Toastify__toast--info {
-  background: rgba(15, 23, 42, 0.88) !important;
-  color: #f1f5f9 !important;
 }

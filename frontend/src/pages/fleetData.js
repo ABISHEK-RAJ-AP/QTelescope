@@ -9,6 +9,15 @@ export const fetchActiveAlerts = (limit = ALERT_LIST_LIMIT) =>
 
 export const STALE_MIN = 30;
 
+/** True for simulator / local test backends — exclude from hardware fleet health %. */
+export function isSimulatorBackend(b) {
+  if (!b) return false;
+  const bt = String(b.backend_type || '').toLowerCase();
+  const mod = String(b.qpu_modality || '').toLowerCase();
+  const id = String(b.backend_id || '').toLowerCase();
+  return bt === 'simulator' || mod === 'simulator' || id.includes('simulator');
+}
+
 export const ageMinutes = (iso) => {
   if (!iso) return null;
   const s = /[zZ]|[+-]\d\d:?\d\d$/.test(iso) ? iso : `${iso}Z`;

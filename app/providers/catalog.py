@@ -220,6 +220,12 @@ CATALOG: List[Dict[str, Any]] = [
 BY_ID = {p["id"]: p for p in CATALOG}
 
 
+def catalog_by_id(provider_id: str) -> Optional[Dict[str, Any]]:
+    if not provider_id:
+        return None
+    return BY_ID.get(provider_id) or BY_ID.get(str(provider_id).lower())
+
+
 def _ensure_data_dir() -> None:
     os.makedirs(DATA_DIR, exist_ok=True)
 

@@ -76,6 +76,8 @@ export const api = {
   confirmMfaEnroll: (code) => fetchApi('/users/me/mfa/enroll/confirm', { method: 'POST', body: JSON.stringify({ code }) }),
   disableMfa: (code) => fetchApi('/users/me/mfa/disable', { method: 'POST', body: JSON.stringify({ code }) }),
   getRolesCatalog: () => fetchApi('/users/roles/catalog'),
+  getRolePermissionCatalog: () => fetchApi('/users/roles/permissions'),
+  patchCustomRole: (roleId, body) => fetchApi(`/users/roles/${encodeURIComponent(roleId)}`, { method: 'PATCH', body: JSON.stringify(body) }),
   getMySessions: () => fetchApi('/users/me/sessions'),
   revokeOtherSessions: () => fetchApi('/users/me/sessions/revoke-others', { method: 'POST' }),
   revokeSession: (sessionId) => fetchApi(`/users/me/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' }),
@@ -309,6 +311,7 @@ export const api = {
     return fetchApi(`/alerts?${params.toString()}`);
   },
   getAlertsSummary: () => fetchApi('/alerts/summary'),
+  getFleetSummary: () => fetchApi('/fleet/summary'),
   getAlert: (id) => fetchApi(`/alerts/${encodeURIComponent(id)}`),
   addAlertComment: (id, text) =>
     fetchApi(`/alerts/${encodeURIComponent(id)}/comments`, { method: 'POST', body: JSON.stringify({ text }) }),

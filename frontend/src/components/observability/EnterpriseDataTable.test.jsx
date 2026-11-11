@@ -33,6 +33,17 @@ describe('EnterpriseDataTable', () => {
     expect(screen.getByLabelText('Rows per page')).toBeInTheDocument();
   });
 
+  it('shows Not available for null cells', () => {
+    render(
+      <EnterpriseDataTable
+        rows={[{ id: '1', name: 'Alpha', score: null }]}
+        columns={columns}
+        pageSize={10}
+      />,
+    );
+    expect(screen.getByText('Not available')).toBeInTheDocument();
+  });
+
   it('shows empty state when no matches', async () => {
     const user = userEvent.setup();
     render(

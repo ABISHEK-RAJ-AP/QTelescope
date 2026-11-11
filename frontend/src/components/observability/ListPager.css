@@ -1,9 +1,15 @@
 .list-pager {
   display: flex;
-  justify-content: center;
+  justify-content: flex-end;
   align-items: center;
-  gap: 12px;
-  padding: 10px 0 0;
-  font-size: 12px;
+  gap: 10px;
+  padding: 12px 0 0;
+  font-size: var(--font-size-helper, 0.9375rem);
   color: var(--text-muted);
+}
+
+.list-pager__meta {
+  font-variant-numeric: tabular-nums;
+  min-width: 3.5rem;
+  text-align: center;
 }

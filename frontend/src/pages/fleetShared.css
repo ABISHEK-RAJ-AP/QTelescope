@@ -1,9 +1,9 @@
-.fs-muted { color: var(--text-muted); font-size: 12px; }
+.fs-muted { color: var(--text-muted); font-size: var(--font-size-micro-label, 0.75rem); }
 
 .dark .fs-muted {
   color: var(--text-secondary);
 }
-.fs-lineage { display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+.fs-lineage { display: inline-block; font-size: var(--font-size-micro-label, 0.75rem); font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
   padding: 2px 7px; border-radius: 999px; border: 1px solid var(--border-color); color: var(--text-muted); white-space: nowrap; }
 .fs-lineage--live { color: var(--accent-emerald); border-color: var(--accent-emerald); }
 .fs-lineage--simulated { border-style: dashed; }
@@ -14,7 +14,7 @@
 .fs-seg--yellow { background: var(--accent-amber); }
 .fs-seg--red { background: var(--accent-rose); }
 .fs-seg--unknown { background: repeating-linear-gradient(45deg, var(--text-muted), var(--text-muted) 3px, transparent 3px, transparent 6px); }
-.fs-bar__nums { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 5px; font-size: 11px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.fs-bar__nums { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 5px; font-size: var(--font-size-micro-label, 0.75rem); color: var(--text-muted); font-variant-numeric: tabular-nums; }
 .fs-num { display: inline-flex; align-items: center; gap: 4px; }
 .fs-num i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
 .fs-num--green i { background: var(--accent-emerald); }
@@ -22,7 +22,7 @@
 .fs-num--red i { background: var(--accent-rose); transform: rotate(45deg); }
 .fs-num--unknown i { background: var(--text-muted); opacity: .6; }
 
-.fs-link { color: var(--accent-cyan); font-size: 12px; font-weight: 600; text-decoration: none; white-space: nowrap; }
+.fs-link { color: var(--accent-cyan); font-size: var(--font-size-helper, 0.875rem); font-weight: 600; text-decoration: none; white-space: nowrap; }
 .fs-link:hover { text-decoration: underline; }
 .fs-link:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; border-radius: 3px; }
 .fs-links { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; align-items: center; }
@@ -33,11 +33,12 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 5px 12px;
+  min-height: 44px;
+  padding: 0 14px;
   border-radius: 999px;
   border: 1px solid var(--border-color);
   background: var(--bg-card);
-  font-size: 11px;
+  font-size: var(--font-size-helper, 0.875rem);
   font-weight: 600;
   line-height: 1.2;
   color: var(--text-secondary);

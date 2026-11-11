@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { Radio } from 'lucide-react';
 import { formatISTTime } from '../utils/time';
@@ -13,12 +13,21 @@ import { baseTooltip, getChartTheme, getChartSemanticColors, getModalityChartPal
 import './LiveTelemetry.css';
 import './TelemetryPages.css';
 
+const ION_MODALITIES = new Set(['trapped_ion', 'trapped-ion', 'ion_trap']);
+const isIonModality = (mod) => ION_MODALITIES.has(String(mod || '').toLowerCase());
+
 const fmtT1 = (v) => {
   const n = Number(v);
   if (!Number.isFinite(n)) return '—';
   if (n >= 1e6) return `${(n / 1e6).toFixed(2)} s`;
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)} ms`;
   return `${n.toFixed(1)} µs`;
+};
+
+const fmtT1Seconds = (microUs) => {
+  const n = Number(microUs);
+  if (!Number.isFinite(n)) return '—';
+  return `${(n / 1e6).toFixed(3)} s`;
 };
 
 /** Parse ISO; tolerate naive UTC from API. */
@@ -175,11 +184,17 @@ export const LiveTelemetry = () => {
     [chrono, isDark, theme.axisLine, theme.splitColor, theme.textColor, xLabels],
   );
 
-  // T1 alone, log axis — superconducting (~1e2 µs) and trapped-ion (~1e7 µs) share log scale.
-  const t1ChartOption = useMemo(
-    () => {
-      const modalityColors = getModalityChartPalette();
-      return {
+  const { superModalityKeys, ionModalityKeys } = useMemo(() => {
+    const other = [];
+    const ion = [];
+    modalityKeys.forEach((m) => (isIonModality(m) ? ion : other).push(m));
+    return { superModalityKeys: other, ionModalityKeys: ion };
+  }, [modalityKeys]);
+
+  const buildT1ModalityChart = useCallback((mods, cfg) => {
+    if (!mods.length) return null;
+    const modalityColors = getModalityChartPalette();
+    return {
       backgroundColor: 'transparent',
       tooltip: {
         ...baseTooltip(isDark),
@@ -189,7 +204,7 @@ export const LiveTelemetry = () => {
           const head = rows[0].axisValueLabel || rows[0].name || '';
           const lines = rows
             .filter((p) => p.value != null && Number.isFinite(Number(p.value)))
-            .map((p) => `${p.marker}${p.seriesName}: <b>${fmtT1(p.value)}</b>`);
+            .map((p) => `${p.marker}${p.seriesName}: <b>${cfg.formatValue(p.value)}</b>`);
           return [`${head}`, ...lines].join('<br/>');
         },
       },
@@ -202,17 +217,17 @@ export const LiveTelemetry = () => {
         axisLabel: { color: theme.textColor, fontSize: 10 },
       },
       yAxis: {
-        type: 'log',
-        name: 'T1 (µs, log)',
-        min: 1,
+        type: cfg.yType,
+        name: cfg.yName,
+        min: cfg.yMin,
         axisLabel: {
           color: theme.textColor,
           fontSize: 10,
-          formatter: (v) => fmtT1(v),
+          formatter: cfg.axisFormatter,
         },
         splitLine: { lineStyle: { color: theme.splitColor } },
       },
-      series: modalityKeys.map((mod, idx) => ({
+      series: mods.map((mod, idx) => ({
         name: mod,
         type: 'line',
         smooth: true,
@@ -220,14 +235,35 @@ export const LiveTelemetry = () => {
         data: chrono.map((l) => {
           const row = (l.t1_by_modality || []).find((x) => x.qpu_modality === mod);
           const v = row?.t1_mean_us;
-          // log axis rejects ≤0
-          return v != null && Number(v) > 0 ? Number(v) : null;
+          return v != null && Number(v) > 0 ? cfg.seriesValue(v) : null;
         }),
         itemStyle: { color: modalityColors[idx % modalityColors.length] },
       })),
     };
-    },
-    [chrono, isDark, modalityKeys, theme.axisLine, theme.splitColor, theme.textColor, xLabels],
+  }, [chrono, isDark, theme.axisLine, theme.splitColor, theme.textColor, xLabels]);
+
+  const t1SuperChartOption = useMemo(
+    () => buildT1ModalityChart(superModalityKeys, {
+      yType: 'log',
+      yName: 'T1 (µs, log)',
+      yMin: 1,
+      seriesValue: (v) => Number(v),
+      formatValue: (v) => fmtT1(v),
+      axisFormatter: (v) => fmtT1(v),
+    }),
+    [buildT1ModalityChart, superModalityKeys],
+  );
+
+  const t1IonChartOption = useMemo(
+    () => buildT1ModalityChart(ionModalityKeys, {
+      yType: 'value',
+      yName: 'T1 (seconds)',
+      yMin: 0,
+      seriesValue: (v) => Number(v) / 1e6,
+      formatValue: (v) => `${Number(v).toFixed(3)} s`,
+      axisFormatter: (v) => `${Number(v).toFixed(2)} s`,
+    }),
+    [buildT1ModalityChart, ionModalityKeys],
   );
 
   const cadenceChartOption = useMemo(
@@ -320,8 +356,10 @@ export const LiveTelemetry = () => {
           <div className="card-title">
             <span>Pending jobs</span>
           </div>
-          <div className="card-value">{latest.pending_jobs ?? latest.queued_jobs ?? '—'}</div>
-          <div className="card-subtitle">queued · running {latest.running_jobs ?? '—'}</div>
+          <div className="card-value">{latest.pending_jobs ?? '—'}</div>
+          <div className="card-subtitle">
+            queue telemetry · job records queued {latest.queued_jobs_records ?? latest.queued_jobs ?? '—'} · running {latest.running_jobs ?? '—'}
+          </div>
         </div>
         <div className="card telemetry-modality-strip">
           <div className="card-title">
@@ -389,18 +427,34 @@ export const LiveTelemetry = () => {
       </div>
 
       <div className="live-charts-row" data-tour="page-live-chart">
-        <ChartPanel
-          title="T1 by modality"
-          titleTo="/app/backends/qubits"
-          question="Mean T1 over time per modality (log scale — ion vs superconducting differ by orders of magnitude)."
-          sourceKind="cached"
-          state={modalityKeys.length && chrono.length ? 'ready' : 'empty'}
-          emptyTitle="No coherence samples"
-          emptyMessage="No T1-by-modality rows in the stream yet."
-          minHeight={300}
-        >
-          <QtECharts option={t1ChartOption} style={{ height: 'min(320px, 42vh)', minHeight: 260 }} />
-        </ChartPanel>
+        {superModalityKeys.length > 0 ? (
+          <ChartPanel
+            title="T1 · superconducting & neutral atom"
+            titleTo="/app/backends/qubits"
+            question="Mean T1 (microseconds, log scale) for non–trapped-ion modalities."
+            sourceKind="cached"
+            state={chrono.length ? 'ready' : 'empty'}
+            emptyTitle="No coherence samples"
+            emptyMessage="No T1 rows for these modalities yet."
+            minHeight={300}
+          >
+            <QtECharts option={t1SuperChartOption} style={{ height: 'min(320px, 42vh)', minHeight: 260 }} />
+          </ChartPanel>
+        ) : null}
+        {ionModalityKeys.length > 0 ? (
+          <ChartPanel
+            title="T1 · trapped ion"
+            titleTo="/app/backends/qubits"
+            question="Mean T1 in seconds — do not compare directly to superconducting µs charts."
+            sourceKind="cached"
+            state={chrono.length ? 'ready' : 'empty'}
+            emptyTitle="No ion coherence samples"
+            emptyMessage="No trapped-ion T1 rows in the stream yet."
+            minHeight={300}
+          >
+            <QtECharts option={t1IonChartOption} style={{ height: 'min(320px, 42vh)', minHeight: 260 }} />
+          </ChartPanel>
+        ) : null}
 
         <ChartPanel
           title="Refresh cadence & measurement age"

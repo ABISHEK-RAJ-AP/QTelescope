@@ -3,6 +3,7 @@ import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { getChartTheme } from '../components/observability/chartTheme.js';
 import { STATES, STATE_GLYPH, STATE_LABEL } from './backendUtils.js';
+import { COPY } from '../copy/operator.js';
 import './BackendInventory.css';
 
 export function LineageTag({ lineage, compact = false }) {
@@ -16,9 +17,9 @@ export function LineageTag({ lineage, compact = false }) {
   );
 }
 
-export function StateBar({ counts, total, label }) {
+export function StateBar({ counts, total, label, emptyLabel = 'No qubit health' }) {
   const t = total ?? STATES.reduce((a, s) => a + (counts?.[s] || 0), 0);
-  if (!t) return <span className="bk-muted">No qubit health</span>;
+  if (!t) return <span className="bk-muted">{emptyLabel}</span>;
   const text = STATES.filter((s) => counts?.[s]).map((s) => `${counts[s]} ${STATE_LABEL[s].toLowerCase()}`).join(', ');
   return (
     <div className="bk-statebar" title={label || text}>
@@ -52,7 +53,7 @@ export function Sparkline({ values, label, height = 36 }) {
     yAxis: { type: 'value', show: false, scale: true },
     series: [{ type: 'line', data: values, showSymbol: false, lineStyle: { width: 1.5, color: t.textColor }, areaStyle: { opacity: 0.08, color: t.textColor } }],
   }), [values, t.textColor]);
-  if (values.length < 2) return <div className="bk-spark bk-muted" style={{ height }}>Not enough samples</div>;
+  if (values.length < 2) return <div className="bk-spark bk-muted" style={{ height }}>{COPY.telemetry.notEnoughSamples}</div>;
   return (
     <div role="img" aria-label={`${label} trend, ${values.length} samples, latest ${values[values.length - 1]}, min ${Math.min(...values)}, max ${Math.max(...values)}`}>
       <QtECharts option={option} style={{ height, width: '100%' }} opts={{ renderer: 'svg' }} />

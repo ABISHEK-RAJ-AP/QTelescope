@@ -1,14 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
-import { ChevronRight } from 'lucide-react';
-import { notifyError, notifyWarn } from '../lib/toast.js';
+import { notifyError, notifyOperatorNotice, notifyWarn } from '../lib/toast.js';
 import { api } from '../services/api';
 import { formatISTTime } from '../utils/time';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
-import { RefreshButton } from '../components/ui/RefreshButton.jsx';
+import { PageRefreshCluster } from '../components/ui/PageRefreshCluster.jsx';
+import { FleetKpiStrip } from '../components/dashboard/FleetKpiStrip.jsx';
+import { FleetBackendCards } from '../components/dashboard/FleetBackendCards.jsx';
+import { formatBackendTitle } from '../lib/displayLabels.js';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { AnimatedNumber } from '../components/ui/AnimatedNumber.jsx';
 import {
@@ -16,14 +19,15 @@ import {
 } from '../components/observability/chartTheme.js';
 import { buildBackendDetailsLocation } from '../lib/investigationLinks.js';
 import { WIDGET_IDS, readDashboardWidgets } from '../utils/dashboardPreferences.js';
+import { deckSlice } from '../utils/dashboardDeck.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { LayoutCustomizeToggle } from '../components/settings/LayoutCustomizeToggle.jsx';
 import { DashboardBentoGrid } from '../components/dashboard/DashboardBentoGrid.jsx';
 import { usePageLayout } from '../hooks/usePageLayout.js';
 import { buildBackendDetailsPath, buildTimelineInvestigationLocation } from '../lib/investigationLinks.js';
-import { STALE_MIN, ageMinutes, groupTimeline, lineageByProvider, sevBadge } from './fleetData.js';
+import { STALE_MIN, ageMinutes, fmtAge, groupTimeline, isSimulatorBackend, lineageByProvider, sevBadge } from './fleetData.js';
 import { StateBar } from './fleetShared.jsx';
-import { unableToLoad } from '../constants/messages.js';
+import { FLEET_TELEMETRY_EMPTY, unableToLoad } from '../constants/messages.js';
 import './DashboardHome.css';
 
 const HEALTH_PATH = '/app/resources/health';
@@ -43,18 +47,8 @@ const ACTIVE = [
   WIDGET_IDS.coherenceChart, WIDGET_IDS.modalityStrip,
   WIDGET_IDS.platformPanel, WIDGET_IDS.fleetSummary, WIDGET_IDS.opsTimeline,
 ];
-const PLACEMENT = {
-  [WIDGET_IDS.fleetTrend]: 'top',
-  [WIDGET_IDS.queueChart]: 'top',
-  [WIDGET_IDS.calChart]: 'top',
-  [WIDGET_IDS.coherenceChart]: 'top',
-  [WIDGET_IDS.modalityStrip]: 'top',
-  [WIDGET_IDS.platformPanel]: 'mid',
-  [WIDGET_IDS.fleetSummary]: 'bottom',
-  [WIDGET_IDS.opsTimeline]: 'bottom',
-};
-const SOURCES = ['backends', 'alertsSummary', 'queues', 'calibrations', 'coherence', 'platform', 'health', 'centre', 'timeline'];
-const PRIMARY_SOURCES = ['backends', 'alertsSummary', 'health', 'centre'];
+const SOURCES = ['backends', 'alertsSummary', 'fleetSummary', 'queues', 'calibrations', 'coherence', 'platform', 'health', 'centre', 'timeline'];
+const PRIMARY_SOURCES = ['backends', 'alertsSummary', 'fleetSummary', 'health', 'centre'];
 const SECONDARY_SOURCES = ['queues', 'calibrations', 'coherence', 'platform', 'timeline'];
 const CHART_WIDGETS = new Set([
   WIDGET_IDS.queueChart, WIDGET_IDS.calChart, WIDGET_IDS.coherenceChart,
@@ -76,10 +70,10 @@ function DashboardHomeInner() {
   const [loading, setLoading] = useState(true);
   const [chartsReady, setChartsReady] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
-
   const apiCalls = useCallback(() => ({
     backends: api.getBackends(),
     alertsSummary: api.getAlertsSummary(),
+    fleetSummary: api.getFleetSummary(),
     queues: api.getQueues(),
     calibrations: api.getCalibrations(),
     coherence: api.getCoherence(),
@@ -150,7 +144,7 @@ function DashboardHomeInner() {
 
   useEffect(() => {
     setActions(
-      <div className="dashboard-header__actions">
+      <div className="dashboard-header__actions page-header__toolbar">
         <LayoutCustomizeToggle
           customizing={customizing}
           onToggle={() => setCustomizing((v) => !v)}
@@ -159,7 +153,7 @@ function DashboardHomeInner() {
           smartLayoutHint={layoutSuggestions[0]?.reason ? `Suggested layout: ${layoutSuggestions[0].reason}` : undefined}
           label="Customize"
         />
-        <RefreshButton onClick={() => loadData({ silent: true })} lastRefreshAt={lastRefresh} label="Refresh dashboard" />
+        <PageRefreshCluster onClick={() => loadData({ silent: true })} lastRefreshAt={lastRefresh} label="Refresh dashboard" />
       </div>,
     );
     return () => clearActions();
@@ -274,16 +268,52 @@ function DashboardHomeInner() {
 
   const fleetStateTotals = useMemo(() => {
     const t = { GREEN: 0, YELLOW: 0, RED: 0, UNKNOWN: 0 };
-    rows.forEach((r) => STATES.forEach((s) => { t[s] += r.counts?.[s] || 0; }));
+    rows.filter((r) => !isSimulatorBackend(r)).forEach((r) => STATES.forEach((s) => { t[s] += r.counts?.[s] || 0; }));
     return t;
   }, [rows]);
   const STATE_COLORS = getFleetStateChartColors();
   const qubitTotal = fleetStateTotals.GREEN + fleetStateTotals.YELLOW + fleetStateTotals.RED + fleetStateTotals.UNKNOWN;
   const greenPct = qubitTotal ? Math.round((100 * fleetStateTotals.GREEN) / qubitTotal) : null;
-  const totalPending = useMemo(
-    () => rows.reduce((sum, r) => sum + (Number(r.pending) || 0), 0),
-    [rows],
-  );
+  const totalPending = useMemo(() => {
+    const fromFleet = d.fleetSummary?.pending_jobs_telemetry;
+    if (Number.isFinite(Number(fromFleet))) return Number(fromFleet);
+    return rows.reduce((sum, r) => sum + (Number(r.pending) || 0), 0);
+  }, [d.fleetSummary, rows]);
+
+  const kpiSnap = useMemo(() => {
+    const online = rows.filter((r) => r.operational_status === 'ONLINE').length;
+    const activeAlerts = alertSummary?.active ?? rows.reduce((n, r) => n + (r.crit || 0) + (r.warn || 0), 0);
+    const critAlerts = alertSummary?.critical ?? rows.reduce((n, r) => n + (r.crit || 0), 0);
+    const openInc = d.centre?.incidents?.filter?.((i) => !['RESOLVED', 'CLOSED'].includes(i.status))?.length
+      ?? d.centre?.open_incidents
+      ?? 0;
+    return {
+      backends: rows.length,
+      online,
+      activeAlerts,
+      critAlerts,
+      openInc,
+      collectorBad,
+      pending: totalPending,
+      greenPct: greenPct ?? 0,
+    };
+  }, [rows, alertSummary, d.centre, collectorBad, totalPending, greenPct]);
+
+  const heroCards = useMemo(() => {
+    const redBackends = rows.filter((r) => r.router === 'RED').length;
+    const yellowBackends = rows.filter((r) => r.router === 'YELLOW').length;
+    return [
+      { id: 'crit', label: 'Critical alerts', value: kpiSnap.critAlerts, hint: 'Needs action', to: '/app/alerts?severity=CRITICAL', tone: kpiSnap.critAlerts > 0 ? 'crit' : 'ok' },
+      { id: 'inc', label: 'Open incidents', value: kpiSnap.openInc, hint: 'Ownership and timeline', to: '/app/alerts/incidents', tone: kpiSnap.openInc > 0 ? 'warn' : 'ok' },
+      { id: 'red', label: 'Red backends', value: redBackends, hint: 'Routing degraded', to: '/app/backends/inventory', tone: redBackends > 0 ? 'crit' : 'ok' },
+      { id: 'yellow', label: 'Yellow backends', value: yellowBackends, hint: 'Watch queue and calibration', to: '/app/backends/inventory', tone: yellowBackends > 0 ? 'warn' : 'ok' },
+      { id: 'backends', label: 'Backends online', value: `${kpiSnap.online}/${kpiSnap.backends}`, hint: 'Registered hardware', to: '/app/backends/inventory', tone: kpiSnap.online === kpiSnap.backends && kpiSnap.backends ? 'ok' : 'warn' },
+      { id: 'jobs', label: 'Pending jobs', value: kpiSnap.pending, hint: 'Latest queue snapshot', to: '/app/execution/queues', tone: kpiSnap.pending > 20 ? 'warn' : 'neutral' },
+      { id: 'active', label: 'Active alerts', value: kpiSnap.activeAlerts, hint: 'All severities', to: '/app/alerts?status=ACTIVE', tone: kpiSnap.activeAlerts ? 'warn' : 'ok' },
+      { id: 'green', label: 'Green qubits', value: kpiSnap.greenPct, suffix: '%', hint: 'Excludes simulators', to: '/app/resources/health', tone: kpiSnap.greenPct >= 50 ? 'ok' : 'warn' },
+    ];
+  }, [kpiSnap, rows]);
+
   /** Actionable: where alert load concentrates (replaces the duplicate count tiles). */
   const alertPressureRows = useMemo(
     () => rows
@@ -338,16 +368,30 @@ function DashboardHomeInner() {
 
   const workloadOption = useMemo(() => {
     const sem = getChartSemanticColors();
+    const chartFont = 12;
     return {
       backgroundColor: 'transparent',
+      grid: { left: 52, right: 16, top: 24, bottom: 44, containLabel: true },
       tooltip: {
         ...baseTooltip(resolved === 'dark'), trigger: 'item',
         formatter: (p) => `${p.data.name}<br/>pending ${p.data.pending}<br/>mean T1 ${fmtUs(p.data.meanT1)}<br/>${p.data.modality || ''}`,
       },
-      xAxis: { type: 'log', name: 'mean T1 µs', nameTextStyle: { color: theme.textColor }, axisLabel: { color: theme.textColor }, splitLine: { lineStyle: { color: theme.splitColor } } },
-      yAxis: { type: 'value', name: 'pending jobs', nameTextStyle: { color: theme.textColor }, axisLabel: { color: theme.textColor }, splitLine: { lineStyle: { color: theme.splitColor } } },
+      xAxis: {
+        type: 'log',
+        name: 'mean T1 µs',
+        nameTextStyle: { color: theme.textColor, fontSize: chartFont },
+        axisLabel: { color: theme.textColor, fontSize: chartFont },
+        splitLine: { lineStyle: { color: theme.splitColor } },
+      },
+      yAxis: {
+        type: 'value',
+        name: 'pending jobs',
+        nameTextStyle: { color: theme.textColor, fontSize: chartFont },
+        axisLabel: { color: theme.textColor, fontSize: chartFont },
+        splitLine: { lineStyle: { color: theme.splitColor } },
+      },
       series: [{
-        type: 'scatter', symbolSize: 14,
+        type: 'scatter', symbolSize: 16,
         data: workloadScatter.map((r) => ({ value: [r.meanT1, r.pending], name: shortName(r.name || r.id), id: r.id, pending: r.pending, meanT1: r.meanT1, modality: r.modality })),
         itemStyle: { color: sem.healthy, opacity: 0.85 },
       }],
@@ -376,10 +420,30 @@ function DashboardHomeInner() {
   }, [d.timeline]);
 
   const latestTelemetry = d.platform?.latest_backend_telemetry_at;
+  const telemetryAgeMin = useMemo(() => ageMinutes(latestTelemetry), [latestTelemetry]);
+  const fleetChartsSparse = useMemo(
+    () => !queueRows.length && !calRows.length && !cohRows.length && !workloadScatter.length,
+    [queueRows.length, calRows.length, cohRows.length, workloadScatter.length],
+  );
+  const sparseChartIds = useMemo(
+    () => new Set([
+      WIDGET_IDS.queueChart,
+      WIDGET_IDS.calChart,
+      WIDGET_IDS.coherenceChart,
+      WIDGET_IDS.modalityStrip,
+    ]),
+    [],
+  );
+  const connectTelemetryAction = useMemo(() => (
+    <Link className="btn btn-primary btn--xs" to="/app/admin/integrations">Connect a provider</Link>
+  ), []);
 
   const renderWidget = useCallback((id) => {
+    if (fleetChartsSparse && sparseChartIds.has(id) && id !== WIDGET_IDS.queueChart) {
+      return null;
+    }
     if (CHART_WIDGETS.has(id) && !chartsReady) {
-      return <div className="card fo-panel" style={{ minHeight: 280 }} aria-hidden><BoneyardSkeleton layout="grid" /></div>;
+      return <div className="card fo-panel" style={{ minHeight: 280 }} aria-hidden><BoneyardSkeleton layout="chart" /></div>;
     }
     switch (id) {
       case WIDGET_IDS.fleetSummary:
@@ -406,7 +470,7 @@ function DashboardHomeInner() {
                 {rows.map((r) => (
                   <div key={r.backend_id} className="fo-row fo-row--compact" role="row">
                     <div role="cell" className="fo-cell-name">
-                      <Link className="fo-name" to={buildBackendDetailsPath(r.backend_id)}>{r.backend_name || r.backend_id}</Link>
+                      <Link className="fo-name" to={buildBackendDetailsPath(r.backend_id)}>{formatBackendTitle(r)}</Link>
                       <div className="fo-meta">{r.qpu_modality || '—'} · cal {r.calFresh || '—'} · {r.pending ?? '—'} queued</div>
                     </div>
                     <div role="cell"><StateBar counts={r.counts} /></div>
@@ -435,7 +499,9 @@ function DashboardHomeInner() {
             titleTo="/app/execution/queues"
             question="Pending jobs from the latest queue snapshot."
             state={queueRows.length ? 'ready' : 'empty'}
-            emptyMessage="No queue snapshots in storage."
+            emptyTitle={fleetChartsSparse ? FLEET_TELEMETRY_EMPTY.title : undefined}
+            emptyMessage={fleetChartsSparse ? FLEET_TELEMETRY_EMPTY.message : 'No queue snapshots in storage.'}
+            emptyAction={fleetChartsSparse ? connectTelemetryAction : undefined}
             minHeight={300}
           >
             <QtECharts
@@ -474,7 +540,7 @@ function DashboardHomeInner() {
           >
             <QtECharts
               option={alertPressureOption}
-              style={{ height: Math.max(260, alertPressureRows.length * 36 + 60), width: '100%' }}
+              style={{ height: Math.min(320, Math.max(240, alertPressureRows.length * 32 + 56)), width: '100%' }}
               onEvents={{
                 click: (p) => {
                   const row = [...alertPressureRows].reverse()[p.dataIndex];
@@ -492,11 +558,11 @@ function DashboardHomeInner() {
             question="Pending jobs vs mean T1 per backend (same modality only)."
             state={workloadScatter.length ? 'ready' : 'empty'}
             emptyMessage="Requires queue depth and T1 on overlapping backends."
-            minHeight={300}
+            minHeight={0}
           >
             <QtECharts
               option={workloadOption}
-              style={{ height: 300, width: '100%' }}
+              style={{ height: 280, width: '100%' }}
               onEvents={{ click: (p) => { const id = p.data?.id; if (id) navigate(buildBackendDetailsLocation(id)); } }}
             />
           </ChartPanel>
@@ -507,26 +573,18 @@ function DashboardHomeInner() {
             <div className="fo-panel__head">
               <div>
                 <h2 className="fo-panel__title">Platform &amp; health shape</h2>
-                <p className="fo-panel__sub">Collectors, telemetry freshness, and router state on lowest-ranked backends.</p>
+                <p className="fo-panel__sub">Collector freshness and router state.</p>
               </div>
               <Link className="fs-link" to="/app/platform/health">Platform health <ChevronRight size={12} aria-hidden /></Link>
             </div>
             <div className="fo-platform-kpis">
               <button type="button" className={`fo-platform-kpi${collectorBad ? ' fo-platform-kpi--bad' : ' fo-platform-kpi--ok'}`} onClick={() => navigate('/app/platform/health')}>
-                <span className="fo-platform-kpi__val"><AnimatedNumber value={collectorBad} />/{providers.length ? <AnimatedNumber value={providers.length} /> : '—'}</span>
                 <span className="fo-platform-kpi__lbl">Collectors bad</span>
+                <span className="fo-platform-kpi__val"><AnimatedNumber value={collectorBad} />/{providers.length ? <AnimatedNumber value={providers.length} /> : '—'}</span>
               </button>
               <button type="button" className="fo-platform-kpi" onClick={() => navigate('/app/telemetry/live')}>
-                <span className="fo-platform-kpi__val">{latestTelemetry ? formatISTTime(latestTelemetry, false) : '—'}</span>
                 <span className="fo-platform-kpi__lbl">Latest telemetry</span>
-              </button>
-              <button type="button" className="fo-platform-kpi" onClick={() => navigate('/app/execution/queues')}>
-                <span className="fo-platform-kpi__val"><AnimatedNumber value={totalPending} /></span>
-                <span className="fo-platform-kpi__lbl">Fleet pending jobs</span>
-              </button>
-              <button type="button" className={`fo-platform-kpi${greenPct != null && greenPct < 50 ? ' fo-platform-kpi--warn' : ' fo-platform-kpi--ok'}`} onClick={() => navigate(HEALTH_PATH)}>
-                <span className="fo-platform-kpi__val">{greenPct != null ? <><AnimatedNumber value={greenPct} />%</> : '—'}</span>
-                <span className="fo-platform-kpi__lbl">Qubits GREEN</span>
+                <span className="fo-platform-kpi__val">{latestTelemetry ? formatISTTime(latestTelemetry, false) : '—'}</span>
               </button>
             </div>
             <ChartPanel
@@ -534,7 +592,7 @@ function DashboardHomeInner() {
               titleTo={HEALTH_PATH}
               question="Advisory router state counts on lowest-ranked backends."
               state={rows.length ? 'ready' : 'empty'}
-              minHeight={260}
+              minHeight={0}
             >
               <QtECharts
                 option={routerStackOption}
@@ -560,7 +618,7 @@ function DashboardHomeInner() {
           >
             <QtECharts
               option={cohOption}
-              style={{ height: Math.max(300, cohRows.length * 40 + 80), width: '100%' }}
+              style={{ height: Math.min(340, Math.max(260, cohRows.length * 28 + 72)), width: '100%' }}
               autoResize
               notMerge
               onEvents={{ click: (p) => { const c = cohRows[p.dataIndex]; if (c) navigate(buildBackendDetailsPath(c.backend_id)); } }}
@@ -598,14 +656,68 @@ function DashboardHomeInner() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [d, rows, alertSummary, collectorBad, qubitTotal,
-    cohRows, cohOption, queueRows, queueOption, calRows, calOption, fleetStateTotals, greenPct, totalPending,
+    cohRows, cohOption, queueRows, queueOption, calRows, calOption, fleetStateTotals,
     alertPressureRows, alertPressureOption, workloadScatter, workloadOption, routerStackOption,
-    events, failed, latestTelemetry, loadData, navigate, chartsReady]);
+    events, failed, latestTelemetry, loadData, navigate, chartsReady, fleetChartsSparse, sparseChartIds, connectTelemetryAction]);
 
   const widgets = useMemo(
     () => layout.widgets.filter((w) => ACTIVE.includes(w.id) && (customizing || widgetVisibility[w.id] !== false)),
     [layout.widgets, customizing, widgetVisibility],
   );
+  const [heroPage, setHeroPage] = useState(0);
+  const [heroHold, setHeroHold] = useState(false);
+
+  const heroPages = useMemo(() => {
+    const first = deckSlice(heroCards, 0, 4).items;
+    if (heroCards.length <= 4) return [first];
+    return [first, deckSlice(heroCards, 1, 4).items];
+  }, [heroCards]);
+
+  const heroSlideCount = heroPages.length;
+  const heroSlide = heroSlideCount > 0 ? ((heroPage % heroSlideCount) + heroSlideCount) % heroSlideCount : 0;
+
+  useEffect(() => {
+    if (heroHold || heroSlideCount < 2) return undefined;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const id = window.setInterval(() => {
+      if (document.hidden) return;
+      setHeroPage((p) => p + 1);
+    }, 8000);
+    return () => window.clearInterval(id);
+  }, [heroHold, heroSlideCount]);
+
+  const collectorNoticeBody = collectorBad > 0
+    ? `${collectorBad} stale or failing — KPIs may be partial.`
+    : '';
+  const telemetryNoticeBody = telemetryAgeMin != null && telemetryAgeMin > STALE_MIN
+    ? `Last stored telemetry ${fmtAge(telemetryAgeMin)} — calibration badges may still look fresh.`
+    : '';
+
+  useEffect(() => {
+    if (loading) return;
+    if (collectorBad > 0) {
+      notifyOperatorNotice({
+        id: 'overview-collectors',
+        title: 'Collectors',
+        body: collectorNoticeBody,
+        variant: 'critical',
+        actions: [
+          { id: 'collectors', label: 'Check collectors', href: '/app/admin/collectors' },
+          { id: 'dismiss', label: 'Dismiss', dismiss: true },
+        ],
+      });
+    }
+    if (telemetryNoticeBody) {
+      notifyOperatorNotice({
+        id: 'overview-telemetry-stale',
+        title: 'Telemetry freshness',
+        body: telemetryNoticeBody,
+        variant: 'warn',
+        actions: [{ id: 'dismiss', label: 'Dismiss', dismiss: true }],
+        showToast: false,
+      });
+    }
+  }, [loading, collectorBad, collectorNoticeBody, telemetryNoticeBody]);
 
   const noData = failed.length === SOURCES.length;
   const stale = lastRefresh && (Date.now() - lastRefresh.getTime()) / 60000 > 2;
@@ -625,29 +737,53 @@ function DashboardHomeInner() {
 
   if (loading) return <BoneyardSkeleton layout="dashboard" />;
 
-  const zone = (z) => widgets.filter((w) => (PLACEMENT[w.id] || 'grid') === z);
-  const nodes = (z) => zone(z).map((w) => <React.Fragment key={w.id}>{renderWidget(w.id)}</React.Fragment>);
-
   return (
     <div className="dashboard-home">
 
       {customizing && (
-        <p className="dashboard-customize-hint">Drag panels to reorder. Resize cycles compact / half row / full row. Layout saves in this browser.</p>
+        <p className="dashboard-customize-hint">Drag panels to reorder. Resize cycles half row / full row. Layout saves in this browser.</p>
       )}
-      {customizing ? (
-        <DashboardBentoGrid widgets={widgets} customizing onReorder={persistOrder} onSpanChange={setWidgetSpan} renderWidget={renderWidget} />
-      ) : (
-        <>
-          {zone('top').length > 0 && (
-            <div className="fo-charts-top" data-tour="page-charts">
-              {nodes('top')}
-            </div>
-          )}
-          {zone('grid').length > 0 && <div className="fo-grid2">{nodes('grid')}</div>}
-          {zone('mid').length > 0 && <div className="fo-mid">{nodes('mid')}</div>}
-          {nodes('bottom')}
-        </>
-      )}
+      <div
+        className="dashboard-home__hero ds-glass-hero hero-cycle"
+        data-tour="page-kpis"
+      >
+        <div
+          className="hero-cycle__viewport"
+          aria-live="polite"
+          aria-roledescription="carousel"
+          aria-label="Fleet KPI summary"
+          onMouseEnter={() => setHeroHold(true)}
+          onMouseLeave={() => setHeroHold(false)}
+        >
+          <div
+            className="hero-cycle__track"
+            data-page={heroSlide}
+            style={{
+              '--hero-slides': heroSlideCount,
+              width: heroSlideCount > 1 ? `${heroSlideCount * 100}%` : undefined,
+              transform: heroSlideCount > 1
+                ? `translate3d(-${(heroSlide / heroSlideCount) * 100}%, 0, 0)`
+                : undefined,
+            }}
+          >
+            {heroPages.map((items, idx) => (
+              <div key={idx} className="hero-cycle__pane">
+                <FleetKpiStrip items={items} className="ds-hero-tiles" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      <FleetBackendCards rows={rows} />
+      <div className="dashboard-home__charts" data-tour="page-charts">
+        <DashboardBentoGrid
+          widgets={widgets}
+          customizing={customizing}
+          onReorder={persistOrder}
+          onSpanChange={setWidgetSpan}
+          renderWidget={renderWidget}
+        />
+      </div>
     </div>
   );
 }

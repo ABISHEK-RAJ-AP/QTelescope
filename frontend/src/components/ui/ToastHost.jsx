@@ -6,18 +6,21 @@ import './toast.css';
 export function ToastHost() {
   return (
     <ToastContainer
-      position="top-right"
-      autoClose={4500}
+      position="bottom-right"
+      autoClose={5200}
       hideProgressBar={false}
       newestOnTop
       closeOnClick
       pauseOnFocusLoss
-      draggable
+      draggable={false}
       pauseOnHover
-      limit={4}
-      theme="colored"
+      limit={3}
+      stacked
+      theme="light"
+      icon={false}
       className="qts-toast-root"
       toastClassName="qts-toast"
+      bodyClassName="qts-toast__body"
       progressClassName="qts-toast__progress"
     />
   );

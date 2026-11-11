@@ -195,7 +195,7 @@ export const EnvironmentPage = () => {
     }
   };
 
-  if (loading) return <BoneyardSkeleton layout="table" />;
+  if (loading) return <BoneyardSkeleton layout="table-plain" />;
 
   const covered = Object.keys(latest).length;
   const mqttStatus = ingestStatus?.mqtt_subscriber || 'DISABLED';

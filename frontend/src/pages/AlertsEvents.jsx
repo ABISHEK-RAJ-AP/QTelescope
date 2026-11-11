@@ -1,7 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronRight, ArrowUp, ArrowDown, Search, Check, Eye } from 'lucide-react';
-import { RefreshButton } from '../components/ui/RefreshButton.jsx';
+import {
+  ChevronDown, ChevronRight, ArrowUp, ArrowDown, Check, Eye, CheckCircle2, PanelRightOpen,
+} from 'lucide-react';
+import { FilterBar } from '../components/ds/FilterBar.jsx';
+import { PageRefreshCluster } from '../components/ui/PageRefreshCluster.jsx';
+import { OpsMonthCalendar } from '../components/observability/OpsMonthCalendar.jsx';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { useAlertsSummary } from '../context/AlertsSummaryContext.jsx';
 import { api, fetchApi } from '../services/api';
@@ -20,24 +24,31 @@ import {
   DetailModalRow,
   DetailModalRelated,
   DetailModalHero,
+  DetailModalCallout,
 } from '../components/observability/DetailModalLayout.jsx';
 import { useAppScope } from '../hooks/useAppScope.js';
 import { buildBackendDetailsPath, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
 import { formatIST } from '../utils/time';
 import { SevBadge, StatusBadge } from './opsShared.jsx';
 import { sevRank, toMs, timelineTo, healthTo, qubitOf } from './opsHelpers.js';
-import { notifyError, notifySuccess } from '../lib/toast.js';
+import { notifyError, notifyOperatorNotice, notifySuccess } from '../lib/toast.js';
 import { usePermissions } from '../hooks/usePermissions.js';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { parseIncidentTitle, formatDurationMs } from '../lib/incidentUi.js';
 import { ViewModeToggle } from '../components/observability/DataViewToolbar.jsx';
 import { EnterpriseDataTable } from '../components/observability/EnterpriseDataTable.jsx';
-import { OpsMonthCalendar } from '../components/observability/OpsMonthCalendar.jsx';
 import { ListPager } from '../components/observability/ListPager.jsx';
 import { CollapsibleSection } from '../components/observability/CollapsibleSection.jsx';
 import { DiscussionModal } from '../components/observability/DiscussionModal.jsx';
 import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
+import {
+  formatObservedVsThreshold,
+  formatObservedVsThresholdGroup,
+  isMetricThresholdAlert,
+} from '../lib/alertSemantics.js';
+import { formatMetricValue } from '../lib/formatMetricValue.js';
+import { formatBackendTitle } from '../lib/displayLabels.js';
 import './AlertsEvents.css';
 
 const FETCH_LIMIT = 500; // API max for /alerts
@@ -45,7 +56,12 @@ const PAGE_SIZE = 20;
 const CHILD_PAGE = 12;
 const SEVERITIES = ['CRITICAL', 'WARNING', 'INFO'];
 const STATUSES = ['ACTIVE', 'ACKNOWLEDGED', 'RESOLVED'];
-const num = (v) => (v == null || !Number.isFinite(Number(v)) ? '—' : Number(v).toFixed(1));
+const num = (v, unit = 'µs') => formatMetricValue(v, { decimals: 1, unit, nullLabel: 'Not available' });
+
+function ruleTitle(type) {
+  const raw = String(type || '').replace(/_/g, ' ').toLowerCase();
+  return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : 'Alert';
+}
 
 function groupAlerts(alerts, grouped) {
   const map = new Map();
@@ -88,10 +104,19 @@ function Breakdown({ counts, order }) {
   );
 }
 
-export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, onOpenAlert, currentUser }) => {
+export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, onOpenAlertWorkspace, currentUser }) => {
   const nav = useNavigate();
   const perms = usePermissions(currentUser);
-  const { backend: scopeBackend, alertId: scopeAlert, setBackend, setAlertId } = useAppScope();
+  const {
+    backend: scopeBackend,
+    alertId: scopeAlert,
+    severity: scopeSeverity,
+    status: scopeStatus,
+    setBackend,
+    setAlertId,
+    setSeverity,
+    setStatus,
+  } = useAppScope();
   const { setActions, clearActions } = usePageActions();
   const {
     summary: alertSummary,
@@ -110,19 +135,20 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   const [statusF, setStatusF] = useState('ACTIVE');
   const [query, setQuery] = useState('');
   const debouncedQuery = useDebouncedValue(query, 300);
-  const [grouped, setGrouped] = useState(true);
+  const grouped = false;
   const [sort, setSort] = useState({ key: 'severity', dir: 'asc' });
   const [expanded, setExpanded] = useState(() => new Set());
   const [page, setPage] = useState(1);
   const [childPage, setChildPage] = useState({});
   const [incPage, setIncPage] = useState(1);
+  const [incQuery, setIncQuery] = useState('');
   const [drawerId, setDrawerId] = useState(null);
   const [incDrawerId, setIncDrawerId] = useState(null);
   const stopRow = (e) => e.stopPropagation();
   const openAlert = useCallback((id) => {
-    if (onOpenAlert) onOpenAlert(id);
-    else setDrawerId(id);
-  }, [onOpenAlert]);
+    setDrawerId(id);
+    setAlertId(id);
+  }, [setAlertId]);
   const openIncident = useCallback((id) => {
     if (onOpenIncident) onOpenIncident(id);
     else setIncDrawerId(id);
@@ -131,22 +157,43 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   const [busy, setBusy] = useState(false);
   const [incCommentBusy, setIncCommentBusy] = useState(false);
   const [listLayout, setListLayout] = useState('table');
-  const [incLayout, setIncLayout] = useState('grid');
+  const [incLayout, setIncLayout] = useState('table');
   const [alertDetail, setAlertDetail] = useState(null);
   const [alertCommentBusy, setAlertCommentBusy] = useState(false);
   const [alertDiscOpen, setAlertDiscOpen] = useState(false);
   const [incDiscOpen, setIncDiscOpen] = useState(false);
   const [hasMoreAlerts, setHasMoreAlerts] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [registryIds, setRegistryIds] = useState(null);
+
+  const applySevF = useCallback((v) => {
+    setSevF(v);
+    setSeverity(v === 'ALL' ? '' : v);
+  }, [setSeverity]);
+
+  const applyStatusF = useCallback((v) => {
+    setStatusF(v);
+    setStatus(v === 'ALL' ? '' : v);
+  }, [setStatus]);
+
+  useEffect(() => {
+    if (scopeSeverity) setSevF(scopeSeverity);
+  }, [scopeSeverity]);
+
+  useEffect(() => {
+    if (scopeStatus) setStatusF(scopeStatus);
+  }, [scopeStatus]);
 
   const load = useCallback(async () => {
     try {
-      const [a, i] = await Promise.all([
+      const [a, i, bs] = await Promise.all([
         api.getAlerts(null, null, { limit: FETCH_LIMIT, offset: 0 }),
         api.getIncidents().catch(() => null),
-        refreshSummary({ force: true }).catch(() => null),
+        api.getBackends().catch(() => []),
       ]);
+      await refreshSummary({ force: true }).catch(() => null);
       setAlerts(a || []);
+      setRegistryIds(new Set((bs || []).map((b) => b.backend_id)));
       setHasMoreAlerts((a || []).length >= FETCH_LIMIT);
       setIncidents(i || []);
       setError(null);
@@ -175,7 +222,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
 
   useEffect(() => { load(); const t = setInterval(load, 15000); return () => clearInterval(t); }, [load]);
   useEffect(() => {
-    setActions(<RefreshButton onClick={load} lastRefreshAt={lastRefresh} label="Refresh alerts" />);
+    setActions(<PageRefreshCluster onClick={load} lastRefreshAt={lastRefresh} label="Refresh alerts" />);
     return () => clearActions();
   }, [load, lastRefresh, setActions, clearActions]);
   useEffect(() => { setPage(1); setChildPage({}); }, [sevF, statusF, debouncedQuery, scopeBackend, grouped]);
@@ -184,11 +231,8 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
       setDrawerId(null);
       return;
     }
-    if (scopeAlert) {
-      if (onOpenAlert) onOpenAlert(scopeAlert);
-      else setDrawerId(scopeAlert);
-    }
-  }, [scopeAlert, onOpenAlert, view]);
+    if (scopeAlert) setDrawerId(scopeAlert);
+  }, [scopeAlert, view]);
   useEffect(() => {
     if (error && (alerts.length || incidents.length)) {
       notifyError(`Refresh failed: ${error}`, { toastId: 'alerts-load' });
@@ -196,6 +240,15 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   }, [error, alerts.length, incidents.length]);
 
   const backends = useMemo(() => [...new Set(alerts.map((a) => a.backend_id).filter(Boolean))].sort(), [alerts]);
+
+  const orphanBackends = useMemo(() => {
+    if (!registryIds?.size) return [];
+    const s = new Set();
+    alerts.forEach((a) => {
+      if (a.backend_id && !registryIds.has(a.backend_id)) s.add(a.backend_id);
+    });
+    return [...s].sort();
+  }, [alerts, registryIds]);
 
   // ---- counts (source of truth: full /alerts list) ----
   const stats = useMemo(() => {
@@ -262,12 +315,53 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
     const r = groupAlerts(filtered, grouped).sort(cmp);
     return sort.dir === 'desc' ? r.reverse() : r;
   }, [filtered, grouped, sort]);
+
+  const filtersActive = sevF !== 'ALL' || statusF !== 'ACTIVE' || scopeBackend || debouncedQuery.trim();
+  const listCountLabel = useMemo(() => {
+    const n = filtered.length;
+    if (!filtersActive) return `${n} in view`;
+    return `${n} in view · filtered`;
+  }, [filtered.length, filtersActive]);
+
+  const orphanNoticeBody = useMemo(() => {
+    if (!orphanBackends.length) return '';
+    const names = orphanBackends.slice(0, 2).map((id) => formatBackendTitle({ backend_id: id })).join(', ');
+    const extra = orphanBackends.length > 2 ? ` +${orphanBackends.length - 2}` : '';
+    return `${names}${extra}: open alerts reference a backend not in the registry. Run discovery or add the processor in Integrations.`;
+  }, [orphanBackends]);
+
+  useEffect(() => {
+    if (view !== 'alerts' || !orphanNoticeBody) return;
+    notifyOperatorNotice({
+      id: 'alerts-orphan-backend',
+      title: 'Registry gap',
+      body: orphanNoticeBody,
+      variant: 'warn',
+      actions: [
+        { id: 'integrations', label: 'Integrations', href: '/app/admin/integrations' },
+        { id: 'dismiss', label: 'Dismiss', dismiss: true },
+      ],
+    });
+  }, [view, orphanNoticeBody]);
+
+  useEffect(() => {
+    if (view !== 'alerts' || activeCount == null || !filtersActive || filtered.length === activeCount) return;
+    notifyOperatorNotice({
+      id: 'alerts-scope',
+      title: 'Scope',
+      body: `${activeCount} active fleet-wide; this list shows ${filtered.length} with current filters.`,
+      variant: 'info',
+      actions: [{ id: 'dismiss', label: 'Dismiss', dismiss: true }],
+      showToast: false,
+    });
+  }, [view, activeCount, filtersActive, filtered.length]);
   const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
   const curPage = Math.min(page, pages);
   const pageRows = rows.slice((curPage - 1) * PAGE_SIZE, curPage * PAGE_SIZE);
 
   const alertById = useMemo(() => new Map(alerts.map((a) => [a.alert_id, a])), [alerts]);
   const drawerAlert = drawerId ? alertById.get(drawerId) : null;
+  const openInc = incDrawerId ? incidents.find((i) => i.incident_id === incDrawerId) : null;
 
   useEffect(() => {
     if (!drawerId) {
@@ -281,6 +375,8 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
     });
     return () => { cancelled = true; };
   }, [drawerId]);
+
+  const calTitle = view === 'incidents' ? 'Incident calendar' : 'Alerts and incidents';
 
   const calEvents = useMemo(() => {
     const alertEv = filtered.map((a) => ({
@@ -303,10 +399,13 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
       kind: 'Incident',
       severity: inc.severity,
       status: inc.status,
-      open: () => openIncident(inc.incident_id),
+      open: () => {
+        if (onOpenIncident) onOpenIncident(inc.incident_id);
+        else openIncident(inc.incident_id);
+      },
     }));
     return view === 'incidents' ? incEv : [...alertEv, ...incEv];
-  }, [filtered, incidents, view, openAlert, openIncident]);
+  }, [filtered, incidents, view, openAlert, openIncident, onOpenIncident]);
   const relatedIncident = (a) => incidents.find((i) => i.backend_id === a.backend_id && String(i.title).endsWith(a.alert_type));
 
   const toggleSort = (key) => setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: key === 'count' || key === 'latest' ? 'desc' : 'asc' }));
@@ -413,19 +512,45 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   };
 
   const openBackend = (id) => nav(buildBackendDetailsPath(id, 'qubits'));
-  const clearFilters = () => { setSevF('ALL'); setStatusF('ALL'); setQuery(''); setBackend(''); };
+  const clearFilters = () => {
+    setSevF('ALL');
+    setStatusF('ALL');
+    setQuery('');
+    setBackend('');
+    setSeverity('');
+    setStatus('');
+  };
+
+  const toggleBackendFilter = useCallback((id) => {
+    setBackend(scopeBackend === id ? '' : id);
+  }, [scopeBackend, setBackend]);
   const toggleExpand = (k) => setExpanded((s) => {
     const n = new Set(s);
     if (n.has(k)) n.delete(k);
     else n.add(k);
     return n;
   });
-  const incPages = Math.max(1, Math.ceil(incidents.length / PAGE_SIZE));
+  const filteredIncidents = useMemo(() => {
+    const q = incQuery.trim().toLowerCase();
+    if (!q) return incidents;
+    return incidents.filter((inc) => {
+      const { backendLabel, rule } = parseIncidentTitle(inc.title);
+      const hay = [
+        inc.incident_id, inc.backend_id, backendLabel, rule,
+        inc.status, inc.severity, inc.owner, inc.acknowledged_by, inc.title,
+      ].filter(Boolean).join(' ').toLowerCase();
+      return hay.includes(q);
+    });
+  }, [incidents, incQuery]);
+
+  const incPages = Math.max(1, Math.ceil(filteredIncidents.length / PAGE_SIZE));
   const incCur = Math.min(incPage, incPages);
-  const incRows = incidents.slice((incCur - 1) * PAGE_SIZE, incCur * PAGE_SIZE);
+  const incRows = filteredIncidents.slice((incCur - 1) * PAGE_SIZE, incCur * PAGE_SIZE);
+
+  useEffect(() => setIncPage(1), [incQuery, incLayout]);
   const closeDrawer = useCallback(() => { setDrawerId(null); if (scopeAlert) setAlertId(''); }, [scopeAlert, setAlertId]);
 
-  if (loading) return <BoneyardSkeleton layout="table" />;
+  if (loading) return <BoneyardSkeleton layout="alerts" />;
   if (error && !alerts.length && !incidents.length) return <ErrorState message={error} onRetry={load} />;
 
   const sevTotal = (s) => STATUSES.reduce((n, st) => n + (stats.m[`${s}|${st}`] || 0), 0);
@@ -433,13 +558,29 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   const openCritInc = openIncidents.filter((i) => i.severity === 'CRITICAL').length;
   const unassignedInc = openIncidents.filter((i) => !i.owner && !i.acknowledged_by).length;
 
-  const rowActions = (a) => (
+  const rowActions = (a, { compact = false } = {}) => (
     <>
       {a.status === 'ACTIVE' && perms.canAckAlerts && (
-        <button type="button" className="btn btn-secondary btn--xs" onClick={() => bulk('acknowledge', [a])}>Ack</button>
+        <button
+          type="button"
+          className={compact ? 'al-icon-btn' : 'btn btn-secondary btn--xs'}
+          title="Acknowledge"
+          aria-label="Acknowledge"
+          onClick={() => bulk('acknowledge', [a])}
+        >
+          {compact ? <Eye size={16} aria-hidden /> : 'Ack'}
+        </button>
       )}
       {a.status !== 'RESOLVED' && perms.canResolveAlerts && (
-        <button type="button" className="btn btn-secondary btn--xs" onClick={() => bulk('resolve', [a])}>Resolve</button>
+        <button
+          type="button"
+          className={compact ? 'al-icon-btn al-icon-btn--primary' : 'btn btn-secondary btn--xs'}
+          title="Resolve"
+          aria-label="Resolve"
+          onClick={() => bulk('resolve', [a])}
+        >
+          {compact ? <CheckCircle2 size={16} aria-hidden /> : 'Resolve'}
+        </button>
       )}
     </>
   );
@@ -461,92 +602,112 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
     </>
   );
 
-  const lastRefreshLabel = lastRefresh ? formatIST(lastRefresh.toISOString(), true) : '—';
-
   return (
     <div className="alerts-container page-stack">
       <div className="al-view-bar">
         <nav className="al-view-switch" aria-label="Alerts workspace">
           <button type="button" className={`al-view-switch__btn ${view === 'alerts' ? 'is-active' : ''}`} onClick={() => onViewChange?.('alerts')}>
-            Active alerts
-            <span className="al-view-switch__n">{stats.active}</span>
+            <span className="al-view-switch__label">Active alerts</span>
+            <span className={`al-view-switch__n${stats.active ? '' : ' is-zero'}`}>{stats.active}</span>
           </button>
           <button type="button" className={`al-view-switch__btn ${view === 'incidents' ? 'is-active' : ''}`} onClick={() => onViewChange?.('incidents')}>
-            Open incidents
-            <span className="al-view-switch__n">{openIncidents.length}</span>
+            <span className="al-view-switch__label">Open incidents</span>
+            <span className={`al-view-switch__n${openIncidents.length ? '' : ' is-zero'}`}>{openIncidents.length}</span>
           </button>
         </nav>
-        <p className="al-view-meta" role="status">
-          Last refresh · {lastRefreshLabel}
-          {openCritInc > 0 && view === 'incidents' ? ` · ${openCritInc} critical` : ''}
-        </p>
+        {openCritInc > 0 && view === 'incidents' ? (
+          <p className="al-view-meta" role="status">{openCritInc} critical incident{openCritInc === 1 ? '' : 's'}</p>
+        ) : null}
       </div>
 
-      <section className="al-kpi-row" aria-label="Operational summary" data-tour="page-alert-kpis">
-        <button type="button" className="al-kpi card" onClick={() => { onViewChange?.('alerts'); setStatusF('ACTIVE'); setSevF('ALL'); }}>
+      <section className="al-kpi-row al-kpi-row--glass" aria-label="Operational summary" data-tour="page-alert-kpis">
+        <button type="button" className="al-kpi al-kpi--glass" onClick={() => { onViewChange?.('alerts'); applyStatusF('ACTIVE'); applySevF('ALL'); }}>
           <span className="al-kpi__label">Active alerts</span>
           <span className="al-kpi__value"><AnimatedNumber value={activeCount} /></span>
           <span className="al-kpi__hint">Across {Object.keys(alertSummary?.by_backend || {}).length || stats.byBackend.length} backend{(Object.keys(alertSummary?.by_backend || {}).length || stats.byBackend.length) === 1 ? '' : 's'}</span>
         </button>
-        <button type="button" className="al-kpi card" onClick={() => { onViewChange?.('alerts'); setSevF('CRITICAL'); setStatusF('ACTIVE'); }}>
+        <button
+          type="button"
+          className={`al-kpi al-kpi--glass${criticalCount === 0 ? ' is-locked' : ''}`}
+          disabled={criticalCount === 0}
+          title={criticalCount === 0 ? 'No critical active alerts' : 'Filter to critical active alerts'}
+          onClick={() => { onViewChange?.('alerts'); applySevF('CRITICAL'); applyStatusF('ACTIVE'); }}
+        >
           <span className="al-kpi__label">Critical (active)</span>
           <span className="al-kpi__value al-kpi__value--crit"><AnimatedNumber value={criticalCount} /></span>
-          <span className="al-kpi__hint">Needs immediate triage</span>
+          <span className="al-kpi__hint">{criticalCount === 0 ? 'None right now' : 'Needs immediate triage'}</span>
         </button>
-        <button type="button" className="al-kpi card" onClick={() => onViewChange?.('incidents')}>
+        <button type="button" className="al-kpi al-kpi--glass" onClick={() => onViewChange?.('incidents')}>
           <span className="al-kpi__label">Open incidents</span>
           <span className="al-kpi__value"><AnimatedNumber value={openIncidents.length} /></span>
           <span className="al-kpi__hint">{openCritInc} critical · {openIncidents.length - openCritInc} other</span>
         </button>
-        <button type="button" className="al-kpi card" onClick={() => onViewChange?.('incidents')}>
+        <button
+          type="button"
+          className={`al-kpi al-kpi--glass${unassignedInc === 0 ? ' is-locked' : ''}`}
+          disabled={unassignedInc === 0}
+          title={unassignedInc === 0 ? 'All open incidents have an owner' : 'Show unassigned incidents'}
+          onClick={() => onViewChange?.('incidents')}
+        >
           <span className="al-kpi__label">Unassigned incidents</span>
           <span className="al-kpi__value"><AnimatedNumber value={unassignedInc} /></span>
-          <span className="al-kpi__hint">No owner yet</span>
+          <span className="al-kpi__hint">{unassignedInc === 0 ? 'All assigned' : 'No owner yet'}</span>
         </button>
       </section>
 
-      {(hasMoreAlerts || alerts.length >= FETCH_LIMIT) && (
-        <div className="al-banner al-banner--warn al-banner--split" role="note">
-          <span>
-            Loaded {alerts.length} alert{alerts.length === 1 ? '' : 's'} (newest first).
-            {hasMoreAlerts ? ' Older records are available.' : ''}
-          </span>
-          {hasMoreAlerts ? (
-            <button
-              type="button"
-              className="btn btn-secondary btn--xs al-banner__action"
-              disabled={loadingMore}
-              onClick={loadMoreAlerts}
-            >
-              {loadingMore ? 'Loading…' : `Load ${FETCH_LIMIT} more`}
-            </button>
-          ) : null}
+      <CollapsibleSection
+        id="al-cal-section"
+        title={calTitle}
+        help="Grouped by day — open a day to inspect alerts and incidents."
+        className="card al-cal-embed al-card al-cal-compact"
+        defaultOpen
+      >
+        <div className="al-pad al-cal-compact__body">
+          <OpsMonthCalendar
+            layout="stacked"
+            variant="default"
+            dayDetailMode="modal"
+            title={calTitle}
+            events={calEvents}
+            onOpenEvent={(ev) => {
+              if (typeof ev?.open === 'function') ev.open();
+              else if (ev?.kind === 'Incident') openIncident(ev.id);
+              else openAlert(ev.id);
+            }}
+            canAckAlerts={perms.canAckAlerts}
+            canResolveAlerts={perms.canResolveAlerts}
+            onAckAlert={(ev) => {
+              const a = alertById.get(ev.id);
+              if (a) bulk('acknowledge', [a]);
+            }}
+            onResolveAlert={(ev) => {
+              const a = alertById.get(ev.id);
+              if (a) bulk('resolve', [a]);
+            }}
+          />
         </div>
-      )}
+      </CollapsibleSection>
 
       {view === 'incidents' ? (
-        <section className="al-inc-grid-wrap" aria-label="Incidents" data-tour="page-incidents">
-          <p className="page-hint al-inc-grid-hint">
-            Each incident groups alerts for one backend and rule. Parentheses show alerts still ACTIVE now.
-          </p>
-          <div className="dvt-toolbar" style={{ borderBottom: 'none', paddingTop: 0 }}>
-            <ViewModeToggle value={incLayout} onChange={setIncLayout} includeCalendar />
-            <span className="dvt-toolbar__count">{incidents.length} incident{incidents.length === 1 ? '' : 's'}</span>
-          </div>
+        <section className="card al-card al-incidents-panel" aria-label="Incidents" data-tour="page-incidents">
+          <FilterBar
+            className="filter-bar--inline al-inc-filter"
+            search={incQuery}
+            onSearchChange={setIncQuery}
+            searchPlaceholder="Search incidents…"
+            searchLabel="Search incidents"
+            count={`${filteredIncidents.length} of ${incidents.length} incident${incidents.length === 1 ? '' : 's'}`}
+            actions={<ViewModeToggle value={incLayout} onChange={setIncLayout} />}
+          />
           {incidents.length === 0 ? (
-            <div className="card al-card al-pad"><TableEmpty colSpan={1} title="No incidents" message="Incidents are created when rules escalate alerts." /></div>
-          ) : incLayout === 'calendar' ? (
-            <div className="card al-card al-pad">
-              <OpsMonthCalendar
-                title="Incident calendar"
-                events={calEvents}
-                onOpenEvent={(ev) => ev.open?.()}
-              />
-            </div>
+            <div className="al-pad"><TableEmpty colSpan={1} title="No incidents" message="Incidents are created when rules escalate alerts." /></div>
+          ) : filteredIncidents.length === 0 ? (
+            <div className="al-pad"><TableEmpty colSpan={1} title="No matches" message="Try a different search." action={<button type="button" className="btn btn-secondary btn--xs" onClick={() => setIncQuery('')}>Clear search</button>} /></div>
           ) : incLayout === 'table' ? (
-            <div className="card al-card al-pad" style={{ paddingTop: 0 }}>
+            <div className="al-pad al-pad--table">
               <EnterpriseDataTable
-                rows={incidents.map((inc) => {
+                hideToolbar
+                rows={filteredIncidents.map((inc) => {
                   const { backendLabel, rule } = parseIncidentTitle(inc.title);
                   const activeNow = alerts.filter(
                     (a) => a.backend_id === inc.backend_id && String(inc.title).endsWith(a.alert_type) && a.status === 'ACTIVE',
@@ -595,8 +756,6 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                     ),
                   },
                 ]}
-                searchKeys={['backend', 'rule', 'owner', 'status', 'id']}
-                searchPlaceholder="Search incidents…"
                 pageSize={15}
                 initialSort={{ key: 'detected_sort', dir: 'desc' }}
                 ariaLabel="Incidents"
@@ -605,13 +764,15 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
               />
             </div>
           ) : (
-            <div className="al-inc-grid">
+            <div className="al-inc-grid al-pad">
               {incRows.map((inc) => {
                 const { backendLabel, rule } = parseIncidentTitle(inc.title);
                 const activeNow = alerts.filter(
                   (a) => a.backend_id === inc.backend_id && String(inc.title).endsWith(a.alert_type) && a.status === 'ACTIVE',
                 ).length;
                 const dur = formatDurationMs(toMs(inc.last_detected_at) - toMs(inc.first_detected_at));
+                const headline = rule || inc.title || inc.backend_id;
+                const backend = backendLabel || inc.backend_id;
                 return (
                   <article
                     key={inc.incident_id}
@@ -623,10 +784,8 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                   >
                     <header className="al-inc-card__head">
                       <div>
-                        <span className="al-inc-card__title">
-                          {backendLabel || inc.backend_id}
-                        </span>
-                        <p className="al-sub">{rule || inc.backend_id} · <span className="admin-mono">{inc.incident_id}</span></p>
+                        <span className="al-inc-card__title">{headline}</span>
+                        <p className="al-inc-card__meta">{backend} · {inc.alert_count} alerts · {activeNow} active · {dur}</p>
                       </div>
                       <div className="al-inc-card__badges">
                         <SevBadge severity={inc.severity} />
@@ -634,10 +793,8 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                       </div>
                     </header>
                     <dl className="al-inc-card__stats">
-                      <div><dt>Alerts</dt><dd>{inc.alert_count} <span className="al-sub">({activeNow} active now)</span></dd></div>
-                      <div><dt>Duration</dt><dd>{dur}</dd></div>
                       <div><dt>Owner</dt><dd>{inc.owner || inc.acknowledged_by || 'Unassigned'}</dd></div>
-                      <div><dt>Detected</dt><dd className="al-nowrap">{formatIST(inc.first_detected_at, false)} → {formatIST(inc.last_detected_at, false)}</dd></div>
+                      <div><dt>Last activity</dt><dd className="al-nowrap">{formatIST(inc.last_detected_at, false)}</dd></div>
                     </dl>
                     <footer className="al-inc-card__foot" onClick={stopRow} onKeyDown={stopRow}>
                       <button type="button" className="btn btn-secondary btn--xs" onClick={() => openIncident(inc.incident_id)}>Open workspace</button>
@@ -652,60 +809,21 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
         </section>
       ) : (
         <>
-          <CollapsibleSection id="al-chart-h" title="Alert detections · last 24 hours" help="New alerts created per hour (IST), stacked by severity. Not the same as how many are still ACTIVE." className="card al-card al-pad al-chart-card" defaultOpen>
-            <p className="page-hint al-chart-hint">New detections per hour by severity — not the same as currently active count.</p>
-            <QtECharts option={trendOption} style={{ height: 220, width: '100%' }} />
-          </CollapsibleSection>
-
-          <section className="al-summary" aria-label="Alert summary">
-            <CollapsibleSection id="al-matrix-h" title="Severity × status" help="Click a cell to filter the table to that severity and status. Counts are from the loaded alert set (newest 500)." className="card al-card al-pad">
-              <table className="al-matrix">
-                <thead><tr><th scope="col"><span className="sr-only">Severity</span></th>{STATUSES.map((s) => <th key={s} scope="col">{s.toLowerCase()}</th>)}</tr></thead>
-                <tbody>
-                  {SEVERITIES.filter((s) => sevTotal(s) > 0 || s !== 'INFO').map((s) => (
-                    <tr key={s}>
-                      <th scope="row"><SevBadge severity={s} /></th>
-                      {STATUSES.map((st) => {
-                        const n = stats.m[`${s}|${st}`] || 0;
-                        const on = sevF === s && statusF === st;
-                        return (
-                          <td key={st}>
-                            <button type="button" className="al-cell" aria-pressed={on} disabled={!n} title={`Filter: ${s} ${st}`} onClick={() => { setSevF(on ? 'ALL' : s); setStatusF(on ? 'ALL' : st); }}>{n}</button>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </CollapsibleSection>
-            <CollapsibleSection id="al-backend-h" title="Active alerts by backend" help="Share of currently ACTIVE alerts. Click a backend to filter the list. Red = critical, amber = warning." className="card al-card al-pad">
-              {stats.byBackend.length === 0 ? <p className="page-hint">No active alerts.</p> : (
-                <ul className="al-rank">
-                  {stats.byBackend.map((b) => (
-                    <li key={b.id}>
-                      <button type="button" className="al-rank__row" aria-pressed={scopeBackend === b.id} onClick={() => setBackend(scopeBackend === b.id ? '' : b.id)} title="Filter table to this backend">
-                        <span className="al-rank__name">{b.id}</span>
-                        <span className="al-rank__bar" aria-hidden>
-                          <span className="al-rank__seg al-rank__seg--crit" style={{ width: `${(b.CRITICAL / stats.byBackend[0].total) * 100}%` }} />
-                          <span className="al-rank__seg al-rank__seg--warn" style={{ width: `${(b.WARNING / stats.byBackend[0].total) * 100}%` }} />
-                        </span>
-                        <span className="al-rank__n">{b.CRITICAL} crit · {b.WARNING} warn</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+          <section className="card al-card al-card--list" aria-label="Alert list" data-tour="page-alert-filters">
+            <FilterBar
+              className="al-toolbar filter-bar--inline"
+              search={query}
+              onSearchChange={setQuery}
+              searchPlaceholder="Search id, qubit, message…"
+              searchLabel="Search alerts"
+              count={listCountLabel}
+              actions={(
+                <>
+                  <button type="button" className="btn btn-secondary btn--xs" onClick={clearFilters}>Reset filters</button>
+                  <ViewModeToggle value={listLayout} onChange={setListLayout} />
+                </>
               )}
-            </CollapsibleSection>
-          </section>
-
-          <section className="card al-card" aria-label="Alert list" data-tour="page-alert-filters">
-            <div className="al-toolbar">
-              <label className="al-search">
-                <Search size={14} aria-hidden />
-                <span className="sr-only">Search alerts</span>
-                <input type="search" placeholder="Search id, qubit, message…" value={query} onChange={(e) => setQuery(e.target.value)} />
-              </label>
+            >
               <label>Sort
                 <select
                   className="input-control"
@@ -725,13 +843,13 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                 </select>
               </label>
               <label>Severity
-                <select className="input-control" value={sevF} onChange={(e) => setSevF(e.target.value)}>
+                <select className="input-control" value={sevF} onChange={(e) => applySevF(e.target.value)} aria-label="Filter by severity">
                   <option value="ALL">All</option>
                   {SEVERITIES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </label>
               <label>Status
-                <select className="input-control" value={statusF} onChange={(e) => setStatusF(e.target.value)}>
+                <select className="input-control" value={statusF} onChange={(e) => applyStatusF(e.target.value)} aria-label="Filter by status">
                   <option value="ALL">All</option>
                   {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -742,24 +860,10 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                   {backends.map((b) => <option key={b} value={b}>{b}</option>)}
                 </select>
               </label>
-              <label className="al-check">
-                <input type="checkbox" checked={grouped} onChange={(e) => setGrouped(e.target.checked)} /> Group by backend + rule
-              </label>
-              <button type="button" className="btn btn-secondary btn--xs" onClick={clearFilters}>Reset filters</button>
-              <ViewModeToggle value={listLayout} onChange={setListLayout} includeCalendar />
-              <span className="al-count" role="status">{filtered.length} alert{filtered.length === 1 ? '' : 's'} · {rows.length} {grouped ? 'group' : 'row'}{rows.length === 1 ? '' : 's'}</span>
-            </div>
+            </FilterBar>
 
-            {listLayout === 'calendar' ? (
-              <div className="al-pad">
-                <OpsMonthCalendar
-                  title="Alerts and incidents"
-                  events={calEvents}
-                  onOpenEvent={(ev) => ev.open?.()}
-                />
-              </div>
-            ) : listLayout === 'grid' ? (
-              <div className="dvt-grid" style={{ padding: 14 }}>
+            {listLayout === 'grid' ? (
+              <div className="dvt-grid al-alert-grid">
                 {pageRows.length === 0 ? (
                   <div style={{ gridColumn: '1 / -1' }}><TableEmpty colSpan={1} title={alerts.length === 0 ? 'No alerts recorded' : 'No alerts match filters'} message={alerts.length === 0 ? 'No alerts in the store.' : `Filters exclude all ${alerts.length} stored alerts.`} action={alerts.length ? <button type="button" className="btn btn-secondary btn--xs" onClick={clearFilters}>Reset filters</button> : undefined} /></div>
                 ) : pageRows.map((g) => {
@@ -768,7 +872,8 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                   return (
                     <article
                       key={g.key}
-                      className={`dvt-card${!multi ? ' dvt-card--clickable' : ''}`}
+                      className={`dvt-card al-alert-card${!multi ? ' dvt-card--clickable' : ''}`}
+                      data-severity={g.worst}
                       tabIndex={!multi ? 0 : undefined}
                       role={!multi ? 'button' : undefined}
                       onClick={!multi ? () => openAlert(a.alert_id) : undefined}
@@ -782,25 +887,44 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                         <SevBadge severity={g.worst} />
                       </header>
                       <dl className="dvt-card__stats">
-                        <div><dt>Observed</dt><dd>{multi ? `${num(g.lo)}–${num(g.hi)}` : num(a.current_value)} µs</dd></div>
+                        <div><dt>Signal</dt><dd>{formatObservedVsThresholdGroup(g)}</dd></div>
                         <div><dt>Latest</dt><dd>{formatIST(g.latestIso, false)}</dd></div>
                       </dl>
-                      <footer className="dvt-card__foot dvt-actions al-actions" onClick={stopRow} onKeyDown={stopRow}>
+                      <footer className="dvt-card__foot al-card-foot" onClick={stopRow} onKeyDown={stopRow}>
                         {multi ? (
-                          <>
-                            {g.open.length > 0 && perms.canAckAlerts && <button type="button" className="btn btn-secondary btn--xs" onClick={() => bulk('acknowledge', g.open)}>Ack {g.open.length}</button>}
-                            {g.unresolved.length > 0 && perms.canResolveAlerts && <button type="button" className="btn btn-secondary btn--xs" onClick={() => bulk('resolve', g.unresolved)}>Resolve {g.unresolved.length}</button>}
-                          </>
+                          <div className="al-card-actions">
+                            {g.open.length > 0 && perms.canAckAlerts && (
+                              <button type="button" className="al-icon-btn" title={`Acknowledge ${g.open.length}`} aria-label={`Acknowledge ${g.open.length}`} onClick={() => bulk('acknowledge', g.open)}>
+                                <Eye size={16} aria-hidden />
+                                <span className="al-icon-btn__n">{g.open.length}</span>
+                              </button>
+                            )}
+                            {g.unresolved.length > 0 && perms.canResolveAlerts && (
+                              <button type="button" className="al-icon-btn al-icon-btn--primary" title={`Resolve ${g.unresolved.length}`} aria-label={`Resolve ${g.unresolved.length}`} onClick={() => bulk('resolve', g.unresolved)}>
+                                <CheckCircle2 size={16} aria-hidden />
+                                <span className="al-icon-btn__n">{g.unresolved.length}</span>
+                              </button>
+                            )}
+                          </div>
                         ) : (
-                          <>
-                            <button type="button" className="btn btn-secondary btn--xs" onClick={() => openAlert(a.alert_id)}>Open workspace</button>
-                            {rowActions(a)}
-                          </>
+                          <div className="al-card-actions">
+                            <button type="button" className="al-icon-btn" title="Open details" aria-label="Open details" onClick={() => openAlert(a.alert_id)}>
+                              <PanelRightOpen size={16} aria-hidden />
+                            </button>
+                            {rowActions(a, { compact: true })}
+                          </div>
                         )}
                       </footer>
                     </article>
                   );
                 })}
+                {hasMoreAlerts ? (
+                  <footer className="al-list-foot al-list-foot--grid">
+                    <button type="button" className="btn btn-secondary btn--xs" disabled={loadingMore} onClick={loadMoreAlerts}>
+                      {loadingMore ? 'Loading…' : 'Load older'}
+                    </button>
+                  </footer>
+                ) : null}
               </div>
             ) : !grouped ? (
               <EnterpriseDataTable
@@ -814,7 +938,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                     type: g.type,
                     backend: g.backend,
                     status: a.status,
-                    observed: `${num(a.current_value)} µs vs ${num(g.threshold)}`,
+                    observed: formatObservedVsThreshold(a),
                     latest_sort: g.latest,
                     latest: formatIST(g.latestIso, false),
                     qubit: qubitOf(a) || '',
@@ -838,13 +962,26 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                       </>
                     ),
                   },
-                  { key: 'backend', label: 'Backend' },
+                  {
+                    key: 'backend',
+                    label: 'Backend',
+                    render: (row) => (
+                      <button
+                        type="button"
+                        className="al-backend-filter"
+                        onClick={(e) => { e.stopPropagation(); toggleBackendFilter(row.backend); }}
+                        aria-pressed={scopeBackend === row.backend}
+                      >
+                        {row.backend}
+                      </button>
+                    ),
+                  },
                   {
                     key: 'status',
                     label: 'Status',
                     render: (row) => <StatusBadge status={row.status} />,
                   },
-                  { key: 'observed', label: 'Observed vs threshold', className: 'al-nowrap' },
+                  { key: 'observed', label: 'Signal', className: 'al-nowrap' },
                   { key: 'latest_sort', label: 'Latest detected (IST)', defaultSortDir: 'desc', render: (row) => row.latest },
                   {
                     key: 'alert_id',
@@ -852,7 +989,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                     sortable: false,
                     render: (row) => (
                       <div className="dvt-actions al-actions" onClick={stopRow} onKeyDown={stopRow}>
-                        <button type="button" className="btn btn-secondary btn--xs" onClick={() => openAlert(row.alert_id)}>Open workspace</button>
+                        <button type="button" className="btn btn-secondary btn--xs" onClick={() => openAlert(row.alert_id)}>Details</button>
                         {rowActions(row._alert)}
                       </div>
                     ),
@@ -865,6 +1002,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                 ariaLabel="Alerts"
                 onRowClick={(row) => openAlert(row.alert_id)}
                 tableClassName="custom-table al-table"
+                hideToolbarCount
                 emptyTitle={alerts.length === 0 ? 'No alerts recorded' : 'No alerts match filters'}
                 emptyMessage={alerts.length === 0 ? 'No alerts in the store.' : `Filters exclude all ${alerts.length} stored alerts.`}
               />
@@ -878,7 +1016,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                     {sortTh('type', 'Rule')}
                     {sortTh('backend', 'Backend')}
                     {sortTh('count', 'Alerts')}
-                    <th>Observed vs threshold</th>
+                    <th>Signal</th>
                     {sortTh('latest', 'Latest detected (IST)')}
                     <th>Actions</th>
                   </tr>
@@ -911,11 +1049,18 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                           )}</td>
                           <td><SevBadge severity={g.worst} />{multi && <div className="al-sub"><Breakdown counts={g.sev} order={SEVERITIES} /></div>}</td>
                           <td><b>{g.type}</b>{!multi && qubitOf(a) && <div className="al-sub">{qubitOf(a)}</div>}</td>
-                          <td>{g.backend}</td>
-                          <td>{multi ? <><b>{g.count}</b><div className="al-sub"><Breakdown counts={g.st} order={STATUSES} /></div></> : <StatusBadge status={a.status} />}</td>
-                          <td className="al-nowrap">
-                            {multi ? `${num(g.lo)}–${num(g.hi)}` : num(a.current_value)} µs <span className="al-sub al-inline">vs {num(g.threshold)}</span>
+                          <td>
+                            <button
+                              type="button"
+                              className="al-backend-filter"
+                              aria-pressed={scopeBackend === g.backend}
+                              onClick={(e) => { stopRow(e); toggleBackendFilter(g.backend); }}
+                            >
+                              {g.backend}
+                            </button>
                           </td>
+                          <td>{multi ? <><b>{g.count}</b><div className="al-sub"><Breakdown counts={g.st} order={STATUSES} /></div></> : <StatusBadge status={a.status} />}</td>
+                          <td className="al-nowrap">{formatObservedVsThresholdGroup(g)}</td>
                           <td className="al-nowrap">{formatIST(g.latestIso, false)}</td>
                           <td>
                             <div className="dvt-actions al-actions" onClick={stopRow} onKeyDown={stopRow}>
@@ -931,7 +1076,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                                 </>
                               ) : (
                                 <>
-                                  <button type="button" className="btn btn-secondary btn--xs" onClick={(e) => { stopRow(e); openAlert(a.alert_id); }}>Open workspace</button>
+                                  <button type="button" className="btn btn-secondary btn--xs" onClick={(e) => { stopRow(e); openAlert(a.alert_id); }}>Details</button>
                                   {rowActions(a)}
                                 </>
                               )}
@@ -959,9 +1104,9 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                                   <td>{qubitOf(c) || c.resource_type}</td>
                                   <td className="al-sub">{c.alert_id}</td>
                                   <td><StatusBadge status={c.status} /></td>
-                                  <td className="al-nowrap">{num(c.current_value)} µs <span className="al-sub al-inline">vs {num(c.threshold_value)}</span></td>
+                                  <td className="al-nowrap">{formatObservedVsThreshold(c)}</td>
                                   <td className="al-nowrap">{formatIST(c.detected_at, false)}</td>
-                                  <td><div className="dvt-actions al-actions" onClick={stopRow} onKeyDown={stopRow}><button type="button" className="btn btn-secondary btn--xs" onClick={() => openAlert(c.alert_id)}>Open workspace</button>{rowActions(c)}</div></td>
+                                  <td><div className="dvt-actions al-actions" onClick={stopRow} onKeyDown={stopRow}><button type="button" className="btn btn-secondary btn--xs" onClick={() => openAlert(c.alert_id)}>Details</button>{rowActions(c)}</div></td>
                                 </tr>
                               ))}
                               {cpages > 1 && (
@@ -985,38 +1130,137 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
               </table>
             </div>
             )}
-            {grouped && <ListPager page={curPage} pages={pages} onPage={setPage} />}
+            {listLayout === 'grid' && pages > 1 && <ListPager page={curPage} pages={pages} onPage={setPage} />}
+            {listLayout !== 'grid' && hasMoreAlerts ? (
+              <footer className="al-list-foot">
+                <button type="button" className="btn btn-secondary btn--xs" disabled={loadingMore} onClick={loadMoreAlerts}>
+                  {loadingMore ? 'Loading…' : 'Load older'}
+                </button>
+              </footer>
+            ) : null}
           </section>
+
+          <CollapsibleSection id="al-chart-h" title="Alert detections · last 24 hours" help="New alerts created per hour (IST), stacked by severity. Not the same as how many are still ACTIVE." className="card al-card al-pad al-chart-card" defaultOpen>
+            <p className="page-hint al-chart-hint">New detections per hour by severity — not the same as currently active count.</p>
+            <QtECharts option={trendOption} style={{ height: 220, width: '100%' }} />
+          </CollapsibleSection>
+
+          <section className="al-summary" aria-label="Alert summary">
+            <CollapsibleSection id="al-matrix-h" title="Severity × status" defaultOpen help="Click a cell to filter the table to that severity and status. Counts are from the loaded alert set (newest 500)." className="card al-card al-pad">
+              <table className="al-matrix">
+                <thead><tr><th scope="col"><span className="sr-only">Severity</span></th>{STATUSES.map((s) => <th key={s} scope="col">{s.toLowerCase()}</th>)}</tr></thead>
+                <tbody>
+                  {SEVERITIES.filter((s) => sevTotal(s) > 0 || s !== 'INFO').map((s) => (
+                    <tr key={s}>
+                      <th scope="row"><SevBadge severity={s} /></th>
+                      {STATUSES.map((st) => {
+                        const n = stats.m[`${s}|${st}`] || 0;
+                        const on = sevF === s && statusF === st;
+                        return (
+                          <td key={st}>
+                            <button type="button" className="al-cell" aria-pressed={on} disabled={!n} title={`Filter: ${s} ${st}`} onClick={() => { applySevF(on ? 'ALL' : s); applyStatusF(on ? 'ALL' : st); }}>{n}</button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CollapsibleSection>
+            <CollapsibleSection id="al-backend-h" title="Active alerts by backend" defaultOpen help="Share of currently ACTIVE alerts. Click a backend to filter the list. Red = critical, amber = warning." className="card al-card al-pad">
+              {stats.byBackend.length === 0 ? <p className="page-hint">No active alerts.</p> : (
+                <ul className="al-rank">
+                  {stats.byBackend.map((b) => (
+                    <li key={b.id}>
+                      <button type="button" className="al-rank__row" aria-pressed={scopeBackend === b.id} onClick={() => setBackend(scopeBackend === b.id ? '' : b.id)} title="Filter table to this backend">
+                        <span className="al-rank__name">{formatBackendTitle({ backend_id: b.id })}</span>
+                        <span className="al-rank__bar" aria-hidden>
+                          <span className="al-rank__seg al-rank__seg--crit" style={{ width: `${(b.CRITICAL / stats.byBackend[0].total) * 100}%` }} />
+                          <span className="al-rank__seg al-rank__seg--warn" style={{ width: `${(b.WARNING / stats.byBackend[0].total) * 100}%` }} />
+                        </span>
+                        <span className="al-rank__n">{b.CRITICAL} crit · {b.WARNING} warn</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CollapsibleSection>
+          </section>
+
+
         </>
       )}
 
       <DetailDrawer
         open={!!drawerId}
         onClose={closeDrawer}
-        title={drawerAlert ? drawerAlert.alert_id : (drawerId || 'Alert')}
-        subtitle={drawerAlert ? `${drawerAlert.backend_id} · ${drawerAlert.alert_type}` : undefined}
+        title={drawerAlert ? ruleTitle(drawerAlert.alert_type) : (drawerId ? 'Alert' : 'Alert')}
+        subtitle={drawerAlert ? formatBackendTitle({ backend_id: drawerAlert.backend_id }) : undefined}
         headerAside={drawerAlert ? <><SevBadge severity={drawerAlert.severity} /><StatusBadge status={drawerAlert.status} /></> : null}
         size="lg"
+        footer={drawerAlert ? (
+          <div className="detail-drawer__foot-actions">
+            <div className="detail-drawer__foot-secondary">
+              {onOpenAlertWorkspace ? (
+                <button type="button" className="btn btn-secondary" onClick={() => { closeDrawer(); onOpenAlertWorkspace(drawerAlert.alert_id); }}>
+                  Open full workspace
+                </button>
+              ) : null}
+            </div>
+            <div className="detail-drawer__foot-respond" aria-label="Respond">
+              {drawerAlert.status === 'ACTIVE' && perms.canAckAlerts ? (
+                <button type="button" className="btn btn-secondary" onClick={() => bulk('acknowledge', [drawerAlert])}>
+                  <Eye size={14} aria-hidden /> Acknowledge
+                </button>
+              ) : null}
+              {drawerAlert.status !== 'RESOLVED' && perms.canResolveAlerts ? (
+                <button type="button" className="btn btn-primary" onClick={() => bulk('resolve', [drawerAlert])}>
+                  <Check size={14} aria-hidden /> Resolve
+                </button>
+              ) : drawerAlert.status === 'RESOLVED' ? (
+                <span className="page-hint">Already resolved.</span>
+              ) : !perms.canAckAlerts && !perms.canResolveAlerts ? (
+                <span className="page-hint">Read-only.</span>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
       >
         {!drawerAlert ? (
           <p className="page-hint">Alert {drawerId} is outside the loaded set (may be older than the newest {FETCH_LIMIT}). Open it from the list when listed.</p>
         ) : (() => {
           const a = drawerAlert; const inc = relatedIncident(a);
-          const ratio = a.threshold_value ? Math.min(1.5, Math.max(0, a.current_value / a.threshold_value)) : null;
+          const metricBreach = isMetricThresholdAlert(a);
+          const ratio = metricBreach && a.threshold_value
+            ? Math.min(1.5, Math.max(0, a.current_value / a.threshold_value))
+            : null;
           return (
-            <DetailModalBody>
+            <DetailModalBody className="dm-detail--alert">
               <DetailModalHero note={a.message} />
-              <DetailModalSection title="Threshold vs observed">
-                <div className="al-meter al-meter--detail" role="img" aria-label={`Observed ${num(a.current_value)}, threshold ${num(a.threshold_value)}`}>
-                  <span className="al-meter__fill" style={{ width: `${(ratio ?? 0) / 1.5 * 100}%` }} />
-                  <span className="al-meter__mark" style={{ left: `${100 / 1.5}%` }} />
-                </div>
-              </DetailModalSection>
+              {metricBreach ? (
+                <DetailModalSection title="Threshold vs observed">
+                  <div className="al-meter al-meter--detail" role="img" aria-label={`Observed ${num(a.current_value)}, threshold ${num(a.threshold_value)}`}>
+                    <span className="al-meter__fill" style={{ width: `${(ratio ?? 0) / 1.5 * 100}%` }} />
+                    <span className="al-meter__mark" style={{ left: `${100 / 1.5}%` }} />
+                  </div>
+                </DetailModalSection>
+              ) : (
+                <DetailModalSection title="Impact">
+                  <DetailModalCallout>
+                    Platform or connectivity alert. Threshold comparison does not apply — use Provider evidence in the full workspace when available.
+                  </DetailModalCallout>
+                </DetailModalSection>
+              )}
               <DetailModalSection title="Details">
                 <DetailModalDl>
-                  <DetailModalRow label="Observed">{num(a.current_value)} µs</DetailModalRow>
-                  <DetailModalRow label="Threshold">{num(a.threshold_value)} µs (alert when below)</DetailModalRow>
-                  <DetailModalRow label="Backend">{a.backend_id}</DetailModalRow>
+                  <DetailModalRow label="Alert"><span className="admin-mono">{a.alert_id}</span></DetailModalRow>
+                  {metricBreach ? (
+                    <>
+                      <DetailModalRow label="Observed">{num(a.current_value)}</DetailModalRow>
+                      <DetailModalRow label="Threshold">{num(a.threshold_value)} (alert when below)</DetailModalRow>
+                    </>
+                  ) : null}
+                  <DetailModalRow label="Backend">{formatBackendTitle({ backend_id: a.backend_id })}</DetailModalRow>
                   <DetailModalRow label="Resource">{a.resource_type} · {a.resource_id}</DetailModalRow>
                   <DetailModalRow label="Detected">{formatIST(a.detected_at)}</DetailModalRow>
                   <DetailModalRow label="Acknowledged by">{a.acknowledged_by || '—'}</DetailModalRow>
@@ -1033,23 +1277,6 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                 <PageRelatedLink onClick={() => nav(buildDriftInvestigationLocation({ backendId: a.backend_id }))}>Drift</PageRelatedLink>
                 <PageRelatedLink onClick={() => setAlertDiscOpen(true)}>Discussion ({(alertDetail?.comments || []).length})</PageRelatedLink>
               </DetailModalRelated>
-              <DetailModalSection title="Respond">
-                <div className="al-actions">
-                  {onOpenAlert && (
-                    <button type="button" className="btn btn-primary" onClick={() => { closeDrawer(); onOpenAlert(a.alert_id); }}>Open full workspace</button>
-                  )}
-                  {a.status === 'ACTIVE' && perms.canAckAlerts && (
-                    <button type="button" className="btn btn-secondary" onClick={() => bulk('acknowledge', [a])}><Eye size={14} /> Acknowledge</button>
-                  )}
-                  {a.status !== 'RESOLVED' && perms.canResolveAlerts ? (
-                    <button type="button" className="btn btn-primary" onClick={() => bulk('resolve', [a])}><Check size={14} /> Resolve</button>
-                  ) : a.status === 'RESOLVED' ? (
-                    <span className="page-hint">Already resolved.</span>
-                  ) : !perms.canAckAlerts && !perms.canResolveAlerts ? (
-                    <span className="page-hint">Read-only. No respond permission.</span>
-                  ) : null}
-                </div>
-              </DetailModalSection>
             </DetailModalBody>
           );
         })()}
@@ -1058,49 +1285,37 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
       <DetailDrawer
         open={!!incDrawerId}
         onClose={() => setIncDrawerId(null)}
-        title={(() => {
-          const inc = incidents.find((i) => i.incident_id === incDrawerId);
-          return inc?.incident_id || 'Incident';
-        })()}
-        subtitle={(() => {
-          const inc = incidents.find((i) => i.incident_id === incDrawerId);
-          return inc?.title;
-        })()}
-        headerAside={(() => {
-          const inc = incidents.find((i) => i.incident_id === incDrawerId);
-          return inc ? <><SevBadge severity={inc.severity} /><StatusBadge status={inc.status} /></> : null;
-        })()}
+        title={openInc ? (parseIncidentTitle(openInc.title).rule || 'Incident') : 'Incident'}
+        subtitle={openInc ? formatBackendTitle({ backend_id: openInc.backend_id }) : undefined}
+        headerAside={openInc ? <><SevBadge severity={openInc.severity} /><StatusBadge status={openInc.status} /></> : null}
         size="lg"
+        footer={openInc && onOpenIncident ? (
+          <button type="button" className="btn btn-primary" onClick={() => { setIncDrawerId(null); onOpenIncident(openInc.incident_id); }}>Open full workspace</button>
+        ) : null}
       >
-        {(() => {
-          const inc = incidents.find((i) => i.incident_id === incDrawerId);
-          if (!inc) return <p className="page-hint">Incident not found.</p>;
-          return (
-            <DetailModalBody>
-              <DetailModalHero note={inc.summary} />
-              <DetailModalSection title="Details">
-                <DetailModalDl>
-                  <DetailModalRow label="Backend">{inc.backend_id}</DetailModalRow>
-                  <DetailModalRow label="Alerts">{inc.alert_count}</DetailModalRow>
-                  <DetailModalRow label="First detected">{formatIST(inc.first_detected_at)}</DetailModalRow>
-                  <DetailModalRow label="Last detected">{formatIST(inc.last_detected_at)}</DetailModalRow>
-                  <DetailModalRow label="Owner">{inc.owner || 'Unassigned'}</DetailModalRow>
-                  <DetailModalRow label="Resolution">{inc.resolution_notes || '—'}</DetailModalRow>
-                </DetailModalDl>
-              </DetailModalSection>
-              {onOpenIncident && (
-                <DetailModalSection title="Workspace">
-                  <button type="button" className="btn btn-primary" onClick={() => { setIncDrawerId(null); onOpenIncident(inc.incident_id); }}>Open full workspace</button>
-                </DetailModalSection>
-              )}
-              <DetailModalRelated>
-                <PageRelatedLink onClick={() => nav(timelineTo({ backendId: inc.backend_id, at: inc.last_detected_at }))}>Timeline</PageRelatedLink>
-                <PageRelatedLink onClick={() => { setIncDrawerId(null); setBackend(inc.backend_id); onViewChange?.('alerts'); }}>View its alerts</PageRelatedLink>
-                <PageRelatedLink onClick={() => setIncDiscOpen(true)}>Discussion ({(inc.comments || []).length})</PageRelatedLink>
-              </DetailModalRelated>
-            </DetailModalBody>
-          );
-        })()}
+        {!openInc ? (
+          <p className="page-hint">Incident not found.</p>
+        ) : (
+          <DetailModalBody>
+            <DetailModalHero note={openInc.summary} />
+            <DetailModalSection title="Details">
+              <DetailModalDl>
+                <DetailModalRow label="Incident"><span className="admin-mono">{openInc.incident_id}</span></DetailModalRow>
+                <DetailModalRow label="Backend">{formatBackendTitle({ backend_id: openInc.backend_id })}</DetailModalRow>
+                <DetailModalRow label="Alerts">{openInc.alert_count}</DetailModalRow>
+                <DetailModalRow label="First detected">{formatIST(openInc.first_detected_at)}</DetailModalRow>
+                <DetailModalRow label="Last detected">{formatIST(openInc.last_detected_at)}</DetailModalRow>
+                <DetailModalRow label="Owner">{openInc.owner || 'Unassigned'}</DetailModalRow>
+                <DetailModalRow label="Resolution">{openInc.resolution_notes || '—'}</DetailModalRow>
+              </DetailModalDl>
+            </DetailModalSection>
+            <DetailModalRelated>
+              <PageRelatedLink onClick={() => nav(timelineTo({ backendId: openInc.backend_id, at: openInc.last_detected_at }))}>Timeline</PageRelatedLink>
+              <PageRelatedLink onClick={() => { setIncDrawerId(null); setBackend(openInc.backend_id); onViewChange?.('alerts'); }}>View its alerts</PageRelatedLink>
+              <PageRelatedLink onClick={() => setIncDiscOpen(true)}>Discussion ({(openInc.comments || []).length})</PageRelatedLink>
+            </DetailModalRelated>
+          </DetailModalBody>
+        )}
       </DetailDrawer>
 
       <DiscussionModal

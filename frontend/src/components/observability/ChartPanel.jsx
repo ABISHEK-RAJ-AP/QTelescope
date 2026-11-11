@@ -24,6 +24,7 @@ export function ChartPanel({
   state = 'ready',
   emptyTitle,
   emptyMessage,
+  emptyAction,
   errorMessage,
   onRetry,
   actions,
@@ -46,7 +47,11 @@ export function ChartPanel({
   const showTooltip = Boolean(tooltipBody);
   const showQuestion = Boolean(question) && !titleTo;
 
-  const stage = state === 'ready' && children ? (
+  const inlineStage = state === 'ready' && children ? (
+    <div className="chart-panel__stage">{children}</div>
+  ) : null;
+
+  const expandStage = state === 'ready' && children ? (
     <div className="chart-expand__stage">{children}</div>
   ) : null;
 
@@ -89,8 +94,12 @@ export function ChartPanel({
           )}
         </div>
       </header>
-      <div className="chart-panel__body" style={{ minHeight }} aria-hidden={presentOpen}>
-        {state === 'loading' && <BoneyardSkeleton layout="grid" />}
+      <div
+        className="chart-panel__body"
+        style={state === 'ready' && !presentOpen ? undefined : { minHeight }}
+        aria-hidden={presentOpen}
+      >
+        {state === 'loading' && <BoneyardSkeleton layout="chart" />}
         {state === 'error' && (
           <ErrorState variant="panel" compact message={errorMessage} onRetry={onRetry} />
         )}
@@ -100,9 +109,10 @@ export function ChartPanel({
             compact
             title={emptyTitle || EMPTY_CHART.title}
             message={emptyMessage || EMPTY_CHART.message}
+            action={emptyAction}
           />
         )}
-        {state === 'ready' && !presentOpen && children}
+        {state === 'ready' && !presentOpen && inlineStage}
         {state === 'ready' && presentOpen && (
           <div className="chart-panel__placeholder" aria-hidden>
             Chart expanded — close the presentation view to return here.
@@ -117,7 +127,7 @@ export function ChartPanel({
       )}
       {presentOpen && typeof document !== 'undefined' && createPortal(
         <ChartExpandModal title={title} question={question} onClose={() => setPresentOpen(false)}>
-          {stage}
+          {expandStage}
         </ChartExpandModal>,
         document.body,
       )}

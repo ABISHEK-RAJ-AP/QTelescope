@@ -14,6 +14,12 @@ Verdict per upstream repo the team considered. **Install** = copied/symlinked un
 | [latent-spaces/brag](https://github.com/latent-spaces/brag) | **Install** (prior) | `.cursor/skills/brag/` | Optional promo video |
 | Karpathy guidelines | **Rule** | `.cursor/rules/karpathy-guidelines.mdc` | Always |
 | Skill router | **Rule** | `.cursor/rules/skill-router.mdc` | Pick skills before coding |
+| [jakubkrehel/skills](https://github.com/jakubkrehel/skills) (interfaces.dev) | **Install** | `.cursor/skills/better-*`, `interface-review`, `explain-interface`, `build-design`, `break`, `state-machine`, `variant`, `teardown`, `afk` | Cross-discipline UI review; refresh `./scripts/install-interfaces-skills.sh` |
+| UX interaction laws (project) | **Install** | `.cursor/skills/ux-interaction-laws/` | HCI baseline on top of interfaces.dev — see table in SKILL.md |
+
+Details: [`INTERFACES_DEV.md`](./INTERFACES_DEV.md).
+
+| [Mounir-Ghafir/design](https://github.com/Mounir-Ghafir/design) | **Install (website)** | `.cursor/skills/mounir-ux-website/` | 685-rule evidence files; TeleScope uses `website/` only — [`MOUNIR_DESIGN.md`](./MOUNIR_DESIGN.md) |
 
 ## Cursor-only future reference (in repo stubs — not npm)
 

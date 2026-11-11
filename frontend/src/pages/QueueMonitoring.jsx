@@ -22,6 +22,7 @@ import { getChartTheme, baseTooltip, getChartSemanticColors } from '../component
 import { buildBackendDetailsPath, buildTimelineInvestigationLocation } from '../lib/investigationLinks.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { unableToLoad } from '../constants/messages.js';
+import { COPY } from '../copy/operator.js';
 import { formatIST } from '../utils/time';
 import { DataPanelToolbar, SortableTh } from '../components/observability/DataViewToolbar.jsx';
 import { ListPager } from '../components/observability/ListPager.jsx';
@@ -87,7 +88,7 @@ function QueueDrawerBody({ q, an, hist, jobs, nav }) {
       </DetailModalSection>
       <DetailModalSection title="History">
         {(hist || []).length < 2
-          ? <p className="page-hint">Not enough stored samples to draw a trend.</p>
+          ? <p className="page-hint">{COPY.queue.sparseTrend}</p>
           : <QtECharts option={option} style={{ height: 220 }} />}
       </DetailModalSection>
       <DetailModalSection title="Job records for this backend">
@@ -270,7 +271,7 @@ export const QueueMonitoring = () => {
         <div className="qm-kpi"><div className="qm-kpi__label">Total pending</div><div className="qm-kpi__value">{totalPending}</div><div className="qm-kpi__sub">across {queues.length} backends</div></div>
         <div className="qm-kpi"><div className="qm-kpi__label">Longest wait</div><div className="qm-kpi__value">{fmtWait(worstWait?.estimated_wait_time)}</div><div className="qm-kpi__sub">{worstWait ? worstWait.backend_name : '—'}</div></div>
         <div className="qm-kpi"><div className="qm-kpi__label">Idle queues</div><div className="qm-kpi__value">{idle}</div><div className="qm-kpi__sub">of {queues.length} with zero pending</div></div>
-        <div className="qm-kpi"><div className="qm-kpi__label">History samples</div><div className="qm-kpi__value">{(analytics?.backends || []).reduce((a, b) => a + b.samples, 0)}</div><div className="qm-kpi__sub">{analytics ? 'stored telemetry' : 'analytics unavailable'}</div></div>
+        <div className="qm-kpi"><div className="qm-kpi__label">History samples</div><div className="qm-kpi__value">{(analytics?.backends || []).reduce((a, b) => a + b.samples, 0)}</div><div className="qm-kpi__sub">{analytics ? COPY.queue.historySub : 'History unavailable'}</div></div>
       </section>
       {analytics?.note && <p className="qm-banner qm-banner--info">{analytics.note}</p>}
 
@@ -297,7 +298,7 @@ export const QueueMonitoring = () => {
           titleTo="/app/telemetry/trends"
           question="Trend over the selected time window."
           sourceKind="derived" asOf={asOf}
-          provenanceDetail="Stored telemetry samples; irregular spacing. Lines connect samples, not continuous measurement."
+          provenanceDetail={COPY.queue.historyProvenance}
           state={withHist.length ? 'ready' : 'empty'} emptyTitle="No history" emptyMessage="No stored queue samples yet." minHeight={260}
           actions={(
             <span className="qm-seg" role="group" aria-label="History metric">

@@ -332,22 +332,9 @@ def run_retention_job(
 
 @router.get("/scheduler-status")
 def get_scheduler_status(db: Session = Depends(get_db)):
-    from app.workers.collection_scheduler import scheduler_enabled, TICK_SECONDS
+    from app.scheduling.neutral_driver import scheduler_snapshot
 
-    schedules = db.query(CollectionScheduleModel).all()
-    return {
-        "enabled": scheduler_enabled(),
-        "tick_seconds": TICK_SECONDS,
-        "schedules": [
-            {
-                "category": s.category,
-                "interval_seconds": s.interval_seconds,
-                "enabled": s.enabled,
-                "last_run": s.last_run.isoformat() if s.last_run else None,
-            }
-            for s in schedules
-        ],
-    }
+    return scheduler_snapshot(db)
 
 
 @router.get("/collection-schedules")

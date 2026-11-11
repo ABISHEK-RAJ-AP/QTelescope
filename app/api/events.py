@@ -7,6 +7,7 @@ from sqlalchemy import func
 from app.core.database import SessionLocal
 from app.models.entities import AlertModel, BackendTelemetryModel, JobRecordModel, QubitTelemetryModel
 from app.analytics.coherence_aggregate import build_coherence_snapshot
+from app.api.queues import _latest_telemetry_map
 from app.services.collector_health import list_provider_health
 
 router = APIRouter(prefix="/events", tags=["Live Telemetry Stream"])
@@ -18,6 +19,12 @@ def _tick_snapshot():
         active_alerts = db.query(AlertModel).filter(AlertModel.status == "ACTIVE").count()
         queued = db.query(JobRecordModel).filter(JobRecordModel.status == "QUEUED").count()
         running = db.query(JobRecordModel).filter(JobRecordModel.status == "RUNNING").count()
+        tel_map = _latest_telemetry_map(db)
+        pending_telemetry = sum(
+            int(r.pending_jobs)
+            for r in tel_map.values()
+            if r.pending_jobs is not None
+        )
         coh = build_coherence_snapshot(db)
         t1_by_modality = [
             {
@@ -53,12 +60,14 @@ def _tick_snapshot():
             "active_alerts": int(active_alerts),
             "queued_jobs": int(queued),
             "running_jobs": int(running),
-            "pending_jobs": int(queued),
+            "pending_jobs": int(pending_telemetry),
+            "pending_jobs_telemetry": int(pending_telemetry),
+            "queued_jobs_records": int(queued),
             "t1_by_modality": t1_by_modality,
             "coherence_note": coh.get("comparison_note"),
             "collectors_ok": collector_ok,
             "collectors_total": len(collectors),
-            "message": "Platform refresh (not vendor live stream) — see latest_measurement_at for measurement age",
+            "message": "Platform refresh — see latest_measurement_at for measurement freshness",
         }
     finally:
         db.close()

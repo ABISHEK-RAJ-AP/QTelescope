@@ -43,7 +43,7 @@ const DEFAULT_WIDGETS = {
   [WIDGET_IDS.queueChart]: true,
   [WIDGET_IDS.calChart]: true,
   [WIDGET_IDS.coherenceChart]: true,
-  [WIDGET_IDS.fleetSummary]: true,
+  [WIDGET_IDS.fleetSummary]: false,
   [WIDGET_IDS.opsTimeline]: true,
   [WIDGET_IDS.modalityStrip]: true,
   [WIDGET_IDS.platformPanel]: true,

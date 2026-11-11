@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { ListPager } from './ListPager.jsx';
+import { OpsCalendarDayModal } from './OpsCalendarDayModal.jsx';
 import './OpsMonthCalendar.css';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -9,8 +9,6 @@ const MONTHS = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 const CELL_PILLS = 3;
-const GROUP_PAGE = 8;
-const MEMBER_PAGE = 12;
 const SEV_RANK = { CRITICAL: 0, WARNING: 1, INFO: 2 };
 
 function dateKey(year, month, day) {
@@ -67,36 +65,30 @@ export function groupCalendarEvents(events) {
   return out;
 }
 
-export function OpsMonthCalendar({ events = [], title = 'Calendar', onOpenEvent }) {
+export function OpsMonthCalendar({
+  events = [],
+  title = 'Calendar',
+  onOpenEvent,
+  layout = 'split',
+  variant = 'default',
+  dayDetailMode = 'modal',
+  canAckAlerts = false,
+  canResolveAlerts = false,
+  onAckAlert,
+  onResolveAlert,
+}) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [selected, setSelected] = useState(dateKey(today.getFullYear(), today.getMonth(), today.getDate()));
-  const [openKey, setOpenKey] = useState(null);
-  const [groupPage, setGroupPage] = useState(1);
-  const [memberPage, setMemberPage] = useState(1);
+  const [dayModalOpen, setDayModalOpen] = useState(false);
+  const [dayModalKey, setDayModalKey] = useState(null);
 
   const byDate = useMemo(() => groupCalendarEvents(events), [events]);
   const grid = useMemo(() => buildGrid(year, month), [year, month]);
   const todayStr = dateKey(today.getFullYear(), today.getMonth(), today.getDate());
   const monthLabel = `${MONTHS[month]} ${year}`;
-  const dayGroups = byDate[selected] || [];
-  const dayCount = dayGroups.reduce((n, g) => n + g.count, 0);
-
-  useEffect(() => {
-    setOpenKey(null);
-    setGroupPage(1);
-    setMemberPage(1);
-  }, [selected]);
-
-  const groupPages = Math.max(1, Math.ceil(dayGroups.length / GROUP_PAGE));
-  const gPage = Math.min(groupPage, groupPages);
-  const shownGroups = dayGroups.slice((gPage - 1) * GROUP_PAGE, gPage * GROUP_PAGE);
-  const openGroup = dayGroups.find((g) => g.key === openKey);
-  const members = openGroup?.items || [];
-  const memberPages = Math.max(1, Math.ceil(members.length / MEMBER_PAGE));
-  const mPage = Math.min(memberPage, memberPages);
-  const shownMembers = members.slice((mPage - 1) * MEMBER_PAGE, mPage * MEMBER_PAGE);
+  const modalGroups = dayModalKey ? (byDate[dayModalKey] || []) : [];
 
   const prev = () => {
     if (month === 0) { setYear((y) => y - 1); setMonth(11); }
@@ -109,19 +101,22 @@ export function OpsMonthCalendar({ events = [], title = 'Calendar', onOpenEvent 
 
   const pickDay = (key) => {
     setSelected(key);
+    const groups = byDate[key] || [];
+  const total = groups.reduce((n, g) => n + g.count, 0);
+    if (dayDetailMode === 'modal' && total > 0) {
+      setDayModalKey(key);
+      setDayModalOpen(true);
+    }
   };
 
-  const pickGroup = (g) => {
-    if (g.count === 1) {
-      onOpenEvent?.(g.items[0]);
-      return;
-    }
-    setOpenKey((k) => (k === g.key ? null : g.key));
-    setMemberPage(1);
-  };
+  const rootClass = [
+    'ops-cal',
+    layout === 'stacked' && 'ops-cal--stacked',
+    variant === 'full' && 'ops-cal--full',
+  ].filter(Boolean).join(' ');
 
   return (
-    <div className="ops-cal">
+    <div className={rootClass}>
       <div className="ops-cal__grid" role="region" aria-label={`${title}, ${monthLabel}`}>
         <div className="ops-cal__header">
           <h3 className="ops-cal__title">{title}</h3>
@@ -172,46 +167,19 @@ export function OpsMonthCalendar({ events = [], title = 'Calendar', onOpenEvent 
           })}
         </div>
       </div>
-      <aside className="ops-cal__side">
-        <h4 className="ops-cal__side-title">{selected}</h4>
-        <p className="ops-cal__side-hint">
-          {dayCount === 0
-            ? 'Nothing recorded this day.'
-            : `${dayGroups.length} group${dayGroups.length === 1 ? '' : 's'} · ${dayCount} item${dayCount === 1 ? '' : 's'}. Open a group, then a row.`}
-        </p>
-        {dayGroups.length === 0 ? null : (
-          <>
-            <ul className="ops-cal__list">
-              {shownGroups.map((g) => (
-                <li key={g.key}>
-                  <button type="button" className={`ops-cal__item ${openKey === g.key ? 'is-open' : ''}`} onClick={() => pickGroup(g)}>
-                    <span className="ops-cal__item-kind">{g.kind}</span>
-                    <span className="ops-cal__item-title">{g.title}</span>
-                    <span className="ops-cal__item-meta">{g.count} · {g.severity} · {g.statusLabel}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <ListPager page={gPage} pages={groupPages} onPage={setGroupPage} />
-            {openGroup && openGroup.count > 1 && (
-              <div className="ops-cal__members">
-                <p className="ops-cal__members-h">{openGroup.title}</p>
-                <ul className="ops-cal__list">
-                  {shownMembers.map((ev) => (
-                    <li key={ev.id}>
-                      <button type="button" className="ops-cal__item ops-cal__item--sub" onClick={() => onOpenEvent?.(ev)}>
-                        <span className="ops-cal__item-title">{ev.subtitle || ev.id}</span>
-                        <span className="ops-cal__item-meta">{ev.severity} · {ev.status}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                <ListPager page={mPage} pages={memberPages} onPage={setMemberPage} />
-              </div>
-            )}
-          </>
-        )}
-      </aside>
+      {dayDetailMode === 'modal' && (
+        <OpsCalendarDayModal
+          open={dayModalOpen}
+          dayKey={dayModalKey}
+          groups={modalGroups}
+          onClose={() => setDayModalOpen(false)}
+          onOpenEvent={onOpenEvent}
+          canAckAlerts={canAckAlerts}
+          canResolveAlerts={canResolveAlerts}
+          onAckAlert={onAckAlert}
+          onResolveAlert={onResolveAlert}
+        />
+      )}
     </div>
   );
 }

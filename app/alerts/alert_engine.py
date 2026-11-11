@@ -19,7 +19,11 @@ class AlertEngine:
     ) -> List[AlertModel]:
         
         new_alerts = []
-        active_keys = {f"{a.resource_type}:{a.resource_id}:{a.alert_type}" for a in existing_active_alerts}
+        active_keys = {
+            f"{a.resource_type}:{a.resource_id}:{a.alert_type}"
+            for a in existing_active_alerts
+            if (a.status or "ACTIVE") in ("ACTIVE", "ACKNOWLEDGED")
+        }
         now = datetime.datetime.utcnow()
 
         # Rule 1: Backend Offline

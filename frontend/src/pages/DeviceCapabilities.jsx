@@ -118,8 +118,7 @@ export const DeviceCapabilities = () => {
             </InfoTooltip>
           </h2>
           <p className="dc-sub">
-            Provider and backend metric coverage matrix · {payload?.schema || 'device-capabilities/1.0'} ·{' '}
-            {devices.length} device{devices.length === 1 ? '' : 's'}
+            Metric coverage by provider and backend · {devices.length} device{devices.length === 1 ? '' : 's'}
           </p>
         </div>
         <div className="dc-hero__actions">

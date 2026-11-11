@@ -15,7 +15,10 @@ router = APIRouter(prefix="/alerts", tags=["Alerts & Events"])
 
 def parse_alert_response(alert: AlertModel) -> AlertResponse:
     res_id = alert.resource_id or ""
-    if "_Q" in res_id:
+    rtype = (alert.resource_type or "").upper()
+    if rtype == "BACKEND":
+        b_id = res_id
+    elif "_Q" in res_id:
         b_id = res_id.rsplit("_Q", 1)[0]
     else:
         b_id = res_id
@@ -74,6 +77,7 @@ def _build_alerts_summary(db: Session) -> AlertSummaryResponse:
         or 0
     )
     active = int(db.query(func.count()).filter(active_filter).scalar() or 0)
+    stored = int(db.query(func.count(AlertModel.alert_id)).scalar() or 0)
     stream = (
         db.query(AlertModel.severity, AlertModel.resource_id)
         .filter(active_filter)
@@ -94,6 +98,7 @@ def _build_alerts_summary(db: Session) -> AlertSummaryResponse:
         active=active,
         critical=critical,
         warning=warning,
+        stored=stored,
         by_backend=dict(by_backend),
         critical_by_backend=dict(critical_by_backend),
         warning_by_backend=dict(warning_by_backend),

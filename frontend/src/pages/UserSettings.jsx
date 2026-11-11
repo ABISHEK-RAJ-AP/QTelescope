@@ -7,7 +7,14 @@ import { formatIST } from '../utils/time';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { writeDensity } from '../utils/uiPreferences.js';
-import { listPermissionsForRole, roleLabel } from '../lib/permissions.js';
+import {
+  capabilityHighlightsForRole,
+  groupPermissionsByDomain,
+  listPermissionsForRole,
+  roleLabel,
+  roleSummaryText,
+} from '../lib/permissions.js';
+import { Toggle } from '../components/ui/Toggle.jsx';
 import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
 import { ConfirmDialog } from '../components/observability/ConfirmDialog.jsx';
 import './UserSettings.css';
@@ -113,6 +120,19 @@ export function UserSettings({ currentUser, onUserUpdate }) {
     }
   };
 
+  const patchPref = async (patch) => {
+    const merged = { ...prefs, ...patch, theme: theme || prefs.theme };
+    setPrefs(merged);
+    try {
+      const p = await api.patchUserPreferences(merged);
+      setPrefs(p);
+      if (p.display_density) writeDensity(p.display_density);
+    } catch (e) {
+      notifyError(e?.message || 'Could not save preference.');
+      await load();
+    }
+  };
+
   const pickTheme = (id) => {
     setTheme(id);
     setPrefs((prev) => ({ ...prev, theme: id }));
@@ -159,7 +179,17 @@ export function UserSettings({ currentUser, onUserUpdate }) {
     return listPermissionsForRole(profile.role || currentUser?.role);
   }, [profile, currentUser]);
 
-  const permPreview = effectivePerms.slice(0, 10);
+  const roleId = profile?.role || currentUser?.role;
+  const accessHighlights = useMemo(
+    () => capabilityHighlightsForRole(roleId, effectivePerms),
+    [roleId, effectivePerms],
+  );
+  const permGroups = useMemo(
+    () => groupPermissionsByDomain(effectivePerms),
+    [effectivePerms],
+  );
+  const showTechnicalScopes = effectivePerms.length > 0
+    && !effectivePerms.some((p) => String(p).includes('*'));
 
   if (loading || !profile) return <BoneyardSkeleton layout="settings" />;
 
@@ -173,14 +203,6 @@ export function UserSettings({ currentUser, onUserUpdate }) {
             <p className="us-identity__meta">@{profile.username}</p>
             <p className="us-identity__meta">{profile.email || 'Add email in profile'}</p>
             <span className="us-role">{profile.role_label || roleLabel(profile.role) || profile.role}</span>
-            {permPreview.length > 0 && (
-              <div className="us-perms" title="Effective capabilities for your role">
-                {permPreview.map((p) => <span key={p}>{p}</span>)}
-                {effectivePerms.length > permPreview.length && (
-                  <span className="us-perms__more">+{effectivePerms.length - permPreview.length} more</span>
-                )}
-              </div>
-            )}
           </div>
           <nav className="us-nav" aria-label="Settings sections">
             {TABS.map(({ id, label, icon: Icon }) => (
@@ -191,7 +213,7 @@ export function UserSettings({ currentUser, onUserUpdate }) {
                 aria-current={tab === id ? 'page' : undefined}
                 onClick={() => setTab(id)}
               >
-                <Icon size={16} aria-hidden />
+                <Icon size={20} aria-hidden />
                 {label}
               </button>
             ))}
@@ -200,10 +222,10 @@ export function UserSettings({ currentUser, onUserUpdate }) {
 
         <div className="us-main">
       {tab === 'profile' && (
-        <section className="us-card">
+        <section className="us-card" aria-labelledby="us-profile-h">
           <header className="us-card__head">
-            <h3 className="us-card__title">Profile</h3>
-            <p className="us-card__desc">Name and contact shown in acknowledgements, comments, and audit trails.</p>
+            <h3 id="us-profile-h" className="us-card__title">Contact & identity</h3>
+            <p className="us-card__desc">Shown on acknowledgements, alert comments, and audit exports.</p>
           </header>
           <div className="us-grid">
             <div className="us-field">
@@ -237,6 +259,52 @@ export function UserSettings({ currentUser, onUserUpdate }) {
 
       {tab === 'security' && (
         <>
+        <section className="us-card us-access" aria-labelledby="us-access-h">
+          <header className="us-card__head">
+            <h3 id="us-access-h" className="us-card__title">Role & access</h3>
+            <p className="us-card__desc">
+              {profile.role_label || roleLabel(roleId) || roleId}
+              {' · '}
+              {roleSummaryText(roleId)}
+            </p>
+          </header>
+          <ul className="us-access__caps" aria-label="Capability areas">
+            {accessHighlights.map((cap) => (
+              <li key={cap.id} className={`us-access__cap${cap.granted ? ' is-on' : ' is-off'}`}>
+                <span className="us-access__cap-status" aria-hidden>{cap.granted ? '✓' : '—'}</span>
+                <div className="us-access__cap-body">
+                  <strong>{cap.label}</strong>
+                  <span>{cap.granted ? 'Included for your role' : 'Not included'}</span>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {showTechnicalScopes ? (
+            <details className="us-access__details">
+              <summary>
+                Technical scopes
+                <span className="us-access__count">{effectivePerms.length}</span>
+              </summary>
+              <div className="us-access__scopes">
+                {permGroups.map((g) => (
+                  <div key={g.domain} className="us-access__scope-group">
+                    <h4>{g.title}</h4>
+                    <ul>
+                      {g.actions.map((a) => (
+                        <li key={a.id}>{a.label}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </details>
+          ) : (
+            <p className="us-access__full page-hint">Full platform access — all capability areas enabled.</p>
+          )}
+          <p className="us-access__foot page-hint">
+            Role changes are managed by a platform or security administrator.
+          </p>
+        </section>
         <section className="us-card">
           <header className="us-card__head">
             <h3 className="us-card__title">Change password</h3>
@@ -385,30 +453,32 @@ export function UserSettings({ currentUser, onUserUpdate }) {
       {tab === 'notifications' && (
         <section className="us-card">
           <header className="us-card__head">
-            <h3 className="us-card__title">Notifications</h3>
-            <p className="us-card__desc">In-app notification preferences (email when outbound mail is configured).</p>
+            <h3 className="us-card__title">In-app notifications</h3>
+            <p className="us-card__desc">
+              Choose what appears in the notification panel. Email delivery uses the same choices when outbound mail is configured.
+            </p>
           </header>
-          {[
-            ['notify_critical', 'Critical alerts', 'QPU threshold breaches and fleet-critical events.'],
-            ['notify_warning', 'Warning alerts', 'Degraded qubits and calibration aging.'],
-            ['notify_incidents', 'Incidents', 'Assignment, status changes, and escalation.'],
-            ['notify_comments', 'Comments', 'Thread replies and investigation notes.'],
-          ].map(([key, label, hint]) => (
-            <label key={key} className="us-check-row">
-              <input
-                type="checkbox"
-                checked={prefs[key] !== false}
-                onChange={(e) => setPrefs({ ...prefs, [key]: e.target.checked })}
-              />
-              <div>
-                <strong>{label}</strong>
-                <p>{hint}</p>
-              </div>
-            </label>
-          ))}
-          <div className="us-actions">
-            <button type="button" className="btn btn-primary" disabled={saving} onClick={savePrefs}>Save notifications</button>
-          </div>
+          <ul className="us-toggle-list">
+            {[
+              ['notify_critical', 'Critical alerts', 'QPU threshold breaches and fleet-critical events.'],
+              ['notify_warning', 'Warning alerts', 'Degraded qubits and calibration aging.'],
+              ['notify_incidents', 'Incidents', 'Assignment, status changes, and escalation.'],
+              ['notify_comments', 'Comments', 'Thread replies and investigation notes.'],
+            ].map(([key, label, hint]) => (
+              <li key={key} className="us-toggle-row">
+                <div className="us-toggle-row__copy">
+                  <strong>{label}</strong>
+                  <p>{hint}</p>
+                </div>
+                <Toggle
+                  className="us-toggle-row__switch"
+                  checked={prefs[key] !== false}
+                  aria-label={label}
+                  onChange={(on) => patchPref({ [key]: on })}
+                />
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
@@ -446,7 +516,7 @@ export function UserSettings({ currentUser, onUserUpdate }) {
             </div>
             <div className="us-field">
               <label>Date format
-                <select className="input-control" value={prefs.date_format || 'ist'} onChange={(e) => setPrefs({ ...prefs, date_format: e.target.value })}>
+                <select value={prefs.date_format || 'ist'} onChange={(e) => setPrefs({ ...prefs, date_format: e.target.value })}>
                   <option value="ist">IST (en-IN)</option>
                   <option value="iso">ISO 8601</option>
                 </select>
@@ -454,26 +524,26 @@ export function UserSettings({ currentUser, onUserUpdate }) {
             </div>
             <div className="us-field">
               <label>Display density
-                <select className="input-control" value={prefs.display_density || 'comfortable'} onChange={(e) => setPrefs({ ...prefs, display_density: e.target.value })}>
+                <select value={prefs.display_density || 'comfortable'} onChange={(e) => setPrefs({ ...prefs, display_density: e.target.value })}>
                   <option value="comfortable">Comfortable</option>
                   <option value="compact">Compact</option>
                 </select>
               </label>
             </div>
-            <div className="us-field">
+            <div className="us-field us-field--select">
               <label>Default landing page
-                <select className="input-control" value={prefs.landing_page || 'overview'} onChange={(e) => setPrefs({ ...prefs, landing_page: e.target.value })}>
+                <select value={prefs.landing_page || 'overview'} onChange={(e) => setPrefs({ ...prefs, landing_page: e.target.value })}>
                   <option value="overview">Fleet overview</option>
-                  <option value="alerts">Alerts</option>
+                  <option value="alerts">Alerts workspace</option>
                   <option value="operations">Operator console</option>
                 </select>
               </label>
             </div>
-            <div className="us-field">
-              <label>Alerts workspace tab
-                <select className="input-control" value={prefs.default_alerts_view || 'alerts'} onChange={(e) => setPrefs({ ...prefs, default_alerts_view: e.target.value })}>
+            <div className="us-field us-field--select">
+              <label>Alerts workspace default tab
+                <select value={prefs.default_alerts_view || 'alerts'} onChange={(e) => setPrefs({ ...prefs, default_alerts_view: e.target.value })}>
                   <option value="alerts">Active alerts</option>
-                  <option value="incidents">Incidents</option>
+                  <option value="incidents">Open incidents</option>
                 </select>
               </label>
             </div>

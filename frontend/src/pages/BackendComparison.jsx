@@ -13,8 +13,40 @@ import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { getChartTheme, baseTooltip, getFleetStateChartColors, getModalityChartPalette } from '../components/observability/chartTheme.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
-import { useProviderLineage, LineageBadge } from './useLineage.jsx';
+import { useProviderLineage } from './useLineage.jsx';
+import { isSimulatorBackend } from './fleetData.js';
+import { ScopeBanner } from '../components/ds/ScopeBanner.jsx';
 import './BackendComparison.css';
+
+const ROUTER_RANK = { GREEN: 4, YELLOW: 3, UNKNOWN: 2, RED: 1 };
+
+function pickRoutingRecommendation(rows, meta, queues) {
+  const eligible = rows.filter((r) => !isSimulatorBackend(meta[r.backend_id]));
+  if (!eligible.length) return null;
+  const scored = eligible.map((r) => {
+    const pending = num(queues[r.backend_id]?.pending_jobs);
+    const fLim = num(r.vector?.F_limit);
+    return {
+      id: r.backend_id,
+      name: r.name,
+      router: r.router || 'UNKNOWN',
+      pending,
+      fLim,
+      score: [
+        ROUTER_RANK[r.router] ?? 2,
+        pending != null ? -pending : -9999,
+        fLim ?? -1,
+      ],
+    };
+  });
+  scored.sort((a, b) => {
+    for (let i = 0; i < a.score.length; i += 1) {
+      if (a.score[i] !== b.score[i]) return b.score[i] - a.score[i];
+    }
+    return a.name.localeCompare(b.name);
+  });
+  return scored[0];
+}
 
 const chartPalette = () => getModalityChartPalette();
 const stateColors = () => getFleetStateChartColors();
@@ -206,6 +238,11 @@ export const BackendComparison = () => {
     }));
   }, [rows]);
 
+  const routingPick = useMemo(
+    () => (result && rows.length && !mixed ? pickRoutingRecommendation(rows, meta, queues) : null),
+    [result, rows, mixed, meta, queues],
+  );
+
   if (!backends) return <BoneyardSkeleton layout="grid" />;
   if (!backends.length) {
     return <div className="page-stack">{error ? <ErrorState variant="panel" message={error} onRetry={reload} /> : <EmptyState variant="panel" title="No backends" message="Register QPUs in Administration before comparing." />}</div>;
@@ -241,8 +278,7 @@ export const BackendComparison = () => {
                 data-mismatch={mismatch || undefined} onClick={() => toggle(b.backend_id)}>
                 <span className="bc-chip__body">
                   <span className="bc-chip__name">{b.backend_name || b.backend_id}</span>
-                  <span className="bc-chip__meta">{mod.replace('_', ' ')} · {b.qubit_count ?? '?'}Q</span>
-                  <LineageBadge lineage={lineage?.[b.provider_id]} />
+                  <span className="bc-chip__meta">{mod.replace('_', ' ')} · {b.qubit_count ?? '?'} qubits</span>
                   {mismatch && <span className="bc-chip__warn">different modality</span>}
                 </span>
               </button>
@@ -265,8 +301,25 @@ export const BackendComparison = () => {
 
       {result && rows.length > 0 && (
         <>
+          {routingPick ? (
+            <ScopeBanner
+              title="Routing recommendation"
+              variant={routingPick.router === 'RED' ? 'critical' : routingPick.router === 'YELLOW' ? 'warn' : 'info'}
+              items={[{
+                term: routingPick.name,
+                detail: `${routingPick.router} routing · ${routingPick.pending != null ? `${routingPick.pending} pending jobs` : 'queue unknown'}${routingPick.fLim != null ? ` · F_limit ${fmt(routingPick.fLim)}` : ''}`,
+              }]}
+              action={(
+                <button type="button" className="btn btn-secondary" onClick={() => navigate(buildBackendDetailsPath(routingPick.id, 'queues'))}>
+                  Open queue tab
+                </button>
+              )}
+            />
+          ) : mixed ? (
+            <p className="page-hint">Pick one modality to get a routing recommendation.</p>
+          ) : null}
           <div className="bc-legend" aria-label="Backend colours">
-            {rows.map((r) => <span key={r.backend_id}><i style={{ borderColor: r.color }} />{r.name} <LineageBadge lineage={lineage?.[meta[r.backend_id]?.provider_id]} /></span>)}
+            {rows.map((r) => <span key={r.backend_id}><i style={{ borderColor: r.color }} />{r.name}</span>)}
             {busy && <span className="page-hint">updating…</span>}
           </div>
 

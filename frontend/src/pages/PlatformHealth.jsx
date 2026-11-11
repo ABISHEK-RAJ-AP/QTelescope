@@ -16,6 +16,7 @@ import { EnterpriseDataTable } from '../components/observability/EnterpriseDataT
 import { DependencyGraph } from '../components/visualizations/topology/DependencyGraph.jsx';
 import { summarizeOperatorError } from '../utils/operatorFault.js';
 import '../components/visualizations/shared/visualizations.css';
+import { COPY } from '../copy/operator.js';
 import './PlatformHealth.css';
 
 const STALE_MIN = 30;
@@ -181,11 +182,16 @@ export const PlatformHealth = () => {
   return (
     <div className="page-stack">
       <section className="ph-tiles" aria-label="Platform status" data-tour="page-platform">
-        <Tile title="Database" tone={db.reachable ? 'ok' : 'bad'} value={db.reachable ? 'Connected' : 'Unreachable'} detail={db.error ? db.error : (db.reachable ? 'Queries OK' : 'Check deployment')} />
+        <Tile title="Data store" tone={db.reachable ? 'ok' : 'bad'} value={db.reachable ? 'Connected' : 'Unreachable'} detail={db.error ? db.error : (db.reachable ? COPY.platform.dbOk : COPY.platform.dbUnreachable)} />
         <Tile title="Collectors" tone={failed ? 'bad' : 'ok'} value={failed ? `${failed} failing` : `${providers.length - failed} of ${providers.length} OK`} detail={`DLQ ${coll.dlq_recent_count ?? 0} · breakers open ${breakers} · run history in admin`} to="/app/admin/collectors" onOpen={nav} />
         <Tile title="Telemetry store" tone={telTone} value={ageText(telAge)} detail={data?.latest_backend_telemetry_at ? formatISTTime(data.latest_backend_telemetry_at) : 'No samples stored'} />
         <Tile title="Scheduler" tone={mode === 'on_demand' ? 'warn' : 'ok'} value={mode === 'on_demand' ? 'On demand' : (mode || '—')} detail={data?.collection_scheduler?.note || 'Collection cycle control'} to="/app/admin/collectors" onOpen={nav} />
-        <Tile title="Event stream" tone="ok" value="Database aggregate SSE" detail={sse.stream_kind || 'Platform refresh ticks'} />
+        <Tile
+          title="Live refresh"
+          tone="ok"
+          value={sse.staleness_seconds != null ? `${Math.round(sse.staleness_seconds)}s stale` : 'Active'}
+          detail="Updates about every 5s from stored measurements"
+        />
       </section>
 
       <section className="card page-panel ph-deps" data-tour="page-platform-dependencies">

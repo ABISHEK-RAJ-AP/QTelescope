@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useTableKit } from '../../hooks/useTableKit.js';
 import { SortableTh } from './DataViewToolbar.jsx';
 import { TableEmpty } from './EmptyState.jsx';
+import { formatTableScalar } from '../../lib/formatMetricValue.js';
 import './enterpriseDataTable.css';
 
 function TableSkeleton({ columns, rows = 5 }) {
@@ -65,30 +66,28 @@ function Pagination({
         )}
         {showPager && (
           <>
-            <button type="button" className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => onPage(1)}>
-              First
-            </button>
-            <button type="button" className="btn btn-secondary btn-sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>
-              Previous
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm btn-icon-only"
+              disabled={page <= 1}
+              onClick={() => onPage(page - 1)}
+              aria-label="Previous page"
+              title="Previous"
+            >
+              <ChevronLeft size={18} aria-hidden />
             </button>
             <span className="edt-pager__meta">
-              Page {page} of {totalPages}
+              {page} / {totalPages}
             </span>
             <button
               type="button"
-              className="btn btn-secondary btn-sm"
+              className="btn btn-secondary btn-sm btn-icon-only"
               disabled={page >= totalPages}
               onClick={() => onPage(page + 1)}
+              aria-label="Next page"
+              title="Next"
             >
-              Next
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary btn-sm"
-              disabled={page >= totalPages}
-              onClick={() => onPage(totalPages)}
-            >
-              Last
+              <ChevronRight size={18} aria-hidden />
             </button>
           </>
         )}
@@ -118,6 +117,8 @@ export function EnterpriseDataTable({
   ariaLabel = 'Data table',
   onRowClick = null,
   rowClassName = '',
+  hideToolbarCount = false,
+  hideToolbar = false,
 }) {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState(initialSort || { key: null, dir: 'asc' });
@@ -160,25 +161,29 @@ export function EnterpriseDataTable({
 
   return (
     <div className="edt">
-      <div className="edt-toolbar" role="toolbar" aria-label="Table controls">
-        <label className="edt-search">
-          <Search size={15} aria-hidden />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setPage(1);
-            }}
-            placeholder={searchPlaceholder}
-            aria-label={searchPlaceholder}
-          />
-        </label>
-        {toolbarExtra}
-        <span className="edt-toolbar__count" role="status">
-          {loading ? 'Loading…' : `${totalCount} shown`}
-        </span>
-      </div>
+      {!hideToolbar && (
+        <div className="edt-toolbar" role="toolbar" aria-label="Table controls">
+          <label className="edt-search">
+            <Search size={15} aria-hidden />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+              placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
+            />
+          </label>
+          {toolbarExtra}
+          {hideToolbarCount ? null : (
+            <span className="edt-toolbar__count" role="status">
+              {loading ? 'Loading…' : `${totalCount} shown`}
+            </span>
+          )}
+        </div>
+      )}
       <div className={wrapClass}>
         <table className={tableClassName} aria-label={ariaLabel}>
           <thead>
@@ -228,7 +233,7 @@ export function EnterpriseDataTable({
                 >
                   {columns.map((col) => (
                     <td key={col.key} className={col.className}>
-                      {col.render ? col.render(row) : row[col.key] ?? '—'}
+                      {col.render ? col.render(row) : formatTableScalar(row[col.key])}
                     </td>
                   ))}
                 </tr>

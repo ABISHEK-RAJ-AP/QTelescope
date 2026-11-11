@@ -1,0 +1,208 @@
+/* Full-page loading shells — mirror page-stack + real ops layouts */
+
+.boneyard-skeleton--inline {
+  width: 100%;
+  min-height: 200px;
+  padding: 4px 0;
+}
+
+.boneyard-skeleton__creds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+
+.boneyard-skeleton-page {
+  width: 100%;
+  min-width: 0;
+  min-height: min(72vh, 880px);
+  flex: 1;
+  align-self: stretch;
+  gap: var(--ds-space-md, 16px);
+}
+
+.boneyard-skeleton-page .card {
+  padding: 14px 16px;
+}
+
+.boneyard-skeleton__hero {
+  padding: 16px 18px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.boneyard-skeleton__hero-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 960px) {
+  .boneyard-skeleton__hero-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .boneyard-skeleton__hero-kpis {
+    grid-template-columns: 1fr;
+  }
+}
+
+.boneyard-skeleton__fleet {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 1280px) {
+  .boneyard-skeleton__fleet {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .boneyard-skeleton__fleet {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.boneyard-skeleton__fleet-card {
+  min-height: 148px;
+}
+
+.boneyard-skeleton__charts {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.boneyard-skeleton__bento {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .boneyard-skeleton__bento {
+    grid-template-columns: 1fr;
+  }
+}
+
+.boneyard-skeleton__chart-panel {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.boneyard-skeleton__kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 960px) {
+  .boneyard-skeleton__kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.boneyard-skeleton__filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 12px 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.boneyard-skeleton__filter .skeleton-block:first-of-type {
+  flex: 1 1 200px;
+  max-width: 280px;
+  min-height: 40px;
+}
+
+.boneyard-skeleton__table-card {
+  flex: 1;
+  min-height: min(52vh, 520px);
+  display: flex;
+  flex-direction: column;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.boneyard-skeleton__table-body {
+  flex: 1;
+}
+
+.boneyard-skeleton__pager {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.boneyard-skeleton--grid .boneyard-skeleton__panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 900px) {
+  .boneyard-skeleton--grid .boneyard-skeleton__panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+.boneyard-skeleton__panel-tall {
+  min-height: min(36vh, 340px);
+}
+
+.boneyard-skeleton--list .boneyard-skeleton__queue {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.boneyard-skeleton__queue-item {
+  min-height: 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+}
+
+.boneyard-skeleton--ops .boneyard-skeleton__exceptions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 1100px) {
+  .boneyard-skeleton--ops .boneyard-skeleton__exceptions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.boneyard-skeleton__switch {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.boneyard-skeleton--timeline .boneyard-skeleton__swim {
+  min-height: min(40vh, 380px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block {
+    animation: none;
+    background: var(--bg-card-hover);
+  }
+}

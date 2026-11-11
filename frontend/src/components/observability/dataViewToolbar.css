@@ -8,7 +8,7 @@
   border-bottom: 1px solid var(--border-color);
 }
 .dvt-toolbar label {
-  font-size: 12px;
+  font-size: var(--font-size-body, 1.0625rem);
   color: var(--text-muted);
   display: inline-flex;
   gap: 6px;
@@ -21,7 +21,7 @@
   border: 1px solid var(--border-color);
   border-radius: 6px;
   padding: 5px 8px;
-  font-size: 12px;
+  font-size: var(--font-size-body, 1.0625rem);
 }
 .dvt-toolbar input[type='search'] {
   min-width: 200px;
@@ -30,7 +30,7 @@
 }
 .dvt-toolbar__spacer { flex: 1 1 8px; }
 .dvt-toolbar__count {
-  font-size: 12px;
+  font-size: var(--font-size-body, 1.0625rem);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
   margin-left: auto;
@@ -47,7 +47,8 @@
   background: var(--bg-card);
   border: 0;
   color: var(--text-muted);
-  padding: 6px 10px;
+  min-height: 44px;
+  padding: 0 12px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -145,7 +146,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 6px 10px;
   margin: 0;
-  font-size: 12px;
+  font-size: var(--font-size-body, 1.0625rem);
 }
 .dvt-card__stats dt { color: var(--text-muted); margin: 0; font-size: var(--font-size-micro-label); text-transform: uppercase; letter-spacing: 0.04em; }
 .dvt-card__stats dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }

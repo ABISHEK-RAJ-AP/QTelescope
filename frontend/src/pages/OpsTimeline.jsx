@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { X } from 'lucide-react';
-import { ContextBar } from '../components/observability/ContextBar.jsx';
+import { FilterBar } from '../components/ds/FilterBar.jsx';
+import { api } from '../services/api';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { DetailDrawer } from '../components/observability/DetailDrawer.jsx';
 import { DetailModalBody, DetailModalSection } from '../components/observability/DetailModalLayout.jsx';
@@ -20,7 +21,7 @@ import { usePageActions } from '../context/PageActionsContext.jsx';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
 import { SevBadge, StatusBadge } from './opsShared.jsx';
 import { sevRank, toMs } from './opsHelpers.js';
-import { DataPanelToolbar, SortableTh } from '../components/observability/DataViewToolbar.jsx';
+import { SortableTh, ViewModeToggle } from '../components/observability/DataViewToolbar.jsx';
 import { ListPager } from '../components/observability/ListPager.jsx';
 import './OpsTimeline.css';
 
@@ -51,6 +52,7 @@ export const OpsTimeline = () => {
   const [page, setPage] = useState(1);
   const [layout, setLayout] = useState('table');
   const [sort, setSort] = useState({ key: 'at', dir: 'desc' });
+  const [backends, setBackends] = useState([]);
 
   const load = useCallback(() => {
     fetchApi(`/operations/timeline?limit=${LIMIT}`)
@@ -60,6 +62,11 @@ export const OpsTimeline = () => {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    let cancelled = false;
+    api.getBackends().then((list) => { if (!cancelled) setBackends(list || []); }).catch(() => { if (!cancelled) setBackends([]); });
+    return () => { cancelled = true; };
+  }, []);
   useEffect(() => {
     setActions(<RefreshButton onClick={load} lastRefreshAt={lastRefresh} label="Refresh timeline" />);
     return () => clearActions();
@@ -162,7 +169,7 @@ export const OpsTimeline = () => {
       ? { label: 'Open alert', to: { pathname: '/app/alerts', search: `?alert=${encodeURIComponent(e.id)}` } }
       : null);
 
-  if (loading) return <BoneyardSkeleton layout="table" />;
+  if (loading) return <BoneyardSkeleton layout="timeline" />;
   if (error && !events.length) return <ErrorState message={error} onRetry={load} />;
 
   const state = events.length === 0 ? 'empty' : filtered.length === 0 ? 'empty' : 'ready';
@@ -170,25 +177,45 @@ export const OpsTimeline = () => {
 
   return (
     <div className="page-stack ops-tl">
-      <ContextBar backend={scopeBackend} onBackendChange={setBackend} alertId={alertId || undefined} hint="Filter by backend, or open from an alert link to pre-fill scope." />
       {error && <p className="ot-note ot-note--warn" role="alert">Refresh failed: {error}. Showing previous data.</p>}
-      {atMs && (
-        <p className="ot-note" role="status">
-          Focused on detection time {formatIST(at)} (dashed line).
-          <button type="button" className="btn btn-secondary btn--xs" onClick={clearAt}><X size={12} /> Clear focus</button>
-        </p>
-      )}
 
-      <div className="card ot-toolbar">
-        <fieldset className="ot-kinds">
-          <legend className="sr-only">Event types</legend>
+      <FilterBar
+        className="card ot-filter-bar filter-bar--inline"
+        search={query}
+        onSearchChange={setQuery}
+        searchPlaceholder="Search title, id…"
+        searchLabel="Search events"
+        count={`${filtered.length} of ${events.length} events`}
+        actions={(
+          <>
+            {atMs && (
+              <button type="button" className="btn btn-secondary btn--xs" onClick={clearAt} title={`Clear time focus ${formatIST(at)}`}>
+                <X size={12} aria-hidden /> Clear time focus
+              </button>
+            )}
+            <button type="button" className="btn btn-secondary btn--xs" onClick={reset}>Reset</button>
+            <ViewModeToggle value={layout} onChange={setLayout} />
+          </>
+        )}
+      >
+        <label className="ot-filter-field">
+          Backend
+          <select className="input-control" value={scopeBackend || ''} onChange={(e) => setBackend(e.target.value)} aria-label="Backend scope">
+            <option value="">All backends</option>
+            {backends.map((b) => (
+              <option key={b.backend_id} value={b.backend_id}>{b.backend_name || b.backend_id}</option>
+            ))}
+          </select>
+        </label>
+        <div className="ot-kinds" role="group" aria-label="Event types">
           {kindCounts.map(([k, n]) => (
             <button key={k} type="button" className="ot-chip" aria-pressed={kinds.has(k)} onClick={() => toggleKind(k)}>
               <span className={`ot-glyph ot-glyph--${k}`} aria-hidden /> {k.replace('_', ' ')} ({n})
             </button>
           ))}
-        </fieldset>
-        <label>Severity
+        </div>
+        <label className="ot-filter-field">
+          Severity
           <select className="input-control" value={sev} onChange={(e) => setSev(e.target.value)}>
             <option value="ALL">All</option>
             <option value="CRITICAL">Critical</option>
@@ -196,13 +223,13 @@ export const OpsTimeline = () => {
             <option value="INFO">Info</option>
           </select>
         </label>
-        <label className="ot-search">
-          <span className="sr-only">Search events</span>
-          <input type="search" placeholder="Search title, id…" value={query} onChange={(e) => setQuery(e.target.value)} />
-        </label>
-        <button type="button" className="btn btn-secondary btn--xs" onClick={reset}>Reset</button>
-        <span className="ot-count" role="status">{filtered.length} of {events.length} events</span>
-      </div>
+        {alertId ? (
+          <span className="ot-alert-pill" title="Scoped from URL">
+            Alert <code>{alertId}</code>
+            <button type="button" className="btn btn-secondary btn--xs" onClick={() => setAlertId('')}>Clear</button>
+          </span>
+        ) : null}
+      </FilterBar>
 
       <ChartPanel
         title="Event swim-lanes"
@@ -223,7 +250,6 @@ export const OpsTimeline = () => {
         />
       </ChartPanel>
       <section className="card ot-table dvt-panel" aria-label="Events">
-        <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${sorted.length} event${sorted.length === 1 ? '' : 's'}`} />
         {layout === 'grid' ? (
           <div className="dvt-grid">
             {sorted.length === 0 ? (
@@ -282,7 +308,7 @@ export const OpsTimeline = () => {
             </table>
           </div>
         )}
-        <ListPager page={eventPage} pages={eventPages} onPage={setPage} label="Page" />
+        <ListPager page={eventPage} pages={eventPages} onPage={setPage} />
       </section>
 
       <DetailDrawer

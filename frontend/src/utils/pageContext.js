@@ -8,15 +8,15 @@ const TELEMETRY_LABELS = {
   explorer: 'Metrics explorer',
   topology: 'Topology explorer',
   'cal-timeline': 'Calibration timeline',
-  compare: 'Backend comparison',
+  compare: 'Compare & routing',
   anomalies: 'Anomaly monitor',
   replay: 'Temporal replay',
   metrics: 'Metrics coverage',
 };
 
 const BACKEND_LABELS = {
-  inventory: 'Backend library',
-  qubits: 'Backend library',
+  inventory: 'Backend registry',
+  qubits: 'Backend registry',
   details: 'Backend workspace',
 };
 
@@ -73,23 +73,23 @@ export function resolvePageContext(state) {
   const breadcrumbs = [{ label: group }];
 
   let title = 'Dashboard';
-  let description = 'Fleet status, exceptions, and entry points to telemetry and alerts.';
+  let description = 'Fleet health, open issues, and where to investigate.';
 
   switch (mainTopic) {
     case 'home':
-      breadcrumbs.push({ label: 'Fleet overview' });
+      breadcrumbs.push({ label: 'Overview' });
       title = 'Fleet overview';
-      description = 'Charts first, then backend health. Action queue is Operator console.';
+      description = 'Fleet status, open alerts, queue pressure, and per-backend health.';
       break;
     case 'operations':
       breadcrumbs.push({ label: 'Operator console' });
       title = 'Operator console';
-      description = 'What to do next: acknowledge, investigate, remediate. Not a second fleet dashboard.';
+      description = 'Prioritized acknowledgement, investigation, and remediation queue.';
       break;
     case 'platform':
       breadcrumbs.push({ label: 'Platform health' });
       title = 'Platform health';
-      description = 'Database, collectors, ingestion freshness, and provider adapter performance.';
+      description = 'Data store reachability, collectors, and ingestion freshness.';
       break;
     case 'investigate':
       breadcrumbs.push({ label: 'Operations timeline' });
@@ -117,7 +117,9 @@ export function resolvePageContext(state) {
       breadcrumbs.push({ label: 'Telemetry' });
       breadcrumbs.push({ label: TELEMETRY_LABELS[sub] || sub });
       title = TELEMETRY_LABELS[sub] || 'Telemetry';
-      description = sub === 'live' ? 'Server-sent refresh stream and fleet-wide aggregates.' : 'Analysis over stored telemetry samples.';
+      description = sub === 'live'
+        ? 'Near-real-time fleet metrics refreshed from stored measurements.'
+        : 'Historical telemetry trends and comparisons for the selected range.';
       break;
     }
     case 'execution': {
@@ -175,7 +177,12 @@ export function resolvePageContext(state) {
       breadcrumbs.push({ label: 'Account' });
       breadcrumbs.push({ label: 'Settings' });
       title = 'Account settings';
-      description = 'Profile, security, notifications, and preferences.';
+      description = 'Profile, security, notifications, and workspace preferences.';
+      break;
+    case 'design':
+      breadcrumbs.push({ label: 'Design gallery' });
+      title = 'Design gallery';
+      description = 'Component states and tokens — internal style guide.';
       break;
     case 'admin': {
       const sub = adminSubTab || 'hub';

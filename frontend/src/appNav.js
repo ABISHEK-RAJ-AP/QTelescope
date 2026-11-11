@@ -61,6 +61,8 @@ export function buildAppPath(state) {
       return '/app/reports';
     case 'settings':
       return '/app/settings';
+    case 'design':
+      return '/app/design';
     case 'admin':
       if (adminSubTab === 'hub') return '/app/admin/integrations';
       if (adminSubTab === 'integrations') return '/app/admin/integrations';
@@ -97,6 +99,11 @@ export function parseAppPath(pathname) {
   if (parts.length === 0) return out;
 
   const [head, sub, third] = parts;
+
+  if (head === 'design') {
+    out.mainTopic = 'design';
+    return out;
+  }
 
   if (head === 'onboarding') {
     out.mainTopic = 'onboarding';
@@ -215,8 +222,10 @@ export function parseAppPath(pathname) {
 
 /** True when pathname is a legacy alias that should redirect to buildAppPath canonical URL. */
 export function isLegacyAppPath(pathname) {
-  const p = pathname || '';
-  if (p === '/app' || p === '/app/') return true;
-  if (p === '/app/operations' || p.startsWith('/app/operations/')) return true;
-  return false;
+  const raw = pathname || '';
+  const p = raw.endsWith('/') && raw.length > 1 ? raw.replace(/\/+$/, '') : raw;
+  if (p === '/app') return true;
+  if (!p.startsWith('/app/')) return false;
+  const canonical = buildAppPath(parseAppPath(p));
+  return p !== canonical;
 }

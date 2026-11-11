@@ -9,8 +9,13 @@ export const EMPTY_DEFAULTS = {
 };
 
 export const EMPTY_CHART = {
-  title: 'No series',
-  message: 'No measurements for the selected time range and filters.',
+  title: 'No data yet',
+  message: 'No measurements for the current scope.',
+};
+
+export const FLEET_TELEMETRY_EMPTY = {
+  title: 'Connect telemetry',
+  message: 'Queue, calibration, and coherence charts need at least one successful collection.',
 };
 
 export const ERROR_DEFAULTS = {

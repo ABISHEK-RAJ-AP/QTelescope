@@ -1,24 +1,38 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pencil, Plus } from 'lucide-react';
 import { ViewModeToggle } from '../components/observability/DataViewToolbar.jsx';
-import { RefreshButton } from '../components/ui/RefreshButton.jsx';
+import { PageRefreshCluster } from '../components/ui/PageRefreshCluster.jsx';
+import { X } from 'lucide-react';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { api } from '../services/api';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { STATES, ageMinutes, formatAge, isStale, lineageOf, modalityName, providerName, useProviderLineage, STALE_MIN, KNOWN_PROVIDER_IDS } from './backendUtils.js';
-import { LineageTag, StateBar, StatusText } from './backendCommon.jsx';
+import { StateBar, StatusText } from './backendCommon.jsx';
 import { AddBackendWizard } from './AddBackendWizard.jsx';
+import { BackendPreviewDrawer } from '../components/backends/BackendPreviewDrawer.jsx';
+import { MetricCard } from '../components/ds/MetricCard.jsx';
+import { FilterBar } from '../components/ds/FilterBar.jsx';
 import { unableToLoad } from '../constants/messages.js';
+import { formatBackendTitle } from '../lib/displayLabels.js';
 import './BackendInventory.css';
 import './fleetShared.css';
+
+const SORT_PRESETS = [
+  { key: 'health', dir: 'desc', label: 'Health (worst first)' },
+  { key: 'name', dir: 'asc', label: 'Name (A→Z)' },
+  { key: 'alerts', dir: 'desc', label: 'Alerts (high first)' },
+  { key: 'queue', dir: 'desc', label: 'Queue depth' },
+  { key: 'age', dir: 'desc', label: 'Telemetry age' },
+  { key: 'status', dir: 'asc', label: 'Status' },
+];
 
 const COLUMNS = [
   { key: 'name', label: 'Backend' },
   { key: 'owner', label: 'Owner' },
   { key: 'facility', label: 'Facility' },
-  { key: 'provider', label: 'Provider · source' },
+  { key: 'provider', label: 'Provider' },
   { key: 'modality', label: 'Modality' },
   { key: 'qubits', label: 'Qubits', right: true },
   { key: 'health', label: 'Qubit health' },
@@ -40,7 +54,8 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
   const [catalogEdit, setCatalogEdit] = useState(null);
   const [catalogSaving, setCatalogSaving] = useState(false);
   const [sort, setSort] = useState({ key: 'health', dir: 'desc' });
-  const [view, setView] = useState('grid');
+  const [view, setView] = useState('table');
+  const [preview, setPreview] = useState(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const { setActions, clearActions } = usePageActions();
   const lineage = useProviderLineage();
@@ -84,7 +99,7 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
         <button type="button" className="btn btn-primary" onClick={() => setWizardOpen(true)}>
           <Plus size={15} aria-hidden /> Add backend
         </button>
-        <RefreshButton onClick={load} lastRefreshAt={lastRefresh} label="Refresh inventory" />
+        <PageRefreshCluster onClick={load} lastRefreshAt={lastRefresh} label="Refresh inventory" />
       </>
     ));
     return () => clearActions();
@@ -97,7 +112,7 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
     const q = data.qMap[id];
     return {
       id,
-      name: b.backend_name,
+      name: formatBackendTitle({ backend_id: id, backend_name: b.backend_name }),
       owner: b.owner || '—',
       facility: b.facility || '—',
       tags: Array.isArray(b.tags) ? b.tags : [],
@@ -112,15 +127,24 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
       status: b.operational_status || 'UNKNOWN',
       age,
       alerts: data.alertsOk ? data.alertN[id] || 0 : null,
-      queue: q ? q.pending_jobs : null,
+      queue: q?.pending_jobs ?? null,
       wait: q?.estimated_wait_time,
       queueCondition: q?.queue_condition,
+      unlisted: !KNOWN_PROVIDER_IDS.has(b.provider_id),
     };
   }), [data, lineage.map]);
 
-  const displayRows = useMemo(
-    () => rows.filter((r) => KNOWN_PROVIDER_IDS.has(r.providerId)),
-    [rows],
+  const displayRows = rows;
+  const unlistedN = useMemo(() => rows.filter((r) => r.unlisted).length, [rows]);
+  const hasOwner = useMemo(() => displayRows.some((r) => r.owner && r.owner !== '—'), [displayRows]);
+  const hasFacility = useMemo(() => displayRows.some((r) => r.facility && r.facility !== '—'), [displayRows]);
+  const visibleColumns = useMemo(
+    () => COLUMNS.filter((c) => {
+      if (c.key === 'owner') return hasOwner;
+      if (c.key === 'facility') return hasFacility;
+      return true;
+    }),
+    [hasOwner, hasFacility],
   );
 
   const shown = useMemo(() => {
@@ -152,10 +176,60 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
   const fleetTotal = STATES.reduce((n, s) => n + fleetCounts[s], 0);
   const online = displayRows.filter((r) => r.status === 'ONLINE').length;
   const staleN = displayRows.filter((r) => isStale(r.age)).length;
-  const alertTotal = data.alertsOk ? displayRows.reduce((n, r) => n + r.alerts, 0) : null;
-  const tally = (k) => Object.entries(displayRows.reduce((m, r) => ({ ...m, [r[k]]: (m[r[k]] || 0) + 1 }), {}));
+  const openPreview = (id) => setPreview(displayRows.find((r) => r.id === id) || null);
   const toggleSort = (key) => setSort((s) => (s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: 'asc' }));
   const filtersActive = search || Object.values(f).some((v) => v !== 'ALL');
+
+  const renderInventoryCell = (r, key) => {
+    switch (key) {
+      case 'name':
+        return (
+          <>
+            <button type="button" className="bk-link" onClick={(e) => { e.stopPropagation(); openPreview(r.id); }} aria-label={`Preview ${r.name}`}>{r.name}</button>
+            <span className="bk-id" title="Technical id">{r.id}</span>
+          </>
+        );
+      case 'owner':
+        return (
+          <>
+            {r.owner !== '—' ? r.owner : <span className="bk-muted">Not configured</span>}
+            {isAdmin && (
+              <button type="button" className="bk-link" style={{ marginLeft: 6, fontSize: 11 }} onClick={(e) => { e.stopPropagation(); setCatalogEdit({ id: r.id, name: r.name, owner: r.owner === '—' ? '' : r.owner, facility: r.facility === '—' ? '' : r.facility, tags: (r.tags || []).join(', ') }); }}>Edit</button>
+            )}
+          </>
+        );
+      case 'facility':
+        return r.facility !== '—' ? r.facility : <span className="bk-muted">Not configured</span>;
+      case 'provider':
+        return r.provider;
+      case 'modality':
+        return r.modality;
+      case 'qubits':
+        return r.qubits ?? '—';
+      case 'health':
+        return <StateBar counts={r.counts} label={r.name} />;
+      case 'status':
+        return <StatusText status={r.status} />;
+      case 'age':
+        return (
+          <>
+            {formatAge(r.age)}
+            {isStale(r.age) && <div className="bk-stale">Stale</div>}
+          </>
+        );
+      case 'alerts':
+        return <span className="bk-alert-n" data-n={r.alerts ?? 0}>{r.alerts ?? '—'}</span>;
+      case 'queue':
+        return (
+          <>
+            {r.queue ?? '—'}
+            {r.wait != null && <div className="bk-muted">~{Math.round(r.wait)}s wait</div>}
+          </>
+        );
+      default:
+        return '—';
+    }
+  };
   const select = (k, label, options) => (
     <label>{label}
       <select className="input-control" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })}>
@@ -168,72 +242,36 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
   return (
     <div className="page-stack">
       <section className="bk-summary card" aria-label="Fleet summary" data-tour="page-inventory">
-        <div className="bk-summary__stats">
-          <div className="bk-stat">
-            <span className="bk-stat__label">Backends</span>
-            <span className="bk-stat__value">{displayRows.length}</span>
-            <span className="bk-stat__hint">{online} online</span>
-          </div>
-          <div className={`bk-stat${data.alertFleetCritical ? ' bk-stat--crit' : alertTotal ? ' bk-stat--warn' : ''}`}>
-            <span className="bk-stat__label">Alerts</span>
-            <span className="bk-stat__value">{alertTotal ?? data.alertFleetActive ?? '—'}</span>
-            {data.alertFleetCritical ? (
-              <span className="bk-stat__hint">{data.alertFleetCritical} critical</span>
-            ) : null}
-          </div>
-          <div className={`bk-stat${staleN ? ' bk-stat--warn' : ''}`}>
-            <span className="bk-stat__label">Stale</span>
-            <span className="bk-stat__value">{staleN}</span>
-            <span className="bk-stat__hint">&gt;{STALE_MIN}m</span>
-          </div>
-        </div>
-        <div className="bk-summary__filters">
-          <div className="bk-filter-group">
-            <span className="bk-filter-group__title">Modality</span>
-            <div className="bk-chips">
-              {tally('modality').map(([k, n]) => (
-                <button
-                  key={k}
-                  type="button"
-                  className="bk-chip"
-                  aria-pressed={f.modality === k}
-                  onClick={() => setF((prev) => ({ ...prev, modality: prev.modality === k ? 'ALL' : k }))}
-                >
-                  <span className="bk-chip__name">{k}</span>
-                  <span className="bk-chip__n">{n}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <div className="bk-filter-group">
-            <span className="bk-filter-group__title">Provider</span>
-            <div className="bk-chips">
-              {tally('provider').map(([k, n]) => {
-                const provRows = displayRows.filter((x) => x.provider === k);
-                const sources = [...new Set(provRows.map((r) => r.source))];
-                const lineageKey = sources.length === 1 ? sources[0] : 'unknown';
-                return (
-                  <button
-                    key={k}
-                    type="button"
-                    className="bk-chip bk-chip--provider"
-                    aria-pressed={f.provider === k}
-                    onClick={() => setF((prev) => ({ ...prev, provider: prev.provider === k ? 'ALL' : k }))}
-                  >
-                    <span className="bk-chip__name">{k}</span>
-                    <span className="bk-chip__n">{n}</span>
-                    <LineageTag lineage={lineageKey} compact />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+        <div className="bk-summary__stats bk-summary__stats--ds">
+          <MetricCard
+            label="Backends"
+            value={displayRows.length}
+            hint={`${online} online${unlistedN ? ` · ${unlistedN} unlisted` : ''}`}
+          />
+          <MetricCard
+            label="Active alerts"
+            value={data.alertsOk ? data.alertFleetActive : null}
+            hint={data.alertFleetCritical ? `${data.alertFleetCritical} critical` : 'ACTIVE status'}
+            tone={data.alertFleetCritical ? 'crit' : data.alertFleetActive ? 'warn' : 'neutral'}
+          />
+          <MetricCard
+            label="Stale telemetry"
+            value={staleN}
+            hint={`Older than ${STALE_MIN} minutes`}
+            tone={staleN ? 'warn' : 'ok'}
+          />
         </div>
         <div className="bk-summary__health">
           <span className="bk-filter-group__title">Fleet qubit health</span>
           <StateBar counts={fleetCounts} total={fleetTotal} label="Fleet qubits" />
         </div>
       </section>
+
+      {unlistedN > 0 && (
+        <p className="bk-note" role="status">
+          {unlistedN} backend{unlistedN === 1 ? '' : 's'} use a provider id outside the built-in catalog — still shown here so fleet counts match the registry.
+        </p>
+      )}
 
       {(failed.length > 0 || lineage.error) && (
         <p className="bk-note" role="status">
@@ -242,19 +280,41 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
       )}
 
       <section className="card bk-panel">
-        <div className="bk-toolbar" role="search">
-          <input type="search" placeholder="Search backend, provider, modality" aria-label="Search backends" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <FilterBar
+          className="bk-toolbar filter-bar--inline"
+          search={search}
+          onSearchChange={setSearch}
+          searchPlaceholder="Search backend, provider, modality"
+          searchLabel="Search backends"
+          count={`${shown.length} of ${displayRows.length}`}
+          actions={(
+            <ViewModeToggle value={view} onChange={setView} toggleClassName="bk-view-toggle dvt-view-toggle" btnClassName="bk-view-btn dvt-view-btn" />
+          )}
+        >
           {select('provider', 'Provider', uniq(displayRows, 'provider'))}
           {select('modality', 'Modality', uniq(displayRows, 'modality'))}
           {select('status', 'Status', uniq(displayRows, 'status'))}
           {select('source', 'Source', uniq(displayRows, 'source'))}
           {select('facility', 'Facility', uniq(displayRows, 'facility').filter((x) => x && x !== '—'))}
-          {filtersActive && (
-            <button type="button" className="btn btn-secondary" onClick={() => { setSearch(''); setF({ provider: 'ALL', modality: 'ALL', status: 'ALL', source: 'ALL', facility: 'ALL' }); }}>Clear filters</button>
-          )}
-          <ViewModeToggle value={view} onChange={setView} toggleClassName="bk-view-toggle dvt-view-toggle" btnClassName="bk-view-btn dvt-view-btn" />
-          <span className="bk-muted bk-toolbar__count" aria-live="polite">{shown.length} of {displayRows.length} backends</span>
-        </div>
+          <label className="bk-sort-pick bk-sort-pick--inline">
+            Sort
+            <select
+              className="input-control"
+              value={`${sort.key}:${sort.dir}`}
+              onChange={(e) => {
+                const [key, dir] = e.target.value.split(':');
+                setSort({ key, dir });
+              }}
+            >
+              {SORT_PRESETS.map((p) => (
+                <option key={`${p.key}:${p.dir}`} value={`${p.key}:${p.dir}`}>{p.label}</option>
+              ))}
+            </select>
+          </label>
+          {filtersActive ? (
+            <button type="button" className="btn btn-secondary btn--xs" onClick={() => { setSearch(''); setF({ provider: 'ALL', modality: 'ALL', status: 'ALL', source: 'ALL', facility: 'ALL' }); }}>Clear</button>
+          ) : null}
+        </FilterBar>
 
         {shown.length === 0 ? (
           <EmptyState variant="panel" compact title={rows.length ? 'No matches' : 'Registry empty'} message={rows.length ? 'Clear filters or change search.' : 'No backends in the registry. Check Platform health and collectors.'} />
@@ -265,7 +325,7 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
                 key={r.id}
                 className={`bk-card${r.alerts ? ' bk-card--alert' : ''}${isStale(r.age) ? ' bk-card--stale' : ''}`}
               >
-                <button type="button" className="bk-card__hit" onClick={() => onSelectBackend?.(r.id)} aria-label={`Open ${r.name}`}>
+                <button type="button" className="bk-card__hit" onClick={() => openPreview(r.id)} aria-label={`Preview ${r.name}`}>
                   <header className="bk-card__head">
                     <div className="bk-card__title">{r.name}</div>
                     <StatusText status={r.status} />
@@ -275,7 +335,8 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
                     <span className="bk-tag">{r.modality}</span>
                     <span className="bk-tag">{r.provider}</span>
                     {r.facility !== '—' && <span className="bk-tag">{r.facility}</span>}
-                    <LineageTag lineage={r.source} />
+                    {isStale(r.age) ? <span className="bk-tag bk-tag--warn">Stale telemetry</span> : null}
+                    {r.unlisted ? <span className="bk-tag bk-tag--warn">Unlisted provider</span> : null}
                   </div>
                   {(r.owner !== '—' || r.tags.length > 0) && (
                     <p className="bk-muted" style={{ fontSize: 12, margin: '4px 0 0' }}>
@@ -307,7 +368,7 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
                       tags: (r.tags || []).join(', '),
                     })}
                   >
-                    <Pencil size={14} aria-hidden /> Catalogue
+                    <Pencil size={14} aria-hidden /> Registry metadata
                   </button>
                 )}
               </article>
@@ -316,10 +377,12 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
         ) : (
           <div className="bk-tablewrap">
             <table className="bk-table">
-              <caption className="bk-sr">Backend registry. Click a row to open its workspace.</caption>
+              <caption className="bk-sr">
+                Backend registry. Source (live vs demo) is in the Source filter — not repeated per row. Click a row to open its workspace.
+              </caption>
               <thead>
                 <tr>
-                  {COLUMNS.map((c) => (
+                  {visibleColumns.map((c) => (
                     <th key={c.key} scope="col" className={c.right ? 'bk-r' : undefined} aria-sort={sort.key === c.key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
                       <button type="button" className="bk-th" data-active={sort.key === c.key} onClick={() => toggleSort(c.key)}>
                         {c.label}<span aria-hidden>{sort.key === c.key ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}</span>
@@ -330,32 +393,10 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
               </thead>
               <tbody>
                 {shown.map((r) => (
-                  <tr key={r.id} className="bk-row" onClick={() => onSelectBackend?.(r.id)}>
-                    <td>
-                      <button type="button" className="bk-link" onClick={(e) => { e.stopPropagation(); onSelectBackend?.(r.id); }} aria-label={`Open workspace for ${r.name}`}>{r.name}</button>
-                      <span className="bk-id">{r.id}</span>
-                    </td>
-                    <td>
-                      {r.owner}
-                      {isAdmin && (
-                        <button type="button" className="bk-link" style={{ marginLeft: 6, fontSize: 11 }} onClick={(e) => { e.stopPropagation(); setCatalogEdit({ id: r.id, name: r.name, owner: r.owner === '—' ? '' : r.owner, facility: r.facility === '—' ? '' : r.facility, tags: (r.tags || []).join(', ') }); }}>Edit</button>
-                      )}
-                    </td>
-                    <td>{r.facility}</td>
-                    <td>{r.provider}<div style={{ marginTop: 3 }}><LineageTag lineage={r.source} /></div></td>
-                    <td>{r.modality}</td>
-                    <td className="bk-r">{r.qubits ?? '—'}</td>
-                    <td><StateBar counts={r.counts} label={r.name} /></td>
-                    <td><StatusText status={r.status} /></td>
-                    <td className="bk-r">
-                      {formatAge(r.age)}
-                      {isStale(r.age) && <div className="bk-stale">Stale</div>}
-                    </td>
-                    <td className="bk-r"><span className="bk-alert-n" data-n={r.alerts ?? 0}>{r.alerts ?? '—'}</span></td>
-                    <td className="bk-r">
-                      {r.queue ?? '—'}
-                      {r.wait != null && <div className="bk-muted">~{Math.round(r.wait)}s wait</div>}
-                    </td>
+                  <tr key={r.id} className="bk-row" onClick={() => openPreview(r.id)}>
+                    {visibleColumns.map((c) => (
+                      <td key={c.key} className={c.right ? 'bk-r' : undefined}>{renderInventoryCell(r, c.key)}</td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
@@ -363,6 +404,12 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
           </div>
         )}
       </section>
+
+      <BackendPreviewDrawer
+        row={preview}
+        onClose={() => setPreview(null)}
+        onOpenWorkspace={onSelectBackend}
+      />
 
       <AddBackendWizard
         open={wizardOpen}
@@ -372,13 +419,17 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
       />
 
       {catalogEdit && (
-        <div className="admin-modal-backdrop" role="presentation" onClick={() => !catalogSaving && setCatalogEdit(null)}>
-          <div className="admin-modal" role="dialog" aria-labelledby="catalog-edit-title" onClick={(e) => e.stopPropagation()}>
-            <header className="admin-modal-header">
-              <h3 id="catalog-edit-title">Catalogue — {catalogEdit.name}</h3>
-              <button type="button" className="admin-modal-close" aria-label="Close" onClick={() => setCatalogEdit(null)}>×</button>
+        <div className="bk-modal-backdrop" role="presentation" onClick={() => !catalogSaving && setCatalogEdit(null)}>
+          <div className="bk-modal-card" role="dialog" aria-modal="true" aria-labelledby="catalog-edit-title" onClick={(e) => e.stopPropagation()}>
+            <header className="bk-modal-header">
+              <div>
+                <h3 id="catalog-edit-title">Registry metadata</h3>
+                <p className="page-hint" style={{ margin: '4px 0 0' }}>{catalogEdit.name} · <code>{catalogEdit.id}</code></p>
+              </div>
+              <button type="button" className="bk-modal-close" aria-label="Close" onClick={() => setCatalogEdit(null)}><X size={18} /></button>
             </header>
-            <div className="admin-modal-body" style={{ display: 'grid', gap: 10 }}>
+            <div className="bk-modal-body">
+              <p className="page-hint">Owner, facility, and tags for inventory search — not vendor cloud configuration.</p>
               <label className="admin-form-field">
                 <span className="admin-form-label">Owner</span>
                 <input className="input-control" value={catalogEdit.owner} onChange={(e) => setCatalogEdit({ ...catalogEdit, owner: e.target.value })} />
@@ -392,7 +443,7 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
                 <input className="input-control" value={catalogEdit.tags} onChange={(e) => setCatalogEdit({ ...catalogEdit, tags: e.target.value })} />
               </label>
             </div>
-            <footer className="admin-modal-footer">
+            <footer className="bk-modal-footer">
               <button type="button" className="btn btn-secondary" disabled={catalogSaving} onClick={() => setCatalogEdit(null)}>Cancel</button>
               <button
                 type="button"
@@ -416,7 +467,7 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
                   }
                 }}
               >
-                {catalogSaving ? 'Saving…' : 'Save catalogue'}
+                {catalogSaving ? 'Saving…' : 'Save'}
               </button>
             </footer>
           </div>

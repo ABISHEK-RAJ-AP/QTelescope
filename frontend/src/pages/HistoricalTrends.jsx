@@ -15,6 +15,7 @@ import { baseTooltip, getChartTheme, getChartSemanticColors } from '../component
 import { parseDate } from '../utils/time';
 import { readTelemetryWindowHours, writeTelemetryWindowHours } from '../utils/telemetryWindow';
 import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
+import { COPY } from '../copy/operator.js';
 import './HistoricalTrends.css';
 import './TelemetryPages.css';
 
@@ -219,7 +220,7 @@ export const HistoricalTrends = () => {
           asOf={asOf}
           state={hasHistory ? 'ready' : 'empty'}
           emptyTitle="No queue history"
-          emptyMessage="Collector has not stored telemetry samples for this backend."
+          emptyMessage={COPY.telemetry.noStored}
           minHeight={380}
         >
           <QtECharts option={queueChartOption} style={{ height: 380 }} />

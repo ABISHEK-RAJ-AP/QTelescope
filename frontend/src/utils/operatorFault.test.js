@@ -4,6 +4,7 @@ import { collectorQueueTitle, summarizeOperatorError } from './operatorFault.js'
 describe('summarizeOperatorError', () => {
   it('hides SQL details', () => {
     expect(summarizeOperatorError('UNIQUE constraint failed: connectivity_edges.edge_id')).toBe('data store error');
+    expect(summarizeOperatorError('no such table: providers')).toBe('data store error');
   });
 
   it('keeps short plain messages', () => {

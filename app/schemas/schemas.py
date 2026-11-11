@@ -195,9 +195,24 @@ class AlertSummaryResponse(BaseModel):
     active: int
     critical: int
     warning: int
+    stored: int = 0  # all rows in alert store (any status)
     by_backend: Dict[str, int] = Field(default_factory=dict)
     critical_by_backend: Dict[str, int] = Field(default_factory=dict)
     warning_by_backend: Dict[str, int] = Field(default_factory=dict)
+
+
+class FleetSummaryResponse(BaseModel):
+    """Canonical fleet KPI scopes for overview + inventory headers."""
+
+    as_of: datetime.datetime
+    total_backends: int
+    operational_backends: int
+    alerts_active: int
+    alerts_critical: int
+    alerts_warning: int
+    alerts_stored: int
+    pending_jobs_telemetry: int  # sum latest telemetry pending_jobs
+    queued_jobs_execution: int  # JobRecordModel QUEUED
 
 
 class AlertAcknowledgeRequest(BaseModel):

@@ -7,9 +7,10 @@ import { api } from '@/services/api';
 import './commandPalette.css';
 
 const NAV_COMMANDS = [
-  { id: 'overview', label: 'Fleet overview', path: '/app/overview', nav: 'home', group: 'Observe' },
-  { id: 'operate', label: 'Operator console', path: '/app/operate', nav: 'operations', group: 'Observe' },
-  { id: 'platform', label: 'Platform health', path: '/app/platform/health', nav: 'platform', group: 'Observe' },
+  { id: 'overview', label: 'Overview', path: '/app/overview', nav: 'home', group: 'Console' },
+  { id: 'compare', label: 'Compare & routing', path: '/app/telemetry/compare', nav: 'compare', group: 'Console' },
+  { id: 'operate', label: 'Operator console', path: '/app/operate', nav: 'operations', group: 'Labs' },
+  { id: 'platform', label: 'Platform health', path: '/app/platform/health', nav: 'platform', group: 'Labs' },
   { id: 'inventory', label: 'Backend inventory', path: '/app/backends/inventory', nav: 'backends', group: 'Observe' },
   { id: 'live', label: 'Live telemetry', path: '/app/telemetry/live', nav: 'telemetry', group: 'Analyze' },
   { id: 'metrics-explorer', label: 'Metrics explorer', path: '/app/telemetry/explorer', nav: 'telemetry', group: 'Analyze' },

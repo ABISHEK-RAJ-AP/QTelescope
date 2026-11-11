@@ -88,8 +88,11 @@ class TelemetryCollector:
                     ))
                 self.db.commit()
                 
-                # Seed topology edges
+                # Seed topology edges (replace — rediscovery must not duplicate edge_id)
                 edges = self.adapter.get_connectivity(b["backend_id"])
+                self.db.query(ConnectivityEdgeModel).filter(
+                    ConnectivityEdgeModel.backend_id == b["backend_id"]
+                ).delete(synchronize_session=False)
                 for e in edges:
                     if "qubits" in e and len(e["qubits"]) >= 2:
                         q_src, q_tgt = e["qubits"][0], e["qubits"][1]
@@ -125,6 +128,12 @@ class TelemetryCollector:
                 status_raw, provider_id=prov_id, lineage=lineage
             )
             self.db.add(BackendTelemetryModel(**status_norm))
+            backend_row = self.db.query(BackendModel).filter(BackendModel.backend_id == backend_id).first()
+            if backend_row:
+                backend_row.operational_status = "ONLINE" if status_norm["operational"] else "OFFLINE"
+                msg = status_raw.get("status_message")
+                if msg:
+                    backend_row.status_message = str(msg)
 
             # Backend Properties & Calibration
             props_raw = self.adapter.get_backend_properties(backend_id)
@@ -136,6 +145,19 @@ class TelemetryCollector:
                     calib_time = utcnow()
 
             age_hrs, freshness = CalibrationFreshnessMonitor.calculate_freshness(calib_time)
+            from sqlalchemy import func
+
+            q_latest = self.db.query(func.max(QubitTelemetryModel.timestamp)).filter(
+                QubitTelemetryModel.backend_id == backend_id
+            ).scalar()
+            if q_latest:
+                q_naive = q_latest.replace(tzinfo=None) if getattr(q_latest, "tzinfo", None) else q_latest
+                now_naive = utcnow().replace(tzinfo=None) if utcnow().tzinfo else utcnow()
+                tel_age_h = max(0.0, (now_naive - q_naive).total_seconds() / 3600.0)
+                if tel_age_h > 12 and freshness in ("Fresh", "Recent", "Aging"):
+                    freshness = "Stale"
+                elif tel_age_h > 3 and freshness == "Fresh":
+                    freshness = "Aging"
 
             # Store Calibration Snapshot
             calib_snap = CalibrationSnapshotModel(
@@ -198,7 +220,11 @@ class TelemetryCollector:
 
 
             # Check Alert Rules
-            active_alerts = self.db.query(AlertModel).filter(AlertModel.status == "ACTIVE").all()
+            active_alerts = (
+                self.db.query(AlertModel)
+                .filter(AlertModel.status.in_(["ACTIVE", "ACKNOWLEDGED"]))
+                .all()
+            )
             triggered = AlertEngine.evaluate_telemetry(
                 backend_id=backend_id,
                 operational=status_norm["operational"],
@@ -210,6 +236,16 @@ class TelemetryCollector:
             )
             for new_alt in triggered:
                 self.db.add(new_alt)
+
+            if status_norm["operational"]:
+                for a in active_alerts:
+                    if (
+                        a.alert_type == "BACKEND_OFFLINE"
+                        and a.status == "ACTIVE"
+                        and (a.resource_id == backend_id or a.resource_id.startswith(f"{backend_id}_"))
+                    ):
+                        a.status = "RESOLVED"
+                        a.resolved_at = utcnow()
 
         self.db.commit()
         self._last_cycle_stats = {

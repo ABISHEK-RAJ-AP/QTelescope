@@ -16,12 +16,14 @@ function snapHours(hours) {
 export function useAppScope({ defaultBackend = '', defaultHours = 24 } = {}) {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const { backend, hours, alertId } = useMemo(() => {
+  const { backend, hours, alertId, severity, status } = useMemo(() => {
     const parsed = parseScopeSearch(searchParams);
     return {
       backend: parsed.backend || defaultBackend || '',
       hours: snapHours(parsed.hours ?? defaultHours),
       alertId: parsed.alertId || '',
+      severity: parsed.severity || '',
+      status: parsed.status || '',
     };
   }, [searchParams, defaultBackend, defaultHours]);
 
@@ -35,14 +37,20 @@ export function useAppScope({ defaultBackend = '', defaultHours = 24 } = {}) {
   const setBackend = useCallback((id) => patchScope({ backend: id || '' }), [patchScope]);
   const setHours = useCallback((h) => patchScope({ hours: h }), [patchScope]);
   const setAlertId = useCallback((id) => patchScope({ alertId: id || '' }), [patchScope]);
+  const setSeverity = useCallback((s) => patchScope({ severity: s || '' }), [patchScope]);
+  const setStatus = useCallback((s) => patchScope({ status: s || '' }), [patchScope]);
 
   return {
     backend,
     hours,
     alertId,
+    severity,
+    status,
     patchScope,
     setBackend,
     setHours,
     setAlertId,
+    setSeverity,
+    setStatus,
   };
 }

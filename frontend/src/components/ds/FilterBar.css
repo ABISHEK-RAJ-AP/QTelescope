@@ -1,0 +1,110 @@
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-sm, 12px) var(--ds-space-md, 16px);
+}
+
+.filter-bar__search {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-space-xs, 8px);
+  flex: 1 1 200px;
+  min-width: 160px;
+}
+
+.filter-bar__search input {
+  width: 100%;
+}
+
+.filter-bar__filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-sm, 12px);
+}
+
+.filter-bar__filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-size-metadata, 0.8125rem);
+  color: var(--text-muted);
+}
+
+.filter-bar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-space-xs, 8px);
+  margin-left: auto;
+}
+
+.filter-bar__count {
+  font-size: var(--font-size-metadata, 0.8125rem);
+  color: var(--text-muted);
+  flex: 1 1 100%;
+}
+
+@media (min-width: 900px) {
+  .filter-bar__count {
+    flex: 0 1 auto;
+    margin-left: auto;
+    text-align: right;
+  }
+}
+
+/* Inline ops toolbar — search + selects on one row (inventory, alerts) */
+.filter-bar--inline {
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--ds-space-sm, 12px);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.filter-bar--inline .filter-bar__search {
+  flex: 1 1 200px;
+  min-width: 160px;
+  max-width: 280px;
+}
+
+.filter-bar--inline .filter-bar__filters {
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: var(--ds-space-sm, 12px);
+}
+
+.filter-bar--inline .filter-bar__filters label,
+.filter-bar--inline .bk-sort-pick--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  white-space: nowrap;
+  font-size: var(--font-size-metadata, 0.8125rem);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.filter-bar--inline .filter-bar__filters select,
+.filter-bar--inline .filter-bar__filters .input-control,
+.filter-bar--inline .bk-sort-pick--inline select {
+  min-height: 40px;
+  min-width: 6.5rem;
+  font-size: var(--font-size-control, 1rem);
+}
+
+.filter-bar--inline .filter-bar__count {
+  flex: 0 0 auto;
+  margin-left: auto;
+  font-size: var(--font-size-label, 0.9375rem);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.filter-bar--inline .filter-bar__actions {
+  margin-left: 0;
+  flex-shrink: 0;
+}

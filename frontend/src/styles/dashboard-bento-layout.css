@@ -1,5 +1,27 @@
 /* Cert Studio dashboard bento + customize mode (adapted) */
 
+/* Chart grid shell — Cert-style soft panel (dashboard-home__charts wraps this) */
+.dashboard-home__charts {
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--border-color);
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--ds-primary, #172554) 4%, var(--bg-card)) 0%,
+    color-mix(in srgb, #2563eb 3%, var(--bg-card)) 28%,
+    var(--bg-card) 72%
+  );
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--text-primary) 5%, transparent);
+}
+
+.dark .dashboard-home__charts {
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, #1e3a8a 18%, var(--bg-card)) 0%,
+    var(--bg-card) 65%
+  );
+}
+
 .dash-bento {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -58,6 +80,20 @@
   width: 100%;
 }
 
+.dash-bento__body > .card,
+.dash-bento__body > section.card {
+  border-color: var(--ds-glass-border, var(--border-color));
+  background: var(--ds-glass-bg, var(--bg-card));
+  backdrop-filter: blur(10px);
+  border-radius: 14px;
+  box-shadow: var(--ds-shadow-card);
+  height: auto;
+}
+
+.dashboard-home__charts .chart-panel {
+  margin: 0;
+}
+
 /* Dedicated strip ABOVE panel content — never overlays titles / expand */
 .dash-bento__toolbar {
   display: flex;
@@ -102,7 +138,7 @@
   color: var(--text-secondary);
   cursor: pointer;
   touch-action: none;
-  font-size: 11px;
+  font-size: var(--font-size-helper, 0.9375rem);
   font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
@@ -144,11 +180,11 @@
 
 .dashboard-customize-hint {
   margin: 0 0 12px;
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-radius: 10px;
   border: 1px solid var(--accent-cyan);
   background: rgba(2, 132, 199, 0.08);
-  font-size: 12.5px;
+  font-size: var(--font-size-helper);
   color: var(--text-secondary);
 }
 

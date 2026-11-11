@@ -80,15 +80,15 @@ const ROLE_PERMS = {
 export const ROLE_DEFINITIONS = [
   { id: 'Viewer', label: 'Viewer', summary: 'Read-only observability and reports.' },
   { id: 'ResearchAnalyst', label: 'Research analyst', summary: 'Read fleet data; export reports; comment on alerts and incidents; developer studio access.' },
-  { id: 'Researcher', label: 'Research analyst (legacy)', summary: 'Same effective access as Research analyst.' },
+  { id: 'Researcher', label: 'Research analyst', summary: 'Alias for Research analyst.' },
   { id: 'OpsEngineer', label: 'Operations engineer', summary: 'Monitor fleet; acknowledge and resolve alerts; update incidents.' },
-  { id: 'Operator', label: 'Operations engineer (legacy)', summary: 'Operations plus developer studio workflows.' },
+  { id: 'Operator', label: 'Operations engineer', summary: 'Alias for Operations engineer (includes studio).' },
   { id: 'IncidentCommander', label: 'Incident commander', summary: 'Full ops response including incident assignment and closure.' },
   { id: 'QuantumOpsAdmin', label: 'Quantum operations administrator', summary: 'Fleet configuration, alert rules, providers, and platform settings.' },
   { id: 'SecurityAdmin', label: 'Security administrator', summary: 'Users, roles, MFA policy, sessions, and audit exports.' },
   { id: 'SuperAdmin', label: 'Super administrator', summary: 'Unrestricted platform capabilities; can assign SuperAdmin.' },
   { id: 'PlatformAdmin', label: 'Platform administrator', summary: 'Unrestricted platform capabilities.' },
-  { id: 'Admin', label: 'Platform administrator (legacy)', summary: 'Unrestricted platform capabilities.' },
+  { id: 'Admin', label: 'Platform administrator', summary: 'Alias for Platform administrator.' },
 ];
 
 /** Matrix columns (capability bundles). */
@@ -155,6 +155,8 @@ export function canSeeNavItem(user, id) {
   if (id === 'execution') return can(user, 'executions:read') || can(user, 'telemetry:read');
   if (id === 'reports') return can(user, 'reports:read');
   if (id === 'alerts') return can(user, 'alerts:read');
+  if (id === 'compare') return can(user, 'telemetry:read') || can(user, 'backends:read');
+  if (id === 'labs') return can(user, 'telemetry:read');
   return false;
 }
 
@@ -174,4 +176,81 @@ export function landingPathForRole(role) {
   if (role === 'Auditor') return '/app/reports';
   if (role === 'Operator' || role === 'OpsEngineer' || role === 'IncidentCommander') return '/app/operate';
   return '/app/overview';
+}
+
+const PERM_DOMAIN_LABELS = {
+  alerts: 'Alerts',
+  incidents: 'Incidents',
+  backends: 'Backends',
+  telemetry: 'Telemetry',
+  reports: 'Reports',
+  platform: 'Platform',
+  audit: 'Audit',
+  studio: 'Developer studio',
+  projects: 'Projects',
+  circuits: 'Circuits',
+  simulation: 'Simulation',
+  compilation: 'Compilation',
+  preflight: 'Preflight',
+  submissions: 'Submissions',
+  estimation: 'Estimation',
+  executions: 'Executions',
+  metering: 'Metering',
+  quotas: 'Quotas',
+  reservations: 'Reservations',
+};
+
+const PERM_ACTION_LABELS = {
+  read: 'View',
+  acknowledge: 'Acknowledge',
+  resolve: 'Resolve',
+  comment: 'Comment',
+  update: 'Update',
+  create: 'Create',
+  run: 'Run',
+  export: 'Export',
+  submit: 'Submit',
+  manage: 'Manage',
+  assign: 'Assign',
+  close: 'Close',
+};
+
+/** Operator-facing capability rows for account settings (not raw scope IDs). */
+export function capabilityHighlightsForRole(role, extraPermissions = []) {
+  const full = FULL_ACCESS_ROLES.has(role) || extraPermissions.some((p) => String(p).includes('*'));
+  if (full) {
+    return RBAC_CAPABILITY_COLUMNS.map((col) => ({ ...col, granted: true }));
+  }
+  const set = extraPermissions.length
+    ? new Set(extraPermissions)
+    : permissionsForRole(role);
+  return RBAC_CAPABILITY_COLUMNS.map((col) => ({
+    ...col,
+    granted: set.has(col.permission),
+  }));
+}
+
+export function roleSummaryText(role) {
+  return ROLE_DEFINITIONS.find((r) => r.id === role)?.summary
+    || 'Capabilities follow your assigned role.';
+}
+
+/** Group raw scopes by domain for an optional technical disclosure block. */
+export function groupPermissionsByDomain(permissions) {
+  const list = (permissions || []).filter((p) => p && !String(p).includes('*'));
+  const groups = new Map();
+  for (const perm of list) {
+    const [domain, action] = String(perm).split(':');
+    if (!domain) continue;
+    if (!groups.has(domain)) groups.set(domain, []);
+    const actionLabel = PERM_ACTION_LABELS[action] || (action ? action.replace(/_/g, ' ') : 'Access');
+    groups.get(domain).push({ id: perm, label: actionLabel });
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([domain, actions]) => ({
+      domain,
+      title: PERM_DOMAIN_LABELS[domain] || domain.replace(/_/g, ' '),
+      actions: actions.sort((a, b) => a.label.localeCompare(b.label)),
+    }));
 }

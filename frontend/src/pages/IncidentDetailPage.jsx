@@ -21,6 +21,7 @@ import {
   buildIncidentTimeline,
 } from '../lib/incidentUi.js';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
+import { COPY } from '../copy/operator.js';
 import { timelineTo } from './opsHelpers.js';
 import './IncidentDetailPage.css';
 
@@ -222,7 +223,7 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
             </thead>
             <tbody>
               {alerts.length === 0 ? (
-                <tr><td colSpan={5} className="page-hint">No alert rows linked in database.</td></tr>
+                <tr><td colSpan={5} className="page-hint">{COPY.incidents.noLinkedAlerts}</td></tr>
               ) : shownAlerts.map((a) => (
                 <tr
                   key={a.alert_id}

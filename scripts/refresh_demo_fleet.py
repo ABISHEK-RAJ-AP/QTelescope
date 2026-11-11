@@ -17,6 +17,7 @@ from app.core.provenance import MOCK_BACKEND_IDS  # noqa: E402
 from app.discovery.hardware_discovery import HardwareDiscoveryEngine  # noqa: E402
 from app.models.entities import AlertModel, BackendModel, BackendTelemetryModel, ProviderModel  # noqa: E402
 from app.services.backend_purge import purge_backend  # noqa: E402
+from app.services.alert_dedupe import dedupe_open_alerts  # noqa: E402
 from app.services.incident_service import backend_id_from_alert  # noqa: E402
 
 JUNK_BACKEND_IDS = frozenset({"b1", "b2", "test_backend"})
@@ -73,12 +74,13 @@ def refresh(*, force: bool, if_stale_hours: float) -> dict:
                 removed.append(bid)
 
         orphans = _resolve_orphan_alerts(db)
+        deduped = dedupe_open_alerts(db)
         for prov in db.query(ProviderModel).all():
             if not db.query(BackendModel).filter(BackendModel.provider_id == prov.provider_id).first():
                 db.delete(prov)
         db.commit()
 
-        print(f"Purged backends: {removed or 'none'}; resolved orphan alerts: {orphans}")
+        print(f"Purged backends: {removed or 'none'}; resolved orphan alerts: {orphans}; deduped open alerts: {deduped}")
         result = HardwareDiscoveryEngine.run_auto_discovery(db)
         db.commit()
 

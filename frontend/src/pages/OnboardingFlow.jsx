@@ -412,9 +412,10 @@ export function OnboardingFlow({ currentUser }) {
                   : discovery.discoverMessage}
               </p>
               {analysisBusy ? (
-                <p className="onboarding-footer__status" style={{ marginTop: 16 }}>
-                  <Loader2 size={16} className="animate-spin" aria-hidden /> Working
-                </p>
+                <div className="onboarding-analysis" style={{ marginTop: 24 }}>
+                  <div className="onboarding-analysis__orb" role="status" aria-label="Discovering backends" />
+                  <p className="onboarding-footer__status">Working</p>
+                </div>
               ) : (
                 <div className="table-container" style={{ border: 'none', marginTop: 16, maxHeight: 420, overflow: 'auto' }}>
                   <table className="onboarding-inv-table">

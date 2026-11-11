@@ -45,3 +45,4 @@ export const OnboardingFlow = lazyNamed(() => import('./pages/OnboardingFlow.jsx
 export const UserSettings = lazyNamed(() => import('./pages/UserSettings.jsx'), 'UserSettings');
 export const IncidentDetailPage = lazyNamed(() => import('./pages/IncidentDetailPage.jsx'), 'IncidentDetailPage');
 export const AlertDetailPage = lazyNamed(() => import('./pages/AlertDetailPage.jsx'), 'AlertDetailPage');
+export const DesignSystemGallery = lazyNamed(() => import('./pages/DesignSystemGallery.jsx'), 'DesignSystemGallery');

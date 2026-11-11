@@ -18,6 +18,7 @@ import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
 import { fmtNum, isStale, modalityOf, timelineLink } from './telemetryPageUtils.js';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { ListPager } from '../components/observability/ListPager.jsx';
+import { COPY } from '../copy/operator.js';
 import './TelemetryPages.css';
 
 const PLAY_MS = 700;
@@ -180,7 +181,7 @@ export const TemporalReplay = () => {
       {error && <ErrorState variant="panel" message={unableToLoad('replay timeline')} onRetry={loadTimeline} />}
       {!error && !loading && !backends.length && <EmptyState variant="panel" title="No backends" message="No backends registered." />}
       {!error && !loading && backends.length > 0 && !frames.length && (
-        <EmptyState variant="panel" title="No replay frames" message="No stored telemetry for this backend. Wait for collector cycles." />
+        <EmptyState variant="panel" title="No replay frames" message={COPY.replay.noFrames} />
       )}
       {!error && loading && !timeline && <BoneyardSkeleton layout="grid" />}
 

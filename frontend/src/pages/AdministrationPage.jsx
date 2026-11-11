@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { readClientVitals } from '../lib/clientVitals.js';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Save, RefreshCw, CheckCircle2, Cpu, AlertTriangle, Key, Eye, EyeOff, Plus, Trash2, X,
@@ -19,7 +18,11 @@ import { roleLabel } from '../lib/permissions.js';
 import { ListPager } from '../components/observability/ListPager.jsx';
 import { CollapsibleSection } from '../components/observability/CollapsibleSection.jsx';
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
+import { summarizeCircuitBreaker, summarizeOperatorError } from '../utils/operatorFault.js';
 import './AdministrationPage.css';
+
+const TEST_RULE_ID = /^e2e_rule_/i;
+const TEST_USER = /^(chg_|mail_|mfa_|e2e_)/i;
 
 const ADMIN_SECTIONS = [
   { id: 'integrations', label: 'Integrations' },
@@ -73,7 +76,8 @@ function Integrations({ providers, health, verification, setVerification, canEdi
   const [discovering, setDiscovering] = useState(false);
   const [discovery, setDiscovery] = useState(null);
   const [confirm, setConfirm] = useState(null); // provider id awaiting confirm
-  const [open, setOpen] = useState(null);
+  const [editProvider, setEditProvider] = useState(null);
+  const [showStubs, setShowStubs] = useState(false);
   const [ldap, setLdap] = useState(null);
 
   useEffect(() => {
@@ -149,7 +153,7 @@ function Integrations({ providers, health, verification, setVerification, canEdi
           <div>
             <h3 className="admin-card-title" style={{ marginBottom: 2 }}>Provider status</h3>
             <p className="page-hint" style={{ margin: 0 }}>
-              Four independent checks per provider. “Verified” only appears after you run live verification (needs env token on server).
+              Live adapters poll telemetry. Run verification after saving credentials on the server.
             </p>
           </div>
           <div className="admin-actions">
@@ -205,6 +209,13 @@ function Integrations({ providers, health, verification, setVerification, canEdi
       )}
 
       <div className="card" style={{ padding: 0 }} data-tour="page-admin-providers">
+        <div className="admin-pad admin-actions" style={{ justifyContent: 'space-between', paddingBottom: 0 }}>
+          <span className="admin-sub">Implemented adapters only by default.</span>
+          <label className="admin-check">
+            <input type="checkbox" checked={showStubs} onChange={(e) => setShowStubs(e.target.checked)} />
+            Show marketplace stubs ({providers.filter((p) => p.adapter !== 'live' && p.adapter_status !== 'LIVE').length})
+          </label>
+        </div>
         <div className="table-container" style={{ border: 'none' }}>
           <table className="custom-table admin-table">
             <thead>
@@ -213,7 +224,7 @@ function Integrations({ providers, health, verification, setVerification, canEdi
               </tr>
             </thead>
             <tbody>
-              {providers.map((p) => {
+              {providers.filter((p) => showStubs || p.adapter === 'live' || p.adapter_status === 'LIVE').map((p) => {
                 const live = p.adapter === 'live' || p.adapter_status === 'LIVE';
                 const v = verBy[p.id];
                 const h = healthBy[p.id];
@@ -237,59 +248,11 @@ function Integrations({ providers, health, verification, setVerification, canEdi
                         <Stage ok={flowing} label={simulated ? 'Simulated' : flowing ? 'Flowing' : h ? 'Stale / failing' : 'No runs'} title={h ? `Lineage ${h.lineage || '?'} · Last run ${fmtTime(h.last_run_at)} · last success ${fmtTime(h.last_success_at)}` : 'No collector run recorded'} />
                       </td>
                       <td style={{ textAlign: 'right' }}>
-                        <button type="button" className="btn btn-secondary btn--xs" onClick={() => setOpen(open === p.id ? null : p.id)} aria-expanded={open === p.id}>
-                          <Pencil size={12} /> {open === p.id ? 'Close' : 'Edit'}
+                        <button type="button" className="btn btn-secondary btn--xs" onClick={() => setEditProvider(p)} disabled={!canEdit} title={reason}>
+                          <Pencil size={12} /> Edit
                         </button>
                       </td>
                     </tr>
-                    {open === p.id && (
-                      <tr className="admin-row-detail">
-                        <td colSpan={6}>
-                          <form className="admin-cred-form" onSubmit={(e) => { e.preventDefault(); if (!Object.keys(errors(p)).length) setConfirm(p.id); }}>
-                            <p className="page-hint" style={{ margin: 0 }}>
-                              {p.truth_help} Saved secrets are never shown; leave a secret blank to keep the existing one.
-                              {live ? ' Saving authenticates against the vendor and runs a collection cycle.' : ' Stub: stored only, not polled.'}
-                            </p>
-                            <div className="admin-cred-fields">
-                              {p.fields.map((f) => {
-                                const err = dirty(p) ? errors(p)[f.key] : null;
-                                return (
-                                  <label key={f.key} className="admin-field">
-                                    <span className="admin-input-label">{f.label}{f.required === false ? ' (optional)' : ''}</span>
-                                    <span className="admin-input-wrapper">
-                                      <input
-                                        type={f.secret && !reveal[`${p.id}.${f.key}`] ? 'password' : 'text'}
-                                        className="input-control admin-input-field"
-                                        value={fieldVal(p, f)}
-                                        placeholder={f.secret && p.is_configured ? '•••••••• (saved)' : f.label}
-                                        autoComplete="off"
-                                        disabled={!canEdit}
-                                        aria-invalid={!!err}
-                                        onChange={(e) => setField(p, f, e.target.value)}
-                                      />
-                                      {f.secret && (
-                                        <button type="button" className="admin-input-toggle-btn" aria-label="Toggle visibility" onClick={() => setReveal((r) => ({ ...r, [`${p.id}.${f.key}`]: !r[`${p.id}.${f.key}`] }))}>
-                                          {reveal[`${p.id}.${f.key}`] ? <EyeOff size={15} /> : <Eye size={15} />}
-                                        </button>
-                                      )}
-                                    </span>
-                                    {err && <span className="admin-field-error">{err}</span>}
-                                  </label>
-                                );
-                              })}
-                            </div>
-                            <div className="admin-cred-footer">
-                              <button type="submit" className="btn btn-primary" disabled={!canEdit || !dirty(p) || fb[p.id]?.text === 'Saving…'} title={reason || (dirty(p) ? undefined : 'No changes')}>
-                                <Save size={14} /> Save
-                              </button>
-                              <button type="button" className="btn btn-secondary" disabled={!dirty(p)} onClick={() => cancel(p)}>Cancel</button>
-                              {dirty(p) && <span className="admin-dirty">Unsaved changes</span>}
-                              <Notice note={fb[p.id]} />
-                            </div>
-                          </form>
-                        </td>
-                      </tr>
-                    )}
                   </React.Fragment>
                 );
               })}
@@ -298,10 +261,66 @@ function Integrations({ providers, health, verification, setVerification, canEdi
         </div>
       </div>
 
+      {editProvider && (
+        <Modal title={`Configure ${editProvider.name}`} onClose={() => { setEditProvider(null); cancel(editProvider); }}
+          footer={(
+            <>
+              <button type="button" className="btn btn-secondary" onClick={() => { setEditProvider(null); cancel(editProvider); }}>Close</button>
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={!canEdit || !dirty(editProvider) || Object.keys(errors(editProvider)).length > 0 || fb[editProvider.id]?.text === 'Saving…'}
+                onClick={() => setConfirm(editProvider.id)}
+              >
+                <Save size={14} /> Save credentials
+              </button>
+            </>
+          )}
+        >
+          <form className="admin-cred-form" onSubmit={(e) => { e.preventDefault(); if (!Object.keys(errors(editProvider)).length) setConfirm(editProvider.id); }}>
+            <p className="page-hint" style={{ margin: 0 }}>
+              {editProvider.truth_help} Leave secrets blank to keep stored values.
+              {(editProvider.adapter === 'live' || editProvider.adapter_status === 'LIVE')
+                ? ' Saving runs a live check and collection pass.'
+                : ' Stub providers store credentials only.'}
+            </p>
+            <div className="admin-cred-fields">
+              {editProvider.fields.map((f) => {
+                const err = dirty(editProvider) ? errors(editProvider)[f.key] : null;
+                return (
+                  <label key={f.key} className="admin-field">
+                    <span className="admin-input-label">{f.label}{f.required === false ? ' (optional)' : ''}</span>
+                    <span className="admin-input-wrapper">
+                      <input
+                        type={f.secret && !reveal[`${editProvider.id}.${f.key}`] ? 'password' : 'text'}
+                        className="input-control admin-input-field"
+                        value={fieldVal(editProvider, f)}
+                        placeholder={f.secret && editProvider.is_configured ? '•••••••• (saved)' : f.label}
+                        autoComplete="off"
+                        disabled={!canEdit}
+                        aria-invalid={!!err}
+                        onChange={(e) => setField(editProvider, f, e.target.value)}
+                      />
+                      {f.secret && (
+                        <button type="button" className="admin-input-toggle-btn" aria-label="Toggle visibility" onClick={() => setReveal((r) => ({ ...r, [`${editProvider.id}.${f.key}`]: !r[`${editProvider.id}.${f.key}`] }))}>
+                          {reveal[`${editProvider.id}.${f.key}`] ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      )}
+                    </span>
+                    {err && <span className="admin-field-error">{err}</span>}
+                  </label>
+                );
+              })}
+            </div>
+            <Notice note={fb[editProvider.id]} />
+          </form>
+        </Modal>
+      )}
+
       {confirm && (
         <Modal title="Save credentials" onClose={() => setConfirm(null)}
           footer={<><button type="button" className="btn btn-secondary" onClick={() => setConfirm(null)}>Cancel</button>
-            <button type="button" className="btn btn-primary" onClick={() => save(providers.find((x) => x.id === confirm))}>Save credentials</button></>}>
+            <button type="button" className="btn btn-primary" onClick={() => { save(providers.find((x) => x.id === confirm)); setEditProvider(null); }}>Save credentials</button></>}>
           <p>Overwrites stored credentials for <strong>{providers.find((x) => x.id === confirm)?.name}</strong>. Live adapters validate the secret with the vendor and trigger telemetry collection immediately.</p>
         </Modal>
       )}
@@ -331,6 +350,7 @@ function Modal({ title, children, footer, onClose }) {
 
 /* ----------------------------- Collectors ----------------------------- */
 function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }) {
+  const [dlqDetail, setDlqDetail] = useState(null);
   const [edits, setEdits] = useState({}); // category -> {interval, enabled}
   const [fb, setFb] = useState({});
   const [runNote, setRunNote] = useState(null);
@@ -402,8 +422,9 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
   const isDirty = (s) => { const c = edits[s.category]; return !!c && (c.interval !== String(s.interval_seconds) || c.enabled !== !!s.enabled); };
   const intervalErr = (s) => { const n = Number(cur(s).interval); return Number.isInteger(n) && n >= 10 && n <= 86400 ? null : 'Whole seconds, 10–86400'; };
   const patch = (s, p) => setEdits((e) => ({ ...e, [s.category]: { ...cur(s), ...p } }));
-  const save = async (s) => {
-    const c = cur(s);
+  const save = async (s, snapshot) => {
+    const c = snapshot ?? cur(s);
+    if (intervalErr(s)) return;
     try {
       await api.updateSchedule({ category: s.category, interval_seconds: Number(c.interval), enabled: c.enabled });
       setEdits((e) => { const n = { ...e }; delete n[s.category]; return n; });
@@ -411,54 +432,68 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
       await reload();
     } catch (e) { setFb((f) => ({ ...f, [s.category]: { type: 'error', text: errText(e) } })); }
   };
+
+  const onEnabledChange = (s, v) => {
+    const next = { ...cur(s), enabled: v };
+    patch(s, { enabled: v });
+    if (canEdit) save(s, next);
+  };
+
+  const onIntervalBlur = (s) => {
+    if (!canEdit || !isDirty(s) || intervalErr(s)) return;
+    save(s);
+  };
   const failures = dlq?.failures || [];
   const breakers = Object.entries(dlq?.circuit_breakers || {});
 
   return (
     <>
-      <div className="card admin-kv-card" data-tour="page-admin-collectors">
-        <h3 className="admin-card-title">Scheduler</h3>
-        <dl className="admin-kv">
-          <div><dt>Background scheduler</dt><dd><span className={`badge ${scheduler?.enabled ? 'badge-online' : 'badge-offline'}`}>{scheduler?.enabled ? 'Enabled' : 'Disabled'}</span></dd></div>
-          <div><dt>Tick</dt><dd>{scheduler ? `${scheduler.tick_seconds}s` : '—'}</dd></div>
-          <div><dt>Facility MQTT</dt><dd><span className={`badge ${mqttBadgeClass(mqtt?.status)}`}>{mqtt?.status || '—'}</span></dd></div>
-        </dl>
-        {mqtt?.note && <p className="page-hint admin-kv__note" style={{ marginBottom: 8 }}>{mqtt.note}</p>}
-        <div className="admin-actions admin-kv__note" style={{ marginTop: 0 }}>
-          <button type="button" className="btn btn-primary btn--xs" disabled={!canEdit || running} title={reason} onClick={() => setCollectorConfirm('run')}>
+      <div className="card" style={{ padding: 0 }} data-tour="page-admin-collectors">
+        <div className="admin-pad admin-actions" style={{ justifyContent: 'space-between' }}>
+          <div>
+            <h3 className="admin-card-title" style={{ marginBottom: 4 }}>Collection schedules</h3>
+            <p className="admin-sub">
+              {scheduler?.driver_label || 'Collection driver'} · {scheduler?.enabled ? 'running' : 'idle'}
+              {scheduler?.tick_seconds ? ` · tick ${scheduler.tick_seconds}s` : ''}
+              . Intervals auto-save on blur.
+            </p>
+          </div>
+          <button type="button" className="btn btn-secondary btn--xs" disabled={!canEdit || running} title={reason} onClick={() => setCollectorConfirm('run')}>
             {running ? 'Collecting…' : 'Run collection now'}
           </button>
-          <span className="admin-sub">Polls configured providers and refreshes telemetry (includes demo catalog when enabled).</span>
         </div>
         <Notice note={runNote} />
-      </div>
-
-      <div className="card" style={{ padding: 0 }}>
-        <h3 className="admin-card-title admin-pad">Collection schedules</h3>
         <div className="table-container" style={{ border: 'none' }}>
           <table className="custom-table admin-table">
-            <thead><tr><th>Category</th><th>Interval (s)</th><th>Enabled</th><th>Last run</th><th style={{ textAlign: 'right' }}>Actions</th></tr></thead>
+            <thead><tr><th>Category</th><th>Interval (s)</th><th>Enabled</th><th>Last run</th><th>Status</th></tr></thead>
             <tbody>
               {schedules.map((s) => {
                 const c = cur(s);
-                const err = intervalErr(s);
+                const err = isDirty(s) ? intervalErr(s) : null;
                 const last = scheduler?.schedules?.find((x) => x.category === s.category)?.last_run;
                 return (
                   <tr key={s.category}>
                     <td><strong>{s.category}</strong></td>
                     <td>
-                      <input type="number" min="10" max="86400" className="input-control admin-num" value={c.interval} disabled={!canEdit} aria-invalid={!!err}
-                        onChange={(e) => patch(s, { interval: e.target.value })} />
-                      {isDirty(s) && err && <div className="admin-field-error">{err}</div>}
+                      <input
+                        type="number"
+                        min="10"
+                        max="86400"
+                        className="input-control admin-num"
+                        value={c.interval}
+                        disabled={!canEdit}
+                        aria-invalid={!!err}
+                        onChange={(e) => patch(s, { interval: e.target.value })}
+                        onBlur={() => onIntervalBlur(s)}
+                      />
+                      {err && <div className="admin-field-error">{err}</div>}
                     </td>
                     <td>
-                      <Toggle checked={c.enabled} disabled={!canEdit} label={c.enabled ? 'On' : 'Off'} onChange={(v) => patch(s, { enabled: v })} />
+                      <Toggle checked={c.enabled} disabled={!canEdit} label={c.enabled ? 'On' : 'Off'} onChange={(v) => onEnabledChange(s, v)} />
                     </td>
                     <td className="admin-sub">{fmtTime(last)}</td>
-                    <td style={{ textAlign: 'right' }}>
-                      {isDirty(s) && <span className="admin-dirty">Unsaved</span>}{' '}
-                      <button type="button" className="btn btn-primary btn--xs" disabled={!canEdit || !isDirty(s) || !!err} title={reason} onClick={() => save(s)}>Save</button>{' '}
-                      <button type="button" className="btn btn-secondary btn--xs" disabled={!isDirty(s)} onClick={() => setEdits((e) => { const n = { ...e }; delete n[s.category]; return n; })}>Cancel</button>
+                    <td className="admin-sub">
+                      {isDirty(s) && !err ? <span className="admin-dirty">Pending…</span> : null}
                       <Notice note={fb[s.category]} />
                     </td>
                   </tr>
@@ -547,21 +582,37 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
           <table className="custom-table admin-table">
             <thead><tr><th>Time</th><th>Provider</th><th>Status</th><th>Error</th></tr></thead>
             <tbody>
-              {failures.map((f) => (
-                <tr key={f.id}><td className="admin-sub">{fmtTime(f.at)}</td><td>{f.provider_id}</td><td>{f.status}</td><td className="admin-err-cell">{f.error || '—'}</td></tr>
-              ))}
+              {failures.map((f) => {
+                const summary = summarizeOperatorError(f.error) || '—';
+                const hasRaw = f.error && summary !== String(f.error).trim();
+                return (
+                  <tr key={f.id}>
+                    <td className="admin-sub">{fmtTime(f.at)}</td>
+                    <td>{f.provider_id}</td>
+                    <td>{f.status}</td>
+                    <td className="admin-err-cell">
+                      <span>{summary}</span>
+                      {hasRaw ? (
+                        <button type="button" className="btn btn-secondary btn--xs" style={{ marginLeft: 8 }} onClick={() => setDlqDetail(f)}>
+                          View details
+                        </button>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
               {failures.length === 0 && <TableEmpty colSpan={4} title="Dead-letter queue empty" message="No collector failures in the DLQ." />}
             </tbody>
           </table>
         </div>
         {breakers.length > 0 && (
-          <p className="page-hint admin-pad">Circuit breakers: {breakers.map(([k, v]) => `${k}: ${v?.state || v?.status || JSON.stringify(v)}`).join(' · ')}</p>
+          <p className="page-hint admin-pad">Circuit breakers: {breakers.map(([k, v]) => summarizeCircuitBreaker(k, v)).join(' · ')}</p>
         )}
         <div className="admin-pad admin-actions" style={{ paddingTop: 0 }}>
           <button type="button" className="btn btn-secondary" disabled={!canEdit || purgingDlq || failures.length === 0} title={reason} onClick={() => setCollectorConfirm('purge')}>
             {purgingDlq ? 'Clearing…' : 'Clear DLQ history'}
           </button>
-          <span className="admin-sub">Removes local failure log (SQLite lock errors from old runs, etc.). Does not replay jobs.</span>
+          <span className="admin-sub">Removes stored failure records on this server. Does not replay collection jobs.</span>
         </div>
       </div>
       {collectorConfirm === 'run' && (
@@ -595,12 +646,32 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
           onCancel={() => !purgingDlq && setCollectorConfirm(null)}
         />
       )}
+      {dlqDetail ? (
+        <ConfirmDialog
+          dlg={{
+            title: `Collector failure · ${dlqDetail.provider_id}`,
+            body: dlqDetail.error || 'No detail recorded.',
+            confirm: 'Close',
+            onConfirm: () => setDlqDetail(null),
+          }}
+          busy={false}
+          onCancel={() => setDlqDetail(null)}
+        />
+      ) : null}
     </>
   );
 }
 
 /* ------------------------------- Rules ------------------------------- */
 function Rules({ rules, canEdit, reload }) {
+  const [showTestRules, setShowTestRules] = useState(false);
+  const testRuleCount = useMemo(() => rules.filter((r) => TEST_RULE_ID.test(r.rule_id)).length, [rules]);
+  const [purgeTestAsk, setPurgeTestAsk] = useState(false);
+  const [purgingTest, setPurgingTest] = useState(false);
+  const visibleRules = useMemo(
+    () => (showTestRules ? rules : rules.filter((r) => !TEST_RULE_ID.test(r.rule_id))),
+    [rules, showTestRules],
+  );
   const [editing, setEditing] = useState(null); // {mode:'create'|'edit', orig, form}
   const [deleting, setDeleting] = useState(null);
   const [discardAsk, setDiscardAsk] = useState(false);
@@ -658,6 +729,23 @@ function Rules({ rules, canEdit, reload }) {
     catch (er) { setNote({ type: 'error', text: `Delete failed: ${errText(er)}` }); }
   };
 
+  const purgeTestRules = async () => {
+    const ids = rules.filter((r) => TEST_RULE_ID.test(r.rule_id)).map((r) => r.rule_id);
+    if (!ids.length) return;
+    setPurgingTest(true);
+    try {
+      const res = await Promise.allSettled(ids.map((id) => api.deleteAlertRule(id)));
+      const ok = res.filter((r) => r.status === 'fulfilled').length;
+      setNote({ type: 'success', text: `Removed ${ok} test rule${ok === 1 ? '' : 's'}.` });
+      await reload();
+    } catch (er) {
+      setNote({ type: 'error', text: `Purge failed: ${errText(er)}` });
+    } finally {
+      setPurgingTest(false);
+      setPurgeTestAsk(false);
+    }
+  };
+
   return (
     <>
       <div className="card" style={{ padding: 0 }} data-tour="page-admin-rules">
@@ -666,14 +754,32 @@ function Rules({ rules, canEdit, reload }) {
             <h3 className="admin-card-title" style={{ marginBottom: 2 }}>Alert rules</h3>
             <p className="page-hint" style={{ margin: 0 }}>Threshold rules evaluated against backend telemetry.</p>
           </div>
-          <button type="button" className="btn btn-primary" disabled={!canEdit} title={reason} onClick={() => open(null)}><Plus size={14} /> Add rule</button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {testRuleCount > 0 && (
+              <>
+                <label className="admin-sub" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <input type="checkbox" checked={showTestRules} onChange={(e) => setShowTestRules(e.target.checked)} />
+                  Show test rules ({testRuleCount} hidden)
+                </label>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn--xs"
+                  disabled={!canEdit || purgingTest}
+                  onClick={() => setPurgeTestAsk(true)}
+                >
+                  Delete test rules
+                </button>
+              </>
+            )}
+            <button type="button" className="btn btn-primary" disabled={!canEdit} title={reason} onClick={() => open(null)}><Plus size={14} /> Add rule</button>
+          </div>
         </div>
         <div className="admin-pad" style={{ paddingTop: 0 }}><Notice note={note} /></div>
         <div className="table-container" style={{ border: 'none' }}>
           <table className="custom-table admin-table">
             <thead><tr><th>Rule</th><th>Condition</th><th>Severity</th><th>Status</th><th style={{ textAlign: 'right' }}>Actions</th></tr></thead>
             <tbody>
-              {rules.map((r) => (
+              {visibleRules.map((r) => (
                 <tr key={r.rule_id}>
                   <td><strong className="admin-mono">{r.rule_id}</strong><div className="admin-sub">{r.description}</div></td>
                   <td className="admin-mono">{r.metric_name} {r.operator} {r.threshold_value}</td>
@@ -759,6 +865,19 @@ function Rules({ rules, canEdit, reload }) {
           onCancel={() => setDeleting(null)}
         />
       )}
+      {purgeTestAsk && (
+        <ConfirmDialog
+          danger
+          dlg={{
+            title: `Delete ${testRuleCount} test rule${testRuleCount === 1 ? '' : 's'}?`,
+            body: 'Removes e2e_rule_* automation rules from this deployment.',
+            confirm: 'Delete test rules',
+            onConfirm: purgeTestRules,
+          }}
+          busy={purgingTest}
+          onCancel={() => !purgingTest && setPurgeTestAsk(false)}
+        />
+      )}
     </>
   );
 }
@@ -779,6 +898,7 @@ function UsersDirectory({ canEdit }) {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 300);
   const [sortKey, setSortKey] = useState('username');
+  const [showTestAccounts, setShowTestAccounts] = useState(false);
   const [page, setPage] = useState(1);
   const USER_PAGE = 20;
 
@@ -812,9 +932,19 @@ function UsersDirectory({ canEdit }) {
     }
   };
 
+  const roleOptions = useMemo(() => {
+    const seen = new Set();
+    return (roles || []).filter((r) => {
+      const id = r.id || r.role;
+      if (!id || seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    });
+  }, [roles]);
+
   const visible = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
-    let list = rows;
+    let list = showTestAccounts ? rows : rows.filter((u) => !TEST_USER.test(u.username || ''));
     if (q) {
       list = list.filter((u) => (
         `${u.username} ${u.full_name || ''} ${u.email || ''} ${u.role || ''} ${u.org || ''}`.toLowerCase().includes(q)
@@ -834,7 +964,8 @@ function UsersDirectory({ canEdit }) {
       return String(a.username).localeCompare(String(b.username));
     });
     return sorted;
-  }, [rows, debouncedSearch, sortKey]);
+  }, [rows, debouncedSearch, sortKey, showTestAccounts]);
+  const hiddenTestUsers = rows.filter((u) => TEST_USER.test(u.username || '')).length;
   useEffect(() => { setPage(1); }, [debouncedSearch, sortKey]);
   const userPages = Math.max(1, Math.ceil(visible.length / USER_PAGE));
   const userPage = Math.min(page, userPages);
@@ -842,7 +973,7 @@ function UsersDirectory({ canEdit }) {
 
   return (
     <>
-      <RoleMatrix compact />
+      <RoleMatrix canEditAccess={canEdit} />
       <div className="card admin-users" data-tour="page-admin-users">
         <h3 className="admin-card-title">User directory</h3>
         <p className="page-hint">Search accounts and assign roles. Capabilities follow the matrix above.</p>
@@ -864,6 +995,12 @@ function UsersDirectory({ canEdit }) {
               {USER_SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
             </select>
           </label>
+          {hiddenTestUsers > 0 && (
+            <label className="admin-sub" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input type="checkbox" checked={showTestAccounts} onChange={(e) => setShowTestAccounts(e.target.checked)} />
+              Show test accounts ({hiddenTestUsers} hidden)
+            </label>
+          )}
           <span className="admin-users-count" role="status">{visible.length} of {rows.length} users</span>
         </div>
         <div className="table-container">
@@ -896,8 +1033,13 @@ function UsersDirectory({ canEdit }) {
                         aria-label={`Role for ${u.username}`}
                         onChange={(e) => onRole(u.username, e.target.value)}
                       >
-                        {(roles.length ? roles : [{ id: u.role, label: u.role }]).map((r) => (
-                          <option key={r.id || r.role} value={r.id || r.role}>{r.label || r.id}</option>
+                        {[
+                          ...roleOptions,
+                          ...(u.role && !roleOptions.some((r) => (r.id || r.role) === u.role)
+                            ? [{ id: u.role, label: roleLabel(u.role) }]
+                            : []),
+                        ].map((r) => (
+                          <option key={r.id || r.role} value={r.id || r.role}>{r.label || roleLabel(r.id || r.role) || r.id}</option>
                         ))}
                       </select>
                     ) : (roleLabel(u.role) || u.role || 'Operator')}
@@ -922,27 +1064,7 @@ function isoWindow(hours, anchorIso) {
   return { since: start.toISOString(), until: end.toISOString() };
 }
 
-function AdminClientVitals() {
-  const vitals = useMemo(() => readClientVitals(), []);
-  if (!vitals) return null;
-  return (
-    <CollapsibleSection
-      id="admin-client-vitals"
-      title="Client performance (this browser)"
-      help="SPA navigation timings for this session. For API latency, use audit logs Server-Timing."
-      defaultOpen
-      className="card admin-kv-card"
-    >
-      <dl className="admin-kv-dl" data-tour="page-admin-client-vitals">
-        <div><dt>TTFB</dt><dd>{vitals.ttfbMs} ms</dd></div>
-        <div><dt>DOM ready</dt><dd>{vitals.domContentLoadedMs} ms</dd></div>
-        <div><dt>Load</dt><dd>{vitals.loadMs} ms</dd></div>
-        <div><dt>FCP</dt><dd>{vitals.fcpMs != null ? `${vitals.fcpMs} ms` : '—'}</dd></div>
-        <div><dt>Transfer</dt><dd>{vitals.transferKb != null ? `${vitals.transferKb} KB` : '—'}</dd></div>
-      </dl>
-    </CollapsibleSection>
-  );
-}
+const LOG_PAGE = 50;
 
 function AdminAuditLog() {
   const [params] = useSearchParams();
@@ -955,6 +1077,7 @@ function AdminAuditLog() {
   const [rows, setRows] = useState([]);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [logPage, setLogPage] = useState(1);
 
   const search = useCallback(async () => {
     setBusy(true);
@@ -992,6 +1115,11 @@ function AdminAuditLog() {
   }, [source, q, action, actor, requestId, backendId, params]);
 
   useEffect(() => { search(); }, [search]);
+  useEffect(() => { setLogPage(1); }, [source, q, action, actor, requestId, backendId]);
+
+  const logPages = Math.max(1, Math.ceil(rows.length / LOG_PAGE));
+  const logPg = Math.min(logPage, logPages);
+  const pageRows = rows.slice((logPg - 1) * LOG_PAGE, logPg * LOG_PAGE);
 
   return (
     <div className="card admin-kv-card" data-tour="page-admin-audit-log">
@@ -1032,7 +1160,7 @@ function AdminAuditLog() {
             </tr>
           </thead>
           <tbody>
-            {source === 'audit' ? rows.map((ev, i) => (
+            {source === 'audit' ? pageRows.map((ev, i) => (
               <tr key={`${ev.timestamp}-${ev.action}-${i}`}>
                 <td className="admin-sub">{fmtTime(ev.timestamp)}</td>
                 <td><code>{ev.action}</code></td>
@@ -1040,7 +1168,7 @@ function AdminAuditLog() {
                 <td className="admin-sub">{ev.resource_type ? `${ev.resource_type}:${ev.resource_id || ''}` : '—'}</td>
                 <td className="admin-sub admin-err-cell" style={{ maxWidth: 280 }}>{ev.detail && Object.keys(ev.detail).length ? JSON.stringify(ev.detail) : '—'}</td>
               </tr>
-            )) : rows.map((ev, i) => (
+            )) : pageRows.map((ev, i) => (
               <tr key={`${ev.timestamp}-${ev.event_code}-${i}`}>
                 <td className="admin-sub">{fmtTime(ev.timestamp)}</td>
                 <td>{ev.severity}</td>
@@ -1053,6 +1181,11 @@ function AdminAuditLog() {
           </tbody>
         </table>
       </div>
+      {rows.length > LOG_PAGE && (
+        <div className="admin-pad">
+          <ListPager page={logPg} pages={logPages} onPage={setLogPage} />
+        </div>
+      )}
     </div>
   );
 }
@@ -1105,12 +1238,7 @@ export const AdministrationPage = ({ section = 'integrations', onNavigateSection
       {active === 'users' && <UsersDirectory canEdit={canEdit} />}
       {active === 'integrations' && <Integrations navigate={navigate} providers={data.providers} health={data.health} verification={verification} setVerification={setVerification} canEdit={canEdit} reload={load} />}
       {active === 'collectors' && <Collectors {...data} canEdit={canEdit} reload={load} />}
-      {active === 'logs' && (
-        <>
-          <AdminClientVitals />
-          <AdminAuditLog />
-        </>
-      )}
+      {active === 'logs' && <AdminAuditLog />}
       {active === 'rules' && <Rules rules={data.rules} canEdit={canEdit} reload={load} />}
     </div>
   );

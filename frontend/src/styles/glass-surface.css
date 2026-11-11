@@ -1,0 +1,23 @@
+/**
+ * Shared glass panels — overview, registry, bento cards.
+ */
+.ds-glass-panel,
+.dashboard-home .card.fo-panel,
+.dashboard-home .chart-panel.card,
+.dashboard-home .dashboard-bento__item > .card {
+  background: var(--ds-glass-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--ds-glass-border);
+  box-shadow: var(--ds-shadow-card);
+}
+
+.page-stack .card.bk-panel,
+.page-stack .card.bk-summary,
+.al-card.card,
+.alerts-container .collapsible-section.card {
+  background: var(--ds-glass-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--ds-glass-border);
+  box-shadow: var(--ds-shadow-card);
+  border-radius: 14px;
+}

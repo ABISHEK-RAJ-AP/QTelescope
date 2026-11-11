@@ -23,6 +23,7 @@ export function PageHeader({
   backendId,
   lastUpdated,
   actions,
+  trailing,
   help,
   embedded = false,
 }) {
@@ -55,7 +56,7 @@ export function PageHeader({
               </InfoTooltip>
             ) : null}
           </h1>
-          {description && <p className="page-header__desc">{description}</p>}
+          {description && !embedded ? <p className="page-header__desc">{description}</p> : null}
           <div className="page-header__context">
             {backendId && (
               <span className="page-header__backend">
@@ -67,10 +68,15 @@ export function PageHeader({
             )}
           </div>
         </div>
-        <div className="page-header__actions">
+        <div className="page-header__actions page-header__actions--center">
           {help}
           {actions}
         </div>
+        {trailing ? (
+          <div className="page-header__trailing">
+            {trailing}
+          </div>
+        ) : null}
       </div>
     </header>
   );

@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Download, FileText, Upload, Copy, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Download, FileText, Copy, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { notifyError, notifySuccess } from '../lib/toast.js';
 import { unableToLoad } from '../constants/messages.js';
 import { api, fetchApi } from '../services/api';
@@ -16,7 +16,6 @@ import {
 } from '../components/observability/DetailModalLayout.jsx';
 import { EmptyState, TableEmpty } from '../components/observability/EmptyState.jsx';
 import { usePageActions } from '../context/PageActionsContext.jsx';
-import { ConfirmDialog } from '../components/observability/ConfirmDialog.jsx';
 import { rowsToCsv } from '../lib/csvExport.js';
 import './ReportsPage.css';
 
@@ -41,7 +40,6 @@ const kb = (n) => (n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`);
 const short = (h) => (h ? `${h.slice(0, 10)}…${h.slice(-4)}` : '—');
 
 export const ReportsPage = () => {
-  const fileRef = useRef(null);
   const { setActions, clearActions } = usePageActions();
   const [loading, setLoading] = useState(true);
   const [backends, setBackends] = useState([]);
@@ -59,12 +57,6 @@ export const ReportsPage = () => {
   const [snapLabel, setSnapLabel] = useState('');
   const [snapBusy, setSnapBusy] = useState(false);
   const [manifest, setManifest] = useState(null); // {snap, state, body}
-  const [importConfirm, setImportConfirm] = useState(null); // { name, text }
-  const [importBusy, setImportBusy] = useState(false);
-
-  const [askQ, setAskQ] = useState('');
-  const [askA, setAskA] = useState(null);
-  const [askBusy, setAskBusy] = useState(false);
 
   const load = useCallback(() => {
     Promise.all([
@@ -162,36 +154,6 @@ export const ReportsPage = () => {
       .catch((e) => setManifest({ snap, state: 'err', body: e?.message || String(e) }));
   };
 
-  const onImport = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    try {
-      const { assertImportSize } = await import('../lib/clientVitals.js');
-      assertImportSize(file.size);
-      const text = await file.text();
-      assertImportSize(text.length);
-      setImportConfirm({ name: file.name, text });
-    } catch (err) {
-      notifyError(`Could not read file: ${err?.message || err}`);
-    }
-  };
-
-  const runImport = async () => {
-    if (!importConfirm) return;
-    setImportBusy(true);
-    try {
-      const res = await api.importBundle(JSON.parse(importConfirm.text));
-      notifySuccess(`Imported ${res.imported ?? 0} records.`);
-      setImportConfirm(null);
-      load();
-    } catch (err) {
-      notifyError(`Import failed: ${err?.message || err}`);
-    } finally {
-      setImportBusy(false);
-    }
-  };
-
   if (loading) return <BoneyardSkeleton layout="grid" />;
 
   const previewCols = rows?.[0] ? Object.keys(rows[0]) : [];
@@ -199,7 +161,7 @@ export const ReportsPage = () => {
   return (
     <div className="page-stack rp">
       <section className="card rp-card" aria-labelledby="rp-export-h" data-tour="page-reports-export">
-        <h3 id="rp-export-h" className="rp-h">1 · Export a report</h3>
+        <h3 id="rp-export-h" className="rp-h">Export a report</h3>
         <div className="rp-export">
           <div>
             <div className="rp-label" id="rp-type-l">Report</div>
@@ -241,7 +203,7 @@ export const ReportsPage = () => {
               {exp.state === 'working' ? <><Loader2 size={14} className="rp-spin" /> Exporting…</> : <><Download size={14} /> Export {report.title.toLowerCase()}</>}
             </button>
             <div className="rp-status" role="status" aria-live="polite">
-              {exp.state === 'idle' && <span className="page-hint">Nothing exported yet this session.</span>}
+              {exp.state === 'idle' && <span className="rp-status__idle">Ready to export.</span>}
               {exp.state === 'ok' && <span className="rp-ok"><CheckCircle2 size={14} aria-hidden /> Exported {exp.rows ?? '?'} rows · {exp.format} · {kb(exp.size)}</span>}
               {exp.state === 'err' && <span className="rp-err"><AlertTriangle size={14} aria-hidden /> Failed: {exp.error}</span>}
             </div>
@@ -277,8 +239,8 @@ export const ReportsPage = () => {
       </section>
 
       <section className="card rp-card" aria-labelledby="rp-ev-h" data-tour="page-evidence">
-        <h3 id="rp-ev-h" className="rp-h">2 · Evidence snapshots</h3>
-        <p className="rp-desc">Immutable ZIP of alerts, incidents, calibration and qubit summaries from the platform database, sealed with SHA-256 hashes so a later copy can be verified against what was recorded.</p>
+        <h3 id="rp-ev-h" className="rp-h">Evidence snapshots</h3>
+        <p className="rp-desc rp-desc--compact">Immutable ZIP with SHA-256 manifest. Fleet or single-backend scope.</p>
         <div className="rp-snaprow">
           <label className="rp-label">Scope
             <select className="input-control" value={snapScope} onChange={(e) => setSnapScope(e.target.value)}>
@@ -321,38 +283,6 @@ export const ReportsPage = () => {
         </div>
       </section>
 
-      <div className="rp-tools">
-        <section className="card rp-card rp-pad" aria-labelledby="rp-qa-h">
-          <h3 id="rp-qa-h" className="rp-h">Evidence Q&amp;A</h3>
-          <p className="rp-desc">Answers use stored telemetry and audit records from this deployment.</p>
-          <form className="rp-qa" onSubmit={async (e) => {
-            e.preventDefault();
-            setAskBusy(true);
-            try { setAskA(await api.askEvidenceAssistant(askQ.trim())); } catch (err) { setAskA({ answer: String(err), refused: true }); } finally { setAskBusy(false); }
-          }}>
-            <input className="input-control" aria-label="Report query" placeholder="e.g. backend count, open incidents" value={askQ} onChange={(e) => setAskQ(e.target.value)} />
-            <button type="submit" className="btn btn-secondary" disabled={askBusy || askQ.trim().length < 3}>{askBusy ? 'Querying…' : 'Ask'}</button>
-          </form>
-          {askA && <div className="rp-answer" role="status">{askA.answer}{askA.refused && <span className="badge badge-warning ops-badge">Out of scope</span>}</div>}
-        </section>
-        <section className="card rp-card rp-pad" aria-labelledby="rp-bn-h">
-          <h3 id="rp-bn-h" className="rp-h">Bundle export / import</h3>
-          <p className="rp-desc">Backends, alerts, calibrations, rules, credential flags (no secrets), environment samples. Import overwrites matching records.</p>
-          <div className="rp-btns">
-            <button type="button" className="btn btn-primary" onClick={async () => {
-              try {
-                saveBlob('qtelescope_bundle.json', JSON.stringify(await api.exportBundle(), null, 2), 'application/json');
-                notifySuccess('Bundle exported as qtelescope_bundle.json.');
-              } catch (e) {
-                notifyError(`Bundle export failed: ${e?.message || e}`);
-              }
-            }}><Download size={14} /> Export bundle</button>
-            <button type="button" className="btn btn-secondary" onClick={() => fileRef.current?.click()}><Upload size={14} /> Import JSON…</button>
-            <input ref={fileRef} type="file" accept="application/json" hidden onChange={onImport} />
-          </div>
-        </section>
-      </div>
-
       <DetailDrawer
         open={!!manifest}
         onClose={() => setManifest(null)}
@@ -381,19 +311,6 @@ export const ReportsPage = () => {
         )}
       </DetailDrawer>
 
-      {importConfirm && (
-        <ConfirmDialog
-          dlg={{
-            title: `Import ${importConfirm.name}?`,
-            body: 'Writes backends, alerts, rules, and samples into the platform database. Existing matching records may be overwritten.',
-            confirm: 'Import bundle',
-            danger: true,
-          }}
-          busy={importBusy}
-          onCancel={() => !importBusy && setImportConfirm(null)}
-          onConfirm={runImport}
-        />
-      )}
     </div>
   );
 };

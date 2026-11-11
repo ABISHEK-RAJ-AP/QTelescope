@@ -13,6 +13,9 @@ Curated skills/rules for Cursor on this repo. Upstream clones live under `.vendo
 | [Cloudflare security-audit](https://github.com/cloudflare/security-audit-skill) | `.cursor/skills/security-audit/` | Full security audit / pen-test |
 | [obra/superpowers](https://github.com/obra/superpowers) (subset) | `.cursor/skills/using-superpowers`, `test-driven-development`, `systematic-debugging`, `writing-plans`, `verification-before-completion` | Non-trivial features / debug |
 | [UI UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | `.cursor/skills/ui-ux-pro-max/` | UI polish, design system, density |
+| [interfaces.dev / jakubkrehel](https://github.com/jakubkrehel/skills) | `.cursor/skills/better-*` (+ helpers) | Layout, type, color, a11y, writing, UI review — [`INTERFACES_DEV.md`](./INTERFACES_DEV.md) |
+| UX interaction laws | `.cursor/skills/ux-interaction-laws/` | Hick/Fitts/Jakob/Miller + Q-TeleScope enforcement |
+| [Mounir-Ghafir/design](https://github.com/Mounir-Ghafir/design) | `.cursor/skills/mounir-ux-website/` | 41 website rule files + IDs; [`MOUNIR_DESIGN.md`](./MOUNIR_DESIGN.md) |
 | [antislop](https://github.com/miqdadbadjuber/anti-slop) | `.cursor/skills/antislop/`, `antislop-ui/` | Anti-slop filter + UI rules; pair with `docs/product/DESIGN.md` |
 | [code-humanizer](https://github.com/LeonardNJU/code-humanizer) | `.cursor/skills/code-humanizer/` | Structural code-slop scan (duplication, try-import, narrating comments) |
 | [code-slop](https://github.com/benjaming/ai-skills) | `.cursor/skills/code-slop/` | Branch diff slop suggestions (comments, `any`, defensive noise) |

@@ -584,7 +584,7 @@ export const TopologyExplorer = () => {
   const hvTime = vector ? 'live health vector applied' : 'health vector unavailable — topology fields only';
 
   if (loadState === 'loading' && !graph?.nodes?.length && backendId) {
-    return <div className="page-stack"><BoneyardSkeleton layout="grid" /></div>;
+    return <BoneyardSkeleton layout="grid" />;
   }
 
   return (

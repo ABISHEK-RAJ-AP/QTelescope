@@ -16,11 +16,14 @@ import { baseTooltip, getChartTheme, getChartSemanticColors } from '../component
 import { BACKEND_WORKSPACE_TABS } from '../lib/investigationLinks.js';
 import { STATES, STATE_GLYPH, STATE_LABEL, ageMinutes, formatAge, isStale, lineageOf, median, modalityName, num, providerName, scopeSearch, useProviderLineage } from './backendUtils.js';
 import { LineageTag, Sparkline, StateBar, StatusText } from './backendCommon.jsx';
+import { ListPager } from '../components/observability/ListPager.jsx';
 import { unableToLoad, unableToLoadLabel } from '../constants/messages.js';
+import { formatBackendTitle } from '../lib/displayLabels.js';
 import './BackendDetails.css';
 
 const TAB_LABEL = { overview: 'Overview', qubits: 'Qubits', calibration: 'Calibration', connectivity: 'Connectivity', execution: 'Execution' };
 const PAGE_SIZE = 25;
+const JOB_PAGE_SIZE = 15;
 const label = (k) => String(k).replace(/_/g, ' ');
 
 /** Durations arrive in µs; trapped-ion T1 is seconds-scale. */
@@ -93,6 +96,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
   const [qSearch, setQSearch] = useState('');
   const [qState, setQState] = useState('ALL');
   const [qPage, setQPage] = useState(0);
+  const [jPage, setJPage] = useState(1);
 
   const load = useCallback(async () => {
     if (!backendId) return;
@@ -142,7 +146,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
     setState('ready');
   }, [backendId]);
 
-  useEffect(() => { setD(null); setState('loading'); setQPage(0); load(); }, [load]);
+  useEffect(() => { setD(null); setState('loading'); setQPage(0); setJPage(1); load(); }, [load]);
   useEffect(() => {
     setActions(<RefreshButton onClick={load} lastRefreshAt={lastRefresh} label="Refresh backend" />);
     return () => clearActions();
@@ -164,10 +168,15 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
     }));
   }, [d, hvQubits]);
 
+  const worstQubits = useMemo(() => {
+    const rank = { RED: 0, YELLOW: 1, GREEN: 2, UNKNOWN: 3 };
+    return [...qubitRows].sort((a, b) => (rank[a.state] ?? 9) - (rank[b.state] ?? 9) || a.qubit_index - b.qubit_index).slice(0, 12);
+  }, [qubitRows]);
+
   if (!backendId) {
     return <EmptyState variant="panel" title="No backend selected" message="Choose a backend from the library to open its workspace." action={<Link className="btn btn-primary" to="/app/backends/inventory">Open library</Link>} />;
   }
-  if (state === 'loading') return <BoneyardSkeleton layout="dashboard" />;
+  if (state === 'loading') return <BoneyardSkeleton layout="backend" />;
   if (state === 'notfound') return <EmptyState variant="panel" title={`Backend “${backendId}” not found`} message="It is not in the registry." action={<Link className="btn btn-primary" to="/app/backends/inventory">Back to inventory</Link>} />;
   if (state === 'error' || !d) return <ErrorState variant="panel" message={unableToLoad('this backend workspace')} onRetry={load} />;
 
@@ -223,6 +232,9 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
   const degs = Object.values(degree);
   const unlinked = Math.max(0, (backend.qubit_count || 0) - degs.length);
   const jobCounts = jobs.reduce((m, j) => ({ ...m, [j.status]: (m[j.status] || 0) + 1 }), {});
+  const jPages = Math.max(1, Math.ceil(jobs.length / JOB_PAGE_SIZE));
+  const jCur = Math.min(jPage, jPages);
+  const jobsShown = jobs.slice((jCur - 1) * JOB_PAGE_SIZE, jCur * JOB_PAGE_SIZE);
   const calHistSorted = [...d.calHist].sort((a, b) => parseTs(b.calibration_timestamp) - parseTs(a.calibration_timestamp));
   const secErr = (name) => d.failed.includes(name);
 
@@ -232,35 +244,41 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
         <div className="bd-head__id">
           <h2 className="bd-title">
             {onBack && <button type="button" className="btn btn-secondary" onClick={onBack}><ArrowLeft size={14} aria-hidden /> Inventory</button>}
-            <span>{backend.backend_name}</span>
+            <span>{formatBackendTitle(backend)}</span>
           </h2>
           <p className="bd-meta">
-            <code>{backend.backend_id}</code> · {providerName(backend.provider_id)} · {modalityName(backend.qpu_modality)} · {backend.qubit_count} qubits
+            {providerName(backend.provider_id)} · {modalityName(backend.qpu_modality)} · {backend.qubit_count} qubits
             {backend.quantum_volume ? ` · QV ${backend.quantum_volume}` : ''}{backend.clops ? ` · CLOPS ${backend.clops}` : ''}
           </p>
           <div className="bd-badges">
-            {d.ingestionQuality && (
-              <button
-                type="button"
-                className="btn btn-secondary btn--xs"
-                title="Latest provider collector quality snapshot"
-                onClick={() => nav('/app/admin/collectors')}
-              >
-                Ingestion {d.ingestionQuality.quality_outcome || d.ingestionQuality.status}
-                {d.ingestionQuality.completeness_pct != null ? ` · ${d.ingestionQuality.completeness_pct}%` : ''}
-              </button>
-            )}
             <StatusText status={backend.operational_status} />
             {hv && (
               <span className="bd-health" data-s={hv.router} title={`Advisory router: ${hv.recommended_action || 'n/a'}`}>
-                <span aria-hidden>{STATE_GLYPH[hv.router]}</span>
-                <span>Health {STATE_LABEL[hv.router] || hv.router}</span>
+                Health {STATE_LABEL[hv.router] || hv.router}
               </span>
             )}
-            <LineageTag lineage={src} />
-            <span className={stale ? 'bk-stale' : 'bk-muted'}>{stale ? '⚠ Stale · ' : ''}Telemetry {formatAge(age)} ago</span>
-            {calibration && <span className={`badge ${calibration.freshness_status === 'Fresh' ? 'badge-fresh' : 'badge-warning'}`}>Calibration {calibration.freshness_status}</span>}
+            <LineageTag lineage={src} compact />
           </div>
+          <dl className="bd-facts">
+            <div>
+              <dt>Telemetry</dt>
+              <dd className={stale ? 'bd-facts--warn' : undefined}>{stale ? 'Stale' : 'Fresh'} · {formatAge(age)} ago</dd>
+            </div>
+            {calibration?.freshness_status ? (
+              <div><dt>Calibration</dt><dd>{calibration.freshness_status}</dd></div>
+            ) : null}
+            {d.ingestionQuality ? (
+              <div>
+                <dt>Ingestion</dt>
+                <dd>
+                  <button type="button" className="bd-facts__link" onClick={() => nav('/app/admin/collectors')}>
+                    {d.ingestionQuality.quality_outcome || d.ingestionQuality.status}
+                    {d.ingestionQuality.completeness_pct != null ? ` · ${d.ingestionQuality.completeness_pct}%` : ''}
+                  </button>
+                </dd>
+              </div>
+            ) : null}
+          </dl>
         </div>
         <nav className="bd-actions" aria-label="Related views">
           <Link className="btn btn-primary" to={link('/app/investigate/timeline')}>Ops timeline</Link>
@@ -489,23 +507,59 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
         )}
 
         {activeTab === 'connectivity' && (
-          <section className="card bd-panel" aria-label="Connectivity">
-            <h3>Coupling map</h3>
-            {conn.length === 0 ? (
-              <EmptyState variant="inline" compact title={secErr('connectivity') ? unableToLoadLabel('coupling edges') : 'No coupling edges'} message={backend.topology_type === 'all_to_all' ? 'All-to-all topology: every qubit pair is coupled, edges are not stored.' : 'The registry has no edges for this backend.'} />
-            ) : (
-              <dl className="bd-props">
-                <dt>Topology</dt><dd>{label(backend.topology_type || '—')}</dd>
-                <dt>Edges</dt><dd className="bd-num">{conn.length}</dd>
-                <dt>Qubits with links</dt><dd className="bd-num">{degs.length} of {backend.qubit_count}{unlinked ? ` (${unlinked} unlinked)` : ''}</dd>
-                <dt>Degree (avg / max)</dt><dd className="bd-num">{num(degs.reduce((a, b) => a + b, 0) / (degs.length || 1), 2)} / {Math.max(...degs)}</dd>
-              </dl>
-            )}
-            <div className="bd-cta link-row">
-              <Link className="btn btn-primary" to={link('/app/telemetry/topology')}>Open topology map</Link>
-              <Link className="fs-link" to={link('/app/resources/health')}>Qubit health</Link>
-            </div>
-          </section>
+          <div className="bd-connect-grid">
+            <section className="card bd-panel" aria-label="Connectivity">
+              <h3>Coupling map</h3>
+              {conn.length === 0 ? (
+                <EmptyState variant="inline" compact title={secErr('connectivity') ? unableToLoadLabel('coupling edges') : 'No coupling edges'} message={backend.topology_type === 'all_to_all' ? 'All-to-all topology: every qubit pair is coupled, edges are not stored.' : 'The registry has no edges for this backend.'} />
+              ) : (
+                <dl className="bd-props">
+                  <dt>Topology</dt><dd>{label(backend.topology_type || '—')}</dd>
+                  <dt>Edges</dt><dd className="bd-num">{conn.length}</dd>
+                  <dt>Qubits with links</dt><dd className="bd-num">{degs.length} of {backend.qubit_count}{unlinked ? ` (${unlinked} unlinked)` : ''}</dd>
+                  <dt>Degree (avg / max)</dt><dd className="bd-num">{num(degs.reduce((a, b) => a + b, 0) / (degs.length || 1), 2)} / {degs.length ? Math.max(...degs) : 0}</dd>
+                </dl>
+              )}
+              <div className="bd-cta link-row">
+                <Link className="btn btn-primary" to={link('/app/telemetry/topology')}>Open topology map</Link>
+              </div>
+            </section>
+            <section className="card bd-panel" aria-label="Qubit health and coupling context">
+              <h3>Qubit health on this backend</h3>
+              {hv?.counts ? (
+                <>
+                  <StateBar counts={hv.counts} label={backend.backend_name} />
+                  {qubitRows.length > 0 && (
+                    <>
+                      <p className="page-hint" style={{ margin: '12px 0 8px' }}>Health map — colour = state; open Qubits tab for full table.</p>
+                      <div className="bd-hm bd-hm--compact">
+                        {qubitRows.map((q) => (
+                          <Link key={q.qubit_index} className="bd-cell" data-s={q.state} to={link('/app/resources/health')}
+                            title={`Q${q.qubit_index} · ${q.state}`} aria-label={`Qubit ${q.qubit_index}, ${q.state}`}>{q.qubit_index}</Link>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  {worstQubits.some((q) => q.state === 'RED' || q.state === 'YELLOW') && (
+                    <div className="bd-connect-worst">
+                      <span className="bk-filter-group__title">Attention qubits</span>
+                      <ul className="bd-connect-worst__list">
+                        {worstQubits.filter((q) => q.state === 'RED' || q.state === 'YELLOW').slice(0, 8).map((q) => (
+                          <li key={q.qubit_index}><span className="bd-sev" data-s={q.state === 'RED' ? 'CRITICAL' : 'WARNING'}>{q.state}</span> Q{q.qubit_index}{q.reasons ? <span className="bk-muted"> — {q.reasons}</span> : null}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <EmptyState variant="inline" compact title={secErr('qubit health') ? unableToLoadLabel('qubit health') : 'No health vector'} message="Open Resource health for fleet-wide scoring." />
+              )}
+              <div className="bd-cta link-row">
+                <button type="button" className="btn btn-secondary btn--xs" onClick={() => onWorkspaceTabChange?.('qubits')}>Qubits tab</button>
+                <Link className="fs-link" to={link('/app/resources/health')}>Resource health</Link>
+              </div>
+            </section>
+          </div>
         )}
 
         {activeTab === 'execution' && (
@@ -517,31 +571,37 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
               <div className="bk-kpi"><div className="bk-kpi__label">Recent jobs</div><div className="bk-kpi__value">{jobs.length}</div><div className="bk-kpi__sub">{Object.entries(jobCounts).map(([k, n]) => `${n} ${k.toLowerCase()}`).join(' · ') || 'None'}</div></div>
             </section>
             <section className="card" style={{ padding: 0 }}>
-              <div className="bk-toolbar link-row">
+              <div className="bk-toolbar link-row bd-jobs-head">
                 <strong style={{ fontSize: 13 }}>Jobs on this backend</strong>
+                <span className="bk-muted" role="status">{jobs.length} job{jobs.length === 1 ? '' : 's'}</span>
                 <Link className="fs-link" to={link('/app/execution/jobs')}>All jobs</Link>
                 <Link className="fs-link" to={link('/app/execution/queues')}>Queues</Link>
               </div>
               {jobs.length === 0 ? (
                 <EmptyState variant="panel" compact title={secErr('jobs') ? unableToLoadLabel('jobs') : 'No jobs'} message={secErr('jobs') ? 'Use Refresh on the page header.' : 'No job records for this backend.'} />
               ) : (
-                <div className="bk-tablewrap">
-                  <table className="bk-table">
-                    <caption className="bk-sr">Recent jobs</caption>
-                    <thead><tr><th scope="col">Job</th><th scope="col">Status</th><th scope="col">Submitted</th><th scope="col" className="bk-r">Runtime</th><th scope="col">Tags</th></tr></thead>
-                    <tbody>
-                      {jobs.slice(0, 25).map((j) => (
-                        <tr key={j.job_id}>
-                          <td><code>{j.job_id}</code></td>
-                          <td>{j.status === 'COMPLETED' ? '● ' : j.status === 'FAILED' ? '◆ ' : '▲ '}{j.status}{j.failure_reason ? <div className="bk-muted">{j.failure_reason}</div> : null}</td>
-                          <td>{formatISTTime(j.submitted_at)}</td>
-                          <td className="bk-r">{j.runtime != null ? `${j.runtime.toFixed(1)} s` : '—'}</td>
-                          <td className="bk-muted">{j.tags?.join(', ') || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                <>
+                  <div className="bk-tablewrap">
+                    <table className="bk-table">
+                      <caption className="bk-sr">Recent jobs</caption>
+                      <thead><tr><th scope="col">Job</th><th scope="col">Status</th><th scope="col">Submitted</th><th scope="col" className="bk-r">Runtime</th><th scope="col">Tags</th></tr></thead>
+                      <tbody>
+                        {jobsShown.map((j) => (
+                          <tr key={j.job_id}>
+                            <td><code>{j.job_id}</code></td>
+                            <td>{j.status === 'COMPLETED' ? '● ' : j.status === 'FAILED' ? '◆ ' : '▲ '}{j.status}{j.failure_reason ? <div className="bk-muted">{j.failure_reason}</div> : null}</td>
+                            <td>{formatISTTime(j.submitted_at)}</td>
+                            <td className="bk-r">{j.runtime != null ? `${j.runtime.toFixed(1)} s` : '—'}</td>
+                            <td className="bk-muted">{j.tags?.join(', ') || '—'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="bd-pager">
+                    <ListPager page={jCur} pages={jPages} onPage={setJPage} />
+                  </div>
+                </>
               )}
             </section>
           </>

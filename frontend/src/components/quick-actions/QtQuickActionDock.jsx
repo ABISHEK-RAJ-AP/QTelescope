@@ -11,7 +11,12 @@ import {
   X,
   Zap,
   Key,
+  Bell,
 } from 'lucide-react';
+import {
+  OPERATOR_NOTICES_EVENT,
+  unreadOperatorNoticeCount,
+} from '@/lib/operatorNotices.js';
 import { markOnboardingPending, getOnboardingRecord } from '@/lib/onboardingState';
 import { isPlatformAdmin } from '@/lib/permissions.js';
 import { api } from '@/services/api';
@@ -53,6 +58,14 @@ export function QtQuickActionDock({
   const [expanded, setExpanded] = useState(readExpanded);
   const [tourPanelOpen, setTourPanelOpen] = useState(false);
   const [discoverBusy, setDiscoverBusy] = useState(false);
+  const [noticeUnread, setNoticeUnread] = useState(() => unreadOperatorNoticeCount());
+
+  useEffect(() => {
+    const refresh = () => setNoticeUnread(unreadOperatorNoticeCount());
+    refresh();
+    window.addEventListener(OPERATOR_NOTICES_EVENT, refresh);
+    return () => window.removeEventListener(OPERATOR_NOTICES_EVENT, refresh);
+  }, []);
 
   const isAdmin = isPlatformAdmin(currentUser) || currentUser?.role === 'QuantumOpsAdmin';
   const username = currentUser?.username;
@@ -86,6 +99,16 @@ export function QtQuickActionDock({
 
   const actions = useMemo(() => {
     const list = [];
+
+    list.push({
+      id: 'notices',
+      label: 'Notifications',
+      subtitle: noticeUnread ? `${noticeUnread} unread` : 'Reminders & scope',
+      icon: <Bell size={22} strokeWidth={2} />,
+      tone: noticeUnread ? 'warning' : 'primary',
+      badge: noticeUnread || undefined,
+      onClick: () => window.dispatchEvent(new CustomEvent('qts:open-notices')),
+    });
 
     if (criticalAlertsCount > 0) {
       list.push({
@@ -194,6 +217,7 @@ export function QtQuickActionDock({
     criticalAlertsCount,
     tourSpotlight,
     discoverBusy,
+    noticeUnread,
   ]);
 
   const startConsoleTour = () => {

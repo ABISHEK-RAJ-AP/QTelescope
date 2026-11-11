@@ -1,0 +1,115 @@
+.design-gallery {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.design-gallery__title {
+  margin: 0 0 8px;
+  font-size: var(--font-size-page-title);
+}
+
+.design-gallery__sub {
+  margin: 0 0 8px;
+  font-size: var(--font-size-body);
+}
+
+.design-gallery__section {
+  margin-bottom: var(--ds-space-lg);
+}
+
+.design-gallery__section.card {
+  padding: var(--ds-space-md);
+}
+
+.design-gallery__h {
+  margin: 0 0 var(--ds-space-sm);
+  font-size: var(--font-size-section-title);
+}
+
+.design-gallery__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.design-gallery__plain-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-size-label);
+  color: var(--text-primary);
+}
+
+.design-gallery__chips {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.design-gallery__chips .is-on {
+  box-shadow: 0 0 0 2px var(--accent-cyan);
+}
+
+.design-gallery__fake-chart {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 160px;
+  color: var(--text-muted);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--ds-radius-control);
+}
+
+.design-gallery__grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--ds-space-md);
+}
+
+.design-gallery__tokens {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.design-gallery__tokens li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--font-size-metadata);
+  font-family: var(--font-mono, ui-monospace, monospace);
+}
+
+.design-gallery__swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.design-gallery__spin {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-right: 8px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: design-gallery-spin 0.7s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes design-gallery-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .design-gallery__spin {
+    animation: none;
+  }
+}

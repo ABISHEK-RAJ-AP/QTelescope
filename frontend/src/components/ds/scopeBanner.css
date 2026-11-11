@@ -1,0 +1,55 @@
+.scope-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin: 0 0 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.45;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+}
+
+.scope-banner--info {
+  border-color: color-mix(in srgb, var(--accent-blue, #3b82f6) 25%, var(--border-color));
+}
+
+.scope-banner--warn {
+  border-color: color-mix(in srgb, var(--accent-amber) 40%, var(--border-color));
+}
+
+.scope-banner__dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin: 0;
+}
+
+.scope-banner__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0;
+}
+
+.scope-banner__row dt {
+  margin: 0;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted, var(--text-secondary));
+}
+
+.scope-banner__row dd {
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.scope-banner__action {
+  flex-shrink: 0;
+}

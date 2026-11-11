@@ -7,16 +7,22 @@ import {
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { buildAppPath, parseAppPath, isLegacyAppPath } from './appNav.js';
 import {
-  TELEMETRY_NAV,
   EXECUTION_NAV,
   RESOURCES_NAV,
-  ALERTS_NAV,
-  NAV_HELP,
   navBranchActive,
   navChildActive,
   goStateForNavChild,
   defaultGoStateForBranch,
 } from './appSidebarNav.js';
+import {
+  ALERTS_HUB_NAV,
+  LABS_TELEMETRY_NAV,
+  NAV_HELP_PRIMARY,
+  navChildGoState,
+  navChildIsActive,
+  navBranchIsActive,
+  defaultBranchGoState,
+} from './appPrimaryNav.js';
 import { buildDriftInvestigationLocation } from './lib/investigationLinks.js';
 import { parseScopeSearch } from './lib/appScopeQuery.js';
 import cdacLogo from './assets/cdaclogo.png';
@@ -31,6 +37,7 @@ import {
   AdministrationPage, OperationsCentre, PlatformHealth, OpsTimeline, OnboardingFlow, UserSettings,
   IncidentDetailPage,
   AlertDetailPage,
+  DesignSystemGallery,
 } from './appLazyPages.js';
 import { BoneyardSkeleton } from './components/ui/Skeleton';
 import { api } from './services/api';
@@ -43,6 +50,7 @@ import { A11yPreheader } from './components/shell/A11yPreheader.jsx';
 import { ProductTour } from './components/onboarding/ProductTour.jsx';
 import { ConfirmDialog } from './components/observability/ConfirmDialog.jsx';
 import { QtQuickActionDock } from './components/quick-actions/QtQuickActionDock.jsx';
+import { OperatorNoticeBell } from './components/shell/OperatorNoticeBell.jsx';
 import { readDensity } from './utils/uiPreferences.js';
 import { OnScreenKeyboard } from './components/shell/OnScreenKeyboard.jsx';
 import { ToastHost } from './components/ui/ToastHost.jsx';
@@ -104,8 +112,9 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
 
   useCommandPaletteShortcut(() => setCommandOpen(true));
   const [expandedBranches, setExpandedBranches] = useState(
-    () => new Set(['telemetry', 'execution', 'resources', 'alerts', 'admin']),
+    () => new Set(['alerts', 'admin']),
   );
+  const [labsOpen, setLabsOpen] = useState(false);
   const canConfigure = canManageFleet(currentUser);
   const tourSteps = useMemo(
     () => filterConsoleTourSteps(currentUser, canSeeNavItem),
@@ -298,7 +307,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
 
   // Render main topic view with internal sub-tabs
   const renderContent = () => {
-    if (mainTopic !== 'settings' && mainTopic !== 'onboarding' && !canSeeNavItem(currentUser, mainTopic)) {
+    if (mainTopic !== 'settings' && mainTopic !== 'onboarding' && mainTopic !== 'design' && !canSeeNavItem(currentUser, mainTopic)) {
       return (
         <div className="card" style={{ padding: 40, textAlign: 'center' }}>
           <ShieldAlert size={48} color="#e11d48" style={{ margin: '0 auto 16px' }} />
@@ -310,6 +319,9 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
       );
     }
     switch (mainTopic) {
+      case 'design':
+        return <DesignSystemGallery />;
+
       case 'home':
         return (
           <DashboardHome
@@ -419,7 +431,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
           <AlertsEvents
             view={alertsView}
             currentUser={currentUser}
-            onOpenAlert={(id) => go({ mainTopic: 'alerts', alertsView: 'alerts', selectedAlertId: id })}
+            onOpenAlertWorkspace={(id) => go({ mainTopic: 'alerts', alertsView: 'alerts', selectedAlertId: id })}
             onOpenIncident={(id) => go({ mainTopic: 'alerts', alertsView: 'incidents', selectedIncidentId: id })}
             onViewChange={(view) => go({
               mainTopic: 'alerts',
@@ -553,50 +565,44 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
     selectedIncidentId,
   };
 
-  const navGroups = useMemo(() => [
-    {
-      label: 'Observe',
+  const navGroups = useMemo(() => {
+    const primary = {
+      label: 'Console',
       items: [
-        { id: 'home', label: 'Fleet overview', icon: LayoutDashboard },
-        { id: 'operations', label: 'Operator console', icon: Radar },
+        { id: 'home', label: 'Overview', icon: LayoutDashboard },
         { id: 'backends', label: 'Backends', icon: Cpu },
-        { id: 'telemetry', label: 'Telemetry', icon: Activity, children: TELEMETRY_NAV },
-        { id: 'investigate', label: 'Timeline', icon: History },
-      ].filter((item) => canSeeNavItem(currentUser, item.id)),
-    },
-    {
-      label: 'Platform',
-      items: [{ id: 'platform', label: 'Platform health', icon: Server }].filter((item) => canSeeNavItem(currentUser, item.id)),
-    },
-    {
-      label: 'Execute',
-      items: [
-        { id: 'execution', label: 'Execution', icon: PlaySquare, children: EXECUTION_NAV },
-        { id: 'resources', label: 'Resources', icon: CheckCircle2, children: RESOURCES_NAV },
-      ].filter((item) => canSeeNavItem(currentUser, item.id)),
-    },
-    {
-      label: 'Record',
-      items: [
-        { id: 'reports', label: 'Reports', icon: FileText },
         {
           id: 'alerts',
-          label: 'Alerts',
+          label: 'Alerts & incidents',
           icon: AlertTriangle,
-          children: ALERTS_NAV,
+          children: ALERTS_HUB_NAV,
           badge: criticalAlertsCount > 0 ? criticalAlertsCount : (activeAlertsCount > 0 ? activeAlertsCount : 0),
           badgeVariant: criticalAlertsCount > 0 ? 'critical' : 'total',
           badgeTitle: criticalAlertsCount > 0
             ? `${criticalAlertsCount} critical · ${activeAlertsCount} active`
             : `${activeAlertsCount} active alerts`,
         },
+        { id: 'compare', label: 'Compare & routing', icon: Activity },
+        { id: 'reports', label: 'Reports', icon: FileText },
       ].filter((item) => canSeeNavItem(currentUser, item.id)),
-    },
-  ].filter((g) => g.items.length > 0), [activeAlertsCount, criticalAlertsCount, currentUser]);
+    };
+    const labsItems = [
+      { id: 'telemetry', label: 'Telemetry', icon: Activity, children: LABS_TELEMETRY_NAV },
+      { id: 'execution', label: 'Execution', icon: PlaySquare, children: EXECUTION_NAV },
+      { id: 'resources', label: 'Resources', icon: CheckCircle2, children: RESOURCES_NAV },
+      { id: 'platform', label: 'Platform health', icon: Server },
+      { id: 'operations', label: 'Operator console', icon: Radar },
+      { id: 'investigate', label: 'Timeline', icon: History },
+    ].filter((item) => canSeeNavItem(currentUser, item.id));
+    const labs = labsItems.length
+      ? { label: 'Labs', items: labsItems, labsGroup: true }
+      : null;
+    return [primary, labs].filter(Boolean).filter((g) => g.items.length > 0);
+  }, [activeAlertsCount, criticalAlertsCount, currentUser]);
 
   const adminNav = visibleAdminNav(currentUser);
   const adminItem = adminNav.length
-    ? { id: 'admin', label: 'Configure', icon: Settings, children: adminNav }
+    ? { id: 'admin', label: 'Settings', icon: Settings, children: adminNav }
     : null;
 
   const toggleBranch = (id) => {
@@ -608,11 +614,22 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
     });
   };
 
+  const resolveChildGo = (item, child) => (
+    child.target ? navChildGoState(item.id, child) : goStateForNavChild(item, child)
+  );
+  const resolveChildActive = (item, child) => (
+    child.target ? navChildIsActive(item.id, child, shellNavState) : navChildActive(item, child, shellNavState)
+  );
+
   const renderNavItem = (item) => {
     const Icon = item.icon;
     const hasChildren = !!item.children?.length;
-    const branchActive = hasChildren && navBranchActive(item, shellNavState);
-    const leafActive = !hasChildren && mainTopic === item.id;
+    const branchActive = hasChildren && navBranchIsActive(item.id, shellNavState);
+    const leafActive = !hasChildren && (
+      item.id === 'compare'
+        ? mainTopic === 'telemetry' && telemetrySubTab === 'compare'
+        : mainTopic === item.id
+    );
     const expanded = hasChildren && expandedBranches.has(item.id);
 
     if (effectiveCollapsed && hasChildren) {
@@ -622,8 +639,8 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
           key={item.id}
           data-tour={`nav-${item.id}`}
           className={`nav-item ${branchActive ? 'active' : ''}`}
-          title={NAV_HELP[item.id] || item.label}
-          onClick={() => go(defaultGoStateForBranch(item))}
+          title={NAV_HELP_PRIMARY[item.id] || item.label}
+          onClick={() => go(defaultBranchGoState(item.id, item.children))}
         >
           <span className="nav-icon">
             <Icon size={18} color={item.id === 'alerts' && item.badge > 0 ? '#e11d48' : 'currentColor'} />
@@ -642,15 +659,17 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
             if (hasChildren) {
               if (!expanded) {
                 setExpandedBranches((p) => new Set(p).add(item.id));
-                go(defaultGoStateForBranch(item));
+                go(defaultBranchGoState(item.id, item.children));
               } else {
                 toggleBranch(item.id);
               }
+            } else if (item.id === 'compare') {
+              go({ mainTopic: 'telemetry', telemetrySubTab: 'compare' });
             } else {
               go({ mainTopic: item.id });
             }
           }}
-          title={NAV_HELP[item.id] || item.label}
+          title={NAV_HELP_PRIMARY[item.id] || item.label}
         >
           <span className="nav-icon">
             <Icon size={18} color={item.id === 'alerts' && item.badge > 0 ? '#e11d48' : 'currentColor'} />
@@ -676,8 +695,8 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
               <button
                 type="button"
                 key={child.value}
-                className={`nav-sub-item ${navChildActive(item, child, shellNavState) ? 'active' : ''}`}
-                onClick={() => go(goStateForNavChild(item, child))}
+                className={`nav-sub-item ${resolveChildActive(item, child) ? 'active' : ''}`}
+                onClick={() => go(resolveChildGo(item, child))}
               >
                 {child.label}
               </button>
@@ -717,13 +736,23 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
         <nav className="sidebar-nav" data-tour="sidebar-nav">
           {navGroups.map((group) => (
             <div key={group.label}>
-              {!effectiveCollapsed && <div className="nav-group-label">{group.label}</div>}
-              {group.items.map((item) => renderNavItem(item))}
+              {group.labsGroup && !effectiveCollapsed ? (
+                <button
+                  type="button"
+                  className="nav-group-label nav-group-label--button"
+                  aria-expanded={labsOpen}
+                  onClick={() => setLabsOpen((v) => !v)}
+                >
+                  {group.label}
+                  <ChevronDown size={14} style={{ transform: labsOpen ? 'rotate(0)' : 'rotate(-90deg)' }} aria-hidden />
+                </button>
+              ) : (!effectiveCollapsed && <div className="nav-group-label">{group.label}</div>)}
+              {(group.labsGroup ? labsOpen : true) && group.items.map((item) => renderNavItem(item))}
             </div>
           ))}
           {adminItem && (
             <div key="admin">
-              {!effectiveCollapsed && <div className="nav-group-label">Configure</div>}
+              {!effectiveCollapsed && <div className="nav-group-label">Settings</div>}
               {renderNavItem(adminItem)}
             </div>
           )}
@@ -784,22 +813,21 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
             title={pageContext.title}
             description={pageContext.description}
             backendId={pageContext.backendId}
-            actions={(
-              <>
-                {pageActions}
-                <div className="app-page-head__global">
-                  <IstClock />
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
-                    title={resolved === 'dark' ? 'Switch to light' : 'Switch to dark'}
-                    aria-label="Toggle theme"
-                  >
-                    {resolved === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-                  </button>
-                </div>
-              </>
+            actions={pageActions}
+            trailing={(
+              <div className="app-page-head__global">
+                <OperatorNoticeBell />
+                <IstClock />
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
+                  title={resolved === 'dark' ? 'Switch to light' : 'Switch to dark'}
+                  aria-label="Toggle theme"
+                >
+                  {resolved === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
+                </button>
+              </div>
             )}
           />
         </header>
