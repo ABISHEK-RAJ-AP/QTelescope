@@ -142,11 +142,12 @@
 
 .op-notice-bell__toolbar {
   display: flex;
-  flex-wrap: nowrap;
+  flex-flow: row wrap;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 8px;
   padding-top: 2px;
+  width: 100%;
 }
 
 .op-notice-btn {
@@ -181,7 +182,6 @@
 .op-notice-btn--primary {
   border-color: color-mix(in srgb, var(--accent-cyan) 40%, var(--border-color));
   background: color-mix(in srgb, var(--accent-cyan) 14%, var(--bg-card));
-  margin-right: auto;
 }
 
 .op-notice-btn--icon {

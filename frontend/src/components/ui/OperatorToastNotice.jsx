@@ -18,7 +18,7 @@ export function OperatorToastNotice({
         {primary ? (
           <button
             type="button"
-            className="btn btn-primary btn--xs qts-toast-notice__cta"
+            className="btn btn-primary btn-sm qts-toast-notice__action"
             onClick={() => onAction?.(primary)}
           >
             {primary.label}
@@ -28,7 +28,7 @@ export function OperatorToastNotice({
           <button
             key={a.id || a.label}
             type="button"
-            className="btn btn-secondary btn--xs"
+            className="btn btn-secondary btn-sm qts-toast-notice__action"
             onClick={() => onAction?.(a)}
           >
             {a.label}
@@ -36,7 +36,7 @@ export function OperatorToastNotice({
         ))}
         <button
           type="button"
-          className="btn btn-secondary btn--xs qts-toast-notice__later"
+          className="btn btn-secondary btn-sm qts-toast-notice__action qts-toast-notice__action--quiet"
           onClick={onRemindLater}
         >
           Remind later

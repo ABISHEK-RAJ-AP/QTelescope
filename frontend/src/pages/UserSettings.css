@@ -540,6 +540,13 @@
 
 .us-toggle-row__switch {
   flex-shrink: 0;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+}
+
+.us-toggle-row__switch .ui-toggle__track {
+  margin-top: 0;
 }
 
 .us-field--select select {

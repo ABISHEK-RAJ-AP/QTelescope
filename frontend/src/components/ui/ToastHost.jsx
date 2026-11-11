@@ -6,7 +6,7 @@ import './toast.css';
 export function ToastHost() {
   return (
     <ToastContainer
-      position="bottom-right"
+      position="top-right"
       autoClose={5200}
       hideProgressBar={false}
       newestOnTop
