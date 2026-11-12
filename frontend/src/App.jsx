@@ -1,8 +1,8 @@
 import React, { Suspense, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   LayoutDashboard, Cpu, Activity, CheckCircle2,
-  FileText, Settings, LogOut, ShieldAlert, AlertTriangle, PlaySquare, Radar,
-  Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, Server, History,
+  FileText, Settings, LogOut, ShieldAlert, AlertTriangle, PlaySquare,
+  Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, Server,
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { buildAppPath, parseAppPath, isLegacyAppPath } from './appNav.js';
@@ -591,8 +591,6 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
       { id: 'execution', label: 'Execution', icon: PlaySquare, children: EXECUTION_NAV },
       { id: 'resources', label: 'Resources', icon: CheckCircle2, children: RESOURCES_NAV },
       { id: 'platform', label: 'Platform health', icon: Server },
-      { id: 'operations', label: 'Operator console', icon: Radar },
-      { id: 'investigate', label: 'Timeline', icon: History },
     ].filter((item) => canSeeNavItem(currentUser, item.id));
     const labs = labsItems.length
       ? { label: 'Labs', items: labsItems, labsGroup: true }

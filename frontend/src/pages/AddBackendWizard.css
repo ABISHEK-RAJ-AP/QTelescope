@@ -334,6 +334,16 @@
   outline-offset: 1px;
 }
 
+.bk-wizard__field-error {
+  color: var(--ds-status-critical, var(--accent-rose, #e11d48));
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.bk-wizard__field input[aria-invalid='true'] {
+  border-color: var(--ds-status-critical, var(--accent-rose, #e11d48));
+}
+
 .bk-wizard__field-hint {
   font-size: 0.75rem;
   font-weight: 400;

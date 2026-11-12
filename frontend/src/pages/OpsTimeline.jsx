@@ -297,9 +297,9 @@ export const OpsTimeline = () => {
                       <td className="ot-nowrap">{formatIST(e.at, false)}</td>
                       <td>{e.kind.replace('_', ' ')}</td>
                       <td><SevBadge severity={e.severity} /></td>
-                      <td>{e.title || e.summary || '—'}</td>
-                      <td>{e.backend_id || '—'}</td>
-                      <td>{e.status ? <StatusBadge status={e.status} /> : '—'}</td>
+                      <td>{e.title || e.summary || 'N/A'}</td>
+                      <td>{e.backend_id || 'N/A'}</td>
+                      <td>{e.status ? <StatusBadge status={e.status} /> : 'N/A'}</td>
                       <td><button type="button" className="btn btn-secondary btn--xs" onClick={() => setSelected(key)}>Details</button></td>
                     </tr>
                   );

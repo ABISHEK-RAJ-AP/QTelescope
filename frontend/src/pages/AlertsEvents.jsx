@@ -28,14 +28,14 @@ import {
 } from '../components/observability/DetailModalLayout.jsx';
 import { useAppScope } from '../hooks/useAppScope.js';
 import { buildBackendDetailsPath, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
-import { formatIST } from '../utils/time';
+import { formatActivity, formatIST } from '../utils/time';
 import { SevBadge, StatusBadge } from './opsShared.jsx';
 import { sevRank, toMs, timelineTo, healthTo, qubitOf } from './opsHelpers.js';
 import { notifyError, notifyOperatorNotice, notifySuccess } from '../lib/toast.js';
 import { usePermissions } from '../hooks/usePermissions.js';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { getChartSemanticColors } from '../components/observability/chartTheme.js';
-import { parseIncidentTitle, formatDurationMs } from '../lib/incidentUi.js';
+import { parseIncidentTitle } from '../lib/incidentUi.js';
 import { ViewModeToggle } from '../components/observability/DataViewToolbar.jsx';
 import { EnterpriseDataTable } from '../components/observability/EnterpriseDataTable.jsx';
 import { ListPager } from '../components/observability/ListPager.jsx';
@@ -651,7 +651,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
         >
           <span className="al-kpi__label">Unassigned incidents</span>
           <span className="al-kpi__value"><AnimatedNumber value={unassignedInc} /></span>
-          <span className="al-kpi__hint">{unassignedInc === 0 ? 'All assigned' : 'No owner yet'}</span>
+          <span className="al-kpi__hint">{unassignedInc === 0 ? 'All assigned' : 'Needs an owner'}</span>
         </button>
       </section>
 
@@ -721,7 +721,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                     status: inc.status,
                     alerts_label: `${inc.alert_count} (${activeNow} active)`,
                     alert_count: inc.alert_count,
-                    owner: inc.owner || inc.acknowledged_by || 'Unassigned',
+                    owner: inc.owner || inc.acknowledged_by || 'No owner',
                     detected_sort: toMs(inc.first_detected_at) ?? 0,
                     detected: formatIST(inc.first_detected_at, false),
                     _inc: inc,
@@ -770,8 +770,8 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                 const activeNow = alerts.filter(
                   (a) => a.backend_id === inc.backend_id && String(inc.title).endsWith(a.alert_type) && a.status === 'ACTIVE',
                 ).length;
-                const dur = formatDurationMs(toMs(inc.last_detected_at) - toMs(inc.first_detected_at));
-                const headline = rule || inc.title || inc.backend_id;
+                const activity = formatActivity(inc.last_detected_at);
+                const headline = String(rule || inc.title || inc.backend_id || 'Incident').replace(/_/g, ' ');
                 const backend = backendLabel || inc.backend_id;
                 return (
                   <article
@@ -785,7 +785,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                     <header className="al-inc-card__head">
                       <div>
                         <span className="al-inc-card__title">{headline}</span>
-                        <p className="al-inc-card__meta">{backend} · {inc.alert_count} alerts · {activeNow} active · {dur}</p>
+                        <p className="al-inc-card__meta">{backend} · {inc.alert_count} alerts · {activeNow} active · {activity}</p>
                       </div>
                       <div className="al-inc-card__badges">
                         <SevBadge severity={inc.severity} />
@@ -793,8 +793,8 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                       </div>
                     </header>
                     <dl className="al-inc-card__stats">
-                      <div><dt>Owner</dt><dd>{inc.owner || inc.acknowledged_by || 'Unassigned'}</dd></div>
-                      <div><dt>Last activity</dt><dd className="al-nowrap">{formatIST(inc.last_detected_at, false)}</dd></div>
+                      <div><dt>Owner</dt><dd>{inc.owner || inc.acknowledged_by || 'No owner'}</dd></div>
+                      <div><dt>Last activity</dt><dd className="al-nowrap" title={formatIST(inc.last_detected_at, false)}>{activity}</dd></div>
                     </dl>
                     <footer className="al-inc-card__foot" onClick={stopRow} onKeyDown={stopRow}>
                       <button type="button" className="btn btn-secondary btn--xs" onClick={() => openIncident(inc.incident_id)}>Open workspace</button>
@@ -1305,7 +1305,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                 <DetailModalRow label="Alerts">{openInc.alert_count}</DetailModalRow>
                 <DetailModalRow label="First detected">{formatIST(openInc.first_detected_at)}</DetailModalRow>
                 <DetailModalRow label="Last detected">{formatIST(openInc.last_detected_at)}</DetailModalRow>
-                <DetailModalRow label="Owner">{openInc.owner || 'Unassigned'}</DetailModalRow>
+                <DetailModalRow label="Owner">{openInc.owner || 'No owner'}</DetailModalRow>
                 <DetailModalRow label="Resolution">{openInc.resolution_notes || '—'}</DetailModalRow>
               </DetailModalDl>
             </DetailModalSection>

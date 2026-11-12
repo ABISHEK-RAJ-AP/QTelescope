@@ -15,10 +15,10 @@ export const normMetric = (m) => {
 
 export const tsMs = (t) => parseDate(t)?.getTime() ?? null;
 
-/** Unit-aware; trapped-ion T1 is millions of µs. Missing is "—", never 0. */
+/** Unit-aware; trapped-ion T1 is millions of µs. Missing is N/A, never 0. */
 export function fmtMetric(v, metric = 't1') {
   const n = Number(v);
-  if (v == null || !Number.isFinite(n)) return '—';
+  if (v == null || !Number.isFinite(n)) return 'N/A';
   if (metric === 'readout_error') return n.toFixed(4);
   if (n >= 1e6) return `${(n / 1e6).toFixed(2)} s`;
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)} ms`;

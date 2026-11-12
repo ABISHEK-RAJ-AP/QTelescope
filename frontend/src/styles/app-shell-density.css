@@ -17,10 +17,12 @@
 
 .context-bar {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px 16px;
-  padding: 12px 16px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .context-bar--inline {
@@ -32,29 +34,67 @@
 
 .context-bar__field {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
+  flex: 0 0 auto;
+  margin: 0;
+  white-space: nowrap;
+  font-size: var(--font-size-metadata, 0.8125rem);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.context-bar .input-control,
+.context-bar select {
+  min-height: 36px;
+  height: 36px;
+  width: auto;
+  min-width: 9.5rem;
+}
+
+.context-bar .time-range-selector__hint {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
 }
 
 .page-toolbar-unified {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 12px 14px;
-  padding: 12px 16px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.page-toolbar-unified .admin-form-field,
+.page-toolbar-unified .context-bar__field {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  white-space: nowrap;
 }
 
 .page-toolbar-unified .input-control,
 .page-toolbar-unified select {
-  min-height: 44px;
-  height: 44px;
+  min-height: 36px;
+  height: 36px;
+  width: auto;
+  min-width: 8.5rem;
   font-size: var(--font-size-control, 1rem);
 }
 
 .detail-drawer--xl {
-  width: min(920px, 96vw);
-  max-height: min(92vh, 940px);
+  width: min(720px, 96vw);
+  max-height: min(88vh, 860px);
+  margin-inline: auto;
 }
 
 .detail-drawer--xl .detail-drawer__title {

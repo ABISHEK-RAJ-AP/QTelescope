@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import {
-  Maximize2, Search, X, ArrowUpDown, Clock, Activity,
+  Search, X, ArrowUpDown, Clock, Activity,
   Zap, AlertTriangle, Info, ChevronDown, GitCompare,
 } from 'lucide-react';
 import { api } from '../services/api';
@@ -20,9 +20,9 @@ import './TopologyExplorer.css';
 const STATE_SYMBOL = { GREEN: 'circle', YELLOW: 'diamond', RED: 'triangle', UNKNOWN: 'rect' };
 const stateColors = () => getFleetStateChartColors();
 const LEGACY = { Healthy: 'GREEN', Warning: 'YELLOW', Degraded: 'RED' };
-const fmt = (v, d = 2) => (v == null || !Number.isFinite(Number(v)) ? '—' : Number(v).toFixed(d));
+const fmt = (v, d = 2) => (v == null || !Number.isFinite(Number(v)) ? 'N/A' : Number(v).toFixed(d));
 const fmtUs = (v) => {
-  if (v == null || !Number.isFinite(Number(v))) return '—';
+  if (v == null || !Number.isFinite(Number(v))) return 'N/A';
   const n = Number(v);
   if (n >= 1e6) return `${(n / 1e6).toFixed(2)} s`;
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)} ms`;
@@ -132,7 +132,7 @@ function QubitHistoryChart({ history, metric, isDark }) {
       },
       xAxis: {
         type: 'category',
-        data: pts.map((h) => h.collected_at ? formatISTTime(h.collected_at).slice(0, 16) : '—'),
+        data: pts.map((h) => h.collected_at ? formatISTTime(h.collected_at).slice(0, 16) : 'N/A'),
         axisLabel: { color: th.textColor, fontSize: 9, interval: 'auto', rotate: 25 },
         axisLine: { lineStyle: { color: th.axisLine } },
       },
@@ -175,14 +175,14 @@ function CalibrationCompare({ snapshots, selectedIds, onSelectIds }) {
         <label className="topo-compare__label">
           Snapshot A
           <select className="input-control" value={a || ''} onChange={(e) => onSelectIds([e.target.value, b])} aria-label="Calibration snapshot A">
-            <option value="">— select —</option>
+            <option value="">Select snapshot</option>
             {snapshots.map((s) => <option key={s.id} value={s.id}>{s.calibrated_at ? formatISTTime(s.calibrated_at) : s.id}</option>)}
           </select>
         </label>
         <label className="topo-compare__label">
           Snapshot B
           <select className="input-control" value={b || ''} onChange={(e) => onSelectIds([a, e.target.value])} aria-label="Calibration snapshot B">
-            <option value="">— select —</option>
+            <option value="">Select snapshot</option>
             {snapshots.map((s) => <option key={s.id} value={s.id}>{s.calibrated_at ? formatISTTime(s.calibrated_at) : s.id}</option>)}
           </select>
         </label>
@@ -209,7 +209,7 @@ function CalibrationCompare({ snapshots, selectedIds, onSelectIds }) {
                   <td className="font-mono text-right">{fmt(va, 4)}</td>
                   <td className="font-mono text-right">{fmt(vb, 4)}</td>
                   <td className={`font-mono text-right ${tone}`}>
-                    {delta == null ? '—' : `${delta >= 0 ? '+' : ''}${fmt(delta, 4)}${pct != null ? ` (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)` : ''}`}
+                    {delta == null ? 'N/A' : `${delta >= 0 ? '+' : ''}${fmt(delta, 4)}${pct != null ? ` (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)` : ''}`}
                   </td>
                 </tr>
               );
@@ -292,7 +292,7 @@ function QubitDetailDrawer({ open, qubit, backendId, neighbors, onClose, onSelec
                 </div>
                 <div className="topo-metric-row">
                   <dt>Frequency</dt>
-                  <dd>{qubit.frequency != null ? `${(qubit.frequency / 1e9).toFixed(4)} GHz` : '—'}</dd>
+                  <dd>{qubit.frequency != null ? `${(qubit.frequency / 1e9).toFixed(4)} GHz` : 'N/A'}</dd>
                 </div>
               </dl>
             </div>
@@ -324,7 +324,7 @@ function QubitDetailDrawer({ open, qubit, backendId, neighbors, onClose, onSelec
                   </dd>
                 </div>
                 <div className="topo-metric-row">
-                  <dt>Operational status</dt><dd>{qubit.status || '—'}</dd>
+                  <dt>Operational status</dt><dd>{qubit.status ? String(qubit.status).replace(/_/g, ' ') : 'N/A'}</dd>
                 </div>
               </dl>
               {qubit.action && (
@@ -569,8 +569,6 @@ export const TopologyExplorer = () => {
     };
   }, [qubits, positions, graph, colorMode, isDark, selectedId, big, neighbors]);
 
-  const fit = () => chartRef.current?.getEchartsInstance().dispatchAction({ type: 'restore' });
-
   const onEvents = useMemo(() => ({
     click: (p) => {
       if (p.dataType === 'node') {
@@ -711,9 +709,6 @@ export const TopologyExplorer = () => {
         >
           {viewMode === 'graph' && (
             <div className="topo-canvas">
-              <button type="button" className="btn btn-secondary topo-fit" onClick={fit} aria-label="Fit topology to view">
-                <Maximize2 size={14} /> Fit to view
-              </button>
               {option && (
                 <QtECharts
                   ref={chartRef}

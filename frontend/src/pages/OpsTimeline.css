@@ -3,7 +3,7 @@
   border: 1px solid var(--border-color); border-left: 4px solid #7c3aed; background: var(--bg-card); color: var(--text-primary); }
 .ot-note--warn { border-left-color: var(--accent-amber); }
 .ops-tl .ot-filter-bar.filter-bar {
-  padding: 14px 16px;
+  padding: 8px 12px;
   align-items: center;
 }
 
@@ -14,9 +14,10 @@
 }
 
 .ot-filter-bar .filter-bar__filters {
-  flex: 1 1 auto;
-  align-items: flex-end;
-  gap: 10px 12px;
+  flex: 0 1 auto;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px 10px;
 }
 
 .ot-filter-bar .filter-bar__actions {
@@ -35,7 +36,7 @@
 }
 
 .ot-kinds { display: inline-flex; gap: 6px; border: 0; padding: 0; margin: 0; flex-wrap: wrap; align-items: center; }
-.ot-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); border-radius: 999px; padding: 6px 12px; min-height: 40px; font-size: var(--font-size-helper, 0.9375rem); cursor: pointer; text-transform: capitalize; }
+.ot-chip { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border-color); background: transparent; color: var(--text-secondary); border-radius: 999px; padding: 4px 10px; min-height: 36px; font-size: var(--font-size-helper, 0.9375rem); cursor: pointer; text-transform: capitalize; }
 .ot-chip[aria-pressed='true'] { background: var(--bg-card-hover); border-color: var(--border-highlight); color: var(--text-primary); font-weight: 600; }
 .ot-chip:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 1px; }
 .ot-glyph { width: 10px; height: 10px; background: currentColor; display: inline-block; }

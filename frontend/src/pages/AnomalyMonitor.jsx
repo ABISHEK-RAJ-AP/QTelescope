@@ -295,8 +295,12 @@ export const AnomalyMonitor = () => {
           )}
 
           <section className="card page-panel dvt-panel" aria-label="Ranked anomalies">
-            <h3 className="dvt-panel__title">Ranked flagged qubits ({hits.length})</h3>
-            <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${hits.length} hit${hits.length === 1 ? '' : 's'}`} />
+            <DataPanelToolbar
+              title={`Ranked flagged qubits (${hits.length})`}
+              layout={layout}
+              onLayoutChange={setLayout}
+              countLabel={`${hits.length} hit${hits.length === 1 ? '' : 's'}`}
+            />
             {layout === 'grid' ? (
               <div className="dvt-grid">
                 {hits.length === 0 ? (

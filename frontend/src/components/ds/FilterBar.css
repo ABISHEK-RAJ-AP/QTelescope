@@ -55,12 +55,13 @@
 }
 
 /* Inline ops toolbar — search + selects on one row (inventory, alerts) */
-.filter-bar--inline {
+.filter-bar.filter-bar--inline {
   flex-wrap: nowrap;
   align-items: center;
-  gap: var(--ds-space-sm, 12px);
+  gap: 8px 10px;
   overflow-x: auto;
   scrollbar-width: thin;
+  padding: 8px 12px;
 }
 
 .filter-bar--inline .filter-bar__search {
@@ -88,16 +89,18 @@
   color: var(--text-muted);
 }
 
-.filter-bar--inline .filter-bar__filters select,
-.filter-bar--inline .filter-bar__filters .input-control,
-.filter-bar--inline .bk-sort-pick--inline select {
-  min-height: 40px;
+.filter-bar.filter-bar--inline .filter-bar__filters select,
+.filter-bar.filter-bar--inline .filter-bar__filters .input-control,
+.filter-bar.filter-bar--inline .bk-sort-pick--inline select {
+  min-height: 36px;
+  height: 36px;
   min-width: 6.5rem;
   font-size: var(--font-size-control, 1rem);
 }
 
-.filter-bar--inline .filter-bar__count {
+.filter-bar.filter-bar--inline .filter-bar__count {
   flex: 0 0 auto;
+  width: auto;
   margin-left: auto;
   font-size: var(--font-size-label, 0.9375rem);
   font-variant-numeric: tabular-nums;

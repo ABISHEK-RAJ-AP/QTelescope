@@ -66,6 +66,24 @@ export function formatISTTime(dateInput, includeSeconds = true) {
   return `${timeStr} IST`;
 }
 
+const ACTIVITY_STALE_MIN = 15;
+
+function relativeAgo(min) {
+  if (min < 1) return '<1 min ago';
+  if (min < 90) return `${Math.round(min)} min ago`;
+  if (min < 48 * 60) return `${(min / 60).toFixed(1)} h ago`;
+  return `${Math.round(min / 1440)} d ago`;
+}
+
+/** IST clock while fresh. Older than 15 minutes becomes a relative age. */
+export function formatActivity(dateInput, staleMin = ACTIVITY_STALE_MIN) {
+  const d = parseDate(dateInput);
+  if (!d) return 'N/A';
+  const min = Math.max(0, (Date.now() - d.getTime()) / 60000);
+  if (min <= staleMin) return formatIST(dateInput, false);
+  return relativeAgo(min);
+}
+
 /**
  * Formats a date/timestamp to IST date string only.
  * Example: "10 Sep 2026"

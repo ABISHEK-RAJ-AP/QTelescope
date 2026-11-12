@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
-import { Filter } from 'lucide-react';
 import { api } from '../services/api';
 import { unableToLoad } from '../constants/messages.js';
 import { formatISTTime } from '../utils/time';
@@ -211,13 +210,15 @@ export const DriftAnalysis = () => {
         onHoursChange={setWindowHours}
         showTimeRange
         timeRangeAffectsQuery
-      />
-      <div className="card page-panel drift-controls-bar">
-        <div className="drift-filter-group page-filter-row">
-          <Filter size={16} color="#64748b" aria-hidden />
+      >
+        <label className="context-bar__field">
+          <span>Metric</span>
           <select value={metric} onChange={(e) => setMetricUi(e.target.value)} className="input-control" aria-label="Metric">
             {METRIC_OPTS.map((m) => <option key={m.ui} value={m.ui}>{m.label}</option>)}
           </select>
+        </label>
+        <label className="context-bar__field">
+          <span>Qubit</span>
           <input
             type="number"
             min="0"
@@ -225,21 +226,24 @@ export const DriftAnalysis = () => {
             value={qubitIndex}
             onChange={(e) => setQubitIndex(parseInt(e.target.value, 10) || 0)}
             className="input-control"
-            style={{ width: 110 }}
-            placeholder="Qubit #"
+            style={{ width: 88, minWidth: 88 }}
             aria-label="Qubit index"
           />
-        </div>
-      </div>
+        </label>
+      </ContextBar>
 
       {mixedModality && (
         <p className="tm-callout">Fleet table spans modalities — compare absolute {metricApi} only within the same modality row (trapped-ion T1 is millions of µs).</p>
       )}
 
       <section className="card page-panel dvt-panel" aria-label="Fleet drift summary">
-        <h3 className="dvt-panel__title">Fleet drift (Q0 summary per backend)</h3>
-        <p className="page-hint" style={{ margin: '0 16px 8px' }}>Summary lists one representative qubit per backend. Select a row to load the full series.</p>
-        <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${rankedSummaries.length} backend${rankedSummaries.length === 1 ? '' : 's'}`} />
+        <DataPanelToolbar
+          title="Fleet drift"
+          hint="One representative qubit per backend. Select a row to load the full series."
+          layout={layout}
+          onLayoutChange={setLayout}
+          countLabel={`${rankedSummaries.length} backend${rankedSummaries.length === 1 ? '' : 's'}`}
+        />
         {layout === 'grid' ? (
           <div className="dvt-grid">
             {rankedSummaries.length === 0 ? (
@@ -251,13 +255,13 @@ export const DriftAnalysis = () => {
                     <button type="button" className="tm-rowbtn dvt-card__title" onClick={() => { setBackend(r.backend_id); setQubitIndex(r.qubit_index ?? 0); }}>
                       {backends.find((b) => b.backend_id === r.backend_id)?.backend_name || r.backend_id}
                     </button>
-                    <p className="dvt-card__meta">{modalityOf(backends, r.backend_id) || '—'} · Q{r.qubit_index ?? 0}</p>
+                    <p className="dvt-card__meta">{modalityOf(backends, r.backend_id) || 'N/A'} · Q{r.qubit_index ?? 0}</p>
                   </div>
-                  <span className={`badge ${driftBadge(r.drift_status)}`}>{r.drift_status || '—'}</span>
+                  <span className={`badge ${driftBadge(r.drift_status)}`}>{r.drift_status || 'N/A'}</span>
                 </header>
                 <dl className="dvt-card__stats">
                   <div><dt>Latest</dt><dd>{fmtMetric(r.latest_val, metricApi)}</dd></div>
-                  <div><dt>Δ%</dt><dd>{r.pct_change != null ? `${r.pct_change > 0 ? '+' : ''}${Number(r.pct_change).toFixed(1)}%` : '—'}</dd></div>
+                  <div><dt>Δ%</dt><dd>{r.pct_change != null ? `${r.pct_change > 0 ? '+' : ''}${Number(r.pct_change).toFixed(1)}%` : 'N/A'}</dd></div>
                 </dl>
                 <footer className="dvt-card__foot dvt-actions">
                   <button type="button" className="btn btn-secondary btn--xs" onClick={() => navigate(healthLink(r.backend_id, r.qubit_index ?? 0))}>Health</button>
@@ -291,11 +295,11 @@ export const DriftAnalysis = () => {
                         {backends.find((b) => b.backend_id === r.backend_id)?.backend_name || r.backend_id}
                       </button>
                     </td>
-                    <td>{modalityOf(backends, r.backend_id) || '—'}</td>
+                    <td>{modalityOf(backends, r.backend_id) || 'N/A'}</td>
                     <td>Q{r.qubit_index ?? 0}</td>
-                    <td><span className={`badge ${driftBadge(r.drift_status)}`}>{r.drift_status || '—'}</span></td>
+                    <td><span className={`badge ${driftBadge(r.drift_status)}`}>{r.drift_status || 'N/A'}</span></td>
                     <td className="tm-num">{fmtMetric(r.latest_val, metricApi)}</td>
-                    <td className="tm-num">{r.pct_change != null ? `${r.pct_change > 0 ? '+' : ''}${Number(r.pct_change).toFixed(1)}%` : '—'}</td>
+                    <td className="tm-num">{r.pct_change != null ? `${r.pct_change > 0 ? '+' : ''}${Number(r.pct_change).toFixed(1)}%` : 'N/A'}</td>
                     <td>
                       <div className="dvt-actions tm-actions">
                         <button type="button" className="btn btn-secondary btn--xs" onClick={() => navigate(healthLink(r.backend_id, r.qubit_index ?? 0))}>Health</button>
@@ -315,24 +319,24 @@ export const DriftAnalysis = () => {
         <div className="drift-stat-grid">
           <div className="drift-stat-box">
             <div className="drift-stat-label">Drift status</div>
-            <span className={`badge ${driftBadge(driftData.drift_status)}`} style={{ marginTop: 6 }}>{driftData.drift_status || '—'}</span>
+            <span className={`badge ${driftBadge(driftData.drift_status)}`} style={{ marginTop: 6 }}>{driftData.drift_status || 'N/A'}</span>
           </div>
           <div className="drift-stat-box">
             <div className="drift-stat-label">Absolute Change (Δ)</div>
-            <div className="drift-stat-val-cyan">{driftData.delta?.toFixed(2) ?? '—'}</div>
+            <div className="drift-stat-val-cyan">{driftData.delta?.toFixed(2) ?? 'N/A'}</div>
           </div>
           <div className="drift-stat-box">
             <div className="drift-stat-label">Percent Change (%Δ)</div>
-            <div className="drift-stat-val-purple">{driftData.percent_change?.toFixed(2) ?? '—'}%</div>
+            <div className="drift-stat-val-purple">{driftData.percent_change != null ? `${driftData.percent_change.toFixed(2)}%` : 'N/A'}</div>
           </div>
           <div className="drift-stat-box">
             <div className="drift-stat-label">Rate of Change (unit/hr)</div>
-            <div className="drift-stat-val-amber">{driftData.rate_of_change?.toFixed(3) ?? '—'}</div>
+            <div className="drift-stat-val-amber">{driftData.rate_of_change?.toFixed(3) ?? 'N/A'}</div>
           </div>
           <div className="drift-stat-box">
             <div className="drift-stat-label">Rolling Std Dev</div>
             <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>
-              {driftData.rolling_std?.length > 0 ? driftData.rolling_std[driftData.rolling_std.length - 1]?.toFixed(2) : '—'}
+              {driftData.rolling_std?.length > 0 ? driftData.rolling_std[driftData.rolling_std.length - 1]?.toFixed(2) : 'N/A'}
             </div>
           </div>
         </div>

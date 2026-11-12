@@ -257,7 +257,7 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
           <MetricCard
             label="Stale telemetry"
             value={staleN}
-            hint={`Older than ${STALE_MIN} minutes`}
+            hint={`Last sample past ${STALE_MIN} min`}
             tone={staleN ? 'warn' : 'ok'}
           />
         </div>

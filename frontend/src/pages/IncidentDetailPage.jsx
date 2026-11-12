@@ -131,7 +131,7 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
         <dl className="inc-detail__kpis">
           <div><dt>Alerts</dt><dd>{inc.alert_count} <span className="al-sub">({activeAlerts} active)</span></dd></div>
           <div><dt>Duration</dt><dd>{dur}</dd></div>
-          <div><dt>Owner</dt><dd>{inc.owner || inc.acknowledged_by || 'Unassigned'}</dd></div>
+          <div><dt>Owner</dt><dd>{inc.owner || inc.acknowledged_by || 'No owner'}</dd></div>
           <div><dt>Window</dt><dd>{formatIST(inc.first_detected_at, false)} → {formatIST(inc.last_detected_at, false)}</dd></div>
         </dl>
         <div className="inc-detail__actions">

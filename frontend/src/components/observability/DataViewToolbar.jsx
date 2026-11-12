@@ -78,8 +78,8 @@ export function ViewModeToggle({
   );
 }
 
-export function DataPanelToolbar({ children, layout, onLayoutChange, countLabel, showLayoutToggle = true }) {
-  return (
+export function DataPanelToolbar({ title, hint, children, layout, onLayoutChange, countLabel, showLayoutToggle = true }) {
+  const bar = (
     <div className="dvt-toolbar" role="toolbar">
       {children}
       {showLayoutToggle && onLayoutChange && (
@@ -88,6 +88,16 @@ export function DataPanelToolbar({ children, layout, onLayoutChange, countLabel,
       {countLabel != null && countLabel !== '' && (
         <span className="dvt-toolbar__count" role="status">{countLabel}</span>
       )}
+    </div>
+  );
+  if (!title && !hint) return bar;
+  return (
+    <div className="dvt-panel__head">
+      <div className="dvt-panel__titles">
+        {title ? <h3 className="dvt-panel__title">{title}</h3> : null}
+        {hint ? <p className="dvt-panel__hint">{hint}</p> : null}
+      </div>
+      {bar}
     </div>
   );
 }

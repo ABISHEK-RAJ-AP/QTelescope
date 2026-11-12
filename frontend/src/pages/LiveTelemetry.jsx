@@ -18,7 +18,7 @@ const isIonModality = (mod) => ION_MODALITIES.has(String(mod || '').toLowerCase(
 
 const fmtT1 = (v) => {
   const n = Number(v);
-  if (!Number.isFinite(n)) return '—';
+  if (!Number.isFinite(n)) return 'N/A';
   if (n >= 1e6) return `${(n / 1e6).toFixed(2)} s`;
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)} ms`;
   return `${n.toFixed(1)} µs`;
@@ -26,7 +26,7 @@ const fmtT1 = (v) => {
 
 const fmtT1Seconds = (microUs) => {
   const n = Number(microUs);
-  if (!Number.isFinite(n)) return '—';
+  if (!Number.isFinite(n)) return 'N/A';
   return `${(n / 1e6).toFixed(3)} s`;
 };
 
@@ -128,7 +128,7 @@ export const LiveTelemetry = () => {
     const parts = (log.t1_by_modality || [])
       .map((m) => `${m.qpu_modality}:${fmtT1(m.t1_mean_us)}`)
       .join(' · ');
-    return parts || '—';
+    return parts || 'N/A';
   };
 
   const theme = getChartTheme(isDark);
@@ -343,7 +343,7 @@ export const LiveTelemetry = () => {
             <span>Active alerts</span>
             <Radio size={16} />
           </div>
-          <div className="card-value">{latest.active_alerts ?? '—'}</div>
+          <div className="card-value">{latest.active_alerts ?? 'N/A'}</div>
           <div
             className="card-subtitle"
             data-testid="live-sse-status"
@@ -356,9 +356,9 @@ export const LiveTelemetry = () => {
           <div className="card-title">
             <span>Pending jobs</span>
           </div>
-          <div className="card-value">{latest.pending_jobs ?? '—'}</div>
+          <div className="card-value">{latest.pending_jobs ?? 'N/A'}</div>
           <div className="card-subtitle">
-            queue telemetry · job records queued {latest.queued_jobs_records ?? latest.queued_jobs ?? '—'} · running {latest.running_jobs ?? '—'}
+            queue telemetry · job records queued {latest.queued_jobs_records ?? latest.queued_jobs ?? 'N/A'} · running {latest.running_jobs ?? 'N/A'}
           </div>
         </div>
         <div className="card telemetry-modality-strip">
@@ -390,10 +390,10 @@ export const LiveTelemetry = () => {
             <span>Last tick gap</span>
           </div>
           <div className="card-value">
-            {lastGap != null ? `${lastGap.toFixed(1)}s` : '—'}
+            {lastGap != null ? `${lastGap.toFixed(1)}s` : 'N/A'}
           </div>
           <div className="card-subtitle">
-            age {latest.staleness_seconds != null ? `${latest.staleness_seconds}s` : '—'} ·{' '}
+            age {latest.staleness_seconds != null ? `${latest.staleness_seconds}s` : 'N/A'} ·{' '}
             {streamLogs.length} ticks
           </div>
         </div>
@@ -405,8 +405,8 @@ export const LiveTelemetry = () => {
           <div className="live-log">
             {streamLogs.map((log, idx) => (
               <div key={idx} className="telemetry-log-line">
-                [{formatISTTime(log.timestamp)}] alerts {log.active_alerts ?? '—'} · pending{' '}
-                {log.pending_jobs ?? log.queued_jobs ?? '—'} · T1 {formatModalityT1Log(log)}
+                [{formatISTTime(log.timestamp)}] alerts {log.active_alerts ?? 'N/A'} · pending{' '}
+                {log.pending_jobs ?? log.queued_jobs ?? 'N/A'} · T1 {formatModalityT1Log(log)}
               </div>
             ))}
           </div>

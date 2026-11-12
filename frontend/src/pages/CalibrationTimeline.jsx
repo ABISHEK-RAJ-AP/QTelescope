@@ -170,15 +170,19 @@ export const CalibrationTimeline = () => {
         const slice = events.slice(page * EVENT_PAGE_SIZE, page * EVENT_PAGE_SIZE + EVENT_PAGE_SIZE);
         return (
         <div className="card page-panel dvt-panel">
-          <h3 className="dvt-panel__title">Calibration events ({events.length})</h3>
-          <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${events.length} events · page ${page + 1}/${totalPages}`} />
+          <DataPanelToolbar
+            title={`Calibration events (${events.length})`}
+            layout={layout}
+            onLayoutChange={setLayout}
+            countLabel={`${events.length} events · page ${page + 1}/${totalPages}`}
+          />
           {layout === 'grid' ? (
             <div className="dvt-grid">
               {slice.map((e, i) => (
                 <article key={`${e.calibration_timestamp}-${i}`} className="dvt-card">
-                  <h4 className="dvt-card__title">{e.calibration_timestamp ? formatISTTime(e.calibration_timestamp) : '—'}</h4>
-                  <p className="dvt-card__meta">{e.calibration_identifier || '—'}</p>
-                  <p className="dvt-card__body">Freshness: {e.freshness_status || '—'}</p>
+                  <h4 className="dvt-card__title">{e.calibration_timestamp ? formatISTTime(e.calibration_timestamp) : 'N/A'}</h4>
+                  <p className="dvt-card__meta">{e.calibration_identifier || 'N/A'}</p>
+                  <p className="dvt-card__body">Freshness: {e.freshness_status || 'N/A'}</p>
                 </article>
               ))}
             </div>

@@ -1,11 +1,16 @@
-.topo-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 16px; }
-.topo-toolbar .input-control { min-width: 0; }
-.topo-meta { margin-left: auto; font-size: 12px; color: var(--text-muted); }
-.topo-workspace { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: stretch; }
-@media (max-width: 1100px) { .topo-workspace { grid-template-columns: 1fr; } }
-.topo-canvas { position: relative; height: max(560px, calc(100vh - 300px)); }
-.topo-canvas .echarts-for-react { height: 100% !important; }
-.topo-fit { position: absolute; top: 10px; right: 10px; z-index: 2; }
+.topo-toolbar { display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; padding: 8px 12px; overflow-x: auto; scrollbar-width: thin; }
+.topo-toolbar .input-control { min-width: 9rem; width: auto; height: 36px; min-height: 36px; }
+.topo-search { position: relative; display: inline-flex; align-items: center; flex: 1 1 180px; max-width: 260px; min-width: 160px; }
+.topo-search__icon { position: absolute; left: 10px; color: var(--text-muted); pointer-events: none; }
+.topo-search__input { width: 100%; padding-left: 30px; }
+.topo-search__clear { position: absolute; right: 4px; border: 0; background: transparent; color: var(--text-muted); min-height: 28px; min-width: 28px; cursor: pointer; }
+.topo-view-toggle { display: inline-flex; margin-left: auto; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
+.topo-view-btn { border: 0; border-radius: 0; min-height: 36px; }
+.topo-view-btn--active { background: var(--bg-card-hover); color: var(--text-primary); }
+.topo-meta { font-size: 0.8125rem; color: var(--text-muted); white-space: nowrap; }
+.topo-workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; align-items: stretch; width: 100%; }
+.topo-canvas { position: relative; height: max(640px, calc(100dvh - 220px)); width: 100%; }
+.topo-canvas .echarts-for-react { height: 100% !important; width: 100% !important; }
 .topo-legend { display: flex; flex-wrap: wrap; gap: 14px; padding: 10px 16px; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border-color); align-items: center; }
 .topo-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
 .topo-legend i.sq { border-radius: 2px; }
@@ -22,3 +27,15 @@
 .topo-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .topo-table-wrap { max-height: 360px; overflow: auto; }
 .topo-row-sel { background: var(--bg-card-hover); }
+
+.topo-drawer__tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border-color); margin: 0 0 12px; }
+.topo-drawer__tab { border: 0; background: transparent; color: var(--text-muted); min-height: 36px; padding: 0 12px; cursor: pointer; border-bottom: 2px solid transparent; }
+.topo-drawer__tab--active { color: var(--text-primary); border-bottom-color: var(--accent-cyan); font-weight: 650; }
+.topo-drawer .topo-metric-grid { display: flex; flex-direction: column; gap: 0; }
+.topo-drawer .topo-metric-row { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 16px; border: 0; border-bottom: 1px solid var(--border-color); border-radius: 0; background: transparent; padding: 8px 0; }
+.topo-drawer .topo-metric-row dd { text-align: end; }
+.topo-drawer__actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+.topo-compare__selects { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.topo-compare__label { display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; font-weight: 600; color: var(--text-muted); }
+.topo-drawer__metric-pick { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.topo-drawer__metric-pick .input-control { height: 36px; min-height: 36px; width: auto; }

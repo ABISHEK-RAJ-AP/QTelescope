@@ -17,6 +17,7 @@ export function ContextBar({
   alertId,
   readOnly = false,
   hint,
+  children,
 }) {
   const [backends, setBackends] = useState(backendsProp || []);
 
@@ -67,6 +68,7 @@ export function ContextBar({
           Alert <code>{alertId}</code>
         </span>
       )}
+      {children}
       {hint && <span className="page-hint context-bar__hint">{hint}</span>}
     </div>
   );

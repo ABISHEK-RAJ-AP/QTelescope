@@ -203,11 +203,13 @@ export const PlatformHealth = () => {
 
       <section className="ph-split">
         <div className="card page-panel ph-providers dvt-panel">
-          <header className="chart-panel__head"><div className="chart-panel__titles">
-            <h3 className="chart-panel__title">Provider adapters</h3>
-            <p className="chart-panel__question">Last successful collection per vendor adapter.</p>
-          </div></header>
-          <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${providers.length} provider${providers.length === 1 ? '' : 's'}`} />
+          <DataPanelToolbar
+            title="Provider adapters"
+            hint="Last successful collection per vendor adapter."
+            layout={layout}
+            onLayoutChange={setLayout}
+            countLabel={`${providers.length} provider${providers.length === 1 ? '' : 's'}`}
+          />
           {layout === 'grid' ? (
             <div className="dvt-grid">
               {providers.length === 0 && <p className="page-hint" style={{ gridColumn: '1 / -1', padding: '0 14px 14px' }}>No collector runs recorded.</p>}

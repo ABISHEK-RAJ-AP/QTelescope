@@ -44,6 +44,7 @@ export function AddBackendWizard({ open, onClose, onComplete, isAdmin }) {
   const [busy, setBusy] = useState(false);
   const [providersLoading, setProvidersLoading] = useState(false);
   const [msg, setMsg] = useState(null);
+  const [credError, setCredError] = useState(false);
   const closeRef = useRef(null);
 
   useEffect(() => {
@@ -54,6 +55,7 @@ export function AddBackendWizard({ open, onClose, onComplete, isAdmin }) {
     setToken('');
     setEndpoint('');
     setMsg(null);
+    setCredError(false);
     setProvidersLoading(true);
     api.getCredentials()
       .then((r) => setProviders(r?.providers || r || []))
@@ -222,14 +224,21 @@ export function AddBackendWizard({ open, onClose, onComplete, isAdmin }) {
                       type="password"
                       autoComplete="off"
                       value={token}
-                      onChange={(e) => setToken(e.target.value)}
+                      aria-invalid={credError && tokenRequired ? 'true' : undefined}
+                      aria-describedby="bk-wizard-token-hint"
+                      onChange={(e) => { setToken(e.target.value); setCredError(false); }}
                       placeholder={provider.is_configured ? 'Leave blank to keep existing secret' : 'Paste provider token'}
                     />
-                    <span className="bk-wizard__field-hint">
+                    <span id="bk-wizard-token-hint" className="bk-wizard__field-hint">
                       {tokenField.required === false || provider.is_configured
                         ? 'Optional. Leave blank to keep a saved secret or skip if the catalog is public.'
                         : 'Required for first-time setup. Sent once; never shown again.'}
                     </span>
+                    {credError && tokenRequired && (
+                      <span className="bk-wizard__field-error" role="alert">
+                        {(tokenField.label || 'Provider token')} is required before discovery.
+                      </span>
+                    )}
                   </label>
                 </div>
               )}
@@ -241,12 +250,18 @@ export function AddBackendWizard({ open, onClose, onComplete, isAdmin }) {
                       id="bk-wizard-endpoint"
                       type="url"
                       value={endpoint}
-                      onChange={(e) => setEndpoint(e.target.value)}
+                      aria-invalid={credError && urlRequired ? 'true' : undefined}
+                      onChange={(e) => { setEndpoint(e.target.value); setCredError(false); }}
                       placeholder={provider.endpoint_url || 'https://…'}
                     />
                     <span className="bk-wizard__field-hint">
                       {urlField.required === false ? 'Optional custom gateway URL.' : 'Controller URL for on-prem discovery.'}
                     </span>
+                    {credError && urlRequired && (
+                      <span className="bk-wizard__field-error" role="alert">
+                        {(urlField.label || 'Endpoint URL')} is required.
+                      </span>
+                    )}
                   </label>
                 </div>
               )}
@@ -280,7 +295,7 @@ export function AddBackendWizard({ open, onClose, onComplete, isAdmin }) {
 
         <footer className="bk-wizard__foot">
           {step > 0 ? (
-            <button type="button" className="btn btn-secondary bk-wizard__foot-spacer" disabled={busy} onClick={() => setStep((s) => s - 1)}>
+            <button type="button" className="btn btn-secondary bk-wizard__foot-spacer" disabled={busy} onClick={() => { setCredError(false); setStep((s) => s - 1); }}>
               Back
             </button>
           ) : (
@@ -290,8 +305,15 @@ export function AddBackendWizard({ open, onClose, onComplete, isAdmin }) {
             <button
               type="button"
               className="btn btn-primary"
-              disabled={!isAdmin || (step === 0 && !selected) || (step === 1 && (tokenRequired || urlRequired))}
-              onClick={() => setStep((s) => s + 1)}
+              disabled={!isAdmin || (step === 0 && !selected)}
+              onClick={() => {
+                if (step === 1 && (tokenRequired || urlRequired)) {
+                  setCredError(true);
+                  return;
+                }
+                setCredError(false);
+                setStep((s) => s + 1);
+              }}
             >
               Continue
             </button>

@@ -192,8 +192,8 @@ export const HistoricalTrends = () => {
       {hasHistory && (
         <div className="tm-kpis">
           <div className="tm-kpi"><div className="tm-kpi__label">Samples</div><div className="tm-kpi__value">{filtered.length}</div><div className="tm-kpi__sub">in {windowHours}h window</div></div>
-          <div className="tm-kpi"><div className="tm-kpi__label">Latest pending</div><div className="tm-kpi__value">{filtered[filtered.length - 1]?.pending_jobs ?? '—'}</div><div className="tm-kpi__sub">{asOf ? `as of ${asOf}` : ''}</div></div>
-          <div className="tm-kpi"><div className="tm-kpi__label">Latest wait</div><div className="tm-kpi__value">{filtered[filtered.length - 1]?.estimated_wait_time != null ? `${filtered[filtered.length - 1].estimated_wait_time}s` : '—'}</div><div className="tm-kpi__sub">estimated queue wait</div></div>
+          <div className="tm-kpi"><div className="tm-kpi__label">Latest pending</div><div className="tm-kpi__value">{filtered[filtered.length - 1]?.pending_jobs ?? 'N/A'}</div><div className="tm-kpi__sub">{asOf ? `as of ${asOf}` : 'N/A'}</div></div>
+          <div className="tm-kpi"><div className="tm-kpi__label">Latest wait</div><div className="tm-kpi__value">{filtered[filtered.length - 1]?.estimated_wait_time != null ? `${filtered[filtered.length - 1].estimated_wait_time}s` : 'N/A'}</div><div className="tm-kpi__sub">estimated queue wait</div></div>
         </div>
       )}
 

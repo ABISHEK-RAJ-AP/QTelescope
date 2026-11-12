@@ -387,6 +387,7 @@ export const JobMonitoring = () => {
 
       <section className="card jm-table-card dvt-panel" data-tour="page-jobs">
         <DataPanelToolbar
+          title="Jobs"
           layout={layout}
           onLayoutChange={setLayout}
           countLabel={layout === 'grid'

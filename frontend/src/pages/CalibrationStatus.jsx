@@ -12,7 +12,7 @@ import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { getChartTheme, baseTooltip, getChartSemanticColors, getCalibrationStatusChartColors } from '../components/observability/chartTheme.js';
 import { buildBackendDetailsPath, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
-import { useProviderLineage, LineageBadge } from './useLineage.jsx';
+import { modalityName } from './backendUtils.js';
 import { DataPanelToolbar } from '../components/observability/DataViewToolbar.jsx';
 import { EnterpriseDataTable } from '../components/observability/EnterpriseDataTable.jsx';
 import './CalibrationStatus.css';
@@ -35,17 +35,43 @@ const STATUS_RANK = { Stale: 0, Aging: 1, Recent: 2, Fresh: 3, None: 4 };
 
 const Badge = ({ status }) => {
   const s = STATUS[status] || STATUS.None;
-  return <span className={`badge ${s.badge}`}><span aria-hidden>{s.glyph}</span> {status === 'None' ? 'No snapshot' : status}</span>;
+  const label = status === 'None' ? 'No snapshot' : status;
+  return <span className={`badge ${s.badge}`}>{label}</span>;
 };
+
+function CalFlipCard({ name, modality, status, ageLabel, calibrated, action, onOpen, onDrift }) {
+  return (
+    <article className="cs-flip" tabIndex={0} aria-label={`${name}. Hover or focus for calibration detail.`}>
+      <div className="cs-flip__inner">
+        <div className="cs-flip__face">
+          <header className="cs-flip__head">
+            <h4 className="cs-flip__name">{name}</h4>
+            <Badge status={status} />
+          </header>
+          <p className="cs-flip__meta">{modality}</p>
+          <p className="cs-flip__age">{ageLabel}</p>
+          <button type="button" className="btn btn-primary btn-sm cs-flip__cta" onClick={onOpen}>Open calibration</button>
+        </div>
+        <div className="cs-flip__face cs-flip__face--back">
+          <p className="cs-flip__back-title">{name}</p>
+          <dl className="cs-flip__stats">
+            <div><dt>Calibrated</dt><dd>{calibrated}</dd></div>
+            <div><dt>Next</dt><dd>{action}</dd></div>
+          </dl>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={onDrift}>Drift analysis</button>
+        </div>
+      </div>
+    </article>
+  );
+}
 
 export const CalibrationStatus = () => {
   const nav = useNavigate();
   const { resolved } = useTheme();
-  const lineage = useProviderLineage();
   const [rows, setRows] = useState(null);
   const [error, setError] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
-  const [layout, setLayout] = useState('table');
+  const [layout, setLayout] = useState('grid');
   const { setActions, clearActions } = usePageActions();
 
   const load = useCallback(async () => {
@@ -80,8 +106,8 @@ export const CalibrationStatus = () => {
       status,
       status_rank: STATUS_RANK[status] ?? 9,
       age: age ?? -1,
-      ageLabel: age != null ? `${age.toFixed(1)} h` : 'unknown',
-      calibrated: c?.calibration_timestamp ? formatIST(c.calibration_timestamp) : 'missing',
+      ageLabel: age != null ? `${age.toFixed(1)} h` : 'N/A',
+      calibrated: c?.calibration_timestamp ? formatIST(c.calibration_timestamp) : 'N/A',
       action: (STATUS[status] || STATUS.None).action,
       modality: (b.qpu_modality || 'unknown').replace('_', ' '),
       provider_id: b.provider_id,
@@ -96,9 +122,7 @@ export const CalibrationStatus = () => {
         render: (row) => (
           <>
             <div className="cs-name">{row.name}</div>
-            <div className="cs-meta">
-              {row.modality} <LineageBadge lineage={lineage?.[row.provider_id]} />
-            </div>
+            <div className="cs-meta">{row.modality}</div>
           </>
         ),
       },
@@ -114,7 +138,7 @@ export const CalibrationStatus = () => {
         defaultSortDir: 'desc',
         render: (row) => (
           <span className="cs-num">
-            {row.age >= 0 ? row.ageLabel : <span className="cs-missing">unknown</span>}
+            {row.age >= 0 ? row.ageLabel : <span className="cs-missing">N/A</span>}
           </span>
         ),
       },
@@ -132,7 +156,7 @@ export const CalibrationStatus = () => {
         ),
       },
     ],
-    [lineage, nav],
+    [nav],
   );
   const plotted = ranked.filter((r) => r.age != null);
 
@@ -192,47 +216,27 @@ export const CalibrationStatus = () => {
       </ChartPanel>
 
       <section className="card page-panel dvt-panel">
-        <h3 className="dvt-panel__title">Per-backend status</h3>
-        <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${ranked.length} backend${ranked.length === 1 ? '' : 's'}`} />
+        <DataPanelToolbar
+          title="Per-backend status"
+          hint="Hover a card for the snapshot time and next step."
+          layout={layout}
+          onLayoutChange={setLayout}
+          countLabel={`${ranked.length} backend${ranked.length === 1 ? '' : 's'}`}
+        />
         {layout === 'grid' ? (
-          <div className="dvt-grid" aria-label="Calibration by backend">
+          <div className="cs-flip-grid" aria-label="Calibration by backend">
             {ranked.map(({ b, c, age, status }) => (
-              <article
+              <CalFlipCard
                 key={b.backend_id}
-                className="dvt-card dvt-card--action"
-                role="button"
-                tabIndex={0}
-                onClick={() => nav(buildBackendDetailsPath(b.backend_id, 'calibration'))}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    nav(buildBackendDetailsPath(b.backend_id, 'calibration'));
-                  }
-                }}
-              >
-                <header className="dvt-card__head">
-                  <div>
-                    <h4 className="dvt-card__title dvt-card__title--link">{b.backend_name || b.backend_id}</h4>
-                    <p className="dvt-card__meta">{(b.qpu_modality || 'unknown').replace('_', ' ')} · <LineageBadge lineage={lineage?.[b.provider_id]} /></p>
-                  </div>
-                  <Badge status={status} />
-                </header>
-                <dl className="dvt-card__stats">
-                  <div><dt>Age</dt><dd>{age != null ? `${age.toFixed(1)} h` : 'unknown'}</dd></div>
-                  <div><dt>Calibrated</dt><dd>{c?.calibration_timestamp ? formatIST(c.calibration_timestamp) : 'missing'}</dd></div>
-                </dl>
-                <p className="dvt-card__body">{(STATUS[status] || STATUS.None).action}</p>
-                <p className="dvt-card__hint">
-                  <button
-                    type="button"
-                    className="fs-link"
-                    style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }}
-                    onClick={(e) => { e.stopPropagation(); nav(buildDriftInvestigationLocation({ backendId: b.backend_id })); }}
-                  >
-                    Drift analysis
-                  </button>
-                </p>
-              </article>
+                name={b.backend_name || b.backend_id}
+                modality={modalityName(b.qpu_modality)}
+                status={status}
+                ageLabel={age != null ? `${age.toFixed(1)} h` : 'N/A'}
+                calibrated={c?.calibration_timestamp ? formatIST(c.calibration_timestamp) : 'N/A'}
+                action={(STATUS[status] || STATUS.None).action}
+                onOpen={() => nav(buildBackendDetailsPath(b.backend_id, 'calibration'))}
+                onDrift={() => nav(buildDriftInvestigationLocation({ backendId: b.backend_id }))}
+              />
             ))}
           </div>
         ) : (

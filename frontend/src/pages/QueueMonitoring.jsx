@@ -337,7 +337,7 @@ export const QueueMonitoring = () => {
       </section>
 
       <section className="card qm-table-card dvt-panel" data-tour="page-queues">
-        <DataPanelToolbar layout={layout} onLayoutChange={setLayout} countLabel={`${displayQueues.length} queue${displayQueues.length === 1 ? '' : 's'}`}>
+        <DataPanelToolbar title="Queues" layout={layout} onLayoutChange={setLayout} countLabel={`${displayQueues.length} queue${displayQueues.length === 1 ? '' : 's'}`}>
           <label>
             Backend
             <select

@@ -136,9 +136,9 @@
   box-shadow: var(--ds-shadow-card);
 }
 .al-inc-card__head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
-.al-inc-card__title { border: 0; background: transparent; padding: 0; font: inherit; font-size: var(--font-size-card-title, 1.0625rem); font-weight: 700; color: var(--text-primary); text-align: left; cursor: pointer; overflow-wrap: anywhere; word-break: break-word; max-width: 100%; line-height: 1.35; }
-.al-inc-card__meta { margin: 4px 0 0; font-size: var(--font-size-body, 1.0625rem); color: var(--text-secondary); line-height: 1.4; }
-.al-inc-card__badges { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.al-inc-card__title { display: block; border: 0; background: transparent; padding: 0; font: inherit; font-size: var(--font-size-card-title, 1.0625rem); font-weight: 700; color: var(--text-primary); text-align: left; overflow-wrap: anywhere; word-break: break-word; max-width: 100%; line-height: 1.35; }
+.al-inc-card__meta { display: block; margin: 6px 0 0; font-size: var(--font-size-helper, 0.9375rem); color: var(--text-secondary); line-height: 1.4; }
+.al-inc-card__badges { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; flex-shrink: 0; }
 .al-inc-card__stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -155,11 +155,11 @@
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   margin-top: auto;
-  border-top: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
-  padding-top: 12px;
+  padding-top: 4px;
 }
+.al-inc-card__foot .al-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .ops-badge { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
 
