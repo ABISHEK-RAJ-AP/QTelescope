@@ -2,14 +2,15 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import {
-  Search, X, ArrowUpDown, Clock, Activity,
-  Zap, AlertTriangle, Info, ChevronDown, GitCompare,
+  X, ArrowUpDown, Clock, Activity,
+  Zap, AlertTriangle, ChevronDown, GitCompare,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { ChartPanel, EmptyState, getChartTheme, baseTooltip, DetailDrawer } from '../components/observability';
+import { DetailModalBody, DetailModalSection } from '../components/observability/DetailModalLayout.jsx';
 import { getFleetStateChartColors, getChartInkColor, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { unableToLoad } from '../constants/messages.js';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
@@ -21,6 +22,14 @@ const STATE_SYMBOL = { GREEN: 'circle', YELLOW: 'diamond', RED: 'triangle', UNKN
 const stateColors = () => getFleetStateChartColors();
 const LEGACY = { Healthy: 'GREEN', Warning: 'YELLOW', Degraded: 'RED' };
 const fmt = (v, d = 2) => (v == null || !Number.isFinite(Number(v)) ? 'N/A' : Number(v).toFixed(d));
+const pretty = (s) => {
+  if (!s) return 'N/A';
+  const raw = String(s).trim();
+  if (/^[A-Z0-9_]+$/.test(raw)) {
+    return raw.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  return raw.replace(/_/g, ' ');
+};
 const fmtUs = (v) => {
   if (v == null || !Number.isFinite(Number(v))) return 'N/A';
   const n = Number(v);
@@ -172,15 +181,15 @@ function CalibrationCompare({ snapshots, selectedIds, onSelectIds }) {
   return (
     <div className="topo-compare">
       <div className="topo-compare__selects">
-        <label className="topo-compare__label">
-          Snapshot A
+        <label className="topo-compare__label outline-field">
+          <span>Snapshot A</span>
           <select className="input-control" value={a || ''} onChange={(e) => onSelectIds([e.target.value, b])} aria-label="Calibration snapshot A">
             <option value="">Select snapshot</option>
             {snapshots.map((s) => <option key={s.id} value={s.id}>{s.calibrated_at ? formatISTTime(s.calibrated_at) : s.id}</option>)}
           </select>
         </label>
-        <label className="topo-compare__label">
-          Snapshot B
+        <label className="topo-compare__label outline-field">
+          <span>Snapshot B</span>
           <select className="input-control" value={b || ''} onChange={(e) => onSelectIds([a, e.target.value])} aria-label="Calibration snapshot B">
             <option value="">Select snapshot</option>
             {snapshots.map((s) => <option key={s.id} value={s.id}>{s.calibrated_at ? formatISTTime(s.calibrated_at) : s.id}</option>)}
@@ -258,12 +267,21 @@ function QubitDetailDrawer({ open, qubit, backendId, neighbors, onClose, onSelec
     <DetailDrawer
       open={open}
       title={`Qubit ${qubit.qubit_index}`}
-      subtitle={`${qubit.state} · ${qubit.status || 'No status'}`}
+      subtitle={pretty(qubit.status)}
+      headerAside={(
+        <span className={`badge ${qubit.state === 'GREEN' ? 'badge-healthy' : qubit.state === 'YELLOW' ? 'badge-warning' : qubit.state === 'RED' ? 'badge-critical' : 'badge-info'}`}>
+          {qubit.state || 'Unknown'}
+        </span>
+      )}
       onClose={onClose}
       size="xl"
+      footer={(
+        <Link className="btn btn-primary" to={buildBackendDetailsPath(backendId, 'qubits')}>
+          Open qubit workspace
+        </Link>
+      )}
     >
-      <div className="topo-drawer">
-        {/* Tab navigation */}
+      <DetailModalBody className="topo-drawer">
         <nav className="topo-drawer__tabs" role="tablist" aria-label="Qubit detail tabs">
           {TABS.map((t) => (
             <button
@@ -281,8 +299,7 @@ function QubitDetailDrawer({ open, qubit, backendId, neighbors, onClose, onSelec
 
         {activeTab === 'metrics' && (
           <div role="tabpanel">
-            <div className="topo-drawer__section">
-              <h4 className="topo-drawer__sect-title">Coherence</h4>
+            <DetailModalSection title="Coherence">
               <dl className="topo-metric-grid">
                 <div className="topo-metric-row">
                   <dt>T1</dt><dd>{fmtUs(qubit.t1)}</dd>
@@ -295,10 +312,9 @@ function QubitDetailDrawer({ open, qubit, backendId, neighbors, onClose, onSelec
                   <dd>{qubit.frequency != null ? `${(qubit.frequency / 1e9).toFixed(4)} GHz` : 'N/A'}</dd>
                 </div>
               </dl>
-            </div>
+            </DetailModalSection>
 
-            <div className="topo-drawer__section">
-              <h4 className="topo-drawer__sect-title">Fidelity</h4>
+            <DetailModalSection title="Fidelity">
               <dl className="topo-metric-grid">
                 <div className="topo-metric-row">
                   <dt>Readout error</dt><dd>{fmt(qubit.readout_error, 5)}</dd>
@@ -310,38 +326,21 @@ function QubitDetailDrawer({ open, qubit, backendId, neighbors, onClose, onSelec
                   <dt>2Q fidelity (F_2q)</dt><dd>{fmt(qubit.F_2q, 5)}</dd>
                 </div>
               </dl>
-            </div>
+            </DetailModalSection>
 
-            <div className="topo-drawer__section">
-              <h4 className="topo-drawer__sect-title">Status</h4>
-              <dl className="topo-metric-grid">
-                <div className="topo-metric-row">
-                  <dt>Health state</dt>
-                  <dd>
-                    <span className={`badge ${qubit.state === 'GREEN' ? 'badge-healthy' : qubit.state === 'YELLOW' ? 'badge-warning' : qubit.state === 'RED' ? 'badge-critical' : 'badge-info'}`}>
-                      {qubit.state}
-                    </span>
-                  </dd>
-                </div>
-                <div className="topo-metric-row">
-                  <dt>Operational status</dt><dd>{qubit.status ? String(qubit.status).replace(/_/g, ' ') : 'N/A'}</dd>
-                </div>
-              </dl>
-              {qubit.action && (
-                <p className="topo-drawer__hint">
-                  <Info size={12} /> {qubit.action}
-                </p>
-              )}
-              {qubit.reasons?.length > 0 && (
-                <ul className="topo-drawer__reasons">
-                  {qubit.reasons.map((r) => <li key={r}>{r}</li>)}
-                </ul>
-              )}
-            </div>
+            {(qubit.action || qubit.reasons?.length > 0) && (
+              <DetailModalSection title="Advisory">
+                {qubit.action && <p className="topo-drawer__callout">{pretty(qubit.action)}</p>}
+                {qubit.reasons?.length > 0 && (
+                  <ul className="topo-drawer__reasons">
+                    {qubit.reasons.map((r) => <li key={r}>{String(r).replace(/_/g, ' ')}</li>)}
+                  </ul>
+                )}
+              </DetailModalSection>
+            )}
 
             {neighbors?.length > 0 && (
-              <div className="topo-drawer__section">
-                <h4 className="topo-drawer__sect-title">Couplings ({neighbors.length})</h4>
+              <DetailModalSection title={`Couplings (${neighbors.length})`}>
                 <div className="topo-nbrs">
                   {neighbors.map((x) => (
                     <button
@@ -356,24 +355,16 @@ function QubitDetailDrawer({ open, qubit, backendId, neighbors, onClose, onSelec
                     </button>
                   ))}
                 </div>
-              </div>
+              </DetailModalSection>
             )}
 
-            <div className="topo-drawer__actions">
-              <Link
-                className="btn btn-primary"
-                to={buildBackendDetailsPath(backendId, 'qubits')}
-              >
-                Open qubit workspace
-              </Link>
-            </div>
           </div>
         )}
 
         {activeTab === 'history' && (
           <div role="tabpanel" className="topo-drawer__section">
-            <div className="topo-drawer__metric-pick">
-              <label htmlFor="hist-metric-sel" className="page-hint">Metric</label>
+            <label className="outline-field" htmlFor="hist-metric-sel">
+              <span>Metric</span>
               <select
                 id="hist-metric-sel"
                 className="input-control"
@@ -384,21 +375,17 @@ function QubitDetailDrawer({ open, qubit, backendId, neighbors, onClose, onSelec
                 <option value="t2">T2</option>
                 <option value="readout">Readout error</option>
               </select>
-            </div>
+            </label>
             {histState === 'loading' && <BoneyardSkeleton layout="list" />}
             {histState === 'error' && <p className="page-hint">Could not load qubit history.</p>}
             {histState === 'ready' && (
               <QubitHistoryChart history={history} metric={histMetric} isDark={isDark} />
             )}
-            <p className="page-hint" style={{ marginTop: 8 }}>
-              History from actual collector executions. Gaps indicate no measurement was recorded.
-            </p>
           </div>
         )}
 
         {activeTab === 'compare' && (
           <div role="tabpanel" className="topo-drawer__section">
-            <p className="page-hint">Compare two calibration snapshots for this backend.</p>
             <CalibrationCompare
               snapshots={calSnapshots}
               selectedIds={compareIds}
@@ -406,7 +393,7 @@ function QubitDetailDrawer({ open, qubit, backendId, neighbors, onClose, onSelec
             />
           </div>
         )}
-      </div>
+      </DetailModalBody>
     </DetailDrawer>
   );
 }
@@ -589,30 +576,35 @@ export const TopologyExplorer = () => {
     <div className="page-stack">
       {/* Toolbar */}
       <div className="card topo-toolbar">
-        <select
-          className="input-control"
-          value={backendId}
-          onChange={(e) => setBackendId(e.target.value)}
-          aria-label="Select backend"
-        >
-          {backends.map((b) => <option key={b.backend_id} value={b.backend_id}>{b.backend_name}</option>)}
-        </select>
+        <label className="outline-field">
+          <span>Backend</span>
+          <select
+            className="input-control"
+            value={backendId}
+            onChange={(e) => setBackendId(e.target.value)}
+            aria-label="Select backend"
+          >
+            {backends.map((b) => <option key={b.backend_id} value={b.backend_id}>{b.backend_name}</option>)}
+          </select>
+        </label>
 
-        <select
-          className="input-control"
-          value={colorMode}
-          onChange={(e) => setColorMode(e.target.value)}
-          aria-label="Colour by metric"
-        >
-          {COLOR_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
-        </select>
+        <label className="outline-field">
+          <span>Color</span>
+          <select
+            className="input-control"
+            value={colorMode}
+            onChange={(e) => setColorMode(e.target.value)}
+            aria-label="Colour by metric"
+          >
+            {COLOR_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
+        </label>
 
-        {/* Search */}
-        <div className="topo-search" role="search">
-          <Search size={13} className="topo-search__icon" aria-hidden />
+        <label className="outline-field topo-search" role="search">
+          <span>Qubit</span>
           <input
             className="input-control topo-search__input"
-            placeholder="Search qubit…"
+            placeholder="Index or state"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             aria-label="Search qubit by index or state"
@@ -622,7 +614,7 @@ export const TopologyExplorer = () => {
               <X size={12} />
             </button>
           )}
-        </div>
+        </label>
 
         {/* View mode toggle */}
         <div className="topo-view-toggle" role="group" aria-label="View mode">

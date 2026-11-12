@@ -347,25 +347,34 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 12px 16px;
+  gap: 8px 12px;
 }
 
 .context-bar__field {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 8px;
   margin: 0;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .context-bar__field .input-control,
 .context-bar select.input-control {
-  min-width: min(100%, 16rem);
-  max-width: 22rem;
+  min-width: 9.5rem;
+  max-width: 16rem;
+  height: 36px;
+  min-height: 36px;
 }
 
 .context-bar__field--range {
-  flex: 1;
-  min-width: 200px;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.context-bar .telemetry-window-control {
+  flex-wrap: nowrap;
 }
 
 .context-bar__pill {
@@ -544,6 +553,18 @@
 .obs-empty__text,
 .obs-error__text {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.obs-error--inline .obs-error__text,
+.obs-error--align-start .obs-error__text,
+.obs-empty--inline .obs-empty__text,
+.obs-empty--align-start .obs-empty__text {
+  align-items: flex-start;
+  text-align: start;
 }
 
 .obs-empty--inline .obs-empty__title,
@@ -577,8 +598,20 @@
 .obs-error__actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 12px;
+}
+
+.obs-error--inline .obs-error__actions,
+.obs-error--align-start .obs-error__actions {
+  justify-content: flex-start;
+}
+
+.chart-panel__body:has(.obs-error),
+.chart-panel__body:has(.obs-empty) {
+  align-items: center;
+  justify-content: center;
 }
 
 .obs-empty__message,

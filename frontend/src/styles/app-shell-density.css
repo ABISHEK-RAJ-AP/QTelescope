@@ -17,12 +17,10 @@
 
 .context-bar {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px 12px;
   padding: 8px 12px;
-  overflow-x: auto;
-  scrollbar-width: thin;
 }
 
 .context-bar--inline {
@@ -64,12 +62,22 @@
 
 .page-toolbar-unified {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px 12px;
-  padding: 8px 12px;
-  overflow-x: auto;
-  scrollbar-width: thin;
+  padding: 0;
+}
+
+.page-toolbar-unified .btn {
+  height: 36px;
+  min-height: 36px;
+  align-self: center;
+}
+
+.page-toolbar-unified .ops-filter__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .page-toolbar-unified .admin-form-field,
@@ -102,20 +110,23 @@
 }
 
 .topo-metric-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 8px 14px;
-  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0 0 12px;
 }
 
 .topo-metric-row {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  background: var(--bg-card-hover);
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 1px solid var(--border-color);
+  border-radius: 0;
+  background: transparent;
 }
 
 .topo-metric-row dt {
@@ -132,6 +143,7 @@
   font-size: 0.9375rem;
   font-variant-numeric: tabular-nums;
   color: var(--text-primary);
+  text-align: end;
 }
 
 .topo-nbr {

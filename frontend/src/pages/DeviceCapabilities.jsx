@@ -107,32 +107,24 @@ export const DeviceCapabilities = () => {
 
   return (
     <div className="page-stack dc-page" data-tour="page-device-capabilities">
-      <header className="card dc-hero" style={{ padding: '1rem 1.15rem' }}>
+      <header className="card dc-hero">
         <div>
-          <p className="dc-eyebrow">Resources</p>
           <h2 className="dc-title">
             Device capabilities
             <InfoTooltip label="About device capabilities">
-              Tables and coupling map for each backend — no charts. Export JSON for automation,
-              audits, or offline review (machine-readable snapshot of the same API payload).
+              Metric coverage by provider and backend. Export downloads the full fleet payload as JSON for scripts and evidence. It is not an API import.
             </InfoTooltip>
           </h2>
-          <p className="dc-sub">
-            Metric coverage by provider and backend · {devices.length} device{devices.length === 1 ? '' : 's'}
-          </p>
+          <p className="dc-sub">{devices.length} device{devices.length === 1 ? '' : 's'}</p>
         </div>
-        <div className="dc-hero__actions">
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => downloadJson(`device-capabilities-${Date.now()}.json`, payload)}
-          >
-            Export JSON
-          </button>
-        </div>
-        <p className="dc-export-hint" style={{ flexBasis: '100%', marginTop: '0.5rem' }}>
-          Export downloads the full fleet payload as JSON for scripts and evidence — not an API import.
-        </p>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          title="Download the fleet payload as JSON. Not an API import."
+          onClick={() => downloadJson(`device-capabilities-${Date.now()}.json`, payload)}
+        >
+          Export JSON
+        </button>
       </header>
 
       <div className="dc-layout">

@@ -1,4 +1,6 @@
-.env-sources__row { display: flex; gap: 16px; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
+.env-sources__row { display: flex; gap: 12px 16px; justify-content: space-between; align-items: center; flex-wrap: nowrap; }
+.env-sources__title { display: inline-flex; align-items: center; gap: 8px; margin: 0; }
+.env-coverage { font-variant-numeric: tabular-nums; color: var(--text-secondary); font-size: 0.9375rem; white-space: nowrap; }
 .env-paths { display: flex; flex-wrap: wrap; gap: 6px; }
 .env-path { font-size: 11px; padding: 3px 8px; border: 1px solid var(--border-color); border-radius: 999px; color: var(--text-muted); }
 .env-path--live { color: var(--accent-emerald); border-color: var(--accent-emerald); }

@@ -1581,6 +1581,119 @@ input.input-control {
   position: relative;
 }
 
+/* Outlined filter fields: the name sits on the border so the row stays one line. */
+.context-bar,
+.page-toolbar-unified,
+.filter-bar.filter-bar--inline,
+.dvt-toolbar,
+.topo-toolbar,
+.hv-toolbar,
+.bk-toolbar {
+  align-items: flex-end;
+  overflow: visible;
+}
+
+.bk-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  padding: 8px 12px;
+}
+
+label.outline-field.outline-field {
+  position: relative;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  min-height: 40px;
+  margin: 8px 0 0;
+  padding: 0 8px 0 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-weight: 500;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+label.outline-field.outline-field > span:first-of-type {
+  position: absolute;
+  top: 0;
+  left: 10px;
+  transform: translateY(-50%);
+  padding: 0 5px;
+  background: var(--bg-card);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 1;
+}
+
+label.outline-field.outline-field:focus-within {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+label.outline-field.outline-field:focus-within > span:first-of-type {
+  color: var(--text-primary);
+}
+
+label.outline-field.outline-field .input-control,
+label.outline-field.outline-field select,
+label.outline-field.outline-field input {
+  border: 0;
+  box-shadow: none;
+  background-color: transparent;
+  height: 36px;
+  min-height: 36px;
+  min-width: 7.25rem;
+  max-width: 14rem;
+  width: auto;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-radius: 0;
+}
+
+label.outline-field.outline-field .input-control:focus,
+label.outline-field.outline-field select:focus,
+label.outline-field.outline-field input:focus {
+  border-color: transparent;
+  box-shadow: none;
+  outline: none;
+}
+
+label.outline-field.outline-field.filter-bar__search {
+  flex: 1 1 180px;
+  min-width: 160px;
+  max-width: 280px;
+}
+
+label.outline-field.outline-field.filter-bar__search input,
+label.outline-field.outline-field input[type='search'],
+label.outline-field.outline-field input[type='number'] {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  max-width: none;
+  background-image: none;
+  padding-right: 8px;
+}
+
+.page-toolbar-unified .ops-filter__actions .btn,
+.filter-bar__actions .btn,
+.context-bar .btn,
+.dvt-toolbar .dvt-view-toggle,
+.topo-view-toggle {
+  height: 40px;
+  min-height: 40px;
+}
+
 .landing-hero__eyebrow {
   margin: 0 0 1.5rem;
   font-size: clamp(0.875rem, 1.2vw + 0.5rem, 1.0625rem);

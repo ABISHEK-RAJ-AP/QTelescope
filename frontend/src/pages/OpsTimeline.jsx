@@ -198,8 +198,8 @@ export const OpsTimeline = () => {
           </>
         )}
       >
-        <label className="ot-filter-field">
-          Backend
+        <label className="ot-filter-field outline-field">
+          <span>Backend</span>
           <select className="input-control" value={scopeBackend || ''} onChange={(e) => setBackend(e.target.value)} aria-label="Backend scope">
             <option value="">All backends</option>
             {backends.map((b) => (
@@ -214,8 +214,8 @@ export const OpsTimeline = () => {
             </button>
           ))}
         </div>
-        <label className="ot-filter-field">
-          Severity
+        <label className="ot-filter-field outline-field">
+          <span>Severity</span>
           <select className="input-control" value={sev} onChange={(e) => setSev(e.target.value)}>
             <option value="ALL">All</option>
             <option value="CRITICAL">Critical</option>

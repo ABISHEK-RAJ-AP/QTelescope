@@ -197,79 +197,79 @@ export const MetricsExplorer = () => {
     <div className="page-stack" data-tour="page-metrics-explorer">
       <section className="card page-panel" aria-label="Metrics explorer controls">
         <div className="page-toolbar-unified" aria-label="Scope and metrics">
-          <label className="context-bar__field">
-            <span className="admin-form-label">Backend</span>
+          <label className="context-bar__field outline-field">
+            <span>Backend</span>
             <select className="input-control" value={selectedBackend || ''} onChange={(e) => setBackend(e.target.value)} aria-label="Backend scope">
               {backends.map((b) => (
                 <option key={b.backend_id} value={b.backend_id}>{b.backend_name || b.backend_id}</option>
               ))}
             </select>
           </label>
-          <div className="context-bar__field context-bar__field--range">
-            <span className="admin-form-label">Lookback</span>
+          <label className="context-bar__field outline-field">
+            <span>Lookback</span>
             <select className="input-control" value={windowHours} onChange={(e) => setWindowHours(Number(e.target.value))} aria-label="Lookback hours">
               {[6, 12, 24, 48, 168].map((h) => (
-                <option key={h} value={h}>{h} hours</option>
+                <option key={h} value={h}>{h} h</option>
               ))}
             </select>
-          </div>
-          <label className="admin-form-field">
-            <span className="admin-form-label">Metric</span>
-            <select className="input-control" value={metricId} onChange={(e) => setMetricId(e.target.value)}>
+          </label>
+          <label className="context-bar__field outline-field">
+            <span>Metric</span>
+            <select className="input-control" value={metricId} onChange={(e) => setMetricId(e.target.value)} aria-label="Metric">
               {EXPLORER_METRICS.map((m) => (
                 <option key={m.id} value={m.id}>{m.label}</option>
               ))}
             </select>
           </label>
-          <label className="admin-form-field">
-            <span className="admin-form-label">Compare backend</span>
-            <select className="input-control" value={compareBackend} onChange={(e) => setCompareBackend(e.target.value)}>
+          <label className="context-bar__field outline-field">
+            <span>Compare</span>
+            <select className="input-control" value={compareBackend} onChange={(e) => setCompareBackend(e.target.value)} aria-label="Compare backend">
               <option value="">None</option>
               {backends.filter((b) => b.backend_id !== selectedBackend).map((b) => (
                 <option key={b.backend_id} value={b.backend_id}>{b.backend_name || b.backend_id}</option>
               ))}
             </select>
           </label>
-          <label className="admin-form-field">
-            <span className="admin-form-label">Saved queries</span>
+          <label className="context-bar__field outline-field">
+            <span>Saved</span>
             <select
               className="input-control"
               value=""
+              aria-label="Saved queries"
               onChange={(e) => {
                 const q = saved.find((s) => s.id === e.target.value);
                 applySaved(q);
               }}
             >
-              <option value="">Load saved…</option>
+              <option value="">Load…</option>
               {saved.map((q) => (
                 <option key={q.id} value={q.id}>{q.name}</option>
               ))}
             </select>
           </label>
-          <label className="admin-form-field" style={{ minWidth: 160 }}>
-            <span className="admin-form-label">Save as</span>
-            <input className="input-control" placeholder="Query name" value={saveName} onChange={(e) => setSaveName(e.target.value)} />
+          <label className="context-bar__field outline-field">
+            <span>Name</span>
+            <input className="input-control" placeholder="Query name" aria-label="Save query as" value={saveName} onChange={(e) => setSaveName(e.target.value)} />
           </label>
-          <button type="button" className="btn btn-primary btn--xs" disabled={!saveName.trim()} onClick={onSave}>Save query</button>
-          {saved.length > 0 && (
-            <button
-              type="button"
-              className="btn btn-secondary btn--xs"
-              onClick={() => {
-                const first = saved[0];
-                if (first) {
-                  deleteSavedQuery(first.id);
-                  refreshSaved();
-                }
-              }}
-            >
-              Delete latest
-            </button>
-          )}
+          <div className="ops-filter__actions">
+            <button type="button" className="btn btn-primary" disabled={!saveName.trim()} onClick={onSave}>Save</button>
+            {saved.length > 0 && (
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => {
+                  const first = saved[0];
+                  if (first) {
+                    deleteSavedQuery(first.id);
+                    refreshSaved();
+                  }
+                }}
+              >
+                Delete latest
+              </button>
+            )}
+          </div>
         </div>
-        <p className="page-hint" style={{ marginTop: 8 }}>
-          Source: {metricDef.source === 'telemetry' ? 'stored backend telemetry' : 'calibration snapshots'} · window applies client-side.
-        </p>
       </section>
 
       <ChartPanel

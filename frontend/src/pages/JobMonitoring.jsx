@@ -16,7 +16,6 @@ import {
   DetailModalRow,
   DetailModalTimeline,
   DetailModalRelated,
-  DetailModalProvenance,
   DetailModalCallout,
 } from '../components/observability/DetailModalLayout.jsx';
 import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
@@ -93,7 +92,6 @@ function JobDrawerBody({ job, nav }) {
           <DetailModalRow label="Calibration">{job.calibration_identifier || '—'}</DetailModalRow>
           <DetailModalRow label="Tags">{job.tags?.length ? job.tags.join(', ') : '—'}</DetailModalRow>
         </DetailModalDl>
-        <DetailModalProvenance>Source: stored job records in platform DB (not a live vendor query).</DetailModalProvenance>
       </DetailModalSection>
       <DetailModalRelated>
         <PageRelatedLink onClick={() => nav(buildBackendDetailsPath(job.backend_id, 'execution'))}>Backend execution</PageRelatedLink>
@@ -401,14 +399,16 @@ export const JobMonitoring = () => {
               </button>
             ))}
           </span>
-          <label>Backend
+          <label className="outline-field">
+            <span>Backend</span>
             <select className="input-control" value={backend} onChange={(e) => setBackend(e.target.value)}>
               <option value="ALL">All backends</option>
               {stats.backends.map((id) => <option key={id} value={id}>{label(id)}</option>)}
             </select>
           </label>
-          <label>Search
-            <input type="search" value={search} placeholder="Job, calibration, reason" onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+          <label className="outline-field">
+            <span>Search</span>
+            <input className="input-control" type="search" value={search} placeholder="Job, calibration, reason" aria-label="Search jobs" onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
           </label>
         </DataPanelToolbar>
         {layout === 'grid' ? (

@@ -426,8 +426,12 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
 
               <section className="card" style={{ padding: 0 }}>
                 <div className="bk-toolbar">
-                  <input type="search" placeholder="Qubit #" aria-label="Find qubit by index" value={qSearch} onChange={(e) => { setQSearch(e.target.value); setQPage(0); }} style={{ minWidth: 100, maxWidth: 120 }} />
-                  <label>State
+                  <label className="outline-field">
+                    <span>Qubit</span>
+                    <input type="search" className="input-control" placeholder="#" aria-label="Find qubit by index" value={qSearch} onChange={(e) => { setQSearch(e.target.value); setQPage(0); }} />
+                  </label>
+                  <label className="outline-field">
+                    <span>State</span>
                     <select className="input-control" value={qState} onChange={(e) => { setQState(e.target.value); setQPage(0); }}>
                       <option value="ALL">All</option>{STATES.map((s) => <option key={s} value={s}>{STATE_LABEL[s]}</option>)}
                     </select>

@@ -824,7 +824,8 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                 </>
               )}
             >
-              <label>Sort
+              <label className="outline-field">
+                <span>Sort</span>
                 <select
                   className="input-control"
                   value={`${sort.key}:${sort.dir}`}
@@ -842,19 +843,22 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                   <option value="type:asc">Rule (A–Z)</option>
                 </select>
               </label>
-              <label>Severity
+              <label className="outline-field">
+                <span>Severity</span>
                 <select className="input-control" value={sevF} onChange={(e) => applySevF(e.target.value)} aria-label="Filter by severity">
                   <option value="ALL">All</option>
                   {SEVERITIES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </label>
-              <label>Status
+              <label className="outline-field">
+                <span>Status</span>
                 <select className="input-control" value={statusF} onChange={(e) => applyStatusF(e.target.value)} aria-label="Filter by status">
                   <option value="ALL">All</option>
                   {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </label>
-              <label>Backend
+              <label className="outline-field">
+                <span>Backend</span>
                 <select className="input-control" value={scopeBackend} onChange={(e) => setBackend(e.target.value)}>
                   <option value="">All ({backends.length})</option>
                   {backends.map((b) => <option key={b} value={b}>{b}</option>)}

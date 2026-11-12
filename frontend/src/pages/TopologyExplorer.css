@@ -1,8 +1,7 @@
-.topo-toolbar { display: flex; flex-wrap: nowrap; gap: 8px; align-items: center; padding: 8px 12px; overflow-x: auto; scrollbar-width: thin; }
-.topo-toolbar .input-control { min-width: 9rem; width: auto; height: 36px; min-height: 36px; }
-.topo-search { position: relative; display: inline-flex; align-items: center; flex: 1 1 180px; max-width: 260px; min-width: 160px; }
-.topo-search__icon { position: absolute; left: 10px; color: var(--text-muted); pointer-events: none; }
-.topo-search__input { width: 100%; padding-left: 30px; }
+.topo-toolbar { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: flex-end; padding: 8px 12px; overflow: visible; }
+.topo-toolbar .input-control { min-width: 7.25rem; width: auto; height: 36px; min-height: 36px; }
+.topo-search { position: relative; flex: 1 1 160px; max-width: 220px; min-width: 140px; }
+.topo-search__input { width: 100%; padding-left: 4px; }
 .topo-search__clear { position: absolute; right: 4px; border: 0; background: transparent; color: var(--text-muted); min-height: 28px; min-width: 28px; cursor: pointer; }
 .topo-view-toggle { display: inline-flex; margin-left: auto; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
 .topo-view-btn { border: 0; border-radius: 0; min-height: 36px; }
@@ -34,7 +33,9 @@
 .topo-drawer .topo-metric-grid { display: flex; flex-direction: column; gap: 0; }
 .topo-drawer .topo-metric-row { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 16px; border: 0; border-bottom: 1px solid var(--border-color); border-radius: 0; background: transparent; padding: 8px 0; }
 .topo-drawer .topo-metric-row dd { text-align: end; }
-.topo-drawer__actions { display: flex; justify-content: flex-end; margin-top: 16px; }
+.topo-drawer__sect-title { margin: 14px 0 4px; font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-muted); }
+.topo-drawer__callout { margin: 0; padding: 8px 10px; border-left: 3px solid var(--accent-amber); background: var(--bg-card-hover); border-radius: 0 8px 8px 0; }
+.topo-drawer__reasons { margin: 8px 0 0; padding-left: 18px; color: var(--text-secondary); }
 .topo-compare__selects { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .topo-compare__label { display: flex; align-items: center; gap: 8px; font-size: 0.8125rem; font-weight: 600; color: var(--text-muted); }
 .topo-drawer__metric-pick { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }

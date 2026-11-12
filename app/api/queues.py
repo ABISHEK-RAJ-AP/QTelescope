@@ -172,6 +172,5 @@ def get_queue_analytics_summary(db: Session = Depends(get_db)):
             }
         )
     return {
-        "note": "Derived from collected BackendTelemetryModel samples; sparse history lowers confidence.",
         "backends": rows_out,
     }

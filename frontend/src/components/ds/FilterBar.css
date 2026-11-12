@@ -56,11 +56,10 @@
 
 /* Inline ops toolbar — search + selects on one row (inventory, alerts) */
 .filter-bar.filter-bar--inline {
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px 10px;
-  overflow-x: auto;
-  scrollbar-width: thin;
+  overflow: visible;
   padding: 8px 12px;
 }
 
@@ -71,22 +70,15 @@
 }
 
 .filter-bar--inline .filter-bar__filters {
-  flex: 0 0 auto;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--ds-space-sm, 12px);
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px 10px;
 }
 
 .filter-bar--inline .filter-bar__filters label,
 .filter-bar--inline .bk-sort-pick--inline {
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  margin: 0;
-  white-space: nowrap;
-  font-size: var(--font-size-metadata, 0.8125rem);
-  font-weight: 600;
-  color: var(--text-muted);
+  margin: 8px 0 0;
 }
 
 .filter-bar.filter-bar--inline .filter-bar__filters select,

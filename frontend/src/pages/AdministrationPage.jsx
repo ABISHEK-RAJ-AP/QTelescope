@@ -18,7 +18,7 @@ import { roleLabel } from '../lib/permissions.js';
 import { ListPager } from '../components/observability/ListPager.jsx';
 import { CollapsibleSection } from '../components/observability/CollapsibleSection.jsx';
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
-import { summarizeCircuitBreaker, summarizeOperatorError } from '../utils/operatorFault.js';
+import { summarizeOperatorError } from '../utils/operatorFault.js';
 import './AdministrationPage.css';
 
 const TEST_RULE_ID = /^e2e_rule_/i;
@@ -77,7 +77,6 @@ function Integrations({ providers, health, verification, setVerification, canEdi
   const [discovery, setDiscovery] = useState(null);
   const [confirm, setConfirm] = useState(null); // provider id awaiting confirm
   const [editProvider, setEditProvider] = useState(null);
-  const [showStubs, setShowStubs] = useState(false);
   const [ldap, setLdap] = useState(null);
 
   useEffect(() => {
@@ -209,13 +208,6 @@ function Integrations({ providers, health, verification, setVerification, canEdi
       )}
 
       <div className="card" style={{ padding: 0 }} data-tour="page-admin-providers">
-        <div className="admin-pad admin-actions" style={{ justifyContent: 'space-between', paddingBottom: 0 }}>
-          <span className="admin-sub">Implemented adapters only by default.</span>
-          <label className="admin-check">
-            <input type="checkbox" checked={showStubs} onChange={(e) => setShowStubs(e.target.checked)} />
-            Show marketplace stubs ({providers.filter((p) => p.adapter !== 'live' && p.adapter_status !== 'LIVE').length})
-          </label>
-        </div>
         <div className="table-container" style={{ border: 'none' }}>
           <table className="custom-table admin-table">
             <thead>
@@ -224,7 +216,7 @@ function Integrations({ providers, health, verification, setVerification, canEdi
               </tr>
             </thead>
             <tbody>
-              {providers.filter((p) => showStubs || p.adapter === 'live' || p.adapter_status === 'LIVE').map((p) => {
+              {providers.filter((p) => p.adapter === 'live' || p.adapter_status === 'LIVE').map((p) => {
                 const live = p.adapter === 'live' || p.adapter_status === 'LIVE';
                 const v = verBy[p.id];
                 const h = healthBy[p.id];
@@ -444,7 +436,6 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
     save(s);
   };
   const failures = dlq?.failures || [];
-  const breakers = Object.entries(dlq?.circuit_breakers || {});
 
   return (
     <>
@@ -605,9 +596,6 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
             </tbody>
           </table>
         </div>
-        {breakers.length > 0 && (
-          <p className="page-hint admin-pad">Circuit breakers: {breakers.map(([k, v]) => summarizeCircuitBreaker(k, v)).join(' · ')}</p>
-        )}
         <div className="admin-pad admin-actions" style={{ paddingTop: 0 }}>
           <button type="button" className="btn btn-secondary" disabled={!canEdit || purgingDlq || failures.length === 0} title={reason} onClick={() => setCollectorConfirm('purge')}>
             {purgingDlq ? 'Clearing…' : 'Clear DLQ history'}
@@ -979,8 +967,8 @@ function UsersDirectory({ canEdit }) {
         <p className="page-hint">Search accounts and assign roles. Capabilities follow the matrix above.</p>
         {err && <Notice note={{ type: 'error', text: err }} />}
         <div className="admin-users-toolbar">
-          <label className="admin-users-search">
-            <span className="sr-only">Search users</span>
+          <label className="admin-users-search outline-field">
+            <span>Search</span>
             <input
               type="search"
               className="input-control"
@@ -1128,23 +1116,38 @@ function AdminAuditLog() {
         Audit events and structured application logs (collector runs, API correlation). Secrets are redacted at ingest.
       </p>
       <div className="admin-actions" style={{ flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-        <label className="admin-form-field">
-          <span className="admin-form-label">Source</span>
-          <select className="input-control" value={source} onChange={(e) => setSource(e.target.value)}>
+        <label className="outline-field">
+          <span>Source</span>
+          <select className="input-control" value={source} onChange={(e) => setSource(e.target.value)} aria-label="Log source">
             <option value="app">Application</option>
             <option value="audit">Audit</option>
           </select>
         </label>
-        <input className="input-control" placeholder="Search text" value={q} onChange={(e) => setQ(e.target.value)} style={{ minWidth: 140 }} />
+        <label className="outline-field">
+          <span>Text</span>
+          <input className="input-control" placeholder="Message" aria-label="Search text" value={q} onChange={(e) => setQ(e.target.value)} />
+        </label>
         {source === 'audit' ? (
           <>
-            <input className="input-control" placeholder="Action prefix" value={action} onChange={(e) => setAction(e.target.value)} style={{ width: 130 }} />
-            <input className="input-control" placeholder="Actor" value={actor} onChange={(e) => setActor(e.target.value)} style={{ width: 110 }} />
+            <label className="outline-field">
+              <span>Action</span>
+              <input className="input-control" placeholder="Prefix" aria-label="Action prefix" value={action} onChange={(e) => setAction(e.target.value)} />
+            </label>
+            <label className="outline-field">
+              <span>Actor</span>
+              <input className="input-control" aria-label="Actor" value={actor} onChange={(e) => setActor(e.target.value)} />
+            </label>
           </>
         ) : (
           <>
-            <input className="input-control" placeholder="Request ID" value={requestId} onChange={(e) => setRequestId(e.target.value)} style={{ width: 150 }} />
-            <input className="input-control" placeholder="Backend ID" value={backendId} onChange={(e) => setBackendId(e.target.value)} style={{ width: 130 }} />
+            <label className="outline-field">
+              <span>Request</span>
+              <input className="input-control" placeholder="ID" aria-label="Request ID" value={requestId} onChange={(e) => setRequestId(e.target.value)} />
+            </label>
+            <label className="outline-field">
+              <span>Backend</span>
+              <input className="input-control" placeholder="ID" aria-label="Backend ID" value={backendId} onChange={(e) => setBackendId(e.target.value)} />
+            </label>
           </>
         )}
         <button type="button" className="btn btn-primary btn--xs" disabled={busy} onClick={search}>{busy ? 'Loading…' : 'Search'}</button>

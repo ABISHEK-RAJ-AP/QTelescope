@@ -211,13 +211,13 @@ export const DriftAnalysis = () => {
         showTimeRange
         timeRangeAffectsQuery
       >
-        <label className="context-bar__field">
+        <label className="context-bar__field outline-field">
           <span>Metric</span>
           <select value={metric} onChange={(e) => setMetricUi(e.target.value)} className="input-control" aria-label="Metric">
             {METRIC_OPTS.map((m) => <option key={m.ui} value={m.ui}>{m.label}</option>)}
           </select>
         </label>
-        <label className="context-bar__field">
+        <label className="context-bar__field outline-field">
           <span>Qubit</span>
           <input
             type="number"

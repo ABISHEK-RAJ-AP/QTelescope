@@ -357,8 +357,9 @@ export const ResourceHealth = () => {
           <div className="hv-toolbar">
             <strong style={{ fontSize: 14 }}>{active.backend_name}</strong>
             <button type="button" className="fs-link" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0, marginLeft: 8 }} onClick={() => nav({ pathname: buildBackendDetailsPath(active.backend_id), search: `?backend=${encodeURIComponent(active.backend_id)}` })}>Backend details</button>
-            <label>Color by
-              <select className="input-control" value={colorBy} onChange={(e) => setColorBy(e.target.value)}>
+            <label className="outline-field">
+              <span>Color</span>
+              <select className="input-control" value={colorBy} onChange={(e) => setColorBy(e.target.value)} aria-label="Color by">
                 {Object.entries(COLOR_MODES).map(([k, m]) => <option key={k} value={k}>{m.label}</option>)}
               </select>
             </label>
@@ -367,7 +368,10 @@ export const ResourceHealth = () => {
                 <button key={s} type="button" className="hv-chip" aria-pressed={stateFilter === s} onClick={() => setStateFilter(s)}>{s === 'ALL' ? 'All' : s[0] + s.slice(1).toLowerCase()}</button>
               ))}
             </span>
-            <input type="search" placeholder="Qubit #" aria-label="Find qubit by index" value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: 90 }} />
+            <label className="outline-field">
+              <span>Qubit</span>
+              <input type="search" className="input-control" placeholder="#" aria-label="Find qubit by index" value={search} onChange={(e) => setSearch(e.target.value)} />
+            </label>
             <span className="page-hint" style={{ margin: '0 0 0 auto' }}>{shown} / {qubits.length} qubits</span>
             <InfoTooltip label="Health scoring">
               <div className="hv-model-tip">

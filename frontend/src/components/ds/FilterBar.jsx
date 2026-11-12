@@ -20,14 +20,16 @@ export function FilterBar({
   return (
     <div className={`filter-bar ${className}`.trim()} role="search">
       {onSearchChange != null ? (
-        <label className="filter-bar__search">
+        <label className="filter-bar__search outline-field">
+          <span>Search</span>
           <Search size={14} aria-hidden />
-          <span className="sr-only">{searchLabel}</span>
           <input
             type="search"
+            className="input-control"
             value={search ?? ''}
             onChange={(e) => onSearchChange(e.target.value)}
             placeholder={searchPlaceholder}
+            aria-label={searchLabel}
           />
         </label>
       ) : null}

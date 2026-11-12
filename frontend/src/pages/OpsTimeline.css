@@ -4,7 +4,7 @@
 .ot-note--warn { border-left-color: var(--accent-amber); }
 .ops-tl .ot-filter-bar.filter-bar {
   padding: 8px 12px;
-  align-items: center;
+  align-items: flex-end;
 }
 
 .ot-filter-bar .filter-bar__search {
@@ -14,25 +14,14 @@
 }
 
 .ot-filter-bar .filter-bar__filters {
-  flex: 0 1 auto;
-  align-items: center;
-  flex-wrap: nowrap;
+  flex: 1 1 auto;
+  align-items: flex-end;
+  flex-wrap: wrap;
   gap: 8px 10px;
 }
 
 .ot-filter-bar .filter-bar__actions {
-  align-items: center;
-}
-
-.ot-filter-field {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--font-size-metadata, 0.8125rem);
-  font-weight: 600;
-  color: var(--text-muted);
-  white-space: nowrap;
+  align-items: flex-end;
 }
 
 .ot-kinds { display: inline-flex; gap: 6px; border: 0; padding: 0; margin: 0; flex-wrap: wrap; align-items: center; }

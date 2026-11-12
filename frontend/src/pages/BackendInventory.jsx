@@ -231,7 +231,8 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
     }
   };
   const select = (k, label, options) => (
-    <label>{label}
+    <label className="outline-field">
+      <span>{label}</span>
       <select className="input-control" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })}>
         <option value="ALL">All</option>
         {options.map((o) => <option key={o} value={o}>{k === 'source' ? (o === 'live' ? 'Live vendor' : o === 'simulated' ? 'Simulated' : 'Unknown') : o}</option>)}
@@ -296,8 +297,8 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
           {select('status', 'Status', uniq(displayRows, 'status'))}
           {select('source', 'Source', uniq(displayRows, 'source'))}
           {select('facility', 'Facility', uniq(displayRows, 'facility').filter((x) => x && x !== '—'))}
-          <label className="bk-sort-pick bk-sort-pick--inline">
-            Sort
+          <label className="bk-sort-pick bk-sort-pick--inline outline-field">
+            <span>Sort</span>
             <select
               className="input-control"
               value={`${sort.key}:${sort.dir}`}

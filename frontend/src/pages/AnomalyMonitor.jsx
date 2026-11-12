@@ -220,7 +220,14 @@ export const AnomalyMonitor = () => {
   if (loading && !data && !error) {
     return (
       <div className="page-stack">
-        <ContextBar backend={scopeBackend} backends={backends} onBackendChange={setBackend} />
+        <ContextBar backend={scopeBackend} backends={backends} onBackendChange={setBackend}>
+          <label className="context-bar__field outline-field">
+            <span>Metric</span>
+            <select className="input-control" value={metric} onChange={(e) => setMetric(e.target.value)} aria-label="Metric">
+              {METRIC_KEYS.map((k) => <option key={k} value={k}>{METRICS[k].label}{METRICS[k].unit ? ` (${METRICS[k].unit})` : ''}</option>)}
+            </select>
+          </label>
+        </ContextBar>
         <BoneyardSkeleton layout="grid" />
       </div>
     );
@@ -232,15 +239,14 @@ export const AnomalyMonitor = () => {
         backend={scopeBackend}
         backends={backends}
         onBackendChange={setBackend}
-      />
-      <div className="card tm-toolbar">
-        <label>Metric
+      >
+        <label className="context-bar__field outline-field">
+          <span>Metric</span>
           <select className="input-control" value={metric} onChange={(e) => setMetric(e.target.value)} aria-label="Metric">
             {METRIC_KEYS.map((k) => <option key={k} value={k}>{METRICS[k].label}{METRICS[k].unit ? ` (${METRICS[k].unit})` : ''}</option>)}
           </select>
         </label>
-        {scopeBackend && <button type="button" className="btn btn-secondary" onClick={() => setBackend('')}>All backends</button>}
-      </div>
+      </ContextBar>
 
       {error && <ErrorState variant="panel" message={unableToLoad('anomaly summary')} onRetry={load} />}
       {!error && (

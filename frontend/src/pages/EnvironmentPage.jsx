@@ -7,6 +7,7 @@ import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
+import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { getChartTheme, baseTooltip } from '../components/observability/chartTheme.js';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
@@ -207,26 +208,25 @@ export const EnvironmentPage = () => {
     ['MQTT', mqttStatus],
     ['Vendor cryo/RF adapter', cryoStatus],
   ] : [];
-  const pathLive = (status) => status === 'LIVE' || status === 'CONNECTING';
 
   return (
     <div className="page-stack">
       <section className="card page-panel env-sources" role="status">
         <div className="env-sources__row">
-          <div>
-            <strong>Facility telemetry is pushed or imported, not streamed from hardware.</strong>
-            <p className="page-hint" style={{ margin: '4px 0 0' }}>
-              {covered} of {backendIds.length * channels.length} backend/channel pairs have a sample. Values labelled "derived" come from calibration snapshots, not facility sensors.
-            </p>
-          </div>
-          <div className="env-paths" aria-label="Ingest paths">
-            {paths.map(([label, status]) => (
-              <span key={label} className={`env-path env-path--${pathLive(status) ? 'live' : 'off'}`}>
-                <b aria-hidden>{pathLive(status) ? '●' : '○'}</b> {label}: {status}
-              </span>
-            ))}
-            {ingestStatus?.inbox_pending_files > 0 && <span className="env-path env-path--live">{ingestStatus.inbox_pending_files} inbox file(s) pending</span>}
-          </div>
+          <h3 className="chart-panel__title env-sources__title">
+            Facility sensors
+            <InfoTooltip label="How these samples arrive">
+              <p style={{ margin: '0 0 8px' }}>Facility telemetry is pushed or imported, not streamed from hardware.</p>
+              <p style={{ margin: '0 0 8px' }}>{covered} of {backendIds.length * channels.length} backend/channel pairs have a sample. Values labelled derived come from calibration snapshots, not facility sensors.</p>
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
+                {paths.map(([label, status]) => <li key={label}>{label}: {status}</li>)}
+              </ul>
+            </InfoTooltip>
+          </h3>
+          <span className="env-coverage">{covered} / {backendIds.length * channels.length} sampled</span>
+          {ingestStatus?.inbox_pending_files > 0 && (
+            <span className="env-coverage">{ingestStatus.inbox_pending_files} inbox pending</span>
+          )}
         </div>
         <div className="env-icon-bar" role="toolbar" aria-label="Environment data actions">
           <button type="button" className="env-icon-btn" title="Scan facility inbox" aria-label="Scan inbox" onClick={async () => {
@@ -256,8 +256,12 @@ export const EnvironmentPage = () => {
 
       <section className="card" style={{ padding: 0 }}>
         <div className="env-matrix-head">
-          <h3 className="chart-panel__title">Coverage by backend and channel</h3>
-          <p className="chart-panel__question">Latest value, age, and source (imported or derived) per cell.</p>
+          <h3 className="chart-panel__title env-sources__title">
+            Coverage by backend and channel
+            <InfoTooltip label="What each cell shows">
+              Latest value, age, and source. Imported values came from a file or API push. Derived values come from calibration snapshots, not facility sensors.
+            </InfoTooltip>
+          </h3>
         </div>
         <div className="env-matrix-wrap">
           <table className="env-matrix">

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Clock } from 'lucide-react';
 import {
   TELEMETRY_CUSTOM_SENTINEL,
   TELEMETRY_WINDOW_OPTIONS,
@@ -29,9 +28,8 @@ export function TelemetryWindowControl({ hours, onChange }) {
   };
 
   return (
-    <div className="telemetry-window-control" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-      <Clock size={16} color="var(--text-muted)" aria-hidden />
-      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>Lookback</span>
+    <label className="outline-field telemetry-window-control">
+      <span>Lookback</span>
       <select
         className="input-control"
         value={selectValue}
@@ -56,8 +54,7 @@ export function TelemetryWindowControl({ hours, onChange }) {
         ))}
       </select>
       {customMode && (
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-          <span className="sr-only">Custom lookback hours</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
           <input
             type="number"
             className="input-control"
@@ -70,9 +67,9 @@ export function TelemetryWindowControl({ hours, onChange }) {
             onBlur={applyCustom}
             onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyCustom(); } }}
           />
-          <span style={{ color: 'var(--text-muted)' }}>hours</span>
-        </label>
+          <span style={{ color: 'var(--text-muted)' }}>h</span>
+        </span>
       )}
-    </div>
+    </label>
   );
 }

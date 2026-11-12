@@ -178,8 +178,12 @@ export const QubitMonitoring = () => {
       <div className="qubit-layout-grid">
         <section className="card" style={{ padding: 0, minWidth: 0 }}>
           <div className="bk-toolbar">
-            <input type="search" placeholder="Qubit #" aria-label="Filter by qubit index" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} style={{ minWidth: 100, maxWidth: 130 }} />
-            <label>Health
+            <label className="outline-field">
+              <span>Qubit</span>
+              <input type="search" className="input-control" placeholder="#" aria-label="Filter by qubit index" value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} />
+            </label>
+            <label className="outline-field">
+              <span>Health</span>
               <select className="input-control" value={stateFilter} onChange={(e) => { setStateFilter(e.target.value); setPage(0); }}>
                 <option value="ALL">All</option>
                 {STATES.map((s) => <option key={s} value={s}>{STATE_LABEL[s]}</option>)}

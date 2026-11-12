@@ -14,7 +14,6 @@ import {
   DetailModalDl,
   DetailModalRow,
   DetailModalRelated,
-  DetailModalProvenance,
 } from '../components/observability/DetailModalLayout.jsx';
 import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
 import { TableEmpty } from '../components/observability/EmptyState.jsx';
@@ -93,9 +92,7 @@ function QueueDrawerBody({ q, an, hist, jobs, nav }) {
       </DetailModalSection>
       <DetailModalSection title="Job records for this backend">
         {jobs == null ? <p className="page-hint">Job records unavailable.</p> : (
-          <DetailModalProvenance>
-            {qd} QUEUED · {rn} RUNNING in the latest 200 stored job records. Telemetry pending ({q.pending_jobs}) and job-record counts are separate sources and may differ.
-          </DetailModalProvenance>
+          <p className="dm-detail__note">{qd} queued · {rn} running</p>
         )}
       </DetailModalSection>
       <DetailModalSection title="Workspace">
@@ -273,8 +270,6 @@ export const QueueMonitoring = () => {
         <div className="qm-kpi"><div className="qm-kpi__label">Idle queues</div><div className="qm-kpi__value">{idle}</div><div className="qm-kpi__sub">of {queues.length} with zero pending</div></div>
         <div className="qm-kpi"><div className="qm-kpi__label">History samples</div><div className="qm-kpi__value">{(analytics?.backends || []).reduce((a, b) => a + b.samples, 0)}</div><div className="qm-kpi__sub">{analytics ? COPY.queue.historySub : 'History unavailable'}</div></div>
       </section>
-      {analytics?.note && <p className="qm-banner qm-banner--info">{analytics.note}</p>}
-
       <section className="qm-charts">
         <ChartPanel
           title="Queue depth and wait by backend"
@@ -338,8 +333,8 @@ export const QueueMonitoring = () => {
 
       <section className="card qm-table-card dvt-panel" data-tour="page-queues">
         <DataPanelToolbar title="Queues" layout={layout} onLayoutChange={setLayout} countLabel={`${displayQueues.length} queue${displayQueues.length === 1 ? '' : 's'}`}>
-          <label>
-            Backend
+          <label className="outline-field">
+            <span>Backend</span>
             <select
               className="input-control"
               aria-label="Filter queues by backend"
