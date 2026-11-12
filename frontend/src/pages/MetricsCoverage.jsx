@@ -176,7 +176,9 @@ export const MetricsCoverage = () => {
                 <DetailModalRow label="Metric"><code>{open.m.metric_id}</code> · {open.m.unit} · scope {openRaw?.scope || open.m.scope}</DetailModalRow>
                 <DetailModalRow label="Description">{regById[open.m.metric_id]?.description || 'Not in registry.'}</DetailModalRow>
                 <DetailModalRow label="Backend">{open.b.backend_id} · {(open.b.qpu_modality || 'unknown').replace('_', ' ')}</DetailModalRow>
-                <DetailModalRow label="Provenance"><LineageBadge lineage={lineage?.[open.b.provider_id]} /></DetailModalRow>
+                {lineage?.[open.b.provider_id] === 'live' && (
+                  <DetailModalRow label="Provenance"><LineageBadge lineage="live" /></DetailModalRow>
+                )}
                 <DetailModalRow label="Calibration">{fresh[open.b.backend_id] || 'unknown'}</DetailModalRow>
                 <DetailModalRow label="Provider adapter">{cap ? `${cap.provider_id}: ${cap.adapter}; ${cap.supported_metrics.includes(open.m.metric_id) ? 'declares support' : 'does not declare support'}` : 'No capability record.'}</DetailModalRow>
                 <DetailModalRow label="Backend coverage">{open.b.present_count}/{open.b.supported_count} supported metrics present</DetailModalRow>

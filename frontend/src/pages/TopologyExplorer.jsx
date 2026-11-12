@@ -3,13 +3,14 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import {
   X, ArrowUpDown, Clock, Activity,
-  Zap, AlertTriangle, ChevronDown, GitCompare,
+  Zap, AlertTriangle, ChevronDown, GitCompare, Network, Table2,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { ChartPanel, EmptyState, getChartTheme, baseTooltip, DetailDrawer } from '../components/observability';
+import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
 import { DetailModalBody, DetailModalSection } from '../components/observability/DetailModalLayout.jsx';
 import { getFleetStateChartColors, getChartInkColor, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { unableToLoad } from '../constants/messages.js';
@@ -623,23 +624,29 @@ export const TopologyExplorer = () => {
             className={`btn btn-secondary topo-view-btn${viewMode === 'graph' ? ' topo-view-btn--active' : ''}`}
             onClick={() => setViewMode('graph')}
             aria-pressed={viewMode === 'graph'}
+            title="Graph"
+            aria-label="Graph"
           >
-            Graph
+            <Network size={16} aria-hidden />
           </button>
           <button
             type="button"
             className={`btn btn-secondary topo-view-btn${viewMode === 'table' ? ' topo-view-btn--active' : ''}`}
             onClick={() => setViewMode('table')}
             aria-pressed={viewMode === 'table'}
+            title="Table"
+            aria-label="Table"
           >
-            Table
+            <Table2 size={16} aria-hidden />
           </button>
         </div>
 
         {graph && (
-          <span className="topo-meta" aria-live="polite">
-            {graph.qpu_modality} · {graph.topology_type} · {graph.node_count} qubits · {graph.edge_count} couplings
-          </span>
+          <InfoTooltip label="Coupling map">
+            <p style={{ margin: 0 }}>
+              {String(graph.qpu_modality || 'N/A').replace(/_/g, ' ')} · {String(graph.topology_type || 'N/A').replace(/_/g, ' ')} · {graph.node_count} qubits · {graph.edge_count} couplings
+            </p>
+          </InfoTooltip>
         )}
       </div>
 

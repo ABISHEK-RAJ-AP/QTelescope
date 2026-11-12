@@ -12,10 +12,11 @@ export function useProviderLineage() {
   return map;
 }
 
-/** Text + glyph so provenance is never colour-only. */
+/** One status dot (from .badge) plus a word. Simulated catalog is not shown. */
 export function LineageBadge({ lineage }) {
   const l = lineage || 'unknown';
-  const cls = l === 'live' ? 'badge-healthy' : l === 'simulated' ? 'badge-warning' : 'badge-info';
-  const mark = l === 'live' ? '●' : l === 'simulated' ? '◐' : '○';
-  return <span className={`badge ${cls}`} title={l === 'live' ? 'Live provider adapter' : l === 'simulated' ? 'Simulated telemetry' : 'Provenance unknown'}><span aria-hidden>{mark}</span> {l}</span>;
+  if (l === 'simulated' || l === 'mock_catalog') return null;
+  const cls = l === 'live' ? 'badge-healthy' : 'badge-info';
+  const label = l === 'live' ? 'Live' : 'Unknown';
+  return <span className={`badge ${cls}`} title={l === 'live' ? 'Live provider adapter' : 'Provenance unknown'}>{label}</span>;
 }

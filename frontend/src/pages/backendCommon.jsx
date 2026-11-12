@@ -8,7 +8,8 @@ import './BackendInventory.css';
 
 export function LineageTag({ lineage, compact = false }) {
   const l = lineage || 'unknown';
-  const text = l === 'live' ? (compact ? 'Live' : 'Live vendor') : l === 'simulated' ? 'Simulated' : (compact ? 'Unknown' : 'Unknown source');
+  if (l === 'simulated' || l === 'mock_catalog') return null;
+  const text = l === 'live' ? (compact ? 'Live' : 'Live vendor') : (compact ? 'Unknown' : 'Unknown source');
   return (
     <span className={`bk-lineage bk-lineage--${l}${compact ? ' bk-lineage--compact' : ''}`} title={`Adapter lineage: ${l}`}>
       <span className="bk-lineage__dot" aria-hidden />

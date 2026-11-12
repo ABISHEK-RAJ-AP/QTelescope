@@ -3,12 +3,10 @@ import './fleetShared.css';
 
 export function LineageChip({ lineage }) {
   const l = lineage || 'unknown';
+  if (l === 'simulated' || l === 'mock_catalog') return null;
   return (
-    <span className={`fs-lineage fs-lineage--${l}`} title={l === 'live'
-      ? 'Collected from the provider API.'
-      : 'Simulated catalog entry for demo and UI tests.'}
-    >
-      {l === 'live' ? '● live' : l === 'simulated' ? '○ simulated' : '? unknown'}
+    <span className={`fs-lineage fs-lineage--${l}`} title={l === 'live' ? 'Collected from the provider API.' : 'Provenance unknown'}>
+      {l === 'live' ? 'Live' : 'Unknown'}
     </span>
   );
 }

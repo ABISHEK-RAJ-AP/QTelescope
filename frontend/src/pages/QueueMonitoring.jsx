@@ -45,9 +45,8 @@ const parseSource = (s) => {
 };
 const SourceTag = ({ source }) => {
   const p = parseSource(source);
-  return p
-    ? <span className="qm-src" data-kind={p.kind} title={`Latest telemetry sample source: ${source}`}>{p.kind}</span>
-    : <span className="qm-src" data-kind="none">no samples</span>;
+  if (!p || p.kind === 'simulated' || p.kind === 'mock_catalog') return null;
+  return <span className="qm-src" data-kind={p.kind} title={`Latest telemetry sample source: ${source}`}>{p.kind}</span>;
 };
 
 function QueueDrawerBody({ q, an, hist, jobs, nav }) {

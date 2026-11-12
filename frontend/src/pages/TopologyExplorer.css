@@ -4,7 +4,7 @@
 .topo-search__input { width: 100%; padding-left: 4px; }
 .topo-search__clear { position: absolute; right: 4px; border: 0; background: transparent; color: var(--text-muted); min-height: 28px; min-width: 28px; cursor: pointer; }
 .topo-view-toggle { display: inline-flex; margin-left: auto; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; flex-shrink: 0; }
-.topo-view-btn { border: 0; border-radius: 0; min-height: 36px; }
+.topo-view-btn { border: 0; border-radius: 0; width: 40px; height: 40px; min-height: 40px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
 .topo-view-btn--active { background: var(--bg-card-hover); color: var(--text-primary); }
 .topo-meta { font-size: 0.8125rem; color: var(--text-muted); white-space: nowrap; }
 .topo-workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; align-items: stretch; width: 100%; }

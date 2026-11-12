@@ -295,7 +295,7 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
           {select('provider', 'Provider', uniq(displayRows, 'provider'))}
           {select('modality', 'Modality', uniq(displayRows, 'modality'))}
           {select('status', 'Status', uniq(displayRows, 'status'))}
-          {select('source', 'Source', uniq(displayRows, 'source'))}
+          {select('source', 'Source', uniq(displayRows, 'source').filter((x) => x !== 'simulated' && x !== 'mock_catalog'))}
           {select('facility', 'Facility', uniq(displayRows, 'facility').filter((x) => x && x !== '—'))}
           <label className="bk-sort-pick bk-sort-pick--inline outline-field">
             <span>Sort</span>

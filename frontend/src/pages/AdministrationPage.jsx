@@ -220,8 +220,7 @@ function Integrations({ providers, health, verification, setVerification, canEdi
                 const live = p.adapter === 'live' || p.adapter_status === 'LIVE';
                 const v = verBy[p.id];
                 const h = healthBy[p.id];
-                const simulated = /simulat|stub|mock/i.test(h?.lineage || '');
-                const flowing = simulated ? null : h?.last_success_at ? Date.now() - new Date(h.last_success_at).getTime() < FRESH_MS : (h ? false : null);
+                const flowing = h?.last_success_at ? Date.now() - new Date(h.last_success_at).getTime() < FRESH_MS : (h ? false : null);
                 const conn = !live ? null : v ? (v.skipped ? null : !!v.verified) : null;
                 return (
                   <React.Fragment key={p.id}>
@@ -237,7 +236,7 @@ function Integrations({ providers, health, verification, setVerification, canEdi
                         />
                       </td>
                       <td>
-                        <Stage ok={flowing} label={simulated ? 'Simulated' : flowing ? 'Flowing' : h ? 'Stale / failing' : 'No runs'} title={h ? `Lineage ${h.lineage || '?'} · Last run ${fmtTime(h.last_run_at)} · last success ${fmtTime(h.last_success_at)}` : 'No collector run recorded'} />
+                        <Stage ok={flowing} label={flowing ? 'Flowing' : h ? 'Stale / failing' : 'No runs'} title={h ? `Last run ${fmtTime(h.last_run_at)} · last success ${fmtTime(h.last_success_at)}` : 'No collector run recorded'} />
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <button type="button" className="btn btn-secondary btn--xs" onClick={() => setEditProvider(p)} disabled={!canEdit} title={reason}>
@@ -536,7 +535,7 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
                   <td><Stage ok={e.status === 'OK'} label={e.status} /></td>
                   <td>{e.backends_detected ?? '—'}</td>
                   <td>{e.duration_ms != null ? `${e.duration_ms} ms` : '—'}</td>
-                  <td className="admin-sub">{e.lineage || '—'}</td>
+                  <td className="admin-sub">{e.lineage && !/simulat|mock/i.test(e.lineage) ? e.lineage : '—'}</td>
                 </tr>
               ))}
               {executions.length === 0 && <TableEmpty colSpan={7} title="No execution history" message="Runs are recorded after discovery or scheduled collection." />}
