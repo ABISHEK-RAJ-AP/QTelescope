@@ -28,7 +28,7 @@ export function AuthShell({ title, subtitle, children, footer, maxWidth = 'max-w
               <span className="text-lg font-semibold tracking-tight">Q-TeleScope</span>
             </div>
 
-            <div className="flex-1 min-h-[240px] max-h-[320px] w-full flex items-center">
+            <div className="auth-shell__fridge flex-1 min-h-[280px] max-h-[340px] w-full flex items-stretch">
               <AuthFridgeVisual />
             </div>
 

@@ -202,11 +202,19 @@ export function QuantumFridge() {
         </div>
 
         <div className="qf-hero__overlay">
-          <p className="qf-hero__kicker">Quantum observability</p>
-          <h1 className="qf-hero__title">Q-TeleScope</h1>
-          <Link className="qf-hero__cta" to="/app">
-            Open console <ArrowRight size={18} strokeWidth={2.5} />
-          </Link>
+          <p className="qf-hero__kicker">Q-TeleScope</p>
+          <h1 className="qf-hero__title">Observability for superconducting QPUs</h1>
+          <p className="qf-hero__lead">
+            Scroll to assemble the cryostat — then open the console.
+          </p>
+          <div className="qf-hero__actions">
+            <Link className="qf-hero__cta" to="/login">
+              Sign in <ArrowRight size={18} strokeWidth={2.5} aria-hidden />
+            </Link>
+            <Link className="qf-hero__cta qf-hero__cta--ghost" to="/register">
+              Sign up
+            </Link>
+          </div>
         </div>
 
         <nav className="qf-hero__rail" aria-label="Scroll progress">

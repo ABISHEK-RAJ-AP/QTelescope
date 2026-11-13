@@ -16,11 +16,11 @@ import {
   ExternalLink
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import KineticMatrix from '@/components/ui/kinetic-matrix'
 import { QuantumBackground } from '@/components/ui/quantum-background'
 import { PublicMarketingHeader } from '@/components/marketing/PublicMarketingHeader'
 import { PublicMarketingFooter } from '@/components/marketing/PublicMarketingFooter'
 import { LandingChrome } from '@/components/marketing/LandingChrome'
+import { QuantumFridge } from '@/components/marketing/QuantumFridge.jsx'
 import '@/components/marketing/landing-chrome.css'
 import { cn } from '@/lib/utils'
 
@@ -142,46 +142,8 @@ export function LandingPage() {
 
       <PublicMarketingHeader />
 
-      <section className="landing-hero relative z-10 w-full scroll-mt-28 px-6 py-12 sm:px-10 sm:py-16 lg:py-20">
-        <div className="relative mx-auto max-w-6xl h-[min(82vh,760px)] w-full overflow-hidden rounded-3xl border border-neutral-200/90 shadow-2xl shadow-cyan-500/10 dark:border-neutral-800 dark:shadow-cyan-400/5">
-          <KineticMatrix title="0x10" className="absolute inset-0 h-full w-full rounded-3xl" showHud={false} />
-          <div
-            className="pointer-events-none absolute inset-0 z-10 bg-gradient-to-b from-[#f8fafc]/55 via-transparent to-[#f8fafc]/92 dark:from-[#070a0f]/50 dark:to-[#070a0f]/94"
-            aria-hidden
-          />
-          <div className="relative z-20 flex h-full flex-col items-center justify-center px-6 py-16 text-center sm:px-12">
-            <p className="landing-hero__eyebrow">Q-TeleScope</p>
-            <h1 className="landing-hero__title text-balance max-w-6xl mt-4">
-              Quantum observability for{' '}
-              <span className="landing-hero__accent">superconducting QPUs</span>
-            </h1>
-            <p className="landing-hero__lead mt-8 max-w-3xl text-pretty">
-              Monitor T1 and T2 coherence, gate fidelity, calibration drift, and incidents for multi-backend fleets.
-            </p>
-            <div className="mt-12 flex w-full max-w-lg flex-col items-stretch gap-4 sm:max-w-none sm:flex-row sm:items-center sm:justify-center sm:gap-5">
-              <Link to="/login" className="sm:min-w-[188px]">
-                <Button size="lg" className="w-full min-h-[3.25rem] gap-2.5 bg-cyan-600 px-10 py-7 text-lg font-semibold text-white shadow-lg shadow-cyan-600/25 hover:bg-cyan-500">
-                  Sign in <ArrowRight className="size-5" aria-hidden />
-                </Button>
-              </Link>
-              <Link to="/register" className="sm:min-w-[188px]">
-                <Button size="lg" variant="outline" className="w-full min-h-[3.25rem] border-neutral-300 bg-white/75 px-10 py-7 text-lg font-semibold backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-950/45">
-                  Sign up
-                </Button>
-              </Link>
-            </div>
-            <p className="mt-8 text-sm text-neutral-500 dark:text-neutral-400">
-              <Link to="/login" className="font-semibold text-cyan-700 hover:text-cyan-600 dark:text-cyan-400 dark:hover:text-cyan-300">
-                Sign in
-              </Link>
-              {' · '}
-              <Link to="/register" className="font-semibold text-cyan-700 hover:text-cyan-600 dark:text-cyan-400 dark:hover:text-cyan-300">
-                Create an account
-              </Link>
-            </p>
-          </div>
-        </div>
-      </section>
+      {/* Dilution-fridge scroll hero — not KineticMatrix / 0x10 */}
+      <QuantumFridge />
 
       <main className="relative z-20 mx-auto max-w-7xl space-y-28 px-6 pb-24 pt-4 sm:px-8">
         {/* Core Capabilities */}
