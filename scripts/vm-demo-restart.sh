@@ -8,7 +8,16 @@ cd "$ROOT"
 source "${ROOT}/scripts/vm-demo-env.sh"
 
 echo "==> git pull"
-git pull --ff-only origin main
+git fetch origin main
+if ! git diff --quiet -- scripts/vm-demo-env.sh scripts/vm-demo-restart.sh scripts/vm-update-from-git.sh 2>/dev/null; then
+  echo "==> discarding local edits under scripts/vm-*.sh (git stash if you need them)"
+  git checkout -- scripts/vm-demo-env.sh scripts/vm-demo-restart.sh scripts/vm-update-from-git.sh 2>/dev/null || true
+fi
+git pull --ff-only origin main || {
+  echo "WARN: ff-only pull failed; resolve conflicts manually" >&2
+  echo "Tip: git stash push -m 'vm local' && git pull --ff-only origin main" >&2
+  exit 1
+}
 
 echo "==> demo .env (mock data + bootstrap accounts)"
 apply_vm_demo_env "$ROOT"
