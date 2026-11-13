@@ -59,6 +59,17 @@ Requires Python 3.x (stdlib + local CSV data only).
 # or: cd .vendor/skills-upstream/<repo> && git pull && re-copy per SKILL_CATALOG.md
 ```
 
+## After clone (Cursor discovery)
+
+Skills live in `.agents/skills/` (committed). `.cursor/` is gitignored — link them locally:
+
+```bash
+./scripts/link-agent-skills-to-cursor.sh
+# restore lockfile installs: npx skills experimental_install -y
+```
+
+Operate vs marketing routing: [`SKILL_ROUTER.md`](./SKILL_ROUTER.md) (mirror of always-on router).
+
 First-time vendor clones (gitignored):
 
 ```bash
