@@ -13,6 +13,16 @@ Curated skills/rules for Cursor on this repo. Upstream clones live under `.vendo
 | [Cloudflare security-audit](https://github.com/cloudflare/security-audit-skill) | `.cursor/skills/security-audit/` | Full security audit / pen-test |
 | [obra/superpowers](https://github.com/obra/superpowers) (subset) | `.cursor/skills/using-superpowers`, `test-driven-development`, `systematic-debugging`, `writing-plans`, `verification-before-completion` | Non-trivial features / debug |
 | [UI UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | `.cursor/skills/ui-ux-pro-max/` | UI polish, design system, density |
+| [impeccable](https://github.com/pbakaus/impeccable) | `.agents/skills/impeccable` → `.cursor/skills/impeccable` | Operate/Persuade craft floor, critique/audit/polish |
+| [Anthropic frontend-design](https://github.com/anthropics/skills) | `.cursor/skills/frontend-design` | Distinctive new UI direction (pair with DESIGN.md) |
+| [interface-design](https://github.com/Dammyjay93/interface-design) | `.cursor/skills/interface-design` | Product/dashboard craft (not marketing) |
+| [responsive-craft](https://github.com/kylezantos/responsive-craft) | `.cursor/skills/responsive-craft` | Intrinsic → CQ → MQ responsive |
+| [ui-craft](https://github.com/educlopez/ui-craft) | `.cursor/skills/ui-craft` | Craft restraint for product UI |
+| [hue](https://github.com/dominikmartn/hue) | `.cursor/skills/hue` | Generate brand design-language skills |
+| [scroll-craft](https://github.com/nateherkai/scroll-craft) | `.cursor/skills/scroll-craft` | Marketing scroll sites only |
+| [epic-design](https://github.com/alirezarezvani/claude-skills) | `.cursor/skills/epic-design` | Cinematic landings only |
+| [claude-design](https://github.com/jiji262/claude-design-skill) | `.cursor/skills/claude-design` | Design mock/prototype skill (landings) |
+| Lockfile | `skills-lock.json` | `npx skills experimental_install` restore |
 | [interfaces.dev / jakubkrehel](https://github.com/jakubkrehel/skills) | `.cursor/skills/better-*` (+ helpers) | Layout, type, color, a11y, writing, UI review — [`INTERFACES_DEV.md`](./INTERFACES_DEV.md) |
 | UX interaction laws | `.cursor/skills/ux-interaction-laws/` | Hick/Fitts/Jakob/Miller + Q-TeleScope enforcement |
 | [Mounir-Ghafir/design](https://github.com/Mounir-Ghafir/design) | `.cursor/skills/mounir-ux-website/` | 41 website rule files + IDs; [`MOUNIR_DESIGN.md`](./MOUNIR_DESIGN.md) |
@@ -21,6 +31,7 @@ Curated skills/rules for Cursor on this repo. Upstream clones live under `.vendo
 | [code-slop](https://github.com/benjaming/ai-skills) | `.cursor/skills/code-slop/` | Branch diff slop suggestions (comments, `any`, defensive noise) |
 | [brag](https://github.com/latent-spaces/brag) | `.cursor/skills/brag/` | Optional launch / promo video from repo |
 | [untangle-codebase](https://github.com/caldoai/skills/tree/main/skills/untangle-codebase) | `.cursor/skills/untangle-codebase/` | User-invoked whole-codebase structural refactor |
+| **RPH hunt kit** (`gtia_hunt_kit.zip` 2026-11-13) | `.cursor/skills/{claim-ladder,novelty-siege,simulation-validity,dedup-gate}/` + `.cursor/agents/paper-*` | Recombinant paper hunt; master `docs/PAPER_HUNT_MASTER_PROMPT.md` |
 
 Full categorization (install vs defer: Lenis, whiteboard, taste-skill, EUI, …): [`SKILL_CATALOG.md`](./SKILL_CATALOG.md).
 

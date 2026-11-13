@@ -32,6 +32,11 @@ Visual direction for `/app/*` (antislop filter + this file). Not a marketing sit
 
 - Respect `prefers-reduced-motion` (replay autoplay off when set).
 - KPI count animation subtle; no gratuitous parallax.
+- **Never** apply scroll-craft / epic-design pin+scrub / cinematic landings inside `/app/*`. Those skills are marketing-only (see skill-router).
+
+## Agent skill stack (ops)
+
+Load before console UI work: `impeccable` (Operate + craft-floor) · `interface-design` · `ui-ux-pro-max` · `responsive-craft` · antislop + this file. **This file wins** over skill-suggested palettes (e.g. Pro Max OLED green).
 
 ## Content rules
 

@@ -1,0 +1,75 @@
+{
+  "version": 2,
+  "skills": {
+    "claude-design": {
+      "source": "jiji262/claude-design-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "447aca8924d2b65ecc9b4f1f8a9c23645ca56cf7d8772342ae70acb3dd54bc13",
+      "installMode": "copy"
+    },
+    "epic-design": {
+      "source": "alirezarezvani/claude-skills",
+      "sourceType": "github",
+      "skillPath": "engineering-team/skills/epic-design/SKILL.md",
+      "computedHash": "4f5996311148a66e25e03b3b1f4c9408a994248dbbd502247cbfeb721fca006e",
+      "installMode": "copy"
+    },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "83485963700bcf11d5bf78118facb301676b69d918fee2e45a95e7f1a2840f6c",
+      "installMode": "copy"
+    },
+    "hue": {
+      "source": "dominikmartn/hue",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "08bc612042062369b3aefbda0d94afca729a39585f98ea09e42d2997c6462a0b",
+      "installMode": "copy"
+    },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "computedHash": "ba6f33350863bd8138de222e55a7bf0f409ed329770a92e3db7535cbd2d0fb80",
+      "installMode": "copy"
+    },
+    "interface-design": {
+      "source": "Dammyjay93/interface-design",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/interface-design/SKILL.md",
+      "computedHash": "1491bb966a2c289550e0d6eb25c19b0570ead479240f6b2ba5766d94599ea744",
+      "installMode": "copy"
+    },
+    "responsive-craft": {
+      "source": "kylezantos/responsive-craft",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "4be387da5577bc86e5aac475a8d192dcc24968a61cc1a1d73f7ae3f056ce6f0f",
+      "installMode": "copy"
+    },
+    "scroll-craft": {
+      "source": "nateherkai/scroll-craft",
+      "sourceType": "github",
+      "skillPath": "plugins/nateherk-design/skills/scroll-craft/SKILL.md",
+      "computedHash": "313906594cddf8d38d2d5cd3eda0436d7f4c912808d5255e1d579fcb8b8befaf",
+      "installMode": "copy"
+    },
+    "ui-craft": {
+      "source": "educlopez/ui-craft",
+      "sourceType": "github",
+      "skillPath": "skills/ui-craft/SKILL.md",
+      "computedHash": "77d2028bd1944d77e539914a3f01871fe361f1fc04f6ce1f053b1123d1ceb58a",
+      "installMode": "copy"
+    },
+    "ui-ux-pro-max": {
+      "source": "nextlevelbuilder/ui-ux-pro-max-skill",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/ui-ux-pro-max/SKILL.md",
+      "computedHash": "ff6863fc7c1be035b294703b2e7c90b2197548985ca4cb98f58740a7e84dc0cc",
+      "installMode": "copy"
+    }
+  }
+}

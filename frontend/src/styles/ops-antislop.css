@@ -1,7 +1,65 @@
 /**
  * Console + auth surface hygiene — design-system layer over page CSS.
- * Accent = --accent (cyan). Nested radius: inner = outer − padding.
+ * Driven by: impeccable Operate + craft-floor, interface-design, responsive-craft,
+ * ui-ux-pro-max checklist. Accent stays DESIGN.md cyan (--accent), not skill palette guesses.
+ * Nested radius: inner = outer − padding.
  */
+
+/* —— Browser chrome themed from palette (impeccable craft-floor) —— */
+.main-content ::selection,
+.auth-shell ::selection {
+  background: color-mix(in oklch, var(--accent) 35%, transparent);
+  color: var(--text-primary);
+}
+
+.main-content {
+  caret-color: var(--accent);
+}
+
+/* Fluid page title (responsive-craft: clamp first) */
+.main-content .page-title,
+.main-content h1.page-heading {
+  font-size: clamp(1.25rem, 1.1rem + 0.6vw, var(--font-size-page-title));
+}
+
+/* Container queries for card grids — component responds to parent, not viewport */
+.main-content .card-grid,
+.main-content .kpi-grid,
+.main-content .ops-grid,
+.main-content [data-card-grid] {
+  container-type: inline-size;
+  display: grid;
+  gap: var(--ds-space-md);
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+}
+
+@container (max-width: 28rem) {
+  .main-content .card-grid,
+  .main-content .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Clickable affordance (ui-ux-pro-max checklist) */
+.main-content a[href],
+.main-content button:not(:disabled),
+.main-content [role='button']:not([aria-disabled='true']),
+.main-content .btn:not(:disabled) {
+  cursor: pointer;
+}
+
+/* Visible focus already in index.css — ensure links get offset */
+.main-content a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+/* Heading rhythm: more space above than below (craft-floor) */
+.main-content .section-title,
+.main-content h2:not(.page-title) {
+  margin-block: var(--ds-space-lg) var(--ds-space-sm);
+}
 
 /* —— Auth shell —— */
 .auth-shell__panel {

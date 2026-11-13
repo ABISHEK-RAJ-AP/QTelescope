@@ -8,7 +8,16 @@ Verdict per upstream repo the team considered. **Install** = copied/symlinked un
 | --- | --- | --- | --- |
 | [abdiraimov-otabek/dashboard-design-skill](https://github.com/abdiraimov-otabek/dashboard-design-skill) | **Install** | `.cursor/skills/dashboard-design/` | KPI tiles, charts, date pickers, wordless monitoring UI, screenshot QA |
 | [shinwood/awesome-dashboard-skill](https://github.com/shinwood/awesome-dashboard-skill) | **Install** | `.cursor/skills/awesome-dashboard-skill/` | Dense single-file HTML dashboards, ECharts bento, export/report prototypes |
-| [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | **Install** (prior) | `.cursor/skills/ui-ux-pro-max/` | Design system search, React ops UI polish |
+| [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | **Install** | `.cursor/skills/ui-ux-pro-max/` + `.agents/skills/ui-ux-pro-max/` | Design system search, React ops UI polish |
+| [pbakaus/impeccable](https://github.com/pbakaus/impeccable) | **Install** | `.agents/skills/impeccable` (symlink in `.cursor/skills/`) | Operate craft floor; polish/audit/adapt |
+| [anthropics/skills](https://github.com/anthropics/skills) `frontend-design` | **Install** | `.agents/skills/frontend-design` | Distinctive UI direction |
+| [Dammyjay93/interface-design](https://github.com/Dammyjay93/interface-design) | **Install** | `.agents/skills/interface-design` | Product UI craft |
+| [kylezantos/responsive-craft](https://github.com/kylezantos/responsive-craft) | **Install** | `.agents/skills/responsive-craft` | Responsive audit/build |
+| [educlopez/ui-craft](https://github.com/educlopez/ui-craft) | **Install** | `.agents/skills/ui-craft` | Product craft restraint |
+| [dominikmartn/hue](https://github.com/dominikmartn/hue) | **Install** | `.agents/skills/hue` | Brand → design-skill generator |
+| [nateherkai/scroll-craft](https://github.com/nateherkai/scroll-craft) | **Install (marketing only)** | `.agents/skills/scroll-craft` | Scroll landings — never `/app/*` |
+| [alirezarezvani/claude-skills](https://github.com/alirezarezvani/claude-skills) `epic-design` | **Install (marketing only)** | `.agents/skills/epic-design` | Cinematic landings — never `/app/*` |
+| [jiji262/claude-design-skill](https://github.com/jiji262/claude-design-skill) | **Install (marketing only)** | `.agents/skills/claude-design` | Design prototypes — never ops console motion |
 | [obra/superpowers](https://github.com/obra/superpowers) | **Install** (subset) | `using-superpowers`, `test-driven-development`, `systematic-debugging`, `writing-plans`, `verification-before-completion` | Non-trivial features, debug, plans |
 | [cloudflare/security-audit-skill](https://github.com/cloudflare/security-audit-skill) | **Install** (prior) | `.cursor/skills/security-audit/` | Security passes |
 | [latent-spaces/brag](https://github.com/latent-spaces/brag) | **Install** (prior) | `.cursor/skills/brag/` | Optional promo video |
