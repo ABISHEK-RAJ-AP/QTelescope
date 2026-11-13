@@ -28,7 +28,7 @@ import { buildBackendDetailsPath, buildTimelineInvestigationLocation } from '../
 import { STALE_MIN, ageMinutes, fmtAge, groupTimeline, isSimulatorBackend, lineageByProvider, sevBadge } from './fleetData.js';
 import { StateBar } from './fleetShared.jsx';
 import { dropAlertsCoveredByIncidents } from './opsHelpers.js';
-import { FLEET_TELEMETRY_EMPTY } from '../constants/messages.js';
+import { FLEET_TELEMETRY_EMPTY, unableToLoad } from '../constants/messages.js';
 import './DashboardHome.css';
 
 const HEALTH_PATH = '/app/resources/health';
