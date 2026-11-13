@@ -68,6 +68,7 @@ export function groupCalendarEvents(events) {
 export function OpsMonthCalendar({
   events = [],
   title = 'Calendar',
+  showTitle = true,
   onOpenEvent,
   layout = 'split',
   variant = 'default',
@@ -119,7 +120,7 @@ export function OpsMonthCalendar({
     <div className={rootClass}>
       <div className="ops-cal__grid" role="region" aria-label={`${title}, ${monthLabel}`}>
         <div className="ops-cal__header">
-          <h3 className="ops-cal__title">{title}</h3>
+          {showTitle ? <h3 className="ops-cal__title">{title}</h3> : null}
           <div className="ops-cal__nav">
             <button type="button" className="btn btn-secondary btn--xs" onClick={prev} aria-label="Previous month">
               <ChevronLeft size={16} />

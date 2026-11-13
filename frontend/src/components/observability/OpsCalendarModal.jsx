@@ -29,7 +29,7 @@ export function OpsCalendarModal({ open, onClose, title, events, onOpenEvent }) 
           </button>
         </div>
         <div className="admin-modal-body ops-cal-modal__body">
-          <OpsMonthCalendar layout="stacked" variant="full" title={title} events={events} onOpenEvent={onOpenEvent} />
+          <OpsMonthCalendar layout="stacked" variant="full" title={title} showTitle={false} events={events} onOpenEvent={onOpenEvent} />
         </div>
       </div>
     </div>

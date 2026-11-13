@@ -81,6 +81,15 @@ SECURITY_ADMIN = frozenset({
 
 PLATFORM_ADMIN = PERMS
 
+# Route gates. Same ids as ROLE_PERMISSIONS. rbac.py checks these; it does not keep a second list.
+ADMIN_ROLES = frozenset({"Admin", "SuperAdmin", "PlatformAdmin"})
+OPERATOR_ROLES = frozenset({
+    "Admin", "SuperAdmin", "PlatformAdmin", "Operator", "QuantumOpsAdmin", "OpsEngineer",
+})
+EVIDENCE_READER_ROLES = frozenset({
+    "Admin", "SuperAdmin", "PlatformAdmin", "Operator", "Researcher", "Auditor",
+})
+
 ROLE_PERMISSIONS: Dict[str, FrozenSet[str]] = {
     # Legacy roles (unchanged login paths)
     "Admin": PLATFORM_ADMIN,

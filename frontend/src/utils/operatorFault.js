@@ -14,12 +14,12 @@ export function summarizeOperatorError(raw) {
   const s = String(raw).trim();
   if (!s) return '';
 
-  if (SQL_RE.test(s)) return 'data store error';
-  if (TIMEOUT_RE.test(s)) return 'timed out';
-  if (AUTH_RE.test(s)) return 'auth failed';
-  if (NET_RE.test(s)) return 'connection failed';
+  if (SQL_RE.test(s)) return 'The data store rejected the request. Retry, or open Platform health.';
+  if (TIMEOUT_RE.test(s)) return 'The request timed out. Retry in a moment.';
+  if (AUTH_RE.test(s)) return 'Sign-in was rejected. Check your session and try again.';
+  if (NET_RE.test(s)) return 'The service could not be reached. Check the network, then retry.';
 
-  if (s.length > 72 || s.includes('\n') || s.includes('Traceback')) return 'collection failed';
+  if (s.length > 72 || s.includes('\n') || s.includes('Traceback')) return 'Collection failed. Retry, or open Platform health.';
 
   const lower = s.toLowerCase();
   if (lower === s && s.length < 40) return s;

@@ -1,7 +1,7 @@
 import React, { Suspense, useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   LayoutDashboard, Cpu, Activity, CheckCircle2,
-  FileText, Settings, LogOut, ShieldAlert, AlertTriangle, PlaySquare,
+  FileText, Settings, LogOut, AlertTriangle, PlaySquare,
   Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, Server,
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -9,10 +9,8 @@ import { buildAppPath, parseAppPath, isLegacyAppPath } from './appNav.js';
 import {
   EXECUTION_NAV,
   RESOURCES_NAV,
-  navBranchActive,
   navChildActive,
   goStateForNavChild,
-  defaultGoStateForBranch,
 } from './appSidebarNav.js';
 import {
   ALERTS_HUB_NAV,
@@ -60,6 +58,19 @@ import { canManageFleet, canSeeNavItem, visibleAdminNav } from './lib/permission
 import { clearSession } from './lib/sessionAuth.js';
 import { useSessionGuard } from './hooks/useSessionGuard.js';
 import { CommandPalette, useCommandPaletteShortcut } from './components/shell/CommandPalette.jsx';
+import { COPY } from './copy/operator.js';
+import { AccessDenied, ConsoleErrorBoundary, NotFoundPage } from './components/shell/RouteStatus.jsx';
+
+function skeletonFor(topic, backendSubTab) {
+  if (topic === 'alerts') return 'alerts';
+  if (topic === 'operations') return 'ops';
+  if (topic === 'investigate') return 'timeline';
+  if (topic === 'admin' || topic === 'settings') return 'settings';
+  if (topic === 'backends' && backendSubTab === 'details') return 'backend';
+  if (topic === 'backends' || topic === 'execution' || topic === 'reports') return 'table';
+  if (topic === 'telemetry' || topic === 'resources' || topic === 'platform') return 'grid';
+  return 'overview';
+}
 
 const SIDEBAR_COLLAPSE_KEY = 'qtelescope_sidebar_collapsed';
 
@@ -305,18 +316,12 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
     });
   };
 
-  // Render main topic view with internal sub-tabs
   const renderContent = () => {
+    if (parseAppPath(location.pathname).unmatched) {
+      return <NotFoundPage variant="console" />;
+    }
     if (mainTopic !== 'settings' && mainTopic !== 'onboarding' && mainTopic !== 'design' && !canSeeNavItem(currentUser, mainTopic)) {
-      return (
-        <div className="card" style={{ padding: 40, textAlign: 'center' }}>
-          <ShieldAlert size={48} color="#e11d48" style={{ margin: '0 auto 16px' }} />
-          <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>Access restricted</h2>
-          <p style={{ color: '#64748b', fontSize: 14 }}>
-            Role <strong>{currentUser?.role_label || currentUser?.role}</strong> cannot open this page.
-          </p>
-        </div>
-      );
+      return <AccessDenied role={currentUser?.role_label || currentUser?.role} />;
     }
     switch (mainTopic) {
       case 'design':
@@ -351,7 +356,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
         return <PlatformHealth />;
 
       case 'investigate':
-        return investigateSubTab === 'timeline' ? <OpsTimeline /> : <OpsTimeline />;
+        return <OpsTimeline />;
 
       case 'backends':
         if (backendSubTab === 'details') {
@@ -476,17 +481,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
       case 'admin': {
         const adminChildren = visibleAdminNav(currentUser);
         if (!adminChildren.length || !adminChildren.some((c) => c.value === adminSubTab || adminSubTab === 'hub')) {
-          return (
-            <div className="card" style={{ padding: 40, textAlign: 'center' }}>
-              <ShieldAlert size={48} color="#e11d48" style={{ margin: '0 auto 16px' }} />
-              <h2 style={{ fontSize: 20, color: '#e11d48', fontWeight: 700, marginBottom: 8 }}>
-                Access Restricted
-              </h2>
-              <p style={{ color: '#64748b', fontSize: 14 }}>
-                This configuration page is not available for role <strong>{currentUser?.role_label || currentUser?.role}</strong>.
-              </p>
-            </div>
-          );
+          return <AccessDenied role={currentUser?.role_label || currentUser?.role} />;
         }
         const section = adminChildren.some((c) => c.value === adminSubTab) ? adminSubTab : adminChildren[0].value;
         return (
@@ -529,6 +524,12 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
     selectedIncidentId,
     selectedAlertId,
   });
+
+  useEffect(() => {
+    const unmatched = parseAppPath(location.pathname).unmatched;
+    const label = unmatched ? COPY.shell.notFoundTitle : pageContext.title;
+    document.title = label ? `${label} · Q-TeleScope` : 'Q-TeleScope';
+  }, [location.pathname, pageContext.title]);
 
   const headerBreadcrumbs = useMemo(() => {
     if (mainTopic === 'alerts' && selectedAlertId) {
@@ -831,9 +832,13 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
         </header>
 
         <div id="page-content" tabIndex={-1} className={`page-container page-container--${density}`}>
-          <Suspense fallback={<BoneyardSkeleton layout="dashboard" />}>
-            {renderContent()}
-          </Suspense>
+          <ConsoleErrorBoundary resetKey={location.pathname}>
+            <Suspense fallback={<BoneyardSkeleton layout={skeletonFor(mainTopic, backendSubTab)} />}>
+              <div key={location.pathname} className="page-enter">
+                {renderContent()}
+              </div>
+            </Suspense>
+          </ConsoleErrorBoundary>
         </div>
       </main>
     </div>

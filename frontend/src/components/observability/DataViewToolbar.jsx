@@ -80,13 +80,13 @@ export function ViewModeToggle({
 
 export function DataPanelToolbar({ title, hint, children, layout, onLayoutChange, countLabel, showLayoutToggle = true }) {
   const bar = (
-    <div className="dvt-toolbar" role="toolbar">
+    <div className={`dvt-toolbar${title || hint ? ' dvt-toolbar--panel' : ''}`} role="toolbar">
       {children}
-      {showLayoutToggle && onLayoutChange && (
-        <ViewModeToggle value={layout} onChange={onLayoutChange} />
-      )}
       {countLabel != null && countLabel !== '' && (
         <span className="dvt-toolbar__count" role="status">{countLabel}</span>
+      )}
+      {showLayoutToggle && onLayoutChange && (
+        <ViewModeToggle value={layout} onChange={onLayoutChange} />
       )}
     </div>
   );

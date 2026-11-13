@@ -4,7 +4,9 @@ from app.metrics.capabilities import metrics_for_provider, provider_capability_m
 
 def test_registry_has_t1():
     assert "t1_us" in METRIC_REGISTRY
-    assert len(list_metrics()) == len(METRIC_REGISTRY)
+    listed = {row["metric_id"] for row in list_metrics()}
+    assert "t1_us" in listed
+    assert listed == set(METRIC_REGISTRY)
 
 
 def test_ibm_supports_t1_not_t2_echo():

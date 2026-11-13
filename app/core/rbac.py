@@ -6,11 +6,8 @@ from typing import FrozenSet, Optional
 
 from fastapi import Depends, Header, HTTPException, Request
 
+from app.core.permissions import ADMIN_ROLES, EVIDENCE_READER_ROLES, OPERATOR_ROLES
 from app.core.sessions import get_session, require_api_auth
-
-ADMIN_ROLES: FrozenSet[str] = frozenset({"Admin", "SuperAdmin", "PlatformAdmin"})
-OPERATOR_ROLES: FrozenSet[str] = frozenset({"Admin", "SuperAdmin", "PlatformAdmin", "Operator", "QuantumOpsAdmin", "OpsEngineer"})
-EVIDENCE_READER_ROLES: FrozenSet[str] = frozenset({"Admin", "SuperAdmin", "PlatformAdmin", "Operator", "Researcher", "Auditor"})
 
 
 def rbac_enforced() -> bool:

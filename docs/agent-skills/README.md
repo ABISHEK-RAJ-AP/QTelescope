@@ -20,6 +20,7 @@ Curated skills/rules for Cursor on this repo. Upstream clones live under `.vendo
 | [code-humanizer](https://github.com/LeonardNJU/code-humanizer) | `.cursor/skills/code-humanizer/` | Structural code-slop scan (duplication, try-import, narrating comments) |
 | [code-slop](https://github.com/benjaming/ai-skills) | `.cursor/skills/code-slop/` | Branch diff slop suggestions (comments, `any`, defensive noise) |
 | [brag](https://github.com/latent-spaces/brag) | `.cursor/skills/brag/` | Optional launch / promo video from repo |
+| [untangle-codebase](https://github.com/caldoai/skills/tree/main/skills/untangle-codebase) | `.cursor/skills/untangle-codebase/` | User-invoked whole-codebase structural refactor |
 
 Full categorization (install vs defer: Lenis, whiteboard, taste-skill, EUI, …): [`SKILL_CATALOG.md`](./SKILL_CATALOG.md).
 

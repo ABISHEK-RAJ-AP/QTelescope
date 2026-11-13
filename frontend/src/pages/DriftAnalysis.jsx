@@ -327,7 +327,7 @@ export const DriftAnalysis = () => {
           </div>
           <div className="drift-stat-box">
             <div className="drift-stat-label">Percent Change (%Δ)</div>
-            <div className="drift-stat-val-purple">{driftData.percent_change != null ? `${driftData.percent_change.toFixed(2)}%` : 'N/A'}</div>
+            <div className="drift-stat-val-purple">{driftData.percent_change != null ? `${driftData.percent_change.toFixed(2)}%` : '—'}</div>
           </div>
           <div className="drift-stat-box">
             <div className="drift-stat-label">Rate of Change (unit/hr)</div>

@@ -11,7 +11,7 @@ Derived from `frontend/src/appNav.js`, `frontend/src/appLazyPages.js`, `frontend
 | platform | `/app/platform/health` | Platform health | `PlatformHealth.jsx` | Platform | yes | Code only |
 | timeline | `/app/investigate/timeline` | Ops timeline | `OpsTimeline.jsx` | Investigate | yes | Code only |
 | backends-inv | `/app/backends/inventory` | Backend inventory | `BackendInventory.jsx` | Backends | yes | Code only |
-| backends-qubits | `/app/backends/qubits` | Qubits | `QubitMonitoring.jsx` | Backends | yes | Code only |
+| backends-qubits | `/app/backends/qubits` | Qubits | `BackendInventory.jsx` | Backends | yes | Legacy alias of inventory |
 | backend-ws | `/app/backends/details/:id[/tab]` | Backend workspace | `BackendDetails.jsx` | Backends | yes | Code only |
 | tel-live | `/app/telemetry/live` | Live telemetry | `LiveTelemetry.jsx` | Telemetry | yes | Code only |
 | tel-cal | `/app/telemetry/calibration` | Calibration status | `CalibrationStatus.jsx` | Telemetry | yes | Code only |

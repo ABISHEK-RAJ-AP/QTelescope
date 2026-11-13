@@ -6,6 +6,7 @@
 .rp-pad .rp-h { margin: 0 0 8px; }
 .rp-desc { font-size: var(--font-size-helper, 0.875rem); color: var(--text-muted); margin-top: 0; margin-bottom: 12px; line-height: 1.45; }
 .rp-label { display: flex; flex-direction: column; gap: 4px; font-size: var(--font-size-micro-label, 0.75rem); text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin-bottom: 6px; }
+.rp-result { display: inline-flex; align-items: center; gap: 6px; }
 .rp-label .input-control, .rp-label select { text-transform: none; letter-spacing: 0; font-size: var(--font-size-control, 1rem); }
 
 .rp-export { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(260px, 1fr); gap: 20px; }

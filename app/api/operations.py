@@ -281,6 +281,7 @@ def get_operations_timeline(
                 "id": a.alert_id,
                 "severity": a.severity,
                 "title": a.message or a.alert_type,
+                "alert_type": a.alert_type,
                 "backend_id": _alert_backend_id(a),
                 "status": a.status,
                 "at": a.detected_at.isoformat() if a.detected_at else None,

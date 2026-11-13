@@ -23,6 +23,7 @@ const AUTH_PUBLIC_PREFIXES = [
   '/auth/verify-captcha',
   '/auth/password/forgot',
   '/auth/password/reset',
+  '/auth/logout',
 ];
 
 export function isPublicAuthEndpoint(endpoint) {

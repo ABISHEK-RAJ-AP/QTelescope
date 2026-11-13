@@ -225,7 +225,6 @@ app.add_middleware(
 app.add_middleware(RequestIdMiddleware)
 app.add_middleware(SlowRequestMiddleware)
 
-# Include API Routers
 app.include_router(backends.router, prefix=settings.API_V1_STR)
 app.include_router(device_capabilities.router, prefix=settings.API_V1_STR)
 app.include_router(topology.router, prefix=settings.API_V1_STR)

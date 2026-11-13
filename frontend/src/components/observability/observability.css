@@ -311,8 +311,8 @@
 
 .ds-badge--live { border-color: rgba(5, 150, 105, 0.4); color: var(--accent-emerald); }
 .ds-badge--simulated,
-.ds-badge--mock { border-color: rgba(124, 58, 237, 0.35); color: var(--accent-purple); }
-.ds-badge--cached { border-color: rgba(37, 99, 235, 0.35); color: var(--accent-blue); }
+.ds-badge--mock { border-color: color-mix(in srgb, var(--text-muted) 45%, transparent); color: var(--text-secondary); }
+.ds-badge--cached { border-color: color-mix(in srgb, var(--accent) 40%, transparent); color: var(--accent); }
 .ds-badge--stale,
 .ds-badge--error { border-color: rgba(225, 29, 72, 0.35); color: var(--accent-rose); }
 .ds-badge--partial,
@@ -533,7 +533,7 @@
 .obs-error--panel {
   background: var(--bg-card-hover);
   border: 1px dashed var(--border-color);
-  border-radius: 10px;
+  border-radius: var(--radius);
   width: 100%;
   box-sizing: border-box;
 }
@@ -1159,7 +1159,7 @@
 }
 
 .health-metric-tile__val {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   font-size: 16px;
   font-weight: 600;
   margin-top: 4px;
@@ -1384,7 +1384,7 @@
 
 .health-backend-card__counts {
   font-size: 11px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-mono);
   color: var(--text-muted);
 }
 

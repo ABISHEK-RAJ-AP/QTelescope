@@ -567,8 +567,12 @@ def issue_sse_stream_ticket(authorization: Optional[str] = Header(None, alias="A
 
 @router.post("/logout")
 def logout_user(authorization: Optional[str] = Header(None, alias="Authorization")):
-    if authorization and authorization.lower().startswith("bearer "):
-        revoke_session(authorization[7:].strip())
+    # Always succeed — client clears local session even if the token is already gone.
+    try:
+        if authorization and authorization.lower().startswith("bearer "):
+            revoke_session(authorization[7:].strip())
+    except Exception:
+        pass
     return {"status": "SUCCESS", "message": "Signed out."}
 
 

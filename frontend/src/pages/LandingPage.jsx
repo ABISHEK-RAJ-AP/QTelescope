@@ -285,7 +285,7 @@ export function LandingPage() {
         </section>
 
         {/* Bottom CTA Banner */}
-        <section className="rounded-3xl border border-cyan-500/30 bg-gradient-to-r from-cyan-900/15 via-sky-900/10 to-purple-900/15 p-10 sm:p-14 text-center backdrop-blur-md">
+        <section className="rounded-lg border border-cyan-600/25 bg-white p-10 text-center dark:bg-slate-950 sm:p-14">
           <div className="mx-auto max-w-2xl space-y-4">
             <h2 className="text-3xl font-extrabold tracking-tight text-neutral-950 dark:text-white">
               Open the console

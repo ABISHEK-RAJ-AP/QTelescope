@@ -12,6 +12,7 @@ Verdict per upstream repo the team considered. **Install** = copied/symlinked un
 | [obra/superpowers](https://github.com/obra/superpowers) | **Install** (subset) | `using-superpowers`, `test-driven-development`, `systematic-debugging`, `writing-plans`, `verification-before-completion` | Non-trivial features, debug, plans |
 | [cloudflare/security-audit-skill](https://github.com/cloudflare/security-audit-skill) | **Install** (prior) | `.cursor/skills/security-audit/` | Security passes |
 | [latent-spaces/brag](https://github.com/latent-spaces/brag) | **Install** (prior) | `.cursor/skills/brag/` | Optional promo video |
+| [caldoai/skills](https://github.com/caldoai/skills) `untangle-codebase` | **Install** | `.cursor/skills/untangle-codebase/` | User-invoked structural refactor; ask Comments/Tests first |
 | Karpathy guidelines | **Rule** | `.cursor/rules/karpathy-guidelines.mdc` | Always |
 | Skill router | **Rule** | `.cursor/rules/skill-router.mdc` | Pick skills before coding |
 | [jakubkrehel/skills](https://github.com/jakubkrehel/skills) (interfaces.dev) | **Install** | `.cursor/skills/better-*`, `interface-review`, `explain-interface`, `build-design`, `break`, `state-machine`, `variant`, `teardown`, `afk` | Cross-discipline UI review; refresh `./scripts/install-interfaces-skills.sh` |

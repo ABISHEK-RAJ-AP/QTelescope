@@ -193,3 +193,66 @@ def build_health_vector_payload(db: Session) -> dict:
         "t1_crit_us": t1_crit,
         "backends": out,
     }
+
+
+_ROUTER_OVERALL = {
+    "GREEN": "HEALTHY",
+    "YELLOW": "DEGRADED",
+    "RED": "CRITICAL",
+    "UNKNOWN": "UNKNOWN",
+}
+_STATE_LABEL = {
+    "GREEN": "Healthy",
+    "YELLOW": "Warning",
+    "RED": "Degraded",
+    "UNKNOWN": "Unknown",
+}
+_ROUTER_SCORE = {"GREEN": 100.0, "YELLOW": 70.0, "RED": 40.0, "UNKNOWN": 0.0}
+_FACTOR_STATUS = {
+    "GREEN": "HEALTHY",
+    "YELLOW": "WARNING",
+    "RED": "CRITICAL",
+    "UNKNOWN": "UNKNOWN",
+}
+
+
+def cached_health_vector(db: Session) -> dict:
+    from app.core.cache import cache_key, default_ttl, get_or_set_json
+
+    ttl = default_ttl("health_vector", 10)
+    return get_or_set_json(cache_key("health", "vector"), ttl, lambda: build_health_vector_payload(db))
+
+
+def backend_by_id(payload: dict) -> dict:
+    return {row["backend_id"]: row for row in payload.get("backends") or []}
+
+
+def qubit_state(row: dict, qubit_index: int) -> str:
+    for q in row.get("qubits") or []:
+        if q.get("qubit_index") == qubit_index:
+            return q.get("state") or "UNKNOWN"
+    return "UNKNOWN"
+
+
+def health_label(state: str) -> str:
+    return _STATE_LABEL.get(state or "UNKNOWN", "Unknown")
+
+
+def legacy_backend_card(row: dict) -> dict:
+    router = row.get("router") or "UNKNOWN"
+    counts = row.get("counts") or {}
+    return {
+        "overall_health": _ROUTER_OVERALL.get(router, "UNKNOWN"),
+        "health_score": _ROUTER_SCORE.get(router, 0.0),
+        "contributing_factors": [
+            {
+                "name": "Health vector",
+                "status": _FACTOR_STATUS.get(router, "UNKNOWN"),
+                "description": (
+                    f"{counts.get('RED', 0)} red, {counts.get('YELLOW', 0)} yellow, "
+                    f"{counts.get('GREEN', 0)} green, {counts.get('UNKNOWN', 0)} unknown"
+                ),
+                "value": router,
+            }
+        ],
+    }

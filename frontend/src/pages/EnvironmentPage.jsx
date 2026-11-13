@@ -89,7 +89,6 @@ export const EnvironmentPage = () => {
   );
   const backendName = (id) => backends.find((b) => b.backend_id === id)?.backend_name || id;
 
-  // latest sample per backend x channel
   const latest = useMemo(() => {
     const m = {};
     samples.forEach((s) => {

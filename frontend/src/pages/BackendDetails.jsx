@@ -200,7 +200,6 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
     ...[...d.calHist].sort((a, b) => parseTs(b.calibration_timestamp) - parseTs(a.calibration_timestamp)).slice(0, 5).map((c) => ({ id: `cal-${c.id}`, ts: c.calibration_timestamp, text: `Calibration ${c.calibration_identifier || ''} recorded (${c.freshness_status})`, tail: 'CALIBRATION' })),
   ].sort((a, b) => (parseTs(b.ts) - parseTs(a.ts))).slice(0, 8);
 
-  // qubit table
   const needle = qSearch.trim().toLowerCase().replace(/^q/, '');
   const qFiltered = qubitRows
     .filter((q) => (qState === 'ALL' || q.state === qState) && (!needle || String(q.qubit_index) === needle))

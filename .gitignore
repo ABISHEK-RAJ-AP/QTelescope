@@ -99,6 +99,10 @@ data/provider_credentials.json
 data/environment_telemetry.json
 data/*.tmp
 data/qtelescope.db
+data/*.db-wal
+data/*.db-shm
+data/quantum_telemetry.db
+data/quantum_telemetry.db-*
 data/collector_health.json
 data/collector_dlq.jsonl
 data/collector_circuit.json
@@ -141,3 +145,7 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# RPH / GTIA hunt kit
+reports/cache/
+.venv-hunt/

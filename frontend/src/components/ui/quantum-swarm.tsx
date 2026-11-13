@@ -173,7 +173,6 @@ export function QuantumSwarm({
             const particleBaseColor = isDark ? "#ffffff" : "#0f172a"; // Crisp white in dark, Deep Navy in light
             const excitedGlowColor = isDark ? "rgba(56, 189, 248, 0.8)" : "rgba(2, 132, 199, 0.8)";
 
-            // 1. Draw Background
             ctx.fillStyle = bgColor;
             ctx.fillRect(0, 0, width, height);
 

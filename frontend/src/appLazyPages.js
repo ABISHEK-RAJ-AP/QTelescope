@@ -18,7 +18,6 @@ function lazyNamed(loader, name) {
 export const DashboardHome = lazyNamed(() => import('./pages/DashboardHome.jsx'), 'DashboardHome');
 export const BackendInventory = lazyNamed(() => import('./pages/BackendInventory.jsx'), 'BackendInventory');
 export const BackendDetails = lazyNamed(() => import('./pages/BackendDetails.jsx'), 'BackendDetails');
-export const QubitMonitoring = lazyNamed(() => import('./pages/QubitMonitoring.jsx'), 'QubitMonitoring');
 export const LiveTelemetry = lazyNamed(() => import('./pages/LiveTelemetry.jsx'), 'LiveTelemetry');
 export const CalibrationStatus = lazyNamed(() => import('./pages/CalibrationStatus.jsx'), 'CalibrationStatus');
 export const DriftAnalysis = lazyNamed(() => import('./pages/DriftAnalysis.jsx'), 'DriftAnalysis');

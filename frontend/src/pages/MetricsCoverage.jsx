@@ -16,15 +16,21 @@ import {
 import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
 import { buildBackendDetailsPath, buildDriftInvestigationLocation, buildTimelineInvestigationLocation } from '../lib/investigationLinks.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
+import { Check, Circle, Clock, Minus } from 'lucide-react';
 import { useProviderLineage, LineageBadge } from './useLineage.jsx';
 import './MetricsCoverage.css';
 
 const STATE = {
-  available: { glyph: '✓', label: 'Available', help: 'At least one stored sample exists for this metric.' },
-  stale: { glyph: '◔', label: 'Stale', help: 'Sample exists, but calibration is Stale (≥24 h); derived values may be outdated.' },
-  missing: { glyph: '○', label: 'No sample', help: 'Adapter supports this metric; nothing stored yet.' },
-  unsupported: { glyph: '—', label: 'Unsupported', help: 'Not offered for this provider/modality (excluded from coverage %).' },
+  available: { Icon: Check, label: 'Available', help: 'At least one stored sample exists for this metric.' },
+  stale: { Icon: Clock, label: 'Stale', help: 'Sample exists, but calibration is Stale (24 h or older). Derived values may be outdated.' },
+  missing: { Icon: Circle, label: 'No sample', help: 'This adapter supports the metric. Nothing is stored yet.' },
+  unsupported: { Icon: Minus, label: 'Unsupported', help: 'Not offered for this provider or modality. Excluded from coverage.' },
 };
+
+function StateMark({ id }) {
+  const Icon = STATE[id].Icon;
+  return <Icon size={14} aria-hidden />;
+}
 const ORDER = ['available', 'stale', 'missing', 'unsupported'];
 // scopes whose values come from the calibration snapshot
 const CAL_SCOPES = new Set(['qubit', 'gate', 'edge']);
@@ -100,7 +106,7 @@ export const MetricsCoverage = () => {
         <div className="mc-kpi"><div className="mc-kpi__label">Coverage</div><div className="mc-kpi__value">{summary.pct}</div><div className="mc-kpi__sub">{summary.available + summary.stale} of {summary.supported} supported cells have data</div></div>
         {ORDER.map((s) => (
           <div className="mc-kpi" key={s}>
-            <div className="mc-kpi__label"><span aria-hidden>{STATE[s].glyph}</span> {STATE[s].label}</div>
+            <div className="mc-kpi__label"><StateMark id={s} /> {STATE[s].label}</div>
             <div className="mc-kpi__value">{summary[s]}</div>
             <div className="mc-kpi__sub">{s === 'unsupported' ? 'excluded from %' : `${pctText(summary[s], coverage.length * metricCols.length)} of matrix`}</div>
           </div>
@@ -110,7 +116,7 @@ export const MetricsCoverage = () => {
       <section className="card page-panel">
         <div className="mc-matrix-head">
           <h3 className="page-section-title" style={{ margin: 0 }}>Backend × metric</h3>
-          <span className="mc-legend">{ORDER.map((s) => <span key={s} title={STATE[s].help}><i className={`mc-cell mc-cell--${s}`}>{STATE[s].glyph}</i>{STATE[s].label}</span>)}</span>
+          <span className="mc-legend">{ORDER.map((s) => <span key={s} title={STATE[s].help}><i className={`mc-cell mc-cell--${s}`}><StateMark id={s} /></i>{STATE[s].label}</span>)}</span>
         </div>
         <div className="mc-scroll">
           <table className="mc-matrix">
@@ -137,7 +143,7 @@ export const MetricsCoverage = () => {
                         <td key={m.metric_id}>
                           <button type="button" className={`mc-cell mc-cell--${s}`} onClick={() => setOpen({ b, m })}
                             aria-label={`${b.backend_name || b.backend_id}, ${m.name}: ${STATE[s].label}`} title={`${m.name}: ${STATE[s].label}`}>
-                            <span aria-hidden>{STATE[s].glyph}</span>
+                            <StateMark id={s} />
                           </button>
                         </td>
                       );
@@ -159,7 +165,7 @@ export const MetricsCoverage = () => {
         subtitle={open ? (open.b.backend_name || open.b.backend_id) : undefined}
         headerAside={open ? (
           <span className={`mc-state-pill mc-state-pill--${openState}`} title={STATE[openState].help}>
-            <span className="mc-state-pill__glyph" aria-hidden>{STATE[openState].glyph}</span>
+            <span className="mc-state-pill__glyph" aria-hidden><StateMark id={openState} /></span>
             <span className="mc-state-pill__label">{STATE[openState].label}</span>
           </span>
         ) : null}

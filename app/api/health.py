@@ -1,24 +1,11 @@
-import statistics
-from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from pydantic import BaseModel
 from app.core.database import get_db
-from app.models.entities import (
-    BackendModel, BackendTelemetryModel, CalibrationSnapshotModel,
-    QubitTelemetryModel, QubitModel, GateTelemetryModel, AlertRuleModel,
-)
+from app.models.entities import BackendModel, QubitModel
 from app.schemas.schemas import BackendHealthResponse
-from app.monitoring.health_engine import HealthEngine
-from app.analytics.health_vector import (
-    HEALTH_MODEL_VERSION,
-    T_GATE_US,
-    T1_CRIT_US,
-    evaluate_qubit,
-    mean_or_none,
-)
+from app.analytics.health_vector import T1_CRIT_US
 from app.analytics.health_explain import explain_backend, explain_qubit
 from app.analytics.coherence_aggregate import backend_coherence_row, build_coherence_snapshot
 from app.api.environment import env_severity_for
@@ -29,113 +16,29 @@ router = APIRouter(prefix="/health", tags=["Resource Health"])
 
 @router.get("/backends", response_model=List[BackendHealthResponse])
 def get_all_backends_health(db: Session = Depends(get_db)):
-    backends = db.query(BackendModel).all()
-    results = []
-    
-    for b in backends:
-        latest_st = (
-            db.query(BackendTelemetryModel)
-            .filter(BackendTelemetryModel.backend_id == b.backend_id)
-            .order_by(BackendTelemetryModel.timestamp.desc())
-            .first()
+    from app.services.health_vector_builder import cached_health_vector, legacy_backend_card
+
+    payload = cached_health_vector(db)
+    return [
+        BackendHealthResponse(
+            backend_id=row["backend_id"],
+            backend_name=row["backend_name"],
+            **legacy_backend_card(row),
         )
-        latest_calib = (
-            db.query(CalibrationSnapshotModel)
-            .filter(CalibrationSnapshotModel.backend_id == b.backend_id)
-            .order_by(CalibrationSnapshotModel.timestamp.desc())
-            .first()
-        )
-        
-        # Latest qubits telemetry
-        q_telemetry = []
-        qubits = db.query(QubitModel).filter(QubitModel.backend_id == b.backend_id).all()
-        for q in qubits:
-            qt = (
-                db.query(QubitTelemetryModel)
-                .filter(QubitTelemetryModel.backend_id == b.backend_id, QubitTelemetryModel.qubit_index == q.qubit_index)
-                .order_by(QubitTelemetryModel.timestamp.desc())
-                .first()
-            )
-            if qt:
-                q_telemetry.append({"t1": qt.t1, "t2": qt.t2, "readout_error": qt.readout_error})
-
-        op = b.operational_status == "ONLINE"
-        st_msg = b.status_message or "Operational"
-        freshness = latest_calib.freshness_status if latest_calib else "Unknown"
-        age_hrs = latest_calib.calibration_age if latest_calib else 9999.0
-        pending = latest_st.pending_jobs if latest_st else 0
-
-        eval_res = HealthEngine.evaluate_backend_health(
-            operational=op,
-            status_msg=st_msg,
-            calibration_freshness=freshness,
-            calibration_age_hours=age_hrs,
-            pending_jobs=pending,
-            qubits_telemetry=q_telemetry
-        )
-
-        results.append(BackendHealthResponse(
-            backend_id=b.backend_id,
-            backend_name=b.backend_name,
-            overall_health=eval_res["overall_health"],
-            health_score=eval_res["health_score"],
-            contributing_factors=eval_res["contributing_factors"]
-        ))
-
-    return results
+        for row in payload.get("backends") or []
+    ]
 
 @router.get("/backends/{backend_id}", response_model=BackendHealthResponse)
 def get_backend_health_detail(backend_id: str, db: Session = Depends(get_db)):
-    b = db.query(BackendModel).filter(BackendModel.backend_id == backend_id).first()
-    if not b:
+    from app.services.health_vector_builder import backend_by_id, cached_health_vector, legacy_backend_card
+
+    row = backend_by_id(cached_health_vector(db)).get(backend_id)
+    if not row:
         raise HTTPException(status_code=404, detail="Backend not found")
-        
-    latest_st = (
-        db.query(BackendTelemetryModel)
-        .filter(BackendTelemetryModel.backend_id == backend_id)
-        .order_by(BackendTelemetryModel.timestamp.desc())
-        .first()
-    )
-    latest_calib = (
-        db.query(CalibrationSnapshotModel)
-        .filter(CalibrationSnapshotModel.backend_id == backend_id)
-        .order_by(CalibrationSnapshotModel.timestamp.desc())
-        .first()
-    )
-    
-    q_telemetry = []
-    qubits = db.query(QubitModel).filter(QubitModel.backend_id == backend_id).all()
-    for q in qubits:
-        qt = (
-            db.query(QubitTelemetryModel)
-            .filter(QubitTelemetryModel.backend_id == backend_id, QubitTelemetryModel.qubit_index == q.qubit_index)
-            .order_by(QubitTelemetryModel.timestamp.desc())
-            .first()
-        )
-        if qt:
-            q_telemetry.append({"t1": qt.t1, "t2": qt.t2, "readout_error": qt.readout_error})
-
-    op = b.operational_status == "ONLINE"
-    st_msg = b.status_message or "Operational"
-    freshness = latest_calib.freshness_status if latest_calib else "Unknown"
-    age_hrs = latest_calib.calibration_age if latest_calib else 9999.0
-    pending = latest_st.pending_jobs if latest_st else 0
-
-    eval_res = HealthEngine.evaluate_backend_health(
-        operational=op,
-        status_msg=st_msg,
-        calibration_freshness=freshness,
-        calibration_age_hours=age_hrs,
-        pending_jobs=pending,
-        qubits_telemetry=q_telemetry
-    )
-
     return BackendHealthResponse(
-        backend_id=b.backend_id,
-        backend_name=b.backend_name,
-        overall_health=eval_res["overall_health"],
-        health_score=eval_res["health_score"],
-        contributing_factors=eval_res["contributing_factors"]
+        backend_id=row["backend_id"],
+        backend_name=row["backend_name"],
+        **legacy_backend_card(row),
     )
 
 
@@ -147,66 +50,11 @@ class CompareBackendsBody(BaseModel):
     backend_ids: List[str]
 
 
-def _t1_crit(db: Session) -> float:
-    rule = db.query(AlertRuleModel).filter(AlertRuleModel.rule_id == "rule_t1").first()
-    if rule and rule.threshold_value:
-        return float(rule.threshold_value)
-    return T1_CRIT_US
-
-
-def _latest_gates(db: Session, backend_id: str):
-    latest_ts = (
-        db.query(func.max(GateTelemetryModel.timestamp))
-        .filter(GateTelemetryModel.backend_id == backend_id)
-        .scalar()
-    )
-    if not latest_ts:
-        return [], []
-    # Each gate row gets its own utcnow(); take the collection burst, not one row.
-    cutoff = latest_ts - timedelta(minutes=2)
-    rows = (
-        db.query(GateTelemetryModel)
-        .filter(GateTelemetryModel.backend_id == backend_id, GateTelemetryModel.timestamp >= cutoff)
-        .all()
-    )
-    g1, g2 = [], []
-    for g in rows:
-        if g.gate_error is None:
-            continue
-        nq = len(g.qubits or [])
-        if nq <= 1:
-            g1.append(g)
-        else:
-            g2.append(g)
-    return g1, g2
-
-
-def _gate_error_for(gates, qubit_index: int, fallback):
-    for g in gates:
-        if qubit_index in (g.qubits or []):
-            return g.gate_error
-    return fallback
-
-
-def _t_gate_us(gates) -> float:
-    durs = [g.gate_duration for g in gates if g.gate_duration]
-    if not durs:
-        return T_GATE_US
-    # stored as ns in mock
-    mean_ns = sum(durs) / len(durs)
-    if mean_ns > 1.0:
-        return mean_ns / 1000.0
-    return mean_ns
-
-
 @router.get("/vector")
 def get_health_vector(db: Session = Depends(get_db)):
-    from app.core.cache import cache_key, default_ttl, get_or_set_json
-    from app.services.health_vector_builder import build_health_vector_payload
+    from app.services.health_vector_builder import cached_health_vector
 
-    ttl = default_ttl("health_vector", 10)
-    key = cache_key("health", "vector")
-    return get_or_set_json(key, ttl, lambda: build_health_vector_payload(db))
+    return cached_health_vector(db)
 
 
 @router.post("/compare")

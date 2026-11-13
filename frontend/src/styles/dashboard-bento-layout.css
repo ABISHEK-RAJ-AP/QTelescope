@@ -3,23 +3,14 @@
 /* Chart grid shell — Cert-style soft panel (dashboard-home__charts wraps this) */
 .dashboard-home__charts {
   padding: 14px;
-  border-radius: 16px;
+  border-radius: var(--radius);
   border: 1px solid var(--border-color);
-  background: linear-gradient(
-    165deg,
-    color-mix(in srgb, var(--ds-primary, #172554) 4%, var(--bg-card)) 0%,
-    color-mix(in srgb, #2563eb 3%, var(--bg-card)) 28%,
-    var(--bg-card) 72%
-  );
+  background: var(--bg-card);
   box-shadow: 0 1px 2px color-mix(in srgb, var(--text-primary) 5%, transparent);
 }
 
 .dark .dashboard-home__charts {
-  background: linear-gradient(
-    165deg,
-    color-mix(in srgb, #1e3a8a 18%, var(--bg-card)) 0%,
-    var(--bg-card) 65%
-  );
+  background: var(--bg-card);
 }
 
 .dash-bento {

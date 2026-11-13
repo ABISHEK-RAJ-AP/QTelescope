@@ -13,7 +13,7 @@ import { buildBackendDetailsPath, buildTimelineInvestigationLocation } from '../
 import { STALE_MIN, ageMinutes, fetchActiveAlerts, groupAlerts, lineageByProvider, sevBadge } from './fleetData.js';
 import { LayoutGrid, List } from 'lucide-react';
 import { OpsMonthCalendar } from '../components/observability/OpsMonthCalendar.jsx';
-import { toMs } from './opsHelpers.js';
+import { dropAlertsCoveredByIncidents, toMs } from './opsHelpers.js';
 import { LineageChip } from './fleetShared.jsx';
 import { collectorQueueTitle } from '../utils/operatorFault.js';
 import { parseIncidentTitle } from '../lib/incidentUi.js';
@@ -269,17 +269,18 @@ export const OperationsCentre = () => {
   const calEvents = useMemo(() => {
     const alerts = Array.isArray(d.alerts) ? d.alerts : [];
     const incidents = Array.isArray(d.incidents) ? d.incidents : (d.centre?.incidents || []);
-  const alertEv = alerts.map((a) => ({
+    const alertEv = alerts.map((a) => ({
       id: a.alert_id,
       at: a.detected_at,
       title: `${a.backend_id} ${a.alert_type}`,
       subtitle: a.alert_id,
       groupKey: `alert|${a.backend_id}|${a.alert_type}`,
       kind: 'Alert',
+      alertType: a.alert_type,
+      backendId: a.backend_id,
       severity: a.severity,
       status: a.status,
       open: () => window.location.assign(`/app/alerts?alert=${encodeURIComponent(a.alert_id)}`),
-      // URL ?alert= opens list drawer (AlertsEvents + useAppScope), not /alerts/detail/*
     }));
     const incEv = incidents.map((inc) => ({
       id: inc.incident_id,
@@ -288,11 +289,12 @@ export const OperationsCentre = () => {
       subtitle: inc.incident_id,
       groupKey: `incident|${inc.incident_id}`,
       kind: 'Incident',
+      backendId: inc.backend_id,
       severity: inc.severity,
       status: inc.status,
       open: () => window.location.assign(`/app/alerts/incidents/${encodeURIComponent(inc.incident_id)}`),
     }));
-    return [...alertEv, ...incEv].filter((e) => toMs(e.at));
+    return dropAlertsCoveredByIncidents([...alertEv, ...incEv]).filter((e) => toMs(e.at));
   }, [d]);
 
   const staleCollectors = useMemo(() => (providers || []).filter((p) => {

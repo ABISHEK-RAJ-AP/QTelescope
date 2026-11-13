@@ -20,6 +20,10 @@ def test_coherence_and_metrics_registry():
 
 
 def test_drift_qubit_route_exists():
-    # 404 backend is fine — proves route is wired (not 405)
-    r = client.get(f"{P}/drift/no_such_backend/qubits/0?limit=20")
-    assert r.status_code in (200, 404)
+    paths = []
+    for route in app.router.routes:
+        router = getattr(route, "original_router", None)
+        if router is None:
+            continue
+        paths.extend(getattr(child, "path", "") for child in router.routes)
+    assert "/drift/{backend_id}/qubits/{qubit_index}" in paths

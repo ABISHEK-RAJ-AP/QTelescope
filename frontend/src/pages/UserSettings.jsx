@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Shield, User, Bell, Sparkles, Sun, Moon, Monitor } from 'lucide-react';
+import { Check, Shield, SlidersHorizontal, User, Bell, Sun, Moon, Monitor } from 'lucide-react';
 import { api } from '../services/api';
 import { notifyError, notifySuccess } from '../lib/toast.js';
 import { unableToLoad } from '../constants/messages.js';
@@ -29,7 +29,7 @@ const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
   { id: 'security', label: 'Security', icon: Shield },
   { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'preferences', label: 'Preferences', icon: Sparkles },
+  { id: 'preferences', label: 'Preferences', icon: SlidersHorizontal },
 ];
 
 function initials(name, username) {
@@ -271,7 +271,7 @@ export function UserSettings({ currentUser, onUserUpdate }) {
           <ul className="us-access__caps" aria-label="Capability areas">
             {accessHighlights.map((cap) => (
               <li key={cap.id} className={`us-access__cap${cap.granted ? ' is-on' : ' is-off'}`}>
-                <span className="us-access__cap-status" aria-hidden>{cap.granted ? '✓' : '—'}</span>
+                <span className="us-access__cap-status" aria-hidden>{cap.granted ? <Check size={14} /> : '—'}</span>
                 <div className="us-access__cap-body">
                   <strong>{cap.label}</strong>
                   <span>{cap.granted ? 'Included for your role' : 'Not included'}</span>

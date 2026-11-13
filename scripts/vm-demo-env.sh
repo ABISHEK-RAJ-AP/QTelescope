@@ -67,14 +67,17 @@ load_env_file() {
 
 activate_python_venv() {
   local ROOT="${1:?}"
-  if [[ -d "${ROOT}/.venv" ]]; then
+  if [[ -f "${ROOT}/.venv/bin/activate" ]]; then
     # shellcheck disable=SC1091
     source "${ROOT}/.venv/bin/activate"
-  elif [[ -d "${ROOT}/venv" ]]; then
+  elif [[ -f "${ROOT}/venv/bin/activate" ]]; then
     # shellcheck disable=SC1091
     source "${ROOT}/venv/bin/activate"
+  elif [[ -x "${HOME}/miniforge3/bin/python" ]]; then
+    export PATH="${HOME}/miniforge3/bin:${PATH}"
+    echo "WARN: no venv activate — using ${HOME}/miniforge3/bin/python" >&2
   else
-    echo "WARN: no venv — using $(command -v python)" >&2
+    echo "WARN: no venv — using $(command -v python || echo 'python-not-found')" >&2
   fi
 }
 

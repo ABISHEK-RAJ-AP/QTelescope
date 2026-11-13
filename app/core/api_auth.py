@@ -18,6 +18,7 @@ _PUBLIC_SUFFIXES = (
     "/auth/verify-captcha",
     "/auth/password/forgot",
     "/auth/password/reset",
+    "/auth/logout",
 )
 
 

@@ -4,7 +4,12 @@ from typing import List
 from app.core.database import get_db
 from app.models.entities import QubitModel, QubitTelemetryModel
 from app.schemas.schemas import QubitDetailResponse
-from app.monitoring.health_engine import HealthEngine
+from app.services.health_vector_builder import (
+    backend_by_id,
+    cached_health_vector,
+    health_label,
+    qubit_state,
+)
 
 router = APIRouter(prefix="/backends/{backend_id}/qubits", tags=["Qubits"])
 
@@ -12,7 +17,8 @@ router = APIRouter(prefix="/backends/{backend_id}/qubits", tags=["Qubits"])
 def get_backend_qubits(backend_id: str, db: Session = Depends(get_db)):
     qubits = db.query(QubitModel).filter(QubitModel.backend_id == backend_id).all()
     results = []
-    
+    row = backend_by_id(cached_health_vector(db)).get(backend_id) or {}
+
     for q in qubits:
         latest = (
             db.query(QubitTelemetryModel)
@@ -26,7 +32,7 @@ def get_backend_qubits(backend_id: str, db: Session = Depends(get_db)):
         freq = latest.frequency if latest else None
         modality_m = latest.modality_metrics if latest else q.modality_metrics
         
-        health = HealthEngine.evaluate_qubit_health(t1, t2, ro)
+        health = health_label(qubit_state(row, q.qubit_index))
         
         results.append(QubitDetailResponse(
             qubit_id=q.qubit_id,
@@ -60,7 +66,7 @@ def get_qubit_detail(backend_id: str, qubit_index: int, db: Session = Depends(ge
     ro = latest.readout_error if latest else None
     freq = latest.frequency if latest else None
     modality_m = latest.modality_metrics if latest else qubit.modality_metrics
-    health = HealthEngine.evaluate_qubit_health(t1, t2, ro)
+    health = health_label(qubit_state(backend_by_id(cached_health_vector(db)).get(backend_id) or {}, qubit_index))
     
     return QubitDetailResponse(
         qubit_id=qubit.qubit_id,

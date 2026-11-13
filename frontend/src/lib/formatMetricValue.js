@@ -8,7 +8,7 @@ const LABELS = {
   awaiting: 'Awaiting data',
   unsupported: 'Not supported',
   na: 'N/A',
-  failed: 'Unable to load',
+  failed: 'Could not load',
 };
 
 /**

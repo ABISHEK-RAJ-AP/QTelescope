@@ -3,8 +3,8 @@ import { collectorQueueTitle, summarizeOperatorError } from './operatorFault.js'
 
 describe('summarizeOperatorError', () => {
   it('hides SQL details', () => {
-    expect(summarizeOperatorError('UNIQUE constraint failed: connectivity_edges.edge_id')).toBe('data store error');
-    expect(summarizeOperatorError('no such table: providers')).toBe('data store error');
+    expect(summarizeOperatorError('UNIQUE constraint failed: connectivity_edges.edge_id')).toMatch(/data store rejected/i);
+    expect(summarizeOperatorError('no such table: providers')).toMatch(/data store rejected/i);
   });
 
   it('keeps short plain messages', () => {
@@ -16,6 +16,6 @@ describe('collectorQueueTitle', () => {
   it('never includes raw error string', () => {
     const t = collectorQueueTitle('ibm', { status: 'ERROR', error: 'sqlite3.OperationalError: database is locked' });
     expect(t).not.toMatch(/sqlite/i);
-    expect(t).toContain('data store error');
+    expect(t).toMatch(/data store rejected/i);
   });
 });

@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from app.providers.ibm_adapter import IBMProviderAdapter
 from app.normalizers.telemetry_normalizer import TelemetryNormalizer
 from app.monitoring.freshness import CalibrationFreshnessMonitor
-from app.monitoring.health_engine import HealthEngine
 from app.alerts.alert_engine import AlertEngine
 from app.core.provenance import infer_collection_lineage
 from app.models.entities import (
@@ -26,7 +25,6 @@ class TelemetryCollector:
         self.adapter = provider_adapter or IBMProviderAdapter()
 
     def run_full_collection_cycle(self):
-        # Infer provider identity from adapter
         adapter_cls = self.adapter.__class__.__name__
         if "Rigetti" in adapter_cls:
             prov_id, prov_name, prov_type = "rigetti_quantum", "Rigetti Computing", "rigetti"
@@ -78,7 +76,6 @@ class TelemetryCollector:
                 self.db.add(backend_record)
                 self.db.commit()
                 
-                # Seed Qubits and Connectivity
                 for q_idx in range(b["qubit_count"]):
                     self.db.add(QubitModel(
                         qubit_id=f"{b['backend_id']}_Q{q_idx}",
@@ -122,7 +119,6 @@ class TelemetryCollector:
         # 3. Collect Telemetry for discovered Backends
         for b in backends:
             backend_id = b["backend_id"]
-            # Backend Status & Queue
             status_raw = self.adapter.get_backend_status(backend_id)
             status_norm = TelemetryNormalizer.normalize_backend_status(
                 status_raw, provider_id=prov_id, lineage=lineage
@@ -159,7 +155,6 @@ class TelemetryCollector:
                 elif tel_age_h > 3 and freshness == "Fresh":
                     freshness = "Aging"
 
-            # Store Calibration Snapshot
             calib_snap = CalibrationSnapshotModel(
                 timestamp=utcnow(),
                 backend_id=backend_id,
@@ -174,7 +169,6 @@ class TelemetryCollector:
             )
             self.db.add(calib_snap)
 
-            # Qubits Telemetry
             qubits_norm = []
             for q_raw in props_raw.get("qubits", []):
                 q_norm = TelemetryNormalizer.normalize_qubit_metric(q_raw, backend_id)
@@ -190,12 +184,10 @@ class TelemetryCollector:
                     if q_entity:
                         q_entity.modality_metrics = q_norm["modality_metrics"]
 
-            # Gates Telemetry
             for g_raw in props_raw.get("gates", []):
                 g_norm = TelemetryNormalizer.normalize_gate_metric(g_raw, backend_id)
                 self.db.add(GateTelemetryModel(**g_norm))
 
-            # Job Records
             valid_job_fields = {"job_id", "backend_id", "status", "submitted_at", "started_at", "completed_at", "runtime", "failure_reason", "calibration_identifier", "tags", "created_at"}
             jobs_raw = self.adapter.get_jobs(backend_id, limit=8)
             for j_raw in jobs_raw:

@@ -347,6 +347,13 @@
 
 .oc-item--grid .oc-item__badge {
   justify-self: start;
+  max-width: 100%;
+}
+.oc-item--grid .oc-item__title,
+.oc-item--grid .oc-item__detail,
+.oc-item--grid .oc-item__meta {
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 .oc-item--grid .oc-item__cta {

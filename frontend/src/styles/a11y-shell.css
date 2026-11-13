@@ -364,7 +364,7 @@ body._access_dyslexia textarea,
 body._access_dyslexia select,
 body._access_dyslexia .sidebar,
 body._access_dyslexia .main-content {
-  font-family: 'Lexend', 'Atkinson Hyperlegible', 'Comic Sans MS', sans-serif !important;
+  font-family: var(--font-sans) !important;
   letter-spacing: 0.02em;
 }
 
@@ -465,8 +465,9 @@ html.a11y-contrast-high {
   --bg-card-hover: #f1f5f9;
   --bg-dark: #ffffff;
   --bg-sidebar: #ffffff;
-  --accent-cyan: #0369a1;
-  --accent-blue: #1d4ed8;
+  --accent: #0369a1;
+  --accent-cyan: var(--accent);
+  --accent-blue: var(--accent);
   --accent-rose: #be123c;
   --accent-amber: #b45309;
   --accent-emerald: #047857;
@@ -481,8 +482,9 @@ html.dark.a11y-contrast-high {
   --bg-card-hover: #111827;
   --bg-dark: #000000;
   --bg-sidebar: #000000;
-  --accent-cyan: #7dd3fc;
-  --accent-blue: #93c5fd;
+  --accent: #7dd3fc;
+  --accent-cyan: var(--accent);
+  --accent-blue: var(--accent);
   --accent-rose: #fb7185;
   --accent-amber: #fbbf24;
   --accent-emerald: #6ee7b7;

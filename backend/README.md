@@ -6,4 +6,4 @@ Use the **repository root** application instead:
 - Tests: `tests/` at repo root
 - Requirements: `backend/requirements.txt` (shared dependency list)
 
-This folder is retained for older Docker paths only; do not add new features here.
+`backend/app/` was a second copy of the API and has been removed. This folder keeps the shared requirements list and `.env.example` for older start scripts. Do not add features here.

@@ -27,7 +27,7 @@ import { usePageLayout } from '../hooks/usePageLayout.js';
 import { buildBackendDetailsPath, buildTimelineInvestigationLocation } from '../lib/investigationLinks.js';
 import { STALE_MIN, ageMinutes, fmtAge, groupTimeline, isSimulatorBackend, lineageByProvider, sevBadge } from './fleetData.js';
 import { StateBar } from './fleetShared.jsx';
-import { FLEET_TELEMETRY_EMPTY, unableToLoad } from '../constants/messages.js';
+import { dropAlertsCoveredByIncidents } from './opsHelpers.js';
 import './DashboardHome.css';
 
 const HEALTH_PATH = '/app/resources/health';
@@ -416,7 +416,7 @@ function DashboardHomeInner() {
 
   const events = useMemo(() => {
     const ev = d.timeline?.events || (Array.isArray(d.timeline) ? d.timeline : []);
-    return groupTimeline(ev).slice(0, 7);
+    return groupTimeline(dropAlertsCoveredByIncidents(ev)).slice(0, 7);
   }, [d.timeline]);
 
   const latestTelemetry = d.platform?.latest_backend_telemetry_at;

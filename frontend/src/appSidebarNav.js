@@ -44,33 +44,6 @@ export const ALERTS_NAV = [
   { value: 'incidents', label: 'Incidents' },
 ];
 
-export const ADMIN_NAV = [
-  { value: 'integrations', label: 'Integrations' },
-  { value: 'collectors', label: 'Collectors' },
-  { value: 'rules', label: 'Alert rules' },
-  { value: 'users', label: 'Users & roles' },
-];
-
-/** @returns {boolean} whether any child of this nav branch matches current shell state */
-export function navBranchActive(item, state) {
-  const { mainTopic, telemetrySubTab, executionSubTab, resourceSubTab, alertsView, adminSubTab } = state;
-  if (!item.children?.length) return mainTopic === item.id;
-  switch (item.id) {
-    case 'telemetry':
-      return mainTopic === 'telemetry';
-    case 'execution':
-      return mainTopic === 'execution';
-    case 'resources':
-      return mainTopic === 'resources';
-    case 'alerts':
-      return mainTopic === 'alerts';
-    case 'admin':
-      return mainTopic === 'admin';
-    default:
-      return mainTopic === item.id;
-  }
-}
-
 export function navChildActive(item, child, state) {
   const { mainTopic, telemetrySubTab, executionSubTab, resourceSubTab, alertsView, adminSubTab } = state;
   switch (item.id) {
@@ -111,8 +84,3 @@ export function goStateForNavChild(item, child) {
   }
 }
 
-export function defaultGoStateForBranch(item) {
-  const first = item.children?.[0];
-  if (!first) return { mainTopic: item.id };
-  return goStateForNavChild(item, first);
-}

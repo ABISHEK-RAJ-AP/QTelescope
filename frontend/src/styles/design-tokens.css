@@ -8,16 +8,17 @@
   --ds-surface-page: var(--bg-dark, #f8fafc);
   --ds-surface-card: var(--bg-card, #ffffff);
   --ds-primary: #172554;
-  --ds-accent: var(--accent-cyan, #0891b2);
+  --ds-accent: var(--accent, #0284c7);
+  --radius: 8px;
 
   --ds-status-healthy: var(--accent-emerald, #059669);
   --ds-status-warn: var(--accent-amber, #d97706);
   --ds-status-critical: var(--accent-rose, #e11d48);
-  --ds-status-info: var(--accent-blue, #2563eb);
+  --ds-status-info: var(--accent, #0284c7);
   --ds-status-unknown: var(--text-muted, #64748b);
 
-  --ds-radius-card: 12px;
-  --ds-radius-control: 10px;
+  --ds-radius-card: var(--radius);
+  --ds-radius-control: var(--radius);
   --ds-space-2xs: 4px;
   --ds-space-xs: 8px;
   --ds-space-sm: 12px;

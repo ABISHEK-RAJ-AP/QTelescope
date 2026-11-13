@@ -37,14 +37,12 @@ class TelemetryNormalizer:
         t2 = qubit_raw.get("t2")
         readout = qubit_raw.get("readout_error")
         
-        # Check validity criteria
         quality = "VALID"
         if t1 is None or t2 is None or readout is None:
             quality = "PARTIAL_MISSING"
         elif t1 <= 0 or t2 <= 0:
             quality = "INVALID_RANGE"
 
-        # Extract modality-specific parameters
         modality_metrics = qubit_raw.get("modality_extras") or qubit_raw.get("modality_metrics") or {}
         if not modality_metrics:
             # Infer from raw payload

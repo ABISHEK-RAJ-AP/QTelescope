@@ -1,6 +1,6 @@
 .ops-tl .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-.ot-note { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 10px 14px; border-radius: 8px; font-size: 13px;
-  border: 1px solid var(--border-color); border-left: 4px solid #7c3aed; background: var(--bg-card); color: var(--text-primary); }
+.ot-note { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; padding: 10px 14px; border-radius: var(--radius); font-size: 13px;
+  border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-primary); }
 .ot-note--warn { border-left-color: var(--accent-amber); }
 .ops-tl .ot-filter-bar.filter-bar {
   padding: 8px 12px;

@@ -230,7 +230,7 @@ export const ReportsPage = () => {
                 <thead><tr><th>Time (IST)</th><th>Report</th><th>Scope</th><th>Format</th><th>Rows</th><th>Size</th><th>Result</th></tr></thead>
                 <tbody>{history.map((h, i) => (
                   <tr key={i}><td>{formatIST(h.at)}</td><td>{h.report}</td><td>{h.scope}</td><td>{h.format}</td><td>{h.rows ?? '—'}</td><td>{h.size ? kb(h.size) : '—'}</td>
-                    <td>{h.state === 'ok' ? '✓ Done' : `✕ ${h.error}`}</td></tr>
+                    <td>{h.state === 'ok' ? <span className="rp-result"><CheckCircle2 size={14} aria-hidden /> Done</span> : <span className="rp-result"><AlertTriangle size={14} aria-hidden /> {h.error}</span>}</td></tr>
                 ))}</tbody>
               </table>
             </div>

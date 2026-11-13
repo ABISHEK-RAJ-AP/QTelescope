@@ -2,33 +2,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
 import { canSeeNavItem, canManageFleet } from '@/lib/permissions';
+import { consoleCommands } from '@/lib/consoleRoutes';
 import { buildBackendDetailsPath } from '@/lib/investigationLinks.js';
 import { api } from '@/services/api';
 import './commandPalette.css';
-
-const NAV_COMMANDS = [
-  { id: 'overview', label: 'Overview', path: '/app/overview', nav: 'home', group: 'Console' },
-  { id: 'compare', label: 'Compare & routing', path: '/app/telemetry/compare', nav: 'compare', group: 'Console' },
-  { id: 'operate', label: 'Operator console', path: '/app/operate', nav: 'operations', group: 'Labs' },
-  { id: 'platform', label: 'Platform health', path: '/app/platform/health', nav: 'platform', group: 'Labs' },
-  { id: 'inventory', label: 'Backend inventory', path: '/app/backends/inventory', nav: 'backends', group: 'Observe' },
-  { id: 'live', label: 'Live telemetry', path: '/app/telemetry/live', nav: 'telemetry', group: 'Analyze' },
-  { id: 'metrics-explorer', label: 'Metrics explorer', path: '/app/telemetry/explorer', nav: 'telemetry', group: 'Analyze' },
-  { id: 'calibration', label: 'Calibration status', path: '/app/telemetry/calibration', nav: 'telemetry', group: 'Analyze' },
-  { id: 'drift', label: 'Drift analysis', path: '/app/telemetry/drift', nav: 'telemetry', group: 'Analyze' },
-  { id: 'jobs', label: 'Job monitoring', path: '/app/execution/jobs', nav: 'execution', group: 'Execute' },
-  { id: 'queues', label: 'Queue monitoring', path: '/app/execution/queues', nav: 'execution', group: 'Execute' },
-  { id: 'alerts', label: 'Active alerts', path: '/app/alerts', nav: 'alerts', group: 'Record' },
-  { id: 'incidents', label: 'Open incidents', path: '/app/alerts/incidents', nav: 'alerts', group: 'Record' },
-  { id: 'timeline', label: 'Operations timeline', path: '/app/investigate/timeline', nav: 'investigate', group: 'Record' },
-  { id: 'reports', label: 'Reports & evidence', path: '/app/reports', nav: 'reports', group: 'Record' },
-  { id: 'settings', label: 'Account settings', path: '/app/settings', nav: 'settings', group: 'Personal' },
-  { id: 'admin-int', label: 'Integrations', path: '/app/admin/integrations', nav: 'admin', group: 'Configure' },
-  { id: 'admin-coll', label: 'Collectors', path: '/app/admin/collectors', nav: 'admin', group: 'Configure' },
-  { id: 'admin-rules', label: 'Alert rules', path: '/app/admin/rules', nav: 'admin', group: 'Configure' },
-  { id: 'admin-users', label: 'Users & roles', path: '/app/admin/users', nav: 'admin', group: 'Configure' },
-  { id: 'admin-logs', label: 'Audit log', path: '/app/admin/logs', nav: 'admin', group: 'Configure' },
-];
 
 const matchHay = (q, ...parts) => parts.some((p) => String(p || '').toLowerCase().includes(q));
 
@@ -40,7 +17,7 @@ export function CommandPalette({ open, onClose, currentUser, onStartTour }) {
   const [entityBusy, setEntityBusy] = useState(false);
 
   const commands = useMemo(() => {
-    const base = NAV_COMMANDS.filter((c) => canSeeNavItem(currentUser, c.nav));
+    const base = consoleCommands().filter((c) => canSeeNavItem(currentUser, c.nav));
     if (canManageFleet(currentUser)) {
       base.push({
         id: 'run-discovery',

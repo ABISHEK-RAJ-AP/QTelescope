@@ -30,7 +30,7 @@ import { useAppScope } from '../hooks/useAppScope.js';
 import { buildBackendDetailsPath, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
 import { formatActivity, formatIST } from '../utils/time';
 import { SevBadge, StatusBadge } from './opsShared.jsx';
-import { sevRank, toMs, timelineTo, healthTo, qubitOf } from './opsHelpers.js';
+import { dropAlertsCoveredByIncidents, sevRank, toMs, timelineTo, healthTo, qubitOf } from './opsHelpers.js';
 import { notifyError, notifyOperatorNotice, notifySuccess } from '../lib/toast.js';
 import { usePermissions } from '../hooks/usePermissions.js';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
@@ -386,6 +386,8 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
       subtitle: qubitOf(a) || a.alert_id,
       groupKey: `alert|${a.backend_id}|${a.alert_type}`,
       kind: 'Alert',
+      alertType: a.alert_type,
+      backendId: a.backend_id,
       severity: a.severity,
       status: a.status,
       open: () => openAlert(a.alert_id),
@@ -397,6 +399,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
       subtitle: inc.incident_id,
       groupKey: `incident|${inc.incident_id}`,
       kind: 'Incident',
+      backendId: inc.backend_id,
       severity: inc.severity,
       status: inc.status,
       open: () => {
@@ -404,7 +407,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
         else openIncident(inc.incident_id);
       },
     }));
-    return view === 'incidents' ? incEv : [...alertEv, ...incEv];
+    return view === 'incidents' ? incEv : dropAlertsCoveredByIncidents([...alertEv, ...incEv]);
   }, [filtered, incidents, view, openAlert, openIncident, onOpenIncident]);
   const relatedIncident = (a) => incidents.find((i) => i.backend_id === a.backend_id && String(i.title).endsWith(a.alert_type));
 
@@ -668,6 +671,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
             variant="default"
             dayDetailMode="modal"
             title={calTitle}
+            showTitle={false}
             events={calEvents}
             onOpenEvent={(ev) => {
               if (typeof ev?.open === 'function') ev.open();

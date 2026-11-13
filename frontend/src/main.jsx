@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from './components/ui/ThemeProvider.jsx';
 import { LandingPage } from './pages/LandingPage.jsx';
+import { ConsoleErrorBoundary, NotFoundPage } from './components/shell/RouteStatus.jsx';
 import { LoginPage } from './pages/LoginPage.jsx';
 import { RegisterPage } from './pages/RegisterPage.jsx';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage.jsx';
@@ -19,15 +20,17 @@ const appTree = (
   <ThemeProvider defaultTheme="light">
     <A11yRuntimeEffects />
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/app/*" element={<App />} />
-        <Route path="*" element={<LandingPage />} />
-      </Routes>
+      <ConsoleErrorBoundary page resetKey="public">
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/app/*" element={<App />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </ConsoleErrorBoundary>
     </BrowserRouter>
   </ThemeProvider>
 );

@@ -19,14 +19,20 @@ function sessionAuthHeaders() {
   return {};
 }
 
-export async function fetchApi(endpoint, options) {
+export async function fetchApi(endpoint, options = {}) {
+  const { headers: optHeaders, body, ...rest } = options;
+  const headers = {
+    ...sessionAuthHeaders(),
+    ...optHeaders,
+  };
+  // Only claim JSON when a body is sent — empty application/json can 400 on some stacks.
+  if (body !== undefined && body !== null && headers['Content-Type'] == null && headers['content-type'] == null) {
+    headers['Content-Type'] = 'application/json';
+  }
   const res = await fetch(`${BASE_URL}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...sessionAuthHeaders(),
-      ...options?.headers,
-    },
-    ...options,
+    ...rest,
+    body,
+    headers,
   });
 
   if (!res.ok) {
@@ -63,7 +69,7 @@ export const api = {
   getMe: () => fetchApi('/auth/me'),
   register: (payload) => fetchApi('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
   getConfigStatus: () => fetchApi('/auth/config-status'),
-  logout: () => fetchApi('/auth/logout', { method: 'POST' }),
+  logout: () => fetchApi('/auth/logout', { method: 'POST', body: '{}' }),
   issueStreamTicket: () => fetchApi('/auth/stream-ticket', { method: 'POST' }),
   getUserProfile: () => fetchApi('/users/me'),
   patchUserProfile: (body) => fetchApi('/users/me', { method: 'PATCH', body: JSON.stringify(body) }),
@@ -229,8 +235,6 @@ export const api = {
   },
 
   // Health
-  getBackendsHealth: () => fetchApi('/health/backends'),
-  getBackendHealthDetail: (id) => fetchApi(`/health/backends/${id}`),
   getHealthVector: () => fetchApi('/health/vector'),
   getHealthExplainFleet: () => fetchApi('/health/explain'),
   getHealthExplainBackend: (backendId) => fetchApi(`/health/explain/${backendId}`),

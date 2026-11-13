@@ -20,7 +20,7 @@ import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
 import { SevBadge, StatusBadge } from './opsShared.jsx';
-import { sevRank, toMs } from './opsHelpers.js';
+import { dropAlertsCoveredByIncidents, sevRank, toMs } from './opsHelpers.js';
 import { SortableTh, ViewModeToggle } from '../components/observability/DataViewToolbar.jsx';
 import { ListPager } from '../components/observability/ListPager.jsx';
 import './OpsTimeline.css';
@@ -75,7 +75,7 @@ export const OpsTimeline = () => {
 
   const filtered = useMemo(() => {
     const q = debouncedQuery.trim().toLowerCase();
-    return events.filter((e) => (
+    return dropAlertsCoveredByIncidents(events).filter((e) => (
       kinds.has(e.kind)
       && (sev === 'ALL' || e.severity === sev)
       && (!scopeBackend || !e.backend_id || e.backend_id === scopeBackend)

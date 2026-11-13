@@ -20,7 +20,7 @@ export function CaptchaField({ value, onChange, onChallenge }) {
         onChallenge?.(res.captcha_id)
       }
     } catch {
-      setError('Unable to load image challenge. Is the backend running?')
+      setError('Could not load the image challenge. Check that the API is running, then retry.')
       onChallenge?.('')
     } finally {
       setLoading(false)

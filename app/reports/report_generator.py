@@ -22,7 +22,6 @@ class ReportGenerator:
         ist_tz = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
         now_str = datetime.datetime.now(ist_tz).strftime("%Y-%m-%d %I:%M:%S %p IST")
         
-        # Format HTML table
         headers = list(table_rows[0].keys()) if table_rows else []
         th_html = "".join(f"<th style='padding: 10px; border-bottom: 2px solid #334155; text-align: left; font-size: 13px;'>{h.replace('_', ' ').title()}</th>" for h in headers)
         

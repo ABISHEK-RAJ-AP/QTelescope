@@ -13,7 +13,7 @@
   height: 100%;
   width: 100%;
   transform-origin: left center;
-  background: linear-gradient(90deg, var(--accent-cyan, #0891b2), var(--accent-blue, #2563eb));
+  background: var(--accent, #0284c7);
   transition: transform 0.12s ease-out;
 }
 

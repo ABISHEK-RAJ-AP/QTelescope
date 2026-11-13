@@ -13,7 +13,12 @@ from app.models.entities import (
     QubitModel,
     QubitTelemetryModel,
 )
-from app.monitoring.health_engine import HealthEngine
+from app.services.health_vector_builder import (
+    backend_by_id,
+    cached_health_vector,
+    health_label,
+    qubit_state,
+)
 
 router = APIRouter(prefix="/backends", tags=["Topology"])
 
@@ -54,6 +59,7 @@ def get_backend_topology(backend_id: str, db: Session = Depends(get_db)):
     gate_err = _latest_gate_errors(db, backend_id)
 
     nodes = []
+    row = backend_by_id(cached_health_vector(db)).get(backend_id) or {}
     for q in qubits:
         latest = (
             db.query(QubitTelemetryModel)
@@ -67,7 +73,7 @@ def get_backend_topology(backend_id: str, db: Session = Depends(get_db)):
         t1 = latest.t1 if latest else None
         t2 = latest.t2 if latest else None
         ro = latest.readout_error if latest else None
-        health = HealthEngine.evaluate_qubit_health(t1, t2, ro)
+        health = health_label(qubit_state(row, q.qubit_index))
         nodes.append(
             {
                 "id": str(q.qubit_index),

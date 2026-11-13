@@ -1,5 +1,7 @@
 /** Guided console tour: expand the rail, then highlight regions on each common page. */
 
+import { consolePath } from './consoleRoutes.js';
+
 export function filterConsoleTourSteps(user, canSeeNavItem) {
   return CONSOLE_TOUR_STEPS.filter((s) => !s.nav || canSeeNavItem(user, s.nav));
 }
@@ -15,7 +17,7 @@ function assertTourContract(steps) {
 export const CONSOLE_TOUR_STEPS = [
   {
     target: 'sidebar-nav',
-    path: '/app/overview',
+    path: consolePath('overview'),
     nav: 'home',
     title: 'Navigation',
     body: 'Observe, Execute, Record, and Configure. Labels stay visible for this walkthrough.',
@@ -23,56 +25,56 @@ export const CONSOLE_TOUR_STEPS = [
   },
   {
     target: 'nav-home',
-    path: '/app/overview',
+    path: consolePath('overview'),
     nav: 'home',
     title: 'Fleet overview',
     body: 'KPIs and charts show fleet health, queue depth, and calibration age. Open a backend from the table below.',
   },
   {
     target: 'page-charts',
-    path: '/app/overview',
+    path: consolePath('overview'),
     nav: 'home',
     title: 'Fleet charts',
     body: 'Alert pressure leads. Click a bar to open that backend. Counts are not repeated as tiles.',
   },
   {
     target: 'nav-operations',
-    path: '/app/operate',
+    path: consolePath('operate'),
     nav: 'operations',
     title: 'Operator console',
     body: 'Work queue: acknowledge, investigate, then remediate — prioritized by lane.',
   },
   {
     target: 'page-ops-kpis',
-    path: '/app/operate',
+    path: consolePath('operate'),
     nav: 'operations',
     title: 'Lane counts',
     body: 'Four lanes. Start with Acknowledgement if anything is unowned.',
   },
   {
     target: 'page-ops-focus',
-    path: '/app/operate',
+    path: consolePath('operate'),
     nav: 'operations',
     title: 'Next item',
     body: 'Highest-priority row to act on now, with a link into the backend or incident.',
   },
   {
     target: 'nav-backends',
-    path: '/app/backends/inventory',
+    path: consolePath('inventory'),
     nav: 'backends',
     title: 'Backends',
     body: 'Registered QPUs. Filter by modality or provider, then open a row for qubits.',
   },
   {
     target: 'page-inventory',
-    path: '/app/backends/inventory',
+    path: consolePath('inventory'),
     nav: 'backends',
     title: 'Inventory summary',
     body: 'Online count, active alerts on those machines, and how many have stale telemetry.',
   },
   {
     target: 'nav-telemetry',
-    path: '/app/telemetry/live',
+    path: consolePath('live'),
     nav: 'telemetry',
     branch: 'telemetry',
     title: 'Telemetry',
@@ -80,7 +82,7 @@ export const CONSOLE_TOUR_STEPS = [
   },
   {
     target: 'page-live-chart',
-    path: '/app/telemetry/live',
+    path: consolePath('live'),
     nav: 'telemetry',
     branch: 'telemetry',
     title: 'Live series',
@@ -88,7 +90,7 @@ export const CONSOLE_TOUR_STEPS = [
   },
   {
     target: 'nav-execution',
-    path: '/app/execution/jobs',
+    path: consolePath('jobs'),
     nav: 'execution',
     branch: 'execution',
     title: 'Execution',
@@ -96,7 +98,7 @@ export const CONSOLE_TOUR_STEPS = [
   },
   {
     target: 'page-jobs',
-    path: '/app/execution/jobs',
+    path: consolePath('jobs'),
     nav: 'execution',
     branch: 'execution',
     title: 'Job table',
@@ -104,7 +106,7 @@ export const CONSOLE_TOUR_STEPS = [
   },
   {
     target: 'nav-alerts',
-    path: '/app/alerts',
+    path: consolePath('alerts'),
     nav: 'alerts',
     branch: 'alerts',
     title: 'Alerts',
@@ -112,7 +114,7 @@ export const CONSOLE_TOUR_STEPS = [
   },
   {
     target: 'page-alert-kpis',
-    path: '/app/alerts',
+    path: consolePath('alerts'),
     nav: 'alerts',
     branch: 'alerts',
     title: 'Alert summary',
@@ -120,7 +122,7 @@ export const CONSOLE_TOUR_STEPS = [
   },
   {
     target: 'page-alert-filters',
-    path: '/app/alerts',
+    path: consolePath('alerts'),
     nav: 'alerts',
     branch: 'alerts',
     title: 'Triage list',
@@ -129,21 +131,21 @@ export const CONSOLE_TOUR_STEPS = [
   },
   {
     target: 'nav-platform',
-    path: '/app/platform/health',
+    path: consolePath('platform'),
     nav: 'platform',
     title: 'Platform health',
     body: 'Collectors, database, adapter run time. This is the monitoring stack, not QPU calibration.',
   },
   {
     target: 'page-platform',
-    path: '/app/platform/health',
+    path: consolePath('platform'),
     nav: 'platform',
     title: 'Collector status',
     body: 'Operational vs degraded. Open collectors in Configure if a provider is stale.',
   },
   {
     target: 'nav-admin',
-    path: '/app/admin/integrations',
+    path: consolePath('admin-int'),
     nav: 'admin',
     branch: 'admin',
     title: 'Configure',
@@ -151,7 +153,7 @@ export const CONSOLE_TOUR_STEPS = [
   },
   {
     target: 'page-admin-providers',
-    path: '/app/admin/integrations',
+    path: consolePath('admin-int'),
     nav: 'admin',
     branch: 'admin',
     title: 'Provider table',
@@ -159,7 +161,7 @@ export const CONSOLE_TOUR_STEPS = [
   },
   {
     target: 'quick-actions-dock',
-    path: '/app/overview',
+    path: consolePath('overview'),
     nav: 'home',
     title: 'Shortcuts',
     body: 'Lower-right dock: restart this tour, platform setup, overview, operate, live telemetry.',

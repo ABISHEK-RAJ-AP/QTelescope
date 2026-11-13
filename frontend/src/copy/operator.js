@@ -36,6 +36,14 @@ export const COPY = {
     heroAlerts: 'Alerts and routing',
     heroFleet: 'Fleet summary',
   },
+  shell: {
+    notFoundTitle: 'Page not found',
+    notFoundBody: 'This address is not part of Q-TeleScope. Check the path, or open a page from the navigation.',
+    crashTitle: 'This page failed to render',
+    crashBody: 'The view hit an error before it could finish. Try again. If it repeats, reload the console.',
+    deniedTitle: 'Access restricted',
+    deniedBody: '{role} cannot open this page.',
+  },
 };
 
 /** @deprecated prefer COPY.telemetry.* — re-export for gradual migration */

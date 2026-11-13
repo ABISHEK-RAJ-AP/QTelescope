@@ -172,7 +172,7 @@ def ensure_discovered(db: Session):
                 HardwareDiscoveryEngine.run_auto_discovery(db)
         elif not settings.ENABLE_MOCK_DATA:
             has_mock = db.query(BackendModel.backend_id).filter(
-                BackendModel.backend_id.in_(["ibm_brisbane", "rigetti_aspen_m3", "ionq_forte", "cdac_qsim_param"])
+                BackendModel.backend_id.in_(MOCK_BACKEND_IDS)
             ).first() is not None
             if has_mock:
                 HardwareDiscoveryEngine.run_auto_discovery(db)

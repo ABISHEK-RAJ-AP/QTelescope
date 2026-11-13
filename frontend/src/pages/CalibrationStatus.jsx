@@ -40,27 +40,44 @@ const Badge = ({ status }) => {
 };
 
 function CalFlipCard({ name, modality, status, ageLabel, calibrated, action, onOpen, onDrift }) {
+  const [open, setOpen] = useState(false);
+  const show = () => setOpen(true);
+  const hide = () => setOpen(false);
   return (
-    <article className="cs-flip" tabIndex={0} aria-label={`${name}. Hover or focus for calibration detail.`}>
-      <div className="cs-flip__inner">
-        <div className="cs-flip__face">
-          <header className="cs-flip__head">
-            <h4 className="cs-flip__name">{name}</h4>
-            <Badge status={status} />
-          </header>
-          <p className="cs-flip__meta">{modality}</p>
-          <p className="cs-flip__age">{ageLabel}</p>
-          <button type="button" className="btn btn-primary btn-sm cs-flip__cta" onClick={onOpen}>Open calibration</button>
-        </div>
-        <div className="cs-flip__face cs-flip__face--back">
-          <p className="cs-flip__back-title">{name}</p>
-          <dl className="cs-flip__stats">
-            <div><dt>Calibrated</dt><dd>{calibrated}</dd></div>
-            <div><dt>Next</dt><dd>{action}</dd></div>
-          </dl>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={onDrift}>Drift analysis</button>
+    <article
+      className={`cs-flip${open ? ' is-open' : ''}`}
+      onMouseLeave={hide}
+      aria-label={`${name}. Hover the summary for calibration detail.`}
+    >
+      <div className="cs-flip__stage">
+        <div className="cs-flip__inner">
+          <div className="cs-flip__face" onMouseEnter={show} onFocus={show}>
+            <header className="cs-flip__head">
+              <h4 className="cs-flip__name">{name}</h4>
+              <Badge status={status} />
+            </header>
+            <p className="cs-flip__meta">{modality}</p>
+            <p className="cs-flip__age">{ageLabel}</p>
+          </div>
+          <div className="cs-flip__face cs-flip__face--back" onMouseEnter={show}>
+            <p className="cs-flip__back-title">{name}</p>
+            <dl className="cs-flip__stats">
+              <div><dt>Calibrated</dt><dd>{calibrated}</dd></div>
+              <div><dt>Next</dt><dd>{action}</dd></div>
+            </dl>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={onDrift}>Drift analysis</button>
+          </div>
         </div>
       </div>
+      <button
+        type="button"
+        className="btn btn-primary btn-sm cs-flip__cta"
+        onMouseEnter={hide}
+        onFocus={hide}
+        onClick={onOpen}
+      >
+        Open calibration
+      </button>
     </article>
   );
 }
@@ -218,7 +235,7 @@ export const CalibrationStatus = () => {
       <section className="card page-panel dvt-panel">
         <DataPanelToolbar
           title="Per-backend status"
-          hint="Hover a card for the snapshot time and next step."
+          hint="Hover the summary for the snapshot time and next step. The button stays put."
           layout={layout}
           onLayoutChange={setLayout}
           countLabel={`${ranked.length} backend${ranked.length === 1 ? '' : 's'}`}

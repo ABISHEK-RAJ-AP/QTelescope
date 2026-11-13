@@ -1236,7 +1236,7 @@ export const AdministrationPage = ({ section = 'integrations', onNavigateSection
   return (
     <div className="admin-container page-stack">
       {!canEdit && <Notice note={{ type: 'info', text: 'Read-only: Admin role required to change configuration.' }} />}
-      {data.miss.length > 0 && <Notice note={{ type: 'error', text: `Unable to load: ${data.miss.join(', ')}. Refresh the page or check Platform health.` }} />}
+      {data.miss.length > 0 && <Notice note={{ type: 'error', text: `Could not load ${data.miss.join(', ')}. Refresh the page or open Platform health.` }} />}
       {active === 'users' && <UsersDirectory canEdit={canEdit} />}
       {active === 'integrations' && <Integrations navigate={navigate} providers={data.providers} health={data.health} verification={verification} setVerification={setVerification} canEdit={canEdit} reload={load} />}
       {active === 'collectors' && <Collectors {...data} canEdit={canEdit} reload={load} />}

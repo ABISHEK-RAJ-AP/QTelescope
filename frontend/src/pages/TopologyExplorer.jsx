@@ -450,7 +450,6 @@ export const TopologyExplorer = () => {
     return () => clearActions();
   }, [load, lastRefresh, setActions, clearActions]);
 
-  // Merge topology nodes with health-vector per-qubit state
   const qubits = useMemo(() => {
     if (!graph?.nodes) return [];
     const hv = vector?.backends?.find((b) => b.backend_id === backendId)?.qubits || [];
@@ -470,7 +469,6 @@ export const TopologyExplorer = () => {
     });
   }, [graph, vector, backendId]);
 
-  // Filter by search term
   const filteredQubits = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return qubits;

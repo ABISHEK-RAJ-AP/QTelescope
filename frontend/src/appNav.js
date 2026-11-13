@@ -1,6 +1,7 @@
 /** Map shell state ↔ /app/* URLs for deep linking (IMP-P1). */
 
 import { BACKEND_WORKSPACE_TABS } from './lib/investigationLinks.js';
+import { EXECUTION_NAV, RESOURCES_NAV, TELEMETRY_NAV } from './appSidebarNav.js';
 
 const DEFAULT_BACKEND = 'ibm_brisbane';
 
@@ -187,16 +188,14 @@ export function parseAppPath(pathname) {
   }
   if (head === 'telemetry') {
     out.mainTopic = 'telemetry';
-    const allowed = [
-      'live', 'calibration', 'drift', 'trends', 'explorer', 'topology', 'cal-timeline',
-      'compare', 'anomalies', 'replay', 'metrics',
-    ];
+    const allowed = TELEMETRY_NAV.map((t) => t.value);
     if (sub && allowed.includes(sub)) out.telemetrySubTab = sub;
     return out;
   }
   if (head === 'execution') {
     out.mainTopic = 'execution';
-    if (sub === 'queues' || sub === 'jobs') out.executionSubTab = sub;
+    const exec = EXECUTION_NAV.map((t) => t.value);
+    if (sub && exec.includes(sub)) out.executionSubTab = sub;
     return out;
   }
   if (head === 'resources') {
@@ -206,7 +205,8 @@ export function parseAppPath(pathname) {
       return out;
     }
     out.mainTopic = 'resources';
-    if (sub === 'environment' || sub === 'health' || sub === 'capabilities' || sub === 'qdmi') {
+    const resourceValues = new Set(RESOURCES_NAV.map((t) => t.value));
+    if (resourceValues.has(sub) || sub === 'qdmi') {
       // legacy /qdmi path → capabilities
       out.resourceSubTab = sub === 'qdmi' ? 'capabilities' : sub;
     }
@@ -217,6 +217,7 @@ export function parseAppPath(pathname) {
     return out;
   }
 
+  out.unmatched = true;
   return out;
 }
 
@@ -226,6 +227,8 @@ export function isLegacyAppPath(pathname) {
   const p = raw.endsWith('/') && raw.length > 1 ? raw.replace(/\/+$/, '') : raw;
   if (p === '/app') return true;
   if (!p.startsWith('/app/')) return false;
-  const canonical = buildAppPath(parseAppPath(p));
+  const parsed = parseAppPath(p);
+  if (parsed.unmatched) return false;
+  const canonical = buildAppPath(parsed);
   return p !== canonical;
 }

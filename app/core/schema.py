@@ -16,24 +16,27 @@ logger = logging.getLogger("schema")
 
 def apply_schema(engine: Engine) -> None:
     use_alembic = os.getenv("USE_ALEMBIC", "true").lower() in ("1", "true", "yes")
-    if not use_alembic:
-        Base.metadata.create_all(bind=engine)
-        _ensure_new_tables(engine)
-        return
+    if use_alembic:
+        _alembic_upgrade(engine)
+    # Alembic changes columns. Model metadata creates any table a migration has not added yet.
+    Base.metadata.create_all(bind=engine)
+    from app.core.user_store import migrate_json_users_to_db
 
+    migrate_json_users_to_db()
+
+
+def _alembic_upgrade(engine: Engine) -> None:
     try:
         from alembic.config import Config
         from alembic import command
     except ImportError:
-        logger.warning("Alembic not installed — falling back to create_all")
-        Base.metadata.create_all(bind=engine)
+        logger.warning("Alembic not installed — create_all only")
         return
 
     root = Path(__file__).resolve().parents[2]
     ini = root / "alembic.ini"
     if not ini.is_file():
-        logger.warning("alembic.ini missing — falling back to create_all")
-        Base.metadata.create_all(bind=engine)
+        logger.warning("alembic.ini missing — create_all only")
         return
 
     cfg = Config(str(ini))
@@ -55,58 +58,3 @@ def apply_schema(engine: Engine) -> None:
             command.upgrade(cfg, "head")
             logger.info("Alembic upgrade head complete")
         conn.commit()
-    _ensure_new_tables(engine)
-
-
-def _ensure_new_tables(engine: Engine) -> None:
-    """Dev helper: create tables added after first deploy if migration was skipped."""
-    from sqlalchemy import inspect
-    from app.models.entities import EvidenceSnapshotModel, IncidentAlertModel, IncidentModel
-
-    insp = inspect(engine)
-    if not insp.has_table("incidents"):
-        IncidentModel.__table__.create(bind=engine, checkfirst=True)
-        IncidentAlertModel.__table__.create(bind=engine, checkfirst=True)
-    if not insp.has_table("evidence_snapshots"):
-        EvidenceSnapshotModel.__table__.create(bind=engine, checkfirst=True)
-    from app.models.entities import UserAccountModel, AuditEventModel
-
-    if not insp.has_table("user_accounts"):
-        UserAccountModel.__table__.create(bind=engine, checkfirst=True)
-    if not insp.has_table("audit_events"):
-        AuditEventModel.__table__.create(bind=engine, checkfirst=True)
-    from app.core.user_store import migrate_json_users_to_db
-
-    migrate_json_users_to_db()
-    from app.models.development import (
-        CircuitVersionModel,
-        CompilationRunModel,
-        DevProjectMemberModel,
-        DevProjectModel,
-        DevProjectRevisionModel,
-        PreflightReportModel,
-        RegistryTimelineEventModel,
-        SimulationJobModel,
-        WorkloadModel,
-        WorkloadSubmissionModel,
-        DevExperimentReportModel,
-        ApprovalRecordModel,
-    )
-
-    dev_tables = (
-        DevProjectModel,
-        DevProjectMemberModel,
-        DevProjectRevisionModel,
-        CircuitVersionModel,
-        WorkloadModel,
-        CompilationRunModel,
-        PreflightReportModel,
-        WorkloadSubmissionModel,
-        DevExperimentReportModel,
-        ApprovalRecordModel,
-        SimulationJobModel,
-        RegistryTimelineEventModel,
-    )
-    for model in dev_tables:
-        if not insp.has_table(model.__tablename__):
-            model.__table__.create(bind=engine, checkfirst=True)

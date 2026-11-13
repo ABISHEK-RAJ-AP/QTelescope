@@ -25,7 +25,7 @@ export const INTRO_SLIDES = [
     tag: 'Telemetry',
     title: 'Source and age on every series',
     body: 'Vendor APIs, last good snapshot, and lab simulation use different labels. A chart with no timestamp is empty, not zero.',
-    accent: '#7c3aed',
+    accent: '#0284c7',
     bullets: [
       'T1 / T2 in microseconds; compare only within the same modality',
       'Calibration Fresh, Aging, or Stale',
