@@ -13,18 +13,33 @@ function saveReturnPath(pathname, search) {
 
 /**
  * Keep React user state aligned with server session (TTL + 401).
+ * onReady fires once after the first /auth/me check so the shell can wait.
  */
-export function useSessionGuard(currentUser, { onEnd, onRefresh }) {
+export function useSessionGuard(currentUser, { onEnd, onRefresh, onReady }) {
   const expiryTimerRef = useRef(null);
   const userRef = useRef(currentUser);
+  const readyOnceRef = useRef(false);
   userRef.current = currentUser;
 
   useEffect(() => {
+    readyOnceRef.current = false;
     const token = currentUser?.token;
-    if (!token) return undefined;
+    if (!token) {
+      onReady?.();
+      return undefined;
+    }
+
+    const markReady = () => {
+      if (readyOnceRef.current) return;
+      readyOnceRef.current = true;
+      onReady?.();
+    };
 
     const terminate = (message) => {
-      if (!userRef.current) return;
+      if (!userRef.current) {
+        markReady();
+        return;
+      }
       saveReturnPath(window.location.pathname, window.location.search);
       clearSession();
       if (expiryTimerRef.current) {
@@ -33,6 +48,7 @@ export function useSessionGuard(currentUser, { onEnd, onRefresh }) {
       }
       onEnd?.();
       notifyWarn(message, { toastId: 'session-expired' });
+      markReady();
     };
 
     const onGlobalExpired = () => {
@@ -54,18 +70,23 @@ export function useSessionGuard(currentUser, { onEnd, onRefresh }) {
       }, ms + 50);
     };
 
-    const sync = async () => {
+    const sync = async ({ isBoot } = {}) => {
       try {
         const me = await api.getMe();
         if (!me?.authenticated) {
           if (readSessionUser()?.token) {
             terminate('Session ended. Sign in again.');
+          } else {
+            markReady();
           }
           return;
         }
         scheduleServerExpiry(me.expires_at);
         const prev = userRef.current;
-        if (!prev) return;
+        if (!prev) {
+          markReady();
+          return;
+        }
         const merged = {
           ...prev,
           username: me.username ?? prev.username,
@@ -79,16 +100,23 @@ export function useSessionGuard(currentUser, { onEnd, onRefresh }) {
         };
         localStorage.setItem('quantum_user', JSON.stringify(merged));
         onRefresh?.(merged);
+        markReady();
       } catch (e) {
         const msg = String(e?.message || e);
-        if (msg.includes('401') || /authentication required/i.test(msg)) {
+        if (
+          msg.includes('401')
+          || /session ended/i.test(msg)
+          || /authentication required/i.test(msg)
+        ) {
           terminate('Session ended. Sign in again.');
+        } else if (isBoot) {
+          markReady();
         }
       }
     };
 
-    sync();
-    const poll = setInterval(sync, 60_000);
+    sync({ isBoot: true });
+    const poll = setInterval(() => sync({ isBoot: false }), 60_000);
     return () => {
       window.removeEventListener(SESSION_EXPIRED_EVENT, onGlobalExpired);
       clearInterval(poll);
@@ -97,5 +125,5 @@ export function useSessionGuard(currentUser, { onEnd, onRefresh }) {
         expiryTimerRef.current = null;
       }
     };
-  }, [currentUser?.token, onEnd, onRefresh]);
+  }, [currentUser?.token, onEnd, onRefresh, onReady]);
 }

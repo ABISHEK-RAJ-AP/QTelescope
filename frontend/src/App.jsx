@@ -898,24 +898,46 @@ export const App = () => {
 
   const endSession = useCallback(() => setCurrentUser(null), []);
   const refreshSession = useCallback((user) => setCurrentUser(user), []);
-
-  useSessionGuard(currentUser, { onEnd: endSession, onRefresh: refreshSession });
+  // Gate overview until /auth/me confirms the Bearer token (avoids 401 race after API restart).
+  const [sessionChecked, setSessionChecked] = useState(() => !currentUser?.token);
+  const markSessionReady = useCallback(() => setSessionChecked(true), []);
 
   useEffect(() => {
-    if (!currentUser) return;
+    setSessionChecked(!currentUser?.token);
+  }, [currentUser?.token]);
+
+  useSessionGuard(currentUser, {
+    onEnd: endSession,
+    onRefresh: refreshSession,
+    onReady: markSessionReady,
+  });
+
+  useEffect(() => {
+    if (!currentUser || !sessionChecked) return;
     if (
       shouldRunOnboarding(currentUser)
       && !location.pathname.startsWith('/app/onboarding')
     ) {
       navigate('/app/onboarding', { replace: true });
     }
-  }, [currentUser, location.pathname, navigate]);
+  }, [currentUser, sessionChecked, location.pathname, navigate]);
 
   if (!currentUser) {
     return (
       <>
         <ToastHost />
         <LoginPage onLoginSuccess={handleLoginSuccess} />
+      </>
+    );
+  }
+
+  if (!sessionChecked) {
+    return (
+      <>
+        <ToastHost />
+        <div className="flex min-h-screen items-center justify-center text-sm text-[var(--text-muted)]" role="status">
+          Checking session…
+        </div>
       </>
     );
   }

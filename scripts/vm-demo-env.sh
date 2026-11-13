@@ -47,6 +47,8 @@ apply_vm_demo_env() {
   upsert_env CACHE_ENABLED false
   upsert_env REDIS_URL ""
   upsert_env COLLECTION_SCHEDULER_ENABLED false
+  # Keep Bearer sessions across uvicorn restarts (demo/lab). Without this, overview 401s after restart.
+  upsert_env PERSIST_API_SESSIONS true
   upsert_env ADMIN_USERNAME admin
   upsert_env ADMIN_PASSWORD quantum2026
   upsert_env USER_USERNAME user_researcher

@@ -46,6 +46,14 @@ export async function fetchApi(endpoint, options = {}) {
     const parsed = parseApiFailure(res.status, body, requestId);
     if (res.status === 401 && !isPublicAuthEndpoint(endpoint)) {
       emitSessionExpired('unauthorized');
+      // Session cleared + App remounts login; reject without leaving a raw unhandled string.
+      const err = attachApiError(new Error(parsed.message), {
+        status: 401,
+        requestId: parsed.requestId,
+        code: parsed.code || 'SESSION_EXPIRED',
+      });
+      err.sessionExpired = true;
+      throw err;
     }
     throw attachApiError(new Error(parsed.message), {
       status: res.status,
