@@ -263,10 +263,10 @@ export const DriftAnalysis = () => {
                   <div><dt>Latest</dt><dd>{fmtMetric(r.latest_val, metricApi)}</dd></div>
                   <div><dt>Δ%</dt><dd>{r.pct_change != null ? `${r.pct_change > 0 ? '+' : ''}${Number(r.pct_change).toFixed(1)}%` : 'N/A'}</dd></div>
                 </dl>
-                <footer className="dvt-card__foot dvt-actions">
-                  <button type="button" className="btn btn-secondary btn--xs" onClick={() => navigate(healthLink(r.backend_id, r.qubit_index ?? 0))}>Health</button>
-                  <button type="button" className="btn btn-secondary btn--xs" onClick={() => navigate(buildBackendDetailsPath(r.backend_id))}>Backend</button>
-                  <button type="button" className="btn btn-secondary btn--xs" onClick={() => navigate(timelineLink(r.backend_id))}>Timeline</button>
+                <footer className="dvt-card__foot dvt-actions page-related-nav">
+                  <PageRelatedLink onClick={() => navigate(healthLink(r.backend_id, r.qubit_index ?? 0))}>Health</PageRelatedLink>
+                  <PageRelatedLink onClick={() => navigate(buildBackendDetailsPath(r.backend_id))}>Backend</PageRelatedLink>
+                  <PageRelatedLink onClick={() => navigate(timelineLink(r.backend_id))}>Timeline</PageRelatedLink>
                 </footer>
               </article>
             ))}
@@ -301,10 +301,10 @@ export const DriftAnalysis = () => {
                     <td className="tm-num">{fmtMetric(r.latest_val, metricApi)}</td>
                     <td className="tm-num">{r.pct_change != null ? `${r.pct_change > 0 ? '+' : ''}${Number(r.pct_change).toFixed(1)}%` : 'N/A'}</td>
                     <td>
-                      <div className="dvt-actions tm-actions">
-                        <button type="button" className="btn btn-secondary btn--xs" onClick={() => navigate(healthLink(r.backend_id, r.qubit_index ?? 0))}>Health</button>
-                        <button type="button" className="btn btn-secondary btn--xs" onClick={() => navigate(buildBackendDetailsPath(r.backend_id))}>Backend</button>
-                        <button type="button" className="btn btn-secondary btn--xs" onClick={() => navigate(timelineLink(r.backend_id))}>Timeline</button>
+                      <div className="dvt-actions tm-actions page-related-nav">
+                        <PageRelatedLink onClick={() => navigate(healthLink(r.backend_id, r.qubit_index ?? 0))}>Health</PageRelatedLink>
+                        <PageRelatedLink onClick={() => navigate(buildBackendDetailsPath(r.backend_id))}>Backend</PageRelatedLink>
+                        <PageRelatedLink onClick={() => navigate(timelineLink(r.backend_id))}>Timeline</PageRelatedLink>
                       </div>
                     </td>
                   </tr>

@@ -203,12 +203,16 @@ class MfaLoginRequest(BaseModel):
 class ForgotPasswordRequest(BaseModel):
     username: Optional[str] = None
     email: Optional[str] = None
+    captcha_id: str = ""
+    captcha_code: str = ""
 
 
 class ResetPasswordRequest(BaseModel):
     token: str = Field(min_length=8)
     new_password: str = Field(min_length=6)
     confirm_password: str = Field(min_length=6)
+    captcha_id: str = ""
+    captcha_code: str = ""
 
 
 class RegisterRequest(BaseModel):
@@ -438,6 +442,7 @@ def forgot_password(req: ForgotPasswordRequest, request: Request):
     from app.core.password_reset import issue_reset_token
 
     check_auth_rate_limit(request, "password_forgot")
+    _consume_captcha(req.captcha_id, req.captcha_code)
     username = (req.username or "").strip()
     email = (req.email or "").strip().lower()
     found = None
@@ -472,6 +477,7 @@ def reset_password(req: ResetPasswordRequest, request: Request):
     from app.core.audit_log import record_audit
 
     check_auth_rate_limit(request, "password_reset")
+    _consume_captcha(req.captcha_id, req.captcha_code)
     if req.new_password != req.confirm_password:
         raise HTTPException(status_code=400, detail="Password confirmation does not match.")
     username = consume_reset_token(req.token)

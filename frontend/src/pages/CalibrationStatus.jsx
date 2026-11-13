@@ -15,6 +15,7 @@ import { usePageActions } from '../context/PageActionsContext.jsx';
 import { modalityName } from './backendUtils.js';
 import { DataPanelToolbar } from '../components/observability/DataViewToolbar.jsx';
 import { EnterpriseDataTable } from '../components/observability/EnterpriseDataTable.jsx';
+import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
 import './CalibrationStatus.css';
 
 function calibrationStatusMeta() {
@@ -65,7 +66,7 @@ function CalFlipCard({ name, modality, status, ageLabel, calibrated, action, onO
               <div><dt>Calibrated</dt><dd>{calibrated}</dd></div>
               <div><dt>Next</dt><dd>{action}</dd></div>
             </dl>
-            <button type="button" className="btn btn-secondary btn-sm" onClick={onDrift}>Drift analysis</button>
+            <button type="button" className="fs-link" onClick={onDrift}>Drift analysis</button>
           </div>
         </div>
       </div>
@@ -166,9 +167,9 @@ export const CalibrationStatus = () => {
         label: 'Links',
         sortable: false,
         render: (row) => (
-          <div className="dvt-actions cs-links">
-            <button type="button" className="btn btn-secondary btn--xs" onClick={() => nav(buildBackendDetailsPath(row.backend_id, 'calibration'))}>Calibration</button>
-            <button type="button" className="btn btn-secondary btn--xs" onClick={() => nav(buildDriftInvestigationLocation({ backendId: row.backend_id }))}>Drift</button>
+          <div className="dvt-actions cs-links page-related-nav">
+            <PageRelatedLink onClick={() => nav(buildBackendDetailsPath(row.backend_id, 'calibration'))}>Calibration</PageRelatedLink>
+            <PageRelatedLink onClick={() => nav(buildDriftInvestigationLocation({ backendId: row.backend_id }))}>Drift</PageRelatedLink>
           </div>
         ),
       },

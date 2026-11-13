@@ -74,21 +74,18 @@ export function RegisterPage() {
 
   return (
     <AuthShell
-      title="Create Account"
-      subtitle="Create an operator account for your lab."
+      title="Create account"
+      subtitle="Operator account for your lab. Admin roles are assigned after review."
       footer={
-        <p className="text-center text-sm text-neutral-500">
+        <p className="text-center text-sm text-[var(--text-muted)]">
           Already registered?{' '}
-          <Link
-            to="/login"
-            className="font-semibold text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:underline"
-          >
-            Sign in here
+          <Link to="/login" className="font-semibold text-[var(--accent)] hover:opacity-90">
+            Sign in
           </Link>
         </p>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Username">
             <div className="relative">
@@ -103,7 +100,7 @@ export function RegisterPage() {
               />
             </div>
           </Field>
-          <Field label="Full Name">
+          <Field label="Full name">
             <input
               type="text"
               value={fullName}
@@ -114,7 +111,7 @@ export function RegisterPage() {
           </Field>
         </div>
 
-        <Field label="Email Address">
+        <Field label="Email">
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
             <input
@@ -175,7 +172,7 @@ export function RegisterPage() {
           </div>
         </Field>
 
-        <Field label="Confirm Password">
+        <Field label="Confirm password">
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
             <input
@@ -196,21 +193,21 @@ export function RegisterPage() {
           onChallenge={setCaptchaId}
         />
 
-        {error && (
-          <div className="rounded-md border border-rose-300 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400">
+        {error ? (
+          <div className="auth-inline-alert auth-inline-alert--error" role="alert">
             {error}
           </div>
-        )}
+        ) : null}
 
-        {success && (
-          <div className="rounded-md border border-emerald-300 bg-emerald-50 p-3 text-xs text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-400">
+        {success ? (
+          <div className="auth-inline-alert auth-inline-alert--success" role="status">
             {success}
           </div>
-        )}
+        ) : null}
 
-        <Button type="submit" className="h-11 w-full gap-2 text-sm font-semibold" disabled={busy}>
-          {busy ? <Loader2 className="size-4 animate-spin" /> : null}
-          Create profile <ArrowRight className="size-4" />
+        <Button type="submit" className="auth-cta h-11 w-full gap-2 text-sm font-semibold" disabled={busy}>
+          {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+          Create account <ArrowRight className="size-4" aria-hidden />
         </Button>
       </form>
     </AuthShell>

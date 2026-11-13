@@ -6,59 +6,62 @@ import { AuthFridgeVisual } from '@/components/marketing/AuthFridgeVisual'
 import { PublicMarketingHeader } from '@/components/marketing/PublicMarketingHeader'
 import { QuantumBackground } from '@/components/ui/quantum-background'
 
+/** Shared layout id for login / register / MFA / forgot / reset. */
+export const AUTH_LAYOUT_ID = 'qt-auth-shell'
+
 export function AuthShell({ title, subtitle, children, footer, maxWidth = 'max-w-5xl' }) {
   return (
-    <div className="relative min-h-screen flex flex-col bg-[#f8fafc] text-neutral-900 dark:bg-[#070a0f] dark:text-neutral-100">
+    <div
+      id={AUTH_LAYOUT_ID}
+      className="auth-shell relative min-h-screen flex flex-col bg-[var(--bg-dark)] text-[var(--text-primary)]"
+    >
       <QuantumBackground />
       <PublicMarketingHeader />
 
       <main className="relative z-10 flex-1 flex items-center justify-center px-4 py-10 sm:px-6">
         <div
-          className={`w-full ${maxWidth} grid grid-cols-1 lg:grid-cols-12 gap-0 rounded-2xl border border-neutral-200/90 bg-white shadow-2xl dark:border-neutral-800 dark:bg-[#0c111a]`}
-          style={{ overflow: 'clip' }}
+          className={`auth-shell__panel w-full ${maxWidth} grid grid-cols-1 lg:grid-cols-12 gap-0`}
         >
-          <div
-            className="lg:col-span-5 relative z-10 flex flex-col gap-3 p-6 sm:p-8 border-b lg:border-b-0 lg:border-r border-neutral-800 text-white min-h-[560px] lg:min-h-0 overflow-hidden"
-            style={{ backgroundColor: '#070b14' }}
-          >
+          <div className="auth-shell__brand lg:col-span-5 relative z-10 flex flex-col gap-3 p-6 sm:p-8 text-white min-h-[520px] lg:min-h-0 overflow-hidden">
             <div className="flex items-center gap-2.5 shrink-0">
               <img src={cdacLogo} alt="" className="h-8 w-auto" />
-              <span className="text-lg font-bold tracking-tight">Q-TeleScope</span>
+              <span className="text-lg font-semibold tracking-tight">Q-TeleScope</span>
             </div>
 
-            <div className="flex-1 min-h-[280px] max-h-[340px] w-full flex items-center">
+            <div className="flex-1 min-h-[240px] max-h-[320px] w-full flex items-center">
               <AuthFridgeVisual />
             </div>
 
-            <div className="mt-auto shrink-0 space-y-2.5 pt-1">
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-cyan-400/95">
-                Q-TeleScope
-              </p>
-              <h2 className="text-lg sm:text-xl font-extrabold leading-[1.2] tracking-tight text-white">
-                Quantum observability for superconducting QPUs
+            <div className="mt-auto shrink-0 space-y-2 pt-1">
+              <h2 className="text-lg sm:text-xl font-semibold leading-[1.25] tracking-tight text-white text-balance">
+                Observability for superconducting QPU fleets
               </h2>
-              <p className="text-sm leading-relaxed text-slate-400">
-                T1 and T2 coherence, gate fidelity, calibration drift, and incidents for multi-backend fleets.
+              <p className="text-sm leading-relaxed text-slate-400 max-w-[36ch]">
+                Coherence, calibration drift, and incidents — one console.
               </p>
               <Link
                 to="/"
-                className="pt-1 text-xs text-slate-500 hover:text-cyan-400 inline-flex items-center gap-1 transition-colors"
+                className="pt-1 text-sm text-slate-500 hover:text-cyan-400 inline-flex items-center gap-1.5 min-h-11 transition-colors"
               >
-                <ArrowLeft className="size-3" /> Home
+                <ArrowLeft className="size-3.5" aria-hidden /> Home
               </Link>
             </div>
           </div>
 
-          <div className="lg:col-span-7 relative z-10 flex flex-col justify-center p-6 sm:p-10 bg-white dark:bg-[#0c111a]">
-            <div className="max-w-md w-full mx-auto space-y-6">
+          <div className="auth-shell__form lg:col-span-7 relative z-10 flex flex-col justify-center p-6 sm:p-10 bg-[var(--bg-card)]">
+            <div className="max-w-md w-full mx-auto space-y-5">
               <div>
-                <h1 className="text-2xl font-bold tracking-tight text-neutral-950 dark:text-white">{title}</h1>
+                <h1 className="text-[1.375rem] font-semibold tracking-tight text-[var(--text-primary)] text-balance">
+                  {title}
+                </h1>
                 {subtitle ? (
-                  <p className="mt-1.5 text-sm text-neutral-600 dark:text-neutral-400">{subtitle}</p>
+                  <p className="mt-1.5 text-sm text-[var(--text-secondary)] max-w-[42ch] leading-relaxed">
+                    {subtitle}
+                  </p>
                 ) : null}
               </div>
               {children}
-              {footer ? <div className="pt-4 border-t border-neutral-200/80 dark:border-neutral-800/80">{footer}</div> : null}
+              {footer ? <div className="pt-3 border-t border-[var(--border-color)]">{footer}</div> : null}
             </div>
           </div>
         </div>
@@ -67,21 +70,22 @@ export function AuthShell({ title, subtitle, children, footer, maxWidth = 'max-w
   )
 }
 
-export function Field({ label, forId, children }) {
+export function Field({ label, forId, children, hint }) {
   return (
     <div className="space-y-1.5">
       <label
         htmlFor={forId}
-        className="block text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-400"
+        className="block text-sm font-medium text-[var(--text-secondary)]"
       >
         {label}
       </label>
       {children}
+      {hint ? <p className="text-xs text-[var(--text-muted)]">{hint}</p> : null}
     </div>
   )
 }
 
 export const fieldClass =
-  'w-full rounded-lg border border-neutral-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-cyan-600 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 dark:border-neutral-700 dark:bg-neutral-900/80 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-cyan-400'
+  'flex h-11 w-full rounded-[calc(var(--ds-radius-card)-4px)] border border-[var(--border-color)] bg-[var(--bg-card)] px-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[var(--accent)] focus:ring-2 focus:ring-[color-mix(in_oklch,var(--accent)_25%,transparent)]'
 
 export default AuthShell

@@ -118,47 +118,43 @@ export function LoginPage({ onLoginSuccess }) {
 
   return (
     <AuthShell
-      title="Sign In"
-      subtitle={ldapHint || 'Sign in to the operations console. Local account or LDAP if configured.'}
+      title="Sign in"
+      subtitle={ldapHint || 'Operations console — local account or LDAP if configured.'}
       footer={
-        <div className="space-y-4">
-          <p className="text-center text-sm text-neutral-500">
-            <Link to="/forgot-password" className="font-semibold text-cyan-600 hover:text-cyan-700 dark:text-cyan-400">
+        <div className="space-y-3">
+          <p className="text-center text-sm text-[var(--text-muted)]">
+            <Link to="/forgot-password" className="font-semibold text-[var(--accent)] hover:opacity-90">
               Forgot password
             </Link>
             {' · '}
-            Need an operator account?{' '}
-            <Link
-              to="/register"
-              className="font-semibold text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:underline"
-            >
+            <Link to="/register" className="font-semibold text-[var(--accent)] hover:opacity-90">
               Register
             </Link>
           </p>
           {showDevPresets ? (
-            <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
-              <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wider text-neutral-500">
+            <div className="rounded-[calc(var(--ds-radius-card)-4px)] border border-[var(--border-color)] bg-[var(--bg-card-hover)] p-3">
+              <span className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
                 Demo accounts
               </span>
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => { setUsername('superadmin'); setPassword('quantum2026'); setError('') }}
-                  className="rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                  className="min-h-11 rounded-[calc(var(--ds-radius-card)-6px)] border border-[var(--border-color)] bg-[var(--bg-card)] px-2 text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--accent)]"
                 >
                   SuperAdmin
                 </button>
                 <button
                   type="button"
                   onClick={() => { setUsername('admin'); setPassword('quantum2026'); setError('') }}
-                  className="rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                  className="min-h-11 rounded-[calc(var(--ds-radius-card)-6px)] border border-[var(--border-color)] bg-[var(--bg-card)] px-2 text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--accent)]"
                 >
                   Admin
                 </button>
                 <button
                   type="button"
                   onClick={() => { setUsername('user_researcher'); setPassword('quantum2026'); setError('') }}
-                  className="rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-xs font-medium text-neutral-700 transition hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                  className="min-h-11 rounded-[calc(var(--ds-radius-card)-6px)] border border-[var(--border-color)] bg-[var(--bg-card)] px-2 text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--accent)]"
                 >
                   Operator
                 </button>
@@ -189,7 +185,7 @@ export function LoginPage({ onLoginSuccess }) {
           }
         }}
       >
-        <Field label="Authenticator code" forId="login-mfa-code">
+        <Field label="Authenticator code" forId="login-mfa-code" hint="6 digits from your TOTP app. Captcha already checked at password step.">
           <input
             id="login-mfa-code"
             type="text"
@@ -197,23 +193,24 @@ export function LoginPage({ onLoginSuccess }) {
             autoComplete="one-time-code"
             required
             value={mfaCode}
-            onChange={(e) => setMfaCode(e.target.value)}
-            className={fieldClass}
-            placeholder="6-digit code"
+            onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+            className={`${fieldClass} font-mono tracking-widest tabular-nums`}
+            placeholder="000000"
+            maxLength={8}
           />
         </Field>
-        {error && (
-          <div className="rounded-md border border-rose-300 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400">
+        {error ? (
+          <div className="auth-inline-alert auth-inline-alert--error" role="alert">
             {error}
           </div>
-        )}
-        <Button type="submit" className="h-11 w-full gap-2 text-sm font-semibold" disabled={loading}>
-          {loading ? <Loader2 className="size-4 animate-spin" /> : null}
+        ) : null}
+        <Button type="submit" className="auth-cta h-11 w-full gap-2 text-sm font-semibold" disabled={loading}>
+          {loading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
           Verify and sign in
         </Button>
         <button
           type="button"
-          className="w-full text-center text-xs text-neutral-500 underline"
+          className="w-full min-h-11 text-center text-sm text-[var(--text-muted)] underline"
           onClick={() => { setMfaToken(''); setMfaCode(''); setError('') }}
         >
           Back to password
@@ -268,18 +265,15 @@ export function LoginPage({ onLoginSuccess }) {
           onChallenge={setCaptchaId}
         />
 
-        {error && (
-          <div
-            data-testid="login-error"
-            className="rounded-md border border-rose-300 bg-rose-50 p-3 text-xs text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400"
-          >
+        {error ? (
+          <div data-testid="login-error" className="auth-inline-alert auth-inline-alert--error" role="alert">
             {error}
           </div>
-        )}
+        ) : null}
 
-        <Button type="submit" data-testid="login-submit" className="h-11 w-full gap-2 text-sm font-semibold" disabled={loading}>
-          {loading ? <Loader2 className="size-4 animate-spin" /> : null}
-          Sign in <ArrowRight className="size-4" />
+        <Button type="submit" data-testid="login-submit" className="auth-cta h-11 w-full gap-2 text-sm font-semibold" disabled={loading}>
+          {loading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+          Sign in <ArrowRight className="size-4" aria-hidden />
         </Button>
       </form>
       )}

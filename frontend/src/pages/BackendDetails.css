@@ -38,11 +38,16 @@
 .bd-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 8px 14px;
   align-items: center;
   justify-content: flex-end;
 }
-.bd-actions a.btn { text-decoration: none; display: inline-flex; align-items: center; }
+.bd-actions a.btn,
+.bd-actions a.fs-link {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
 
 .bd-facts {
   display: flex;

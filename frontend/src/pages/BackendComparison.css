@@ -22,7 +22,7 @@
 .bc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 16px; align-items: start; width: 100%; min-width: 0; }
 .bc-grid .chart-panel { min-width: 0; }
 .bc-note { margin: 6px 0 0; }
-.bc-missing { color: var(--text-muted); font-style: italic; }
+.bc-missing { color: var(--text-muted); font-style: normal; }
 .bc-range { display: inline-flex; flex-direction: column; font-variant-numeric: tabular-nums; }
 .bc-range small { color: var(--text-muted); font-size: var(--font-size-micro-label, 0.75rem); }
 .bc-row-click { cursor: pointer; }

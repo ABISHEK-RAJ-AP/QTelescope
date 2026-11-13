@@ -73,7 +73,7 @@
 .cs-name { font-weight: 600; font-size: 13px; }
 .cs-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 .cs-num { font-variant-numeric: tabular-nums; }
-.cs-missing { color: var(--text-muted); font-style: italic; }
+.cs-missing { color: var(--text-muted); font-style: normal; }
 .cs-action { font-size: 12px; max-width: 280px; line-height: 1.4; }
 .cs-links { display: flex; flex-wrap: wrap; gap: 6px; }
 .cs-note { margin-top: 8px; }

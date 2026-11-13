@@ -33,6 +33,13 @@
   --ds-glass-border: color-mix(in srgb, var(--border-color) 72%, transparent);
   --ds-motion-fast: 150ms;
   --ds-motion-modal: 200ms;
+  --ds-motion-popover: 180ms; /* dropdowns 150–250ms ease-out */
+  --ds-motion-row: 160ms;
+  --ds-motion-exit-factor: 0.8; /* exits ~20% shorter */
+  --ds-press-scale: 0.97;
+  --ds-knob-stretch: 1.12;
+  --accent-oklch: oklch(0.62 0.12 230); /* cyan accent — single brand focus */
+  --ds-radius-nested: calc(var(--ds-radius-card) - var(--ds-space-xs));
 
   /* Typography — canonical app scale (+1 step for ops readability) */
   --font-size-body: 1.0625rem;

@@ -329,8 +329,8 @@
 .oc-item__cta {
   flex: none;
   white-space: nowrap;
-  min-height: 2.25rem;
   align-self: center;
+  font-weight: 600;
 }
 
 .oc-item--grid {

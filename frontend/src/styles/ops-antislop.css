@@ -1,0 +1,284 @@
+/**
+ * Console + auth surface hygiene — design-system layer over page CSS.
+ * Accent = --accent (cyan). Nested radius: inner = outer − padding.
+ */
+
+/* —— Auth shell —— */
+.auth-shell__panel {
+  --auth-radius: 16px;
+  --auth-pad: 24px;
+  border-radius: var(--auth-radius);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  box-shadow: 0 12px 32px -16px color-mix(in oklch, var(--text-primary) 22%, transparent);
+  overflow: clip;
+}
+
+.auth-shell__brand {
+  background: #070b14;
+  border-bottom: 1px solid color-mix(in oklch, white 8%, transparent);
+}
+
+@media (min-width: 1024px) {
+  .auth-shell__brand {
+    border-bottom: none;
+    border-right: 1px solid color-mix(in oklch, white 8%, transparent);
+  }
+}
+
+.auth-inline-alert {
+  border-radius: calc(var(--ds-radius-card) - 4px);
+  padding: 0.75rem 0.875rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.auth-inline-alert--error {
+  border: 1px solid color-mix(in oklch, var(--ds-status-critical) 45%, var(--border-color));
+  background: color-mix(in oklch, var(--ds-status-critical) 8%, var(--bg-card));
+  color: var(--ds-status-critical);
+}
+
+.auth-inline-alert--success {
+  border: 1px solid color-mix(in oklch, var(--ds-status-healthy) 45%, var(--border-color));
+  background: color-mix(in oklch, var(--ds-status-healthy) 8%, var(--bg-card));
+  color: var(--ds-status-healthy);
+  animation: auth-success-pulse 420ms ease-out;
+}
+
+.auth-cta {
+  background: var(--accent) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  transform-origin: center;
+  transition: transform var(--ds-motion-fast) ease-out, opacity var(--ds-motion-fast) ease-out;
+}
+
+.auth-cta:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@keyframes auth-success-pulse {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.01); }
+  100% { transform: scale(1); }
+}
+
+/* —— Main content: contrast, mono, italics, tabular —— */
+.main-content {
+  --text-muted: #475569;
+}
+
+.dark .main-content {
+  --text-muted: #94a3b8;
+}
+
+.main-content em,
+.main-content i,
+.main-content .italic {
+  font-style: normal;
+}
+
+.main-content {
+  font-variant-numeric: lining-nums;
+}
+
+.main-content .kpi-value,
+.main-content .metric-value,
+.main-content .tabular-nums,
+.main-content table td,
+.main-content [data-tabular],
+.main-content .age,
+.main-content .timestamp,
+.main-content .mono-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+/* Mono only for ids / code / captcha / OTP — not body copy */
+.main-content :where(p, li, label, h1, h2, h3, h4, .page-title, .section-title):not(code):not(pre):not(.font-mono) {
+  font-family: var(--font-sans);
+}
+
+.main-content code,
+.main-content pre,
+.main-content .font-mono,
+.main-content [data-mono],
+.main-content kbd {
+  font-family: var(--font-mono);
+}
+
+/* Headlines: balance + widow-ish wrap */
+.main-content h1,
+.main-content h2,
+.main-content .page-title,
+.main-content .section-title {
+  text-wrap: balance;
+  letter-spacing: -0.01em;
+  max-width: 48ch;
+  line-height: var(--line-height-heading);
+}
+
+.main-content p,
+.main-content .prose-ops {
+  max-width: 68ch;
+  text-wrap: pretty;
+}
+
+/* Kill ALL CAPS micro-eyebrows in ops chrome */
+.main-content .page-eyebrow,
+.main-content .section-eyebrow,
+.main-content .eyebrow {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: var(--font-size-helper);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-secondary);
+}
+
+/* Nested cards: inner radius = outer − padding */
+.main-content .card,
+.main-content .panel,
+.main-content .page-toolbar-unified,
+.main-content [class*='__card'] {
+  --_outer-r: var(--ds-radius-card);
+  --_pad: var(--ds-space-md);
+  border-radius: var(--_outer-r);
+}
+
+.main-content .card > .card,
+.main-content .panel > .panel,
+.main-content .card .inner-surface,
+.main-content .nested-surface {
+  border-radius: calc(var(--_outer-r, var(--ds-radius-card)) - var(--_pad, 12px));
+}
+
+/* Soften decorative pills / filter chip piles */
+.main-content .filter-chip-row .badge:not([data-severity]):not(.badge-healthy):not(.badge-warning):not(.badge-critical):not(.badge-info) {
+  background: transparent;
+  border-color: transparent;
+  padding-inline: 0;
+}
+
+/* Touch targets — primary actions only; dense table icon buttons stay compact */
+.main-content .page-toolbar-unified .btn:not(.btn--xs),
+.main-content .btn-primary:not(.btn--xs),
+.main-content a.btn-primary {
+  min-height: 44px;
+}
+
+/* Press feedback — no bounce on everyday UI */
+.main-content .btn:active:not(:disabled),
+.main-content button.pressable:active:not(:disabled) {
+  transform: scale(0.97);
+  transition: transform var(--ds-motion-fast) ease-out;
+}
+
+/* Dropdown / popover entrances */
+[data-radix-popper-content-wrapper] > *,
+.popover-panel,
+.dropdown-menu,
+.combobox-list {
+  transform-origin: var(--radix-popper-transform-origin, top center);
+  animation: qt-popover-in var(--ds-motion-popover) ease-out;
+}
+
+@keyframes qt-popover-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes qt-popover-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.qt-exit {
+  animation: qt-popover-out calc(var(--ds-motion-popover) * 0.8) ease-in forwards;
+}
+
+/* List stagger (opt-in) */
+.qt-stagger > * {
+  animation: qt-row-in var(--ds-motion-row) ease-out both;
+}
+.qt-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.qt-stagger > *:nth-child(2) { animation-delay: 30ms; }
+.qt-stagger > *:nth-child(3) { animation-delay: 60ms; }
+.qt-stagger > *:nth-child(4) { animation-delay: 90ms; }
+.qt-stagger > *:nth-child(5) { animation-delay: 120ms; }
+.qt-stagger > *:nth-child(6) { animation-delay: 150ms; }
+.qt-stagger > *:nth-child(n+7) { animation-delay: 180ms; }
+
+@keyframes qt-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading skeleton pulse — useful feedback, not bounce */
+.qt-skeleton {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklch, var(--border-color) 40%, var(--bg-card)) 0%,
+    color-mix(in oklch, var(--border-color) 70%, var(--bg-card)) 50%,
+    color-mix(in oklch, var(--border-color) 40%, var(--bg-card)) 100%
+  );
+  background-size: 200% 100%;
+  animation: qt-shimmer 1.1s ease-in-out infinite;
+  border-radius: calc(var(--ds-radius-card) - 4px);
+}
+
+@keyframes qt-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* Icon + state crossfade helper */
+.qt-icon-swap {
+  display: inline-grid;
+  place-items: center;
+}
+.qt-icon-swap > * {
+  grid-area: 1 / 1;
+  transition: opacity var(--ds-motion-fast) ease-in-out, filter var(--ds-motion-fast) ease-in-out;
+}
+.qt-icon-swap > [data-state='out'] {
+  opacity: 0;
+  filter: blur(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-cta:active,
+  .main-content .btn:active,
+  .qt-stagger > *,
+  .qt-skeleton,
+  [data-radix-popper-content-wrapper] > *,
+  .popover-panel,
+  .dropdown-menu,
+  .combobox-list,
+  .auth-inline-alert--success {
+    animation: none !important;
+    transition: none !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}

@@ -95,7 +95,7 @@ function QueueRow({ item, laneLabel, layout, showLane }) {
         </div>
       </div>
       {primary && (
-        <Link className="btn btn-secondary oc-item__cta" to={primary.to}>{primary.label}</Link>
+        <Link className="fs-link oc-item__cta" to={primary.to}>{primary.label}</Link>
       )}
     </li>
   );

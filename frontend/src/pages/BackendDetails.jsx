@@ -12,6 +12,7 @@ import { useAppScope } from '../hooks/useAppScope.js';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
+import { PageRelatedLink, PageRelatedNav } from '../components/observability/PageRelatedNav.jsx';
 import { baseTooltip, getChartTheme, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { BACKEND_WORKSPACE_TABS } from '../lib/investigationLinks.js';
 import { STATES, STATE_GLYPH, STATE_LABEL, ageMinutes, formatAge, isStale, lineageOf, median, modalityName, num, providerName, scopeSearch, useProviderLineage } from './backendUtils.js';
@@ -242,7 +243,12 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
       <header className="card bd-head">
         <div className="bd-head__id">
           <h2 className="bd-title">
-            {onBack && <button type="button" className="btn btn-secondary" onClick={onBack}><ArrowLeft size={14} aria-hidden /> Inventory</button>}
+            {onBack && (
+              <PageRelatedLink onClick={onBack}>
+                <ArrowLeft size={14} aria-hidden style={{ marginInlineEnd: 4, verticalAlign: 'middle' }} />
+                Inventory
+              </PageRelatedLink>
+            )}
             <span>{formatBackendTitle(backend)}</span>
           </h2>
           <p className="bd-meta">
@@ -279,9 +285,11 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
             ) : null}
           </dl>
         </div>
-        <nav className="bd-actions" aria-label="Related views">
-          <Link className="btn btn-primary" to={link('/app/investigate/timeline')}>Ops timeline</Link>
-        </nav>
+        <PageRelatedNav className="bd-actions" aria-label="Related views">
+          <Link className="fs-link" to={link('/app/investigate/timeline')}>Ops timeline</Link>
+          <Link className="fs-link" to={link('/app/resources/health')}>Resource health</Link>
+          <Link className="fs-link" to={link('/app/telemetry/drift')}>Drift</Link>
+        </PageRelatedNav>
       </header>
 
       {(d.failed.length > 0 || lineage.error) && (
@@ -557,10 +565,10 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
               ) : (
                 <EmptyState variant="inline" compact title={secErr('qubit health') ? unableToLoadLabel('qubit health') : 'No health vector'} message="Open Resource health for fleet-wide scoring." />
               )}
-              <div className="bd-cta link-row">
-                <button type="button" className="btn btn-secondary btn--xs" onClick={() => onWorkspaceTabChange?.('qubits')}>Qubits tab</button>
+              <PageRelatedNav className="bd-cta" aria-label="Related">
+                <PageRelatedLink onClick={() => onWorkspaceTabChange?.('qubits')}>Qubits tab</PageRelatedLink>
                 <Link className="fs-link" to={link('/app/resources/health')}>Resource health</Link>
-              </div>
+              </PageRelatedNav>
             </section>
           </div>
         )}

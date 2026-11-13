@@ -7,6 +7,7 @@
 @import "./styles/glass-surface.css";
 @import "./styles/app-shell-density.css";
 @import "./styles/typography-ops-floor.css";
+@import "./styles/ops-antislop.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 

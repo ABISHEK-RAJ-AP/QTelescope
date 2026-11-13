@@ -329,7 +329,7 @@ export const OpsTimeline = () => {
                       <div className="ot-list__head"><SevBadge severity={e.severity} />{e.status && <StatusBadge status={e.status} />}</div>
                       <div>{e.title}</div>
                       <div className="ot-list__id">{e.id}</div>
-                      {l && <button type="button" className="btn btn-secondary btn--xs" onClick={() => nav(l.to)}>{l.label}</button>}
+                      {l && <button type="button" className="fs-link" onClick={() => nav(l.to)}>{l.label}</button>}
                     </li>
                   );
                 })}

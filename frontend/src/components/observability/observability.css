@@ -889,7 +889,7 @@
 
 .dm-detail__timeline li[data-known='false'] span {
   color: var(--text-muted);
-  font-style: italic;
+  font-style: normal;
 }
 
 .dm-detail__timeline li span { font-size: var(--font-size-helper); color: var(--text-secondary); }

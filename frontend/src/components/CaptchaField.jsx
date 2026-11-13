@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { RotateCw, ShieldCheck } from 'lucide-react'
+import { RotateCw } from 'lucide-react'
 import { api } from '@/services/api'
 import { fieldClass } from '@/components/AuthShell'
 import { InfoTooltip } from '@/components/observability/InfoTooltip.jsx'
@@ -20,7 +20,7 @@ export function CaptchaField({ value, onChange, onChallenge }) {
         onChallenge?.(res.captcha_id)
       }
     } catch {
-      setError('Could not load the image challenge. Check that the API is running, then retry.')
+      setError('Could not load the image. Confirm the API is up, then retry.')
       onChallenge?.('')
     } finally {
       setLoading(false)
@@ -35,57 +35,61 @@ export function CaptchaField({ value, onChange, onChallenge }) {
 
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <label className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-700 dark:text-neutral-300">
+      <div className="flex items-center justify-between gap-2 min-h-11">
+        <label className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--text-secondary)]">
           Image verification
           <InfoTooltip label="Image verification">
-            Type the six characters shown. This proves a person is signing in, not a script. After an API restart, click New image.
+            Type the characters shown. Proves a person is signing in. After an API restart, click New image.
           </InfoTooltip>
         </label>
         <button
           type="button"
           onClick={fetchNewCaptcha}
           disabled={loading}
-          className="inline-flex items-center gap-1 text-[11px] font-medium text-cyan-700 hover:text-cyan-800 dark:text-cyan-400"
+          className="inline-flex items-center gap-1.5 min-h-11 px-2 text-sm font-medium text-[var(--accent)] hover:opacity-90 disabled:opacity-50"
         >
-          <RotateCw className={`size-3 ${loading ? 'animate-spin' : ''}`} />
+          <RotateCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} aria-hidden />
           New image
         </button>
       </div>
 
       <div className="flex items-stretch gap-3">
-        <div className="flex h-[72px] w-[220px] shrink-0 items-center justify-center overflow-hidden rounded-md border border-neutral-300 bg-[#efe8d8] dark:border-neutral-700 dark:bg-neutral-950">
+        <div className="flex h-[72px] w-[220px] shrink-0 items-center justify-center overflow-hidden rounded-[calc(var(--ds-radius-card)-4px)] border border-[var(--border-color)] bg-[#efe8d8] dark:bg-neutral-950">
           {loading ? (
-            <span className="text-[11px] text-neutral-500">Generating…</span>
+            <span className="text-xs text-[var(--text-muted)]" aria-live="polite">
+              Generating…
+            </span>
           ) : captchaImage ? (
             <img
               src={captchaImage}
-              alt="Enter the six characters shown"
+              alt="Enter the characters shown"
               className="h-full w-full object-contain select-none"
               draggable={false}
             />
           ) : (
-            <span className="px-2 text-center text-[11px] text-neutral-500">Challenge offline</span>
+            <span className="px-2 text-center text-xs text-[var(--text-muted)]">Challenge offline</span>
           )}
         </div>
-        <div className="relative flex-1">
-          <ShieldCheck className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-          <input
-            type="text"
-            inputMode="text"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="6 characters"
-            value={value}
-            onChange={(e) => onChange(e.target.value.replace(/\s/g, ''))}
-            className={`${fieldClass} h-[72px] pl-8 font-mono text-base uppercase tracking-[0.28em]`}
-            maxLength={8}
-            required
-            aria-label="Characters from the image"
-          />
-        </div>
+        <input
+          type="text"
+          inputMode="text"
+          autoComplete="off"
+          spellCheck={false}
+          placeholder="Characters"
+          value={value}
+          onChange={(e) => onChange(e.target.value.replace(/\s/g, ''))}
+          className={`${fieldClass} h-[72px] font-mono text-base tracking-widest tabular-nums uppercase`}
+          maxLength={8}
+          required
+          aria-label="Characters from the image"
+          aria-invalid={Boolean(error)}
+        />
       </div>
-      {error ? <p className="text-[11px] text-rose-600 dark:text-rose-400">{error}</p> : null}
+      {error ? (
+        <p className="text-sm text-[var(--ds-status-critical)]" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   )
 }
