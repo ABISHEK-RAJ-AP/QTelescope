@@ -63,39 +63,41 @@ function FleetFlipCard({ r }) {
       onMouseLeave={hide}
       aria-label={`${title}. Hover the summary for alerts, queue, and routing.`}
     >
-      <div className="fo-fleet-card__flip">
-        <div className="fo-fleet-card__face fo-fleet-card__face--front" onMouseEnter={show} onFocus={show}>
-          <header className="fo-fleet-card__head">
-            <div className="fo-fleet-card__titles">
-              <h3 className="fo-fleet-card__name">{title}</h3>
-              <p className="fo-fleet-card__meta">{cardMeta(r)}</p>
+      <div className="fo-fleet-card__stage">
+        <div className="fo-fleet-card__flip">
+          <div className="fo-fleet-card__face fo-fleet-card__face--front" onMouseEnter={show} onFocus={show}>
+            <header className="fo-fleet-card__head">
+              <div className="fo-fleet-card__titles">
+                <h3 className="fo-fleet-card__name">{title}</h3>
+                <p className="fo-fleet-card__meta">{cardMeta(r)}</p>
+              </div>
+              <StatusText status={r.operational_status || 'UNKNOWN'} />
+            </header>
+            <div className="fo-fleet-card__health">
+              <StateBar counts={r.counts} label={`${title} qubit health`} emptyLabel="Health data not available yet" />
             </div>
-            <StatusText status={r.operational_status || 'UNKNOWN'} />
-          </header>
-          <div className="fo-fleet-card__health">
-            <StateBar counts={r.counts} label={`${title} qubit health`} emptyLabel="Health data not available yet" />
           </div>
-        </div>
 
-        <div className="fo-fleet-card__face fo-fleet-card__face--back" onMouseEnter={show}>
-          <p className="fo-fleet-card__back-title">{title}</p>
-          <dl className="fo-fleet-card__stats">
-            <div><dt>Alerts</dt><dd>{alertLine(r)}</dd></div>
-            <div><dt>Queue</dt><dd>{queueLine(r)}</dd></div>
-            <div><dt>Calibration</dt><dd>{calLine(r)}</dd></div>
-            <div><dt>Routing</dt><dd className={`fo-route fo-route--${routeKey}`}>{routingLine(r)}</dd></div>
-          </dl>
-          <div className="fo-fleet-card__back-actions">
-            {r.crit > 0 ? (
-              <Link className="btn btn-sm fo-fleet-card__action fo-fleet-card__action--crit" to={alertsHref(r, 'CRITICAL')}>
-                Critical ({r.crit})
-              </Link>
-            ) : null}
-            {r.warn > 0 ? (
-              <Link className="btn btn-sm fo-fleet-card__action fo-fleet-card__action--warn" to={alertsHref(r, 'WARNING')}>
-                Warnings ({r.warn})
-              </Link>
-            ) : null}
+          <div className="fo-fleet-card__face fo-fleet-card__face--back" onMouseEnter={show}>
+            <p className="fo-fleet-card__back-title">{title}</p>
+            <dl className="fo-fleet-card__stats">
+              <div><dt>Alerts</dt><dd>{alertLine(r)}</dd></div>
+              <div><dt>Queue</dt><dd>{queueLine(r)}</dd></div>
+              <div><dt>Calibration</dt><dd>{calLine(r)}</dd></div>
+              <div><dt>Routing</dt><dd className={`fo-route fo-route--${routeKey}`}>{routingLine(r)}</dd></div>
+            </dl>
+            <div className={`fo-fleet-card__back-actions${r.crit > 0 && r.warn > 0 ? ' fo-fleet-card__back-actions--pair' : ''}`}>
+              {r.crit > 0 ? (
+                <Link className="fo-fleet-card__action fo-fleet-card__action--crit" to={alertsHref(r, 'CRITICAL')}>
+                  Critical ({r.crit})
+                </Link>
+              ) : null}
+              {r.warn > 0 ? (
+                <Link className="fo-fleet-card__action fo-fleet-card__action--warn" to={alertsHref(r, 'WARNING')}>
+                  Warnings ({r.warn})
+                </Link>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
