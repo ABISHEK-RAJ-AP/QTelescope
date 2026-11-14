@@ -30,8 +30,8 @@
   top: calc(100% + 8px);
   right: 0;
   z-index: 9500;
-  width: min(400px, calc(100vw - 24px));
-  max-height: min(72vh, 520px);
+  width: min(26.5rem, calc(100vw - 24px));
+  max-height: min(72vh, 560px);
   display: flex;
   flex-direction: column;
   border-radius: 16px;
@@ -55,8 +55,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: var(--font-size-helper);
-  font-weight: 650;
+  font-size: var(--font-size-section-title, 1.1875rem);
+  font-weight: 700;
   color: var(--text-primary);
 }
 
@@ -127,17 +127,19 @@
 }
 
 .op-notice-bell__title {
-  margin: 0 0 4px;
-  font-size: var(--font-size-helper);
-  font-weight: 650;
+  margin: 0 0 6px;
+  font-size: var(--font-size-card-title, 1.0625rem);
+  font-weight: 700;
   color: var(--text-primary);
+  overflow-wrap: anywhere;
 }
 
 .op-notice-bell__body {
   margin: 0;
-  font-size: var(--font-size-helper);
+  font-size: var(--font-size-body, 1rem);
   color: var(--text-secondary);
-  line-height: 1.45;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .op-notice-bell__toolbar {

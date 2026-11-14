@@ -1,13 +1,18 @@
 /* Backend workspace */
 .bd-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px 20px;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   padding: 16px 18px;
 }
+.bd-head__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(11rem, 13.5rem);
+  gap: 16px 20px;
+  align-items: start;
+}
 @media (max-width: 800px) {
-  .bd-head { grid-template-columns: 1fr; }
+  .bd-head__top { grid-template-columns: 1fr; }
 }
 .bd-head__id { min-width: 0; }
 .bd-title {
@@ -36,11 +41,32 @@
   margin-top: 12px;
 }
 .bd-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 14px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  align-items: stretch;
+  justify-content: stretch;
+  width: 100%;
+  flex-wrap: nowrap;
+}
+.bd-actions__link {
+  text-decoration: none;
+  display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  font-size: var(--font-size-label, 0.9375rem);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.bd-actions__link:hover {
+  border-color: color-mix(in srgb, var(--accent-cyan) 40%, var(--border-color));
+  color: var(--accent-cyan);
 }
 .bd-actions a.btn,
 .bd-actions a.fs-link {
@@ -50,18 +76,24 @@
 }
 
 .bd-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px 20px;
-  margin: 12px 0 0;
-  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 12px 16px;
+  margin: 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--border-color);
+  width: 100%;
 }
 
 .bd-facts > div {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--bg-card-hover) 70%, transparent);
 }
 
 .bd-facts dt {

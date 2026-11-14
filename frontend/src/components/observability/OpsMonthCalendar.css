@@ -69,7 +69,7 @@
   gap: 12px;
   margin-bottom: 10px;
 }
-.ops-cal__title { margin: 0; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.02em; }
+.ops-cal__title { margin: 0; font-size: var(--font-size-section-title, 1.1875rem); font-weight: 700; letter-spacing: -0.02em; }
 
 .ops-cal-section-title {
   margin: 0 0 12px;
@@ -193,7 +193,7 @@
   color: var(--text-muted);
 }
 .ops-cal__nav { display: flex; align-items: center; gap: 8px; }
-.ops-cal__month { min-width: 9rem; text-align: center; font-weight: 700; font-size: 13px; }
+.ops-cal__month { min-width: 9rem; text-align: center; font-weight: 700; font-size: 1rem; }
 
 .ops-cal__weekdays,
 .ops-cal__cells {
@@ -203,11 +203,17 @@
 }
 .ops-cal__weekday {
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-muted);
   padding: 4px 0;
 }
+@media (max-width: 720px) {
+  .ops-cal__cell { min-height: 64px; padding: 4px; }
+  .ops-cal__pill { font-size: 11px; }
+  .ops-cal__header { flex-wrap: wrap; }
+}
+
 .ops-cal__cell {
   min-height: 88px;
   border: 1px solid var(--border-color);

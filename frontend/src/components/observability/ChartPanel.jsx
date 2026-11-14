@@ -96,7 +96,7 @@ export function ChartPanel({
       </header>
       <div
         className="chart-panel__body"
-        style={state === 'ready' && !presentOpen ? undefined : { minHeight }}
+        style={{ minHeight }}
         aria-hidden={presentOpen}
       >
         {state === 'loading' && <BoneyardSkeleton layout="chart" />}

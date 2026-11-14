@@ -18,8 +18,9 @@
 
 /* Fluid page title (responsive-craft: clamp first) */
 .main-content .page-title,
-.main-content h1.page-heading {
-  font-size: clamp(1.25rem, 1.1rem + 0.6vw, var(--font-size-page-title));
+.main-content h1.page-heading,
+.main-content .page-header__title {
+  font-size: clamp(1.4375rem, 1.2rem + 0.7vw, var(--font-size-page-title));
 }
 
 /* Container queries for card grids — component responds to parent, not viewport */

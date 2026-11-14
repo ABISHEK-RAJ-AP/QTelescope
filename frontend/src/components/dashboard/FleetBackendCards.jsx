@@ -5,6 +5,7 @@ import { formatBackendTitle, formatModalityLabel, formatProviderLabel } from '@/
 import { buildBackendDetailsPath } from '@/lib/investigationLinks.js';
 import { StateBar, StatusText } from '@/pages/backendCommon.jsx';
 import { STATE_LABEL } from '@/pages/backendUtils.js';
+import { InfoTooltip } from '@/components/observability/InfoTooltip.jsx';
 
 function cardMeta(r) {
   const mod = formatModalityLabel(r.qpu_modality);
@@ -86,12 +87,12 @@ function FleetFlipCard({ r }) {
           </dl>
           <div className="fo-fleet-card__back-actions">
             {r.crit > 0 ? (
-              <Link className="btn btn-secondary btn-sm fo-fleet-card__action fo-fleet-card__action--crit" to={alertsHref(r, 'CRITICAL')}>
+              <Link className="btn btn-sm fo-fleet-card__action fo-fleet-card__action--crit" to={alertsHref(r, 'CRITICAL')}>
                 Critical ({r.crit})
               </Link>
             ) : null}
             {r.warn > 0 ? (
-              <Link className="btn btn-secondary btn-sm fo-fleet-card__action" to={alertsHref(r, 'WARNING')}>
+              <Link className="btn btn-sm fo-fleet-card__action fo-fleet-card__action--warn" to={alertsHref(r, 'WARNING')}>
                 Warnings ({r.warn})
               </Link>
             ) : null}
@@ -123,9 +124,11 @@ export function FleetBackendCards({ rows = [], className = '' }) {
       data-tour="page-fleet-cards"
     >
       <div className="fo-fleet-cards__head">
-        <div>
+        <div className="fo-fleet-cards__heading">
           <h2 id="fo-fleet-cards-h" className="fo-fleet-cards__title">Backends</h2>
-          <p className="fo-fleet-cards__sub">Hover the summary for ops detail. Open workspace stays on the card.</p>
+          <InfoTooltip label="How these cards work">
+            Hover the summary for ops detail. Open workspace stays on the card.
+          </InfoTooltip>
         </div>
         <Link className="btn btn-secondary fo-fleet-cards__inventory" to="/app/backends/inventory">
           View inventory <ChevronRight size={14} aria-hidden />

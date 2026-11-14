@@ -1,5 +1,5 @@
 import React from 'react';
-import { ToastContainer } from 'react-toastify';
+import { Slide, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import './toast.css';
 
@@ -7,6 +7,7 @@ export function ToastHost() {
   return (
     <ToastContainer
       position="top-right"
+      transition={Slide}
       autoClose={5200}
       hideProgressBar={false}
       newestOnTop
@@ -14,8 +15,7 @@ export function ToastHost() {
       pauseOnFocusLoss
       draggable={false}
       pauseOnHover
-      limit={3}
-      stacked
+      limit={4}
       theme="light"
       icon={false}
       className="qts-toast-root"

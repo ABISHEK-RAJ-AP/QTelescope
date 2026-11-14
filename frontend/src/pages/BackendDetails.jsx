@@ -241,55 +241,57 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
   return (
     <div className="page-stack">
       <header className="card bd-head">
-        <div className="bd-head__id">
-          <h2 className="bd-title">
-            {onBack && (
-              <PageRelatedLink onClick={onBack}>
-                <ArrowLeft size={14} aria-hidden style={{ marginInlineEnd: 4, verticalAlign: 'middle' }} />
-                Inventory
-              </PageRelatedLink>
-            )}
-            <span>{formatBackendTitle(backend)}</span>
-          </h2>
-          <p className="bd-meta">
-            {providerName(backend.provider_id)} · {modalityName(backend.qpu_modality)} · {backend.qubit_count} qubits
-            {backend.quantum_volume ? ` · QV ${backend.quantum_volume}` : ''}{backend.clops ? ` · CLOPS ${backend.clops}` : ''}
-          </p>
-          <div className="bd-badges">
-            <StatusText status={backend.operational_status} />
-            {hv && (
-              <span className="bd-health" data-s={hv.router} title={`Advisory router: ${hv.recommended_action || 'n/a'}`}>
-                Health {STATE_LABEL[hv.router] || hv.router}
-              </span>
-            )}
-            <LineageTag lineage={src} compact />
-          </div>
-          <dl className="bd-facts">
-            <div>
-              <dt>Telemetry</dt>
-              <dd className={stale ? 'bd-facts--warn' : undefined}>{stale ? 'Stale' : 'Fresh'} · {formatAge(age)} ago</dd>
+        <div className="bd-head__top">
+          <div className="bd-head__id">
+            <h2 className="bd-title">
+              {onBack && (
+                <PageRelatedLink onClick={onBack}>
+                  <ArrowLeft size={14} aria-hidden style={{ marginInlineEnd: 4, verticalAlign: 'middle' }} />
+                  Inventory
+                </PageRelatedLink>
+              )}
+              <span>{formatBackendTitle(backend)}</span>
+            </h2>
+            <p className="bd-meta">
+              {providerName(backend.provider_id)} · {modalityName(backend.qpu_modality)} · {backend.qubit_count} qubits
+              {backend.quantum_volume ? ` · QV ${backend.quantum_volume}` : ''}{backend.clops ? ` · CLOPS ${backend.clops}` : ''}
+            </p>
+            <div className="bd-badges">
+              <StatusText status={backend.operational_status} />
+              {hv && (
+                <span className="bd-health" data-s={hv.router} title={`Advisory router: ${hv.recommended_action || 'n/a'}`}>
+                  Health {STATE_LABEL[hv.router] || hv.router}
+                </span>
+              )}
+              <LineageTag lineage={src} compact />
             </div>
-            {calibration?.freshness_status ? (
-              <div><dt>Calibration</dt><dd>{calibration.freshness_status}</dd></div>
-            ) : null}
-            {d.ingestionQuality ? (
-              <div>
-                <dt>Ingestion</dt>
-                <dd>
-                  <button type="button" className="bd-facts__link" onClick={() => nav('/app/admin/collectors')}>
-                    {d.ingestionQuality.quality_outcome || d.ingestionQuality.status}
-                    {d.ingestionQuality.completeness_pct != null ? ` · ${d.ingestionQuality.completeness_pct}%` : ''}
-                  </button>
-                </dd>
-              </div>
-            ) : null}
-          </dl>
+          </div>
+          <PageRelatedNav className="bd-actions" aria-label="Related views">
+            <Link className="bd-actions__link" to={link('/app/investigate/timeline')}>Ops timeline</Link>
+            <Link className="bd-actions__link" to={link('/app/resources/health')}>Resource health</Link>
+            <Link className="bd-actions__link" to={link('/app/telemetry/drift')}>Drift</Link>
+          </PageRelatedNav>
         </div>
-        <PageRelatedNav className="bd-actions" aria-label="Related views">
-          <Link className="fs-link" to={link('/app/investigate/timeline')}>Ops timeline</Link>
-          <Link className="fs-link" to={link('/app/resources/health')}>Resource health</Link>
-          <Link className="fs-link" to={link('/app/telemetry/drift')}>Drift</Link>
-        </PageRelatedNav>
+        <dl className="bd-facts">
+          <div>
+            <dt>Telemetry</dt>
+            <dd className={stale ? 'bd-facts--warn' : undefined}>{stale ? 'Stale' : 'Fresh'} · {formatAge(age)} ago</dd>
+          </div>
+          {calibration?.freshness_status ? (
+            <div><dt>Calibration</dt><dd>{calibration.freshness_status}</dd></div>
+          ) : null}
+          {d.ingestionQuality ? (
+            <div>
+              <dt>Ingestion</dt>
+              <dd>
+                <button type="button" className="bd-facts__link" onClick={() => nav('/app/admin/collectors')}>
+                  {d.ingestionQuality.quality_outcome || d.ingestionQuality.status}
+                  {d.ingestionQuality.completeness_pct != null ? ` · ${d.ingestionQuality.completeness_pct}%` : ''}
+                </button>
+              </dd>
+            </div>
+          ) : null}
+        </dl>
       </header>
 
       {(d.failed.length > 0 || lineage.error) && (
