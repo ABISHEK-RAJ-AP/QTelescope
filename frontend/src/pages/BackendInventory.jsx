@@ -4,7 +4,8 @@ import { ViewModeToggle } from '../components/observability/DataViewToolbar.jsx'
 import { PageRefreshCluster } from '../components/ui/PageRefreshCluster.jsx';
 import { X } from 'lucide-react';
 import { usePageActions } from '../context/PageActionsContext.jsx';
-import { api } from '../services/api';
+import { api, invalidateApiGetCache } from '../services/api';
+import { hydrateBackendInventoryFromCache } from '../lib/hydrateFromApiCache.js';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
@@ -45,7 +46,7 @@ const COLUMNS = [
 const uniq = (rows, k) => [...new Set(rows.map((r) => r[k]))].sort();
 
 export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(() => hydrateBackendInventoryFromCache());
   const [failed, setFailed] = useState([]);
   const [fatal, setFatal] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
@@ -60,9 +61,10 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
   const { setActions, clearActions } = usePageActions();
   const lineage = useProviderLineage();
 
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ force = false } = {}) => {
     setFatal(false);
-    const backends = await api.getBackends().catch(() => null);
+    if (force) invalidateApiGetCache('');
+    const backends = await api.getBackends({ force }).catch(() => null);
     if (!backends) { setFatal(true); return; }
     const [hv, queues, alertSummary, statusAll] = await Promise.allSettled([
       api.getHealthVector(),
@@ -99,7 +101,7 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
         <button type="button" className="btn btn-primary" onClick={() => setWizardOpen(true)}>
           <Plus size={15} aria-hidden /> Add backend
         </button>
-        <PageRefreshCluster onClick={load} lastRefreshAt={lastRefresh} label="Refresh inventory" />
+        <PageRefreshCluster onClick={() => load({ force: true })} lastRefreshAt={lastRefresh} label="Refresh inventory" />
       </>
     ));
     return () => clearActions();

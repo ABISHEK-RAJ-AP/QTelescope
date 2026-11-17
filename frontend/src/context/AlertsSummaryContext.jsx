@@ -1,14 +1,14 @@
 import React, {
   createContext, useCallback, useContext, useEffect, useMemo, useRef, useState,
 } from 'react';
-import { api } from '../services/api';
+import { api, peekApiCache } from '../services/api';
 
 const AlertsSummaryContext = createContext(null);
 const TTL_MS = 25_000;
 const POLL_MS = 30_000;
 
 export function AlertsSummaryProvider({ children }) {
-  const [summary, setSummary] = useState(null);
+  const [summary, setSummary] = useState(() => peekApiCache('/alerts/summary') ?? null);
   const summaryRef = useRef(summary);
   summaryRef.current = summary;
   const lastFetch = useRef(0);

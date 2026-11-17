@@ -108,16 +108,12 @@ def _build_alerts_summary(db: Session) -> AlertSummaryResponse:
 @router.get("/summary", response_model=AlertSummaryResponse)
 def get_alerts_summary(db: Session = Depends(get_db)):
     """Lightweight counts for nav badges and fleet rollups (no full alert payloads)."""
-    from app.core.cache import cache_get_json, cache_key, cache_set_json, default_ttl
+    from app.core.cache import cache_key, default_ttl, get_or_set_json
 
-    ttl = default_ttl("alerts_summary", 8)
+    ttl = default_ttl("alerts_summary", 20)
     key = cache_key("alerts", "summary")
-    cached = cache_get_json(key)
-    if cached is not None:
-        return AlertSummaryResponse(**cached)
-    summary = _build_alerts_summary(db)
-    cache_set_json(key, summary.model_dump(), ttl)
-    return summary
+    payload = get_or_set_json(key, ttl, lambda: _build_alerts_summary(db).model_dump())
+    return AlertSummaryResponse(**payload)
 
 
 class AlertDetailResponse(AlertResponse):

@@ -16,6 +16,19 @@ router = APIRouter(prefix="/fleet", tags=["Fleet"])
 @router.get("/summary", response_model=FleetSummaryResponse)
 def get_fleet_summary(db: Session = Depends(get_db)):
     """Single contract for dashboard/inventory KPIs (see docs/audit/METRIC_CONTRACTS.md)."""
+    from app.core.cache import cache_key, default_ttl, get_or_set_json
+
+    ttl = default_ttl("fleet_summary", 25)
+    key = cache_key("fleet", "summary")
+
+    def build() -> dict:
+        return _build_fleet_summary(db).model_dump(mode="json")
+
+    payload = get_or_set_json(key, ttl, build)
+    return FleetSummaryResponse(**payload)
+
+
+def _build_fleet_summary(db: Session) -> FleetSummaryResponse:
     total_b = int(db.query(func.count(BackendModel.backend_id)).scalar() or 0)
     online_b = int(
         db.query(func.count(BackendModel.backend_id))

@@ -45,6 +45,15 @@ def _latest_telemetry_map(db: Session) -> dict[str, BackendTelemetryModel]:
 
 @router.get("", response_model=List[QueueStatusResponse])
 def get_all_queues(db: Session = Depends(get_db)):
+    from app.core.cache import cache_key, default_ttl, get_or_set_json
+
+    ttl = default_ttl("queues", 25)
+    key = cache_key("queues", "list")
+    payload = get_or_set_json(key, ttl, lambda: [r.model_dump(mode="json") for r in _build_all_queues(db)])
+    return [QueueStatusResponse(**row) for row in payload]
+
+
+def _build_all_queues(db: Session) -> List[QueueStatusResponse]:
     backends = db.query(BackendModel).all()
     tel_map = _latest_telemetry_map(db)
     results = []

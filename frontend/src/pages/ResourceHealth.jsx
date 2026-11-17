@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
-import { api } from '../services/api';
+import { api, peekApiCache } from '../services/api';
 import { unableToLoad } from '../constants/messages.js';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
@@ -136,7 +136,7 @@ export const ResourceHealth = () => {
   const [params, setParams] = useSearchParams();
   const { backend: backendId, setBackend } = useAppScope();
   const { resolved } = useTheme();
-  const [payload, setPayload] = useState(null);
+  const [payload, setPayload] = useState(() => peekApiCache('/health/vector') ?? null);
   const [loadError, setLoadError] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [busy, setBusy] = useState(false);

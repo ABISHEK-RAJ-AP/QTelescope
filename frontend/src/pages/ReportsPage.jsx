@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Download, FileText, Copy, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { notifyError, notifySuccess } from '../lib/toast.js';
 import { unableToLoad } from '../constants/messages.js';
-import { api, fetchApi, invalidateApiGetCache } from '../services/api';
+import { api, fetchApi, invalidateApiGetCache, peekApiCache } from '../services/api';
 import { ReportExportPreviewModal } from '../components/reports/ReportExportPreviewModal.jsx';
 import { formatIST } from '../utils/time';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
@@ -35,7 +35,7 @@ const short = (h) => (h ? `${h.slice(0, 10)}…${h.slice(-4)}` : '—');
 
 export const ReportsPage = () => {
   const { setActions, clearActions } = usePageActions();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !peekApiCache('/reports/batch'));
   const [backends, setBackends] = useState([]);
   const [data, setData] = useState({}); // report type -> records | null on failure
   const [snapshots, setSnapshots] = useState(null);
@@ -54,7 +54,8 @@ export const ReportsPage = () => {
   const [previewOpen, setPreviewOpen] = useState(false);
 
   const load = useCallback((force = false) => {
-    setLoading(true);
+    const warm = !force && peekApiCache('/reports/batch') !== undefined;
+    if (!warm) setLoading(true);
     if (force) invalidateApiGetCache('/reports');
     Promise.all([
       api.getBackendsCached().catch(() => []),

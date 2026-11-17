@@ -4,28 +4,101 @@ import { attachApiError, parseApiFailure } from '../lib/apiErrors.js';
 
 export const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
-/** In-memory GET cache — cuts repeat page loads when Redis/API is warm. */
+/** Client GET cache (stale-while-revalidate) — survives React route unmounts. */
 const _apiGetCache = new Map();
+const _inflight = new Map();
+
+const NO_CACHE_PREFIXES = ['/auth/', '/users/me'];
+
+function ttlForEndpoint(endpoint) {
+  const path = endpoint.split('?')[0];
+  if (NO_CACHE_PREFIXES.some((p) => path.startsWith(p))) return 0;
+  if (path === '/backends' || path.startsWith('/backends/status-all')) return 60_000;
+  if (path.startsWith('/fleet/')) return 30_000;
+  if (path.startsWith('/alerts/summary')) return 25_000;
+  if (path.startsWith('/health/vector')) return 45_000;
+  if (path.startsWith('/health/coherence')) return 45_000;
+  if (path === '/queues' || path.startsWith('/queues/')) return 30_000;
+  if (path === '/calibration' || path.startsWith('/calibration/')) return 45_000;
+  if (path.startsWith('/operations/')) return 25_000;
+  if (path.startsWith('/reports/batch')) return 45_000;
+  if (path.startsWith('/drift')) return 30_000;
+  if (path.startsWith('/environment')) return 30_000;
+  return 30_000;
+}
+
+export function peekApiCache(endpoint) {
+  const hit = _apiGetCache.get(endpoint);
+  if (!hit) return undefined;
+  if (hit.staleUntil > Date.now()) return hit.data;
+  return undefined;
+}
 
 export function invalidateApiGetCache(prefix = '') {
   if (!prefix) {
     _apiGetCache.clear();
+    _inflight.clear();
     return;
   }
-  for (const key of _apiGetCache.keys()) {
+  for (const key of [..._apiGetCache.keys()]) {
     if (key.startsWith(prefix)) _apiGetCache.delete(key);
+  }
+  for (const key of [..._inflight.keys()]) {
+    if (key.startsWith(prefix)) _inflight.delete(key);
   }
 }
 
-export async function fetchApiCached(endpoint, { ttlMs = 30_000, force = false } = {}) {
+function storeCacheEntry(endpoint, data, ttlMs, staleMs) {
+  const now = Date.now();
+  _apiGetCache.set(endpoint, {
+    data,
+    expires: now + ttlMs,
+    staleUntil: now + staleMs,
+  });
+}
+
+function revalidateCached(endpoint, ttlMs, staleMs) {
+  if (_inflight.has(endpoint)) return;
+  const run = fetchApiRaw(endpoint)
+    .then((data) => {
+      storeCacheEntry(endpoint, data, ttlMs, staleMs);
+      return data;
+    })
+    .finally(() => _inflight.delete(endpoint));
+  _inflight.set(endpoint, run);
+}
+
+export async function fetchApiCached(endpoint, { ttlMs, force = false, staleMs } = {}) {
+  const ttl = ttlMs ?? ttlForEndpoint(endpoint);
+  const stale = staleMs ?? ttl * 3;
+  if (ttl <= 0) return fetchApiRaw(endpoint);
+
   const now = Date.now();
   if (!force) {
     const hit = _apiGetCache.get(endpoint);
-    if (hit && hit.expires > now) return hit.data;
+    if (hit?.expires > now) return hit.data;
+    if (hit?.staleUntil > now) {
+      revalidateCached(endpoint, ttl, stale);
+      return hit.data;
+    }
   }
-  const data = await fetchApi(endpoint);
-  _apiGetCache.set(endpoint, { data, expires: now + ttlMs });
-  return data;
+
+  if (_inflight.has(endpoint)) return _inflight.get(endpoint);
+
+  const p = fetchApiRaw(endpoint)
+    .then((data) => {
+      storeCacheEntry(endpoint, data, ttl, stale);
+      _inflight.delete(endpoint);
+      return data;
+    })
+    .catch((err) => {
+      _inflight.delete(endpoint);
+      const hit = _apiGetCache.get(endpoint);
+      if (hit) return hit.data;
+      throw err;
+    });
+  _inflight.set(endpoint, p);
+  return p;
 }
 
 function sessionAuthHeaders() {
@@ -43,7 +116,7 @@ function sessionAuthHeaders() {
   return {};
 }
 
-export async function fetchApi(endpoint, options = {}) {
+async function fetchApiRaw(endpoint, options = {}) {
   const { headers: optHeaders, body, ...rest } = options;
   const headers = {
     ...sessionAuthHeaders(),
@@ -87,6 +160,31 @@ export async function fetchApi(endpoint, options = {}) {
   }
 
   return res.json();
+}
+
+export async function fetchApi(endpoint, options = {}) {
+  const method = (options.method || 'GET').toUpperCase();
+  const bypass = options.bypassCache === true || options.cache === false;
+  if (method === 'GET' && options.body == null && !bypass) {
+    const ttl = options.ttlMs ?? ttlForEndpoint(endpoint);
+    if (ttl > 0) {
+      return fetchApiCached(endpoint, { ttlMs: ttl, force: options.force === true });
+    }
+  }
+  const data = await fetchApiRaw(endpoint, options);
+  if (method !== 'GET' && method !== 'HEAD' && !endpoint.startsWith('/auth/')) {
+    if (
+      endpoint.includes('run-collection')
+      || endpoint.includes('auto-discover')
+      || endpoint.includes('/import')
+    ) {
+      invalidateApiGetCache('');
+    } else {
+      const slash = endpoint.indexOf('/', 1);
+      invalidateApiGetCache(slash > 0 ? endpoint.slice(0, slash) : endpoint.split('?')[0]);
+    }
+  }
+  return data;
 }
 
 export const api = {
@@ -217,8 +315,8 @@ export const api = {
     fetchApi(`/device-capabilities/devices/${encodeURIComponent(backendId)}?include_jobs=${include_jobs}`),
 
   // Backends
-  getBackends: () => fetchApi('/backends'),
-  getBackendsCached: (ttlMs = 45_000) => fetchApiCached('/backends', { ttlMs }),
+  getBackends: (opts = {}) => fetchApi('/backends', { force: opts.force === true }),
+  getBackendsCached: (ttlMs = 45_000, force = false) => fetchApiCached('/backends', { ttlMs, force }),
   updateBackendCatalog: (backendId, body) =>
     fetchApi(`/admin/backends/${encodeURIComponent(backendId)}/catalog`, {
       method: 'PATCH',

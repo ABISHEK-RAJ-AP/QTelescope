@@ -33,17 +33,17 @@ def _all_latest_calibrations(db: Session) -> List[CalibrationSnapshotResponse]:
 
 @router.get("", response_model=List[CalibrationSnapshotResponse])
 def get_all_latest_calibrations(db: Session = Depends(get_db)):
-    from app.core.cache import cache_get_json, cache_key, cache_set_json, default_ttl
+    from app.core.cache import cache_key, default_ttl, get_or_set_json
 
-    ttl = default_ttl("calibrations", 20)
-    key = cache_key("fleet", "calibrations")
-    cached = cache_get_json(key)
-    if cached is not None:
-        return [CalibrationSnapshotResponse.model_validate(x) for x in cached]
-    rows = _all_latest_calibrations(db)
-    payload = [CalibrationSnapshotResponse.model_validate(r).model_dump(mode="json") for r in rows]
-    cache_set_json(key, payload, ttl)
-    return [CalibrationSnapshotResponse.model_validate(r) for r in rows]
+    ttl = default_ttl("calibrations", 35)
+    key = cache_key("calibration", "list")
+
+    def build():
+        rows = _all_latest_calibrations(db)
+        return [CalibrationSnapshotResponse.model_validate(r).model_dump(mode="json") for r in rows]
+
+    payload = get_or_set_json(key, ttl, build)
+    return [CalibrationSnapshotResponse.model_validate(x) for x in payload]
 
 @router.get("/{backend_id}", response_model=CalibrationSnapshotResponse)
 def get_latest_backend_calibration(backend_id: str, db: Session = Depends(get_db)):

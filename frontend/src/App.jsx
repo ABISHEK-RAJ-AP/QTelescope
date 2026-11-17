@@ -39,6 +39,8 @@ import {
 } from './appLazyPages.js';
 import { BoneyardSkeleton } from './components/ui/Skeleton';
 import { api } from './services/api';
+import { warmConsoleCache, resetConsoleWarmCache } from './lib/warmConsoleCache.js';
+import { invalidateApiGetCache } from './services/api';
 import { useTheme } from './components/ui/ThemeProvider';
 import { PageHeader } from './components/observability/PageHeader.jsx';
 import { resolvePageContext } from './utils/pageContext.js';
@@ -60,6 +62,7 @@ import { useSessionGuard } from './hooks/useSessionGuard.js';
 import { CommandPalette, useCommandPaletteShortcut } from './components/shell/CommandPalette.jsx';
 import { COPY } from './copy/operator.js';
 import { AccessDenied, ConsoleErrorBoundary, NotFoundPage } from './components/shell/RouteStatus.jsx';
+import { QtFilmReadyWatcher } from './components/shell/QtFilmReadyWatcher.jsx';
 
 function skeletonFor(topic, backendSubTab) {
   if (topic === 'alerts') return 'alerts';
@@ -710,6 +713,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
 
   return (
     <>
+    <QtFilmReadyWatcher />
     <div className="app-shell">
       <A11yPreheader />
     <div className="app-container">
@@ -894,9 +898,14 @@ export const App = () => {
 
   const handleLoginSuccess = (userObj) => {
     setCurrentUser(userObj);
+    warmConsoleCache({ force: true });
   };
 
-  const endSession = useCallback(() => setCurrentUser(null), []);
+  const endSession = useCallback(() => {
+    resetConsoleWarmCache();
+    invalidateApiGetCache('');
+    setCurrentUser(null);
+  }, []);
   const refreshSession = useCallback((user) => setCurrentUser(user), []);
   // Gate overview until /auth/me confirms the Bearer token (avoids 401 race after API restart).
   const [sessionChecked, setSessionChecked] = useState(() => !currentUser?.token);
@@ -911,6 +920,11 @@ export const App = () => {
     onRefresh: refreshSession,
     onReady: markSessionReady,
   });
+
+  useEffect(() => {
+    if (!currentUser?.token || !sessionChecked) return;
+    warmConsoleCache();
+  }, [currentUser?.token, sessionChecked]);
 
   useEffect(() => {
     if (!currentUser || !sessionChecked) return;

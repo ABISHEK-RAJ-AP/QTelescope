@@ -165,10 +165,18 @@ def invalidate_operational_cache() -> None:
     cache_delete_prefix(f"{ns}:alerts:")
     cache_delete_prefix(f"{ns}:fleet:")
     cache_delete_prefix(f"{ns}:operations:")
+    cache_delete_prefix(f"{ns}:backends:")
+    cache_delete_prefix(f"{ns}:reports:")
+    cache_delete_prefix(f"{ns}:queues:")
+    cache_delete_prefix(f"{ns}:calibration:")
     _mem_clear_prefix(f"{ns}:health:")
     _mem_clear_prefix(f"{ns}:alerts:")
     _mem_clear_prefix(f"{ns}:fleet:")
     _mem_clear_prefix(f"{ns}:operations:")
+    _mem_clear_prefix(f"{ns}:backends:")
+    _mem_clear_prefix(f"{ns}:reports:")
+    _mem_clear_prefix(f"{ns}:queues:")
+    _mem_clear_prefix(f"{ns}:calibration:")
 
 
 def cache_health() -> dict:

@@ -3,7 +3,8 @@ import { ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { notifyError, notifyOperatorNotice, notifyWarn } from '../lib/toast.js';
-import { api } from '../services/api';
+import { api, invalidateApiGetCache } from '../services/api';
+import { hasWarmCache, hydrateDashboardSlice } from '../lib/hydrateFromApiCache.js';
 import { formatISTTime } from '../utils/time';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
@@ -66,9 +67,9 @@ function DashboardHomeInner() {
     layout, customizing, setCustomizing, persistOrder, setWidgetSpan, resetLayout, applySmart, layoutSuggestions,
   } = usePageLayout('dashboard');
 
-  const [d, setD] = useState({});
+  const [d, setD] = useState(() => hydrateDashboardSlice(SOURCES));
   const [failed, setFailed] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !hasWarmCache(['/backends', '/alerts/summary', '/fleet/summary']));
   const [chartsReady, setChartsReady] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(null);
   const apiCalls = useCallback(() => ({
@@ -108,13 +109,15 @@ function DashboardHomeInner() {
     fetchKeys(SECONDARY_SOURCES).then((res) => mergeKeys(SECONDARY_SOURCES, res));
   }, [fetchKeys, mergeKeys]);
 
-  const loadData = useCallback(async ({ silent = false } = {}) => {
+  const loadData = useCallback(async ({ silent = false, force = false } = {}) => {
     if (silent) {
       const res = await fetchKeys(SOURCES);
       mergeKeys(SOURCES, res);
       return;
     }
-    setLoading(true);
+    if (force) invalidateApiGetCache('');
+    const warm = !force && hasWarmCache(['/backends']);
+    if (!warm) setLoading(true);
     const res = await fetchKeys(PRIMARY_SOURCES);
     mergeKeys(PRIMARY_SOURCES, res);
     setLoading(false);
@@ -134,13 +137,19 @@ function DashboardHomeInner() {
       setChartsReady(false);
       return undefined;
     }
-    const id = typeof requestIdleCallback === 'function'
-      ? requestIdleCallback(() => setChartsReady(true), { timeout: 600 })
-      : setTimeout(() => setChartsReady(true), 80);
-    return () => {
-      if (typeof id === 'number') clearTimeout(id);
-      else cancelIdleCallback(id);
+    let cancelled = false;
+    const tick = () => {
+      if (cancelled) return;
+      const root = document.querySelector('.dashboard-home');
+      const pending = root?.querySelectorAll('[data-qt-echart-pending="true"]') || [];
+      if (pending.length) {
+        requestAnimationFrame(tick);
+        return;
+      }
+      setChartsReady(true);
     };
+    requestAnimationFrame(tick);
+    return () => { cancelled = true; };
   }, [loading]);
 
   useEffect(() => {
@@ -154,7 +163,7 @@ function DashboardHomeInner() {
           smartLayoutHint={layoutSuggestions[0]?.reason ? `Suggested layout: ${layoutSuggestions[0].reason}` : undefined}
           label="Customize"
         />
-        <PageRefreshCluster onClick={() => loadData({ silent: true })} lastRefreshAt={lastRefresh} label="Refresh dashboard" />
+        <PageRefreshCluster onClick={() => loadData({ force: true })} lastRefreshAt={lastRefresh} label="Refresh dashboard" />
       </div>,
     );
     return () => clearActions();
@@ -739,7 +748,11 @@ function DashboardHomeInner() {
   if (loading) return <BoneyardSkeleton layout="dashboard" />;
 
   return (
-    <div className="dashboard-home">
+    <div
+      className="dashboard-home"
+      data-qt-page-pending="false"
+      data-qt-charts-pending={chartsReady ? 'false' : 'true'}
+    >
 
       {customizing && (
         <p className="dashboard-customize-hint">Drag panels to reorder. Resize cycles half row / full row. Layout saves in this browser.</p>

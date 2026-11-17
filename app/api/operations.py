@@ -37,6 +37,14 @@ def _alert_backend_id(alert: AlertModel) -> str | None:
 
 @router.get("/centre")
 def get_operations_centre(db: Session = Depends(get_db)):
+    from app.core.cache import cache_key, default_ttl, get_or_set_json
+
+    ttl = default_ttl("operations_centre", 20)
+    key = cache_key("operations", "centre")
+    return get_or_set_json(key, ttl, lambda: _build_operations_centre(db))
+
+
+def _build_operations_centre(db: Session) -> Dict[str, Any]:
     ensure_discovered(db)
     try:
         sync_incidents_from_alerts_if_stale(db)

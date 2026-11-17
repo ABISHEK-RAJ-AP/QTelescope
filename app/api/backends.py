@@ -41,17 +41,42 @@ def _fleet_query(db: Session):
 
 @router.get("", response_model=List[BackendResponse])
 def get_backends(provider_id: Optional[str] = None, db: Session = Depends(get_db)):
-    ensure_discovered(db)
-    query = _fleet_query(db)
+    from app.core.cache import cache_key, default_ttl, get_or_set_json
+
     if provider_id:
-        query = query.filter(BackendModel.provider_id == provider_id)
-    return [_backend_response(b) for b in query.all()]
+        ensure_discovered(db)
+        query = _fleet_query(db).filter(BackendModel.provider_id == provider_id)
+        return [_backend_response(b) for b in query.all()]
+
+    ttl = default_ttl("backends_list", 45)
+    key = cache_key("backends", "list")
+
+    def build():
+        ensure_discovered(db)
+        rows = [_backend_response(b) for b in _fleet_query(db).all()]
+        return [r.model_dump(mode="json") for r in rows]
+
+    payload = get_or_set_json(key, ttl, build)
+    return [BackendResponse(**row) for row in payload]
 
 
 @router.get("/status-all", response_model=List[BackendStatusResponse])
 def get_all_backend_status(db: Session = Depends(get_db)):
     """Latest operational telemetry for every backend (one round trip)."""
-    ensure_discovered(db)
+    from app.core.cache import cache_key, default_ttl, get_or_set_json
+
+    ttl = default_ttl("backends_status_all", 35)
+    key = cache_key("backends", "status-all")
+
+    def build():
+        ensure_discovered(db)
+        return [r.model_dump(mode="json") for r in _build_all_backend_status(db)]
+
+    payload = get_or_set_json(key, ttl, build)
+    return [BackendStatusResponse(**row) for row in payload]
+
+
+def _build_all_backend_status(db: Session) -> List[BackendStatusResponse]:
     backends = _fleet_query(db).all()
     if not backends:
         return []
