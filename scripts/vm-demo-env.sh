@@ -44,9 +44,15 @@ apply_vm_demo_env() {
   ensure_sqlite_if_no_postgres
   upsert_env ENABLE_MOCK_DATA true
   upsert_env BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS false
-  upsert_env CACHE_ENABLED false
-  upsert_env REDIS_URL ""
   upsert_env COLLECTION_SCHEDULER_ENABLED false
+  if [[ -f "${ROOT}/scripts/vm-ensure-redis-cache.sh" ]]; then
+    # shellcheck source=scripts/vm-ensure-redis-cache.sh
+    source "${ROOT}/scripts/vm-ensure-redis-cache.sh"
+    ensure_redis_cache "$ROOT"
+  else
+    upsert_env CACHE_ENABLED true
+    upsert_env REDIS_URL ""
+  fi
   # Keep Bearer sessions across uvicorn restarts (demo/lab). Without this, overview 401s after restart.
   upsert_env PERSIST_API_SESSIONS true
   upsert_env ADMIN_USERNAME admin

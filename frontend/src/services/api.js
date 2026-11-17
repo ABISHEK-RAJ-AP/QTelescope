@@ -4,6 +4,30 @@ import { attachApiError, parseApiFailure } from '../lib/apiErrors.js';
 
 export const BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
 
+/** In-memory GET cache — cuts repeat page loads when Redis/API is warm. */
+const _apiGetCache = new Map();
+
+export function invalidateApiGetCache(prefix = '') {
+  if (!prefix) {
+    _apiGetCache.clear();
+    return;
+  }
+  for (const key of _apiGetCache.keys()) {
+    if (key.startsWith(prefix)) _apiGetCache.delete(key);
+  }
+}
+
+export async function fetchApiCached(endpoint, { ttlMs = 30_000, force = false } = {}) {
+  const now = Date.now();
+  if (!force) {
+    const hit = _apiGetCache.get(endpoint);
+    if (hit && hit.expires > now) return hit.data;
+  }
+  const data = await fetchApi(endpoint);
+  _apiGetCache.set(endpoint, { data, expires: now + ttlMs });
+  return data;
+}
+
 function sessionAuthHeaders() {
   try {
     const raw = localStorage.getItem('quantum_user');
@@ -194,6 +218,7 @@ export const api = {
 
   // Backends
   getBackends: () => fetchApi('/backends'),
+  getBackendsCached: (ttlMs = 45_000) => fetchApiCached('/backends', { ttlMs }),
   updateBackendCatalog: (backendId, body) =>
     fetchApi(`/admin/backends/${encodeURIComponent(backendId)}/catalog`, {
       method: 'PATCH',
@@ -337,8 +362,19 @@ export const api = {
   }),
 
   // Reports
-  exportReport: (reportType, format) => `${BASE_URL}/reports/export?report_type=${reportType}&format=${format}`,
-  exportReportJson: (reportType) => fetchApi(`/reports/export?report_type=${reportType}&format=json`),
+  exportReport: (reportType, format, params = {}) => {
+    const q = new URLSearchParams({ report_type: reportType, format });
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '') q.set(k, String(v));
+    });
+    return `${BASE_URL}/reports/export?${q.toString()}`;
+  },
+  exportReportJson: (reportType, backendId) => {
+    const q = new URLSearchParams({ report_type: reportType, format: 'json' });
+    if (backendId) q.set('backend_id', backendId);
+    return fetchApi(`/reports/export?${q.toString()}`);
+  },
+  reportsBatch: (ttlMs = 45_000, force = false) => fetchApiCached('/reports/batch', { ttlMs, force }),
   exportBundle: () => fetchApi('/reports/bundle'),
   importBundle: (payload) => fetchApi('/reports/import', { method: 'POST', body: JSON.stringify(payload) }),
 

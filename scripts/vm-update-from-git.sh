@@ -68,6 +68,11 @@ if [[ "$SKIP_TESTS" != "1" ]]; then
   (cd frontend && npm run test) || true
 fi
 
+# shellcheck source=scripts/vm-ensure-redis-cache.sh
+source "${ROOT}/scripts/vm-ensure-redis-cache.sh"
+echo "==> Redis / Valkey cache"
+ensure_redis_cache "$ROOT" || true
+
 if [[ "$RUN_DEMO_ENV" == "1" ]]; then
   # shellcheck source=scripts/vm-demo-env.sh
   source "${ROOT}/scripts/vm-demo-env.sh"

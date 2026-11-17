@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Download, FileText, Copy, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { notifyError, notifySuccess } from '../lib/toast.js';
 import { unableToLoad } from '../constants/messages.js';
-import { api, fetchApi } from '../services/api';
+import { api, fetchApi, invalidateApiGetCache } from '../services/api';
+import { ReportExportPreviewModal } from '../components/reports/ReportExportPreviewModal.jsx';
 import { formatIST } from '../utils/time';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
@@ -16,7 +17,6 @@ import {
 } from '../components/observability/DetailModalLayout.jsx';
 import { EmptyState, TableEmpty } from '../components/observability/EmptyState.jsx';
 import { usePageActions } from '../context/PageActionsContext.jsx';
-import { rowsToCsv } from '../lib/csvExport.js';
 import './ReportsPage.css';
 
 const REPORTS = [
@@ -27,15 +27,9 @@ const REPORTS = [
 const FORMATS = [
   { id: 'csv', label: 'CSV', hint: 'Spreadsheet-ready' },
   { id: 'json', label: 'JSON', hint: 'Machine-readable' },
-  { id: 'html', label: 'HTML', hint: 'Printable view, fleet only' },
+  { id: 'html', label: 'HTML', hint: 'Printable header/footer + charts' },
 ];
 
-const saveBlob = (name, text, mime) => {
-  const url = URL.createObjectURL(new Blob([text], { type: mime }));
-  const a = document.createElement('a');
-  a.href = url; a.download = name; a.click();
-  URL.revokeObjectURL(url);
-};
 const kb = (n) => (n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`);
 const short = (h) => (h ? `${h.slice(0, 10)}…${h.slice(-4)}` : '—');
 
@@ -57,26 +51,32 @@ export const ReportsPage = () => {
   const [snapLabel, setSnapLabel] = useState('');
   const [snapBusy, setSnapBusy] = useState(false);
   const [manifest, setManifest] = useState(null); // {snap, state, body}
+  const [previewOpen, setPreviewOpen] = useState(false);
 
-  const load = useCallback(() => {
+  const load = useCallback((force = false) => {
+    setLoading(true);
+    if (force) invalidateApiGetCache('/reports');
     Promise.all([
-      api.getBackends().catch(() => []),
-      ...REPORTS.map((r) => fetchApi(`/reports/export?report_type=${r.type}&format=json`).then((d) => d?.records || []).catch(() => null)),
+      api.getBackendsCached().catch(() => []),
+      api.reportsBatch(45_000, force).catch(() => null),
       api.listEvidenceSnapshots().catch(() => null),
-    ]).then(([b, ...rest]) => {
+    ]).then(([b, batch, snaps]) => {
       setBackends(b || []);
-      setData(Object.fromEntries(REPORTS.map((r, i) => [r.type, rest[i]])));
-      setSnapshots(rest[REPORTS.length]);
+      if (batch && typeof batch === 'object') {
+        setData(Object.fromEntries(REPORTS.map((r) => [r.type, batch[r.type]?.records ?? null])));
+      } else {
+        setData(Object.fromEntries(REPORTS.map((r) => [r.type, null])));
+      }
+      setSnapshots(snaps);
       setLastRefresh(new Date());
     }).finally(() => setLoading(false));
   }, []);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    setActions(<RefreshButton onClick={load} lastRefreshAt={lastRefresh} label="Refresh reports data" />);
+    setActions(<RefreshButton onClick={() => load(true)} lastRefreshAt={lastRefresh} label="Refresh reports data" />);
     return () => clearActions();
   }, [load, lastRefresh, setActions, clearActions]);
-  useEffect(() => { if (scope && format === 'html') setFormat('csv'); }, [scope, format]);
 
   const report = REPORTS.find((r) => r.type === type);
   const scoped = useCallback((r) => {
@@ -87,38 +87,28 @@ export const ReportsPage = () => {
   }, [data, scope]);
   const rows = useMemo(() => scoped(report), [scoped, report]);
 
-  const doExport = async () => {
-    const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const recordExportResult = (meta) => {
     const scopeLabel = scope || 'fleet';
-    const entry = { at: new Date(), report: report.title, scope: scopeLabel, format: format.toUpperCase() };
-    setExp({ state: 'working' });
-    try {
-      let count; let size;
-      if (format === 'html') {
-        const res = await fetch(api.exportReport(type, 'html'));
-        if (!res.ok) throw new Error(`Server returned ${res.status}`);
-        const text = await res.text();
-        count = data[type]?.length ?? null; size = text.length;
-        saveBlob(`${type}_${stamp}.html`, text, 'text/html');
-      } else {
-        const fresh = await fetchApi(`/reports/export?report_type=${type}&format=json`);
-        const all = fresh?.records || [];
-        const out = scope ? all.filter((x) => (report.prefix ? String(report.scopeKey(x) || '').startsWith(`${scope}_`) : report.scopeKey(x) === scope)) : all;
-        if (!out.length) throw new Error('No records for this scope — nothing to export.');
-        const text = format === 'csv' ? rowsToCsv(out) : JSON.stringify({ kind: type, scope: scopeLabel, exported_at: new Date().toISOString(), records: out }, null, 2);
-        count = out.length; size = text.length;
-        saveBlob(`${type}_${scopeLabel}_${stamp}.${format}`, text, format === 'csv' ? 'text/csv' : 'application/json');
-      }
-      const done = { ...entry, state: 'ok', rows: count, size };
-      setHistory((h) => [done, ...h].slice(0, 8));
-      setExp({ state: 'ok', ...done });
-      notifySuccess(`Exported ${count ?? '—'} rows (${format.toUpperCase()}).`);
-    } catch (e) {
-      const fail = { ...entry, state: 'err', error: e?.message || String(e) };
-      setHistory((h) => [fail, ...h].slice(0, 8));
-      setExp({ state: 'err', ...fail });
-      notifyError(fail.error);
+    const entry = {
+      at: new Date(),
+      report: report.title,
+      scope: scopeLabel,
+      format: meta.format || format.toUpperCase(),
+      state: 'ok',
+      rows: meta.rows,
+      size: meta.size,
+    };
+    setHistory((h) => [entry, ...h].slice(0, 8));
+    setExp({ state: 'ok', ...entry });
+    notifySuccess(`Exported ${meta.rows ?? '—'} rows (${entry.format}).`);
+  };
+
+  const openPreview = () => {
+    if (rows == null) {
+      notifyError('Report data unavailable — refresh and try again.');
+      return;
     }
+    setPreviewOpen(true);
   };
 
   const createSnapshot = async () => {
@@ -189,18 +179,15 @@ export const ReportsPage = () => {
             <div>
               <div className="rp-label" id="rp-fmt-l">Format</div>
               <div className="rp-formats" role="radiogroup" aria-labelledby="rp-fmt-l">
-                {FORMATS.map((f) => {
-                  const off = f.id === 'html' && !!scope;
-                  return (
-                    <button key={f.id} type="button" role="radio" aria-checked={format === f.id} disabled={off} className="rp-fmt" onClick={() => setFormat(f.id)} title={off ? 'HTML export is fleet-wide only; choose CSV or JSON for a backend scope.' : f.hint}>
-                      <b>{f.label}</b><small>{f.hint}</small>
-                    </button>
-                  );
-                })}
+                {FORMATS.map((f) => (
+                  <button key={f.id} type="button" role="radio" aria-checked={format === f.id} className="rp-fmt" onClick={() => setFormat(f.id)} title={f.hint}>
+                    <b>{f.label}</b><small>{f.hint}</small>
+                  </button>
+                ))}
               </div>
             </div>
-            <button type="button" className="btn btn-primary" onClick={doExport} disabled={exp.state === 'working' || rows == null || (rows?.length === 0 && format !== 'html')}>
-              {exp.state === 'working' ? <><Loader2 size={14} className="rp-spin" /> Exporting…</> : <><Download size={14} /> Export {report.title.toLowerCase()}</>}
+            <button type="button" className="btn btn-primary" onClick={openPreview} disabled={rows == null}>
+              <Download size={14} /> Preview & export
             </button>
             <div className="rp-status" role="status" aria-live="polite">
               {exp.state === 'idle' && <span className="rp-status__idle">Ready to export.</span>}
@@ -310,6 +297,17 @@ export const ReportsPage = () => {
           </DetailModalBody>
         )}
       </DetailDrawer>
+
+      <ReportExportPreviewModal
+        open={previewOpen}
+        onClose={() => setPreviewOpen(false)}
+        reportType={type}
+        reportTitle={report.title}
+        format={format}
+        scope={scope}
+        rowCount={rows?.length ?? null}
+        onExported={recordExportResult}
+      />
 
     </div>
   );
