@@ -18,7 +18,13 @@ import { isSimulatorBackend } from './fleetData.js';
 import { ScopeBanner } from '../components/ds/ScopeBanner.jsx';
 import './BackendComparison.css';
 
+const MAX_COMPARE = 4;
+const MIN_COMPARE = 2;
 const ROUTER_RANK = { GREEN: 4, YELLOW: 3, UNKNOWN: 2, RED: 1 };
+
+function shortBackendName(name, id) {
+  return (name || id).replace(/\s*\(.*\)/, '');
+}
 
 function pickRoutingRecommendation(rows, meta, queues) {
   const eligible = rows.filter((r) => !isSimulatorBackend(meta[r.backend_id]));
@@ -145,7 +151,7 @@ export const BackendComparison = () => {
   const [queues, setQueues] = useState({});
   const [selected, setSelected] = useState(() => {
     const raw = params.get('backends') || params.get('backend');
-    return raw ? raw.split(',').filter(Boolean).slice(0, 4) : null;
+    return raw ? raw.split(',').filter(Boolean).slice(0, MAX_COMPARE) : null;
   });
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -182,7 +188,7 @@ export const BackendComparison = () => {
   }, [key, setParams]);
 
   useEffect(() => {
-    if (sel.length < 2) { setResult(null); return undefined; }
+    if (sel.length < MIN_COMPARE) { setResult(null); return undefined; }
     let live = true;
     setBusy(true);
     setError(null);
@@ -204,16 +210,45 @@ export const BackendComparison = () => {
   const toggle = (id) => setSelected((prev) => {
     const p = prev || [];
     if (p.includes(id)) return p.filter((x) => x !== id);
-    return p.length >= 4 ? p : [...p, id];
+    if (p.length >= MAX_COMPARE) return p;
+    return [...p, id];
   });
 
   const selMods = [...new Set(sel.map((id) => meta[id]?.qpu_modality || 'unknown'))];
   const mixed = selMods.length > 1;
   const selMod = selMods.length === 1 ? selMods[0] : null;
 
-  const rows = useMemo(() => (result?.backends || []).map((b, i) => ({
-    ...b, name: b.backend_name || b.backend_id, short: (b.backend_name || b.backend_id).replace(/\s*\(.*\)/, ''), color: chartPalette()[i % chartPalette().length], idx: i,
-  })), [result]);
+  const rows = useMemo(() => {
+    const byId = Object.fromEntries((result?.backends || []).map((b) => [b.backend_id, b]));
+    const palette = chartPalette();
+    return sel.map((id, i) => {
+      const fromApi = byId[id];
+      if (fromApi) {
+        return {
+          ...fromApi,
+          name: fromApi.backend_name || id,
+          short: shortBackendName(fromApi.backend_name, id),
+          color: palette[i % palette.length],
+          idx: i,
+        };
+      }
+      const m = meta[id];
+      return {
+        backend_id: id,
+        backend_name: m?.backend_name || id,
+        name: m?.backend_name || id,
+        short: shortBackendName(m?.backend_name, id),
+        qpu_modality: m?.qpu_modality || 'unknown',
+        router: 'UNKNOWN',
+        vector: {},
+        counts: {},
+        qubits: [],
+        color: palette[i % palette.length],
+        idx: i,
+        missing_compare_data: true,
+      };
+    });
+  }, [result, sel, meta]);
 
   const queueRows = useMemo(() => rows.map((b) => ({ b, pending: num(queues[b.backend_id]?.pending_jobs) })), [rows, queues]);
 
@@ -264,15 +299,19 @@ export const BackendComparison = () => {
     <div className="page-stack">
       <section className="card page-panel">
         <div className="bc-head">
-          <strong>Select 2–4 backends</strong>
-          <span className="page-hint">{sel.length}/4 selected · ranks and deltas only apply within one modality</span>
+          <strong>Select {MIN_COMPARE}–{MAX_COMPARE} backends</strong>
+          <span className="page-hint">
+            {sel.length}/{MAX_COMPARE} selected
+            {sel.length >= MIN_COMPARE ? ` · comparing ${sel.length} backend${sel.length === 1 ? '' : 's'}` : ''}
+            {' · ranks and deltas only apply within one modality'}
+          </span>
         </div>
         <div className="bc-chips" role="group" aria-label="Backends to compare">
           {backends.map((b) => {
             const on = sel.includes(b.backend_id);
             const mod = b.qpu_modality || 'unknown';
             const mismatch = !on && selMod && mod !== selMod;
-            const full = !on && sel.length >= 4;
+            const full = !on && sel.length >= MAX_COMPARE;
             return (
               <button key={b.backend_id} type="button" className="bc-chip" aria-pressed={on} disabled={full}
                 data-mismatch={mismatch || undefined} onClick={() => toggle(b.backend_id)}>
@@ -295,9 +334,16 @@ export const BackendComparison = () => {
           </span>
         </div>
       )}
-      {sel.length < 2 && <EmptyState variant="panel" compact title="Pick at least two backends" message="Comparison runs automatically once two are selected." />}
-      {error && sel.length >= 2 && <ErrorState variant="panel" message={error} onRetry={reload} />}
-      {busy && !result && sel.length >= 2 && <BoneyardSkeleton layout="grid" />}
+      {sel.length < MIN_COMPARE && (
+        <EmptyState
+          variant="panel"
+          compact
+          title={`Pick at least ${MIN_COMPARE} backends`}
+          message={`Charts, table, and pair deltas include every selected backend (up to ${MAX_COMPARE}).`}
+        />
+      )}
+      {error && sel.length >= MIN_COMPARE && <ErrorState variant="panel" message={error} onRetry={reload} />}
+      {busy && !result && sel.length >= MIN_COMPARE && <BoneyardSkeleton layout="grid" />}
 
       {result && rows.length > 0 && (
         <>
@@ -319,7 +365,16 @@ export const BackendComparison = () => {
             <p className="page-hint">Pick one modality to get a routing recommendation.</p>
           ) : null}
           <div className="bc-legend" aria-label="Backend colours">
-            {rows.map((r) => <span key={r.backend_id}><i style={{ borderColor: r.color }} />{r.name}</span>)}
+            {rows.map((r) => (
+              <span key={r.backend_id}>
+                <i style={{ borderColor: r.color }} />
+                {r.name}
+                {r.missing_compare_data ? ' (no health data)' : ''}
+              </span>
+            ))}
+            {rows.length !== sel.length && (
+              <span className="page-hint">Selection mismatch — refresh or re-pick backends.</span>
+            )}
             {busy && <span className="page-hint">updating…</span>}
           </div>
 
@@ -409,8 +464,16 @@ export const BackendComparison = () => {
           </section>
 
           <section className="card page-panel">
-            <h3 className="page-section-title">Pair deltas (A − B)</h3>
-            {result.pairs?.some((p) => p.ranking_allowed) ? (
+            <h3 className="page-section-title">
+              Pair deltas (A − B)
+              {result.pairs?.length ? ` · ${result.pairs.length} pair${result.pairs.length === 1 ? '' : 's'}` : ''}
+            </h3>
+            {sel.length > MIN_COMPARE && (
+              <p className="page-hint" style={{ marginTop: 0 }}>
+                With {sel.length} backends selected, every pair is listed below (not only the first two).
+              </p>
+            )}
+            {result.pairs?.length ? (
               <div className="table-container" style={{ border: 'none' }}>
                 <table className="custom-table custom-table--dense">
                   <thead><tr><th>Pair</th><th>Δ F_limit</th><th>Δ T1 (µs)</th><th>Δ T2 (µs)</th></tr></thead>
@@ -426,7 +489,7 @@ export const BackendComparison = () => {
                   </tbody>
                 </table>
               </div>
-            ) : <p className="page-hint">No same-modality pair in this selection, so no deltas are shown.</p>}
+            ) : <p className="page-hint">Need at least two backends in the selection for pair deltas.</p>}
             <p className="page-hint bc-note">{result.methodology}</p>
           </section>
         </>

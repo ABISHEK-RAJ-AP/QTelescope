@@ -32,3 +32,12 @@ def test_cross_modality_blocks_ranking():
     out = build_comparison(vec, coh, ["a", "b"])
     assert out["same_modality_selection"] is False
     assert out["pairs"][0]["ranking_allowed"] is False
+
+
+def test_three_backends_yields_three_pairs():
+    vec = [_vec("a", "superconducting"), _vec("b", "superconducting", fl=0.97), _vec("c", "superconducting", fl=0.96)]
+    coh = [_coh("a"), _coh("b"), _coh("c", t1=95.0)]
+    out = build_comparison(vec, coh, ["a", "b", "c"])
+    assert len(out["backends"]) == 3
+    assert len(out["pairs"]) == 3
+    assert out["same_modality_selection"] is True
