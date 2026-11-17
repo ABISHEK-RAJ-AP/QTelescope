@@ -8,8 +8,11 @@ import { api } from '@/services/api'
 import { shouldRunOnboarding } from '@/lib/onboardingState'
 import { landingPathForRole } from '@/lib/permissions.js'
 import { safePostLoginRedirect } from '@/lib/safePostLoginRedirect'
+import { usePublicFilmReady } from '@/hooks/usePublicFilmReady.js'
+import { AuthDemoPresets } from '@/components/AuthDemoPresets.jsx'
 
 export function LoginPage({ onLoginSuccess }) {
+  usePublicFilmReady('login')
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -131,36 +134,14 @@ export function LoginPage({ onLoginSuccess }) {
               Register
             </Link>
           </p>
-          {showDevPresets ? (
-            <div className="rounded-[calc(var(--ds-radius-card)-4px)] border border-[var(--border-color)] bg-[var(--bg-card-hover)] p-3">
-              <span className="mb-2 block text-sm font-medium text-[var(--text-secondary)]">
-                Demo accounts
-              </span>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => { setUsername('superadmin'); setPassword('quantum2026'); setError('') }}
-                  className="min-h-11 rounded-[calc(var(--ds-radius-card)-6px)] border border-[var(--border-color)] bg-[var(--bg-card)] px-2 text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--accent)]"
-                >
-                  SuperAdmin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setUsername('admin'); setPassword('quantum2026'); setError('') }}
-                  className="min-h-11 rounded-[calc(var(--ds-radius-card)-6px)] border border-[var(--border-color)] bg-[var(--bg-card)] px-2 text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--accent)]"
-                >
-                  Admin
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setUsername('user_researcher'); setPassword('quantum2026'); setError('') }}
-                  className="min-h-11 rounded-[calc(var(--ds-radius-card)-6px)] border border-[var(--border-color)] bg-[var(--bg-card)] px-2 text-sm font-medium text-[var(--text-secondary)] hover:border-[var(--accent)]"
-                >
-                  Operator
-                </button>
-              </div>
-            </div>
-          ) : null}
+          <AuthDemoPresets
+            visible={showDevPresets}
+            onSelect={(user, pass) => {
+              setUsername(user);
+              setPassword(pass);
+              setError('');
+            }}
+          />
         </div>
       }
     >
