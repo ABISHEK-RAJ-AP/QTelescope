@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { LoadingPanel } from './components/ui.jsx';
-import ToastHost from './components/ToastHost.jsx';
+import NotificationHost from './components/NotificationHost.jsx';
+import GovernNotificationSync from './components/GovernNotificationSync.jsx';
 import GovernErrorBoundary from './components/GovernErrorBoundary.jsx';
 import ErrorPage from './pages/ErrorPage.jsx';
 import GovernSignIn from './pages/GovernSignIn.jsx';
@@ -29,6 +30,7 @@ import SchedulingAdmin from './pages/SchedulingAdmin.jsx';
 import PageFrame from './components/PageFrame.jsx';
 import GovernCommandPalette from './components/GovernCommandPalette.jsx';
 import UiScaleControl from './components/UiScaleControl.jsx';
+import NotificationBell from './components/NotificationBell.jsx';
 import SessionSecurityBanner from './components/SessionSecurityBanner.jsx';
 import { QRP_NAV_GROUPS, filterNavGroups, matchGovernRoute } from './nav/qrpNav.js';
 import { useGovernSession } from './hooks/useGovernSession.js';
@@ -66,7 +68,10 @@ export default function App() {
 
   function refreshQueueBadge() {
     api(governanceSummaryPath(readContextProjectId()))
-      .then((s) => setQueueBadge(s.queue ?? 0))
+      .then((s) => {
+        setQueueBadge(s.queue ?? 0);
+        window.dispatchEvent(new CustomEvent('govern:data-refresh'));
+      })
       .catch(() => setQueueBadge(0));
   }
 
@@ -283,7 +288,8 @@ export default function App() {
       <a className="qre-skip-link" href="#main-content">
         Skip to main content
       </a>
-      <ToastHost />
+      <NotificationHost />
+      <GovernNotificationSync enabled={canEnterApp} permissions={permissions} />
       <GovernCommandPalette commands={paletteCommands} onNavigate={(route) => route && open(route)} />
       <StudioShell
       workspaceId="govern"
@@ -297,7 +303,12 @@ export default function App() {
       hideObserveLink
       useGlobalHeader={false}
       showPageTitle={false}
-      topbarExtra={<UiScaleControl />}
+      topbarExtra={
+        <>
+          <NotificationBell />
+          <UiScaleControl />
+        </>
+      }
     >
       <PageFrame>
         <SessionSecurityBanner me={me} />
