@@ -13,7 +13,6 @@ export function RegisterPage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [org, setOrg] = useState('')
-  const [role, setRole] = useState('Operator')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
@@ -53,7 +52,6 @@ export function RegisterPage() {
         full_name: fullName.trim() || username.trim(),
         email: email.trim(),
         org: org.trim() || 'C-DAC',
-        role,
         password,
         captcha_id: captchaId,
         captcha_code: captchaCode.trim(),
@@ -75,7 +73,7 @@ export function RegisterPage() {
   return (
     <AuthShell
       title="Create account"
-      subtitle="Operator account for your lab. Admin roles are assigned after review."
+      subtitle="Creates an operator login. Seeded admin assigns other roles later."
       footer={
         <p className="text-center text-sm text-[var(--text-muted)]">
           Already registered?{' '}
@@ -85,86 +83,80 @@ export function RegisterPage() {
         </p>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+      <form onSubmit={handleSubmit} className="space-y-3" noValidate>
         <div className="grid grid-cols-2 gap-3">
-          <Field label="Username">
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+          <Field label="Username" forId="reg-username">
+            <div className="relative flex w-full items-center">
+              <User className="pointer-events-none absolute left-1 size-4 text-neutral-400" aria-hidden />
               <input
+                id="reg-username"
                 type="text"
                 required
+                autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className={`${fieldClass} pl-9`}
-                placeholder="quantum_op"
+                className={`${fieldClass} pl-8`}
               />
             </div>
           </Field>
-          <Field label="Full name">
+          <Field label="Full name" forId="reg-fullname">
             <input
+              id="reg-fullname"
               type="text"
+              autoComplete="name"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               className={fieldClass}
-              placeholder="Dr. Raman"
             />
           </Field>
         </div>
 
-        <Field label="Email">
-          <div className="relative">
-            <Mail className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+        <Field label="Email" forId="reg-email">
+          <div className="relative flex w-full items-center">
+            <Mail className="pointer-events-none absolute left-1 size-4 text-neutral-400" aria-hidden />
             <input
+              id="reg-email"
               type="email"
               required
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={`${fieldClass} pl-9`}
-              placeholder="operator@cdac.in"
+              className={`${fieldClass} pl-8`}
             />
           </div>
         </Field>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Organisation">
-            <div className="relative">
-              <Building className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
-              <input
-                type="text"
-                value={org}
-                onChange={(e) => setOrg(e.target.value)}
-                className={`${fieldClass} pl-9`}
-                placeholder="C-DAC / Lab"
-              />
-            </div>
-          </Field>
-          <Field label="Console role">
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className={`${fieldClass} input-control`}
-            >
-              <option value="Operator">Operator</option>
-              <option value="Researcher">Researcher</option>
-            </select>
-          </Field>
-        </div>
-
-        <Field label="Password">
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+        <Field label="Organisation" forId="reg-org">
+          <div className="relative flex w-full items-center">
+            <Building className="pointer-events-none absolute left-1 size-4 text-neutral-400" aria-hidden />
             <input
+              id="reg-org"
+              type="text"
+              autoComplete="organization"
+              value={org}
+              onChange={(e) => setOrg(e.target.value)}
+              className={`${fieldClass} pl-8`}
+            />
+          </div>
+        </Field>
+
+        <Field label="Password" forId="reg-password" hint="Min. 6 characters">
+          <div className="relative flex w-full items-center">
+            <Lock className="pointer-events-none absolute left-1 size-4 text-neutral-400" aria-hidden />
+            <input
+              id="reg-password"
               type={showPw ? 'text' : 'password'}
               required
               minLength={6}
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={`${fieldClass} pl-9 pr-10`}
-              placeholder="Min 6 characters"
+              className={`${fieldClass} pl-8 pr-10`}
             />
             <button
               type="button"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+              className="absolute right-0 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+              aria-label={showPw ? 'Hide password' : 'Show password'}
               onClick={() => setShowPw((v) => !v)}
             >
               {showPw ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -172,16 +164,17 @@ export function RegisterPage() {
           </div>
         </Field>
 
-        <Field label="Confirm password">
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+        <Field label="Confirm password" forId="reg-confirm">
+          <div className="relative flex w-full items-center">
+            <Lock className="pointer-events-none absolute left-1 size-4 text-neutral-400" aria-hidden />
             <input
+              id="reg-confirm"
               type={showPw ? 'text' : 'password'}
               required
+              autoComplete="new-password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className={`${fieldClass} pl-9`}
-              placeholder="Re-enter password"
+              className={`${fieldClass} pl-8`}
             />
           </div>
         </Field>

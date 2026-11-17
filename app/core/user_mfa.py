@@ -85,26 +85,35 @@ def _load_persisted() -> Dict[str, Dict[str, Any]]:
 
 def _totp_code(secret_b32: str, for_time: Optional[int] = None, digits: int = 6) -> str:
     import hmac
-    import struct
+    import struct as struct_mod
 
     key = base64.b32decode(secret_b32.upper().replace(" ", ""), casefold=True)
     counter = int((for_time or time.time()) // 30)
-    msg = struct.pack(">Q", counter)
+    msg = struct_mod.pack(">Q", counter)
     digest = hmac.new(key, msg, hashlib.sha1).digest()
     offset = digest[-1] & 0x0F
-    code = struct.unpack(">I", digest[offset : offset + 4])[0] & 0x7FFFFFFF
+    code = struct_mod.unpack(">I", digest[offset : offset + 4])[0] & 0x7FFFFFFF
     return str(code % (10**digits)).zfill(digits)
 
 
-def verify_totp(secret_b32: str, code: str, window: int = 1) -> bool:
+def totp_match_counter(secret_b32: str, code: str, window: int = 1) -> Optional[int]:
+    import hmac
+
     code = (code or "").strip().replace(" ", "")
     if not code.isdigit() or len(code) not in (6, 8):
-        return False
+        return None
+    padded = code.zfill(6)[:6]
     now = int(time.time())
     for w in range(-window, window + 1):
-        if _totp_code(secret_b32, for_time=now + w * 30) == code.zfill(6)[:6]:
-            return True
-    return False
+        t = now + w * 30
+        expected = _totp_code(secret_b32, for_time=t)
+        if hmac.compare_digest(expected, padded):
+            return int(t // 30)
+    return None
+
+
+def verify_totp(secret_b32: str, code: str, window: int = 1) -> bool:
+    return totp_match_counter(secret_b32, code, window=window) is not None
 
 
 def mfa_status(username: str) -> Dict[str, Any]:
@@ -158,13 +167,27 @@ def verify_login_code(username: str, code: str) -> bool:
         if not rec or not rec.get("enabled"):
             return False
         secret = _secret_from_rec(rec)
-        if secret and verify_totp(secret, code):
+        matched = totp_match_counter(secret, code) if secret else None
+        if matched is not None:
+            last = rec.get("last_totp_counter")
+            if last is not None and int(last) == int(matched):
+                return False
+            rec["last_totp_counter"] = int(matched)
+            all_m[username] = rec
+            _save(all_m)
             return True
         if len(code) >= 6:
+            import hmac
+
             h = hashlib.sha256(code.encode()).hexdigest()
             hashes = list(rec.get("backup_hashes") or [])
-            if h in hashes:
-                hashes.remove(h)
+            hit = None
+            for stored in hashes:
+                if hmac.compare_digest(str(stored), h):
+                    hit = stored
+                    break
+            if hit is not None:
+                hashes.remove(hit)
                 rec["backup_hashes"] = hashes
                 all_m[username] = rec
                 _save(all_m)

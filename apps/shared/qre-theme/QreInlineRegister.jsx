@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { fetchCaptcha, registerWithCredentials } from './auth.js';
 import QreCaptchaField from './QreCaptchaField.jsx';
 
@@ -17,6 +18,7 @@ export default function QreInlineRegister({ onSuccess, onFieldChange = null, foo
   const [success, setSuccess] = useState('');
   const [busy, setBusy] = useState(false);
   const [captchaBusy, setCaptchaBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   function syncWire(u, p, c) {
     onFieldChange?.setUsername?.(u);
@@ -130,23 +132,34 @@ export default function QreInlineRegister({ onSuccess, onFieldChange = null, foo
       </div>
       <label className="qre-field">
         <span className="qre-field__label">Password</span>
-        <input
-          className="qre-field__input"
-          type="password"
-          value={password}
-          onChange={(e) => {
-            setPassword(e.target.value);
-            syncWire(username, e.target.value, captchaCode);
-          }}
-          autoComplete="new-password"
-          required
-        />
+        <div className="cert-login-password-field">
+          <input
+            className="qre-field__input"
+            type={showPassword ? 'text' : 'password'}
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              syncWire(username, e.target.value, captchaCode);
+            }}
+            autoComplete="new-password"
+            required
+          />
+          <button
+            type="button"
+            className="cert-login-password-toggle"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
+            aria-pressed={showPassword}
+            onClick={() => setShowPassword((v) => !v)}
+          >
+            {showPassword ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}
+          </button>
+        </div>
       </label>
       <label className="qre-field">
         <span className="qre-field__label">Confirm password</span>
         <input
           className="qre-field__input"
-          type="password"
+          type={showPassword ? 'text' : 'password'}
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           autoComplete="new-password"

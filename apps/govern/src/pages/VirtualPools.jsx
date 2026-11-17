@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import GovernPageShell from '../components/GovernPageShell.jsx';
+import { buildQrpBreadcrumbs } from '../nav/qrpNav.js';
 import ListViewToolbar from '../components/ListViewToolbar.jsx';
 import AdaptiveListView from '../components/AdaptiveListView.jsx';
 import { EmptyState, KpiStrip } from '../components/ui.jsx';
@@ -95,8 +96,9 @@ export default function VirtualPools({ onOpen }) {
 
   return (
     <GovernPageShell
+      breadcrumbs={buildQrpBreadcrumbs('resource-ops', 'Resource pools')}
       eyebrow="Resource management"
-      title="Virtual resource pools"
+      title="Resource pools"
       subtitle="Logical groupings over registered inventory. Pools do not merge qubits or blur provider boundaries."
       loading={loading && pools.length === 0}
       error={error}

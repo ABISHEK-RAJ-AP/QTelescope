@@ -1,3 +1,4 @@
+import '../load-public-auth-css.js';
 import QreAuthMarketingPage from '@qre-theme/QreAuthMarketingPage.jsx';
 import QreInlineSignIn from '@qre-theme/QreInlineSignIn.jsx';
 export default function GovernSignIn({ onDevContinue, onSignedIn, onHome, onSignIn, onRegister, onFooterNavigate }) {

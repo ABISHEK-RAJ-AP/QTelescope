@@ -19,3 +19,11 @@ export function governanceActivityPath(projectId = '', limit = 200) {
   if (projectId) params.set('project_id', projectId);
   return `/governance/activity?${params.toString()}`;
 }
+
+export function reservationsListPath({ state = '', projectId = '' } = {}) {
+  const params = new URLSearchParams();
+  if (state) params.set('state', state);
+  if (projectId) params.set('project_id', projectId);
+  const q = params.toString();
+  return q ? `/reservations?${q}` : '/reservations';
+}

@@ -18,9 +18,13 @@
 .studio-feature-card__shell {
   position: relative;
   height: 100%;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   padding: 1px;
-  background: color-mix(in srgb, var(--border) 65%, transparent);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--primary) 22%, var(--border)),
+    color-mix(in srgb, var(--primary) 6%, var(--border))
+  );
 }
 
 .studio-feature-card__body {
@@ -33,18 +37,20 @@
   height: 100%;
   min-height: 11.5rem;
   padding: var(--space-6);
-  border-radius: calc(var(--radius-xl) - 1px);
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  backdrop-filter: blur(10px);
+  border-radius: calc(var(--radius-lg) - 1px);
+  background: color-mix(in srgb, var(--surface) 96%, var(--primary-light));
   box-shadow: var(--shadow-sm);
-  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
   box-sizing: border-box;
   overflow: visible;
+  border: 1px solid color-mix(in srgb, var(--primary) 10%, transparent);
 }
 
 .studio-feature-card:hover .studio-feature-card__body {
-  transform: translateY(-2px);
   box-shadow: var(--shadow-md);
+  border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
 }
 
 .landing-page .studio-feature-grid {
@@ -139,6 +145,6 @@
   }
 
   .studio-feature-card:hover .studio-feature-card__body {
-    transform: none;
+    box-shadow: var(--shadow-sm);
   }
 }

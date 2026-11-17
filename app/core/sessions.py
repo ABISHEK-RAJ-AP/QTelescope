@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import secrets
 import threading
 import time
 import uuid
@@ -53,7 +54,7 @@ def _purge_expired() -> None:
 
 
 def create_session(username: str, role: str, extra: Optional[Dict[str, Any]] = None) -> str:
-    token = f"qtok_{uuid.uuid4().hex}"
+    token = f"qtok_{secrets.token_urlsafe(32)}"
     record = {
         "session_id": uuid.uuid4().hex,
         "username": username,

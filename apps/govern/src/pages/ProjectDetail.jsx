@@ -3,7 +3,9 @@ import { Filter } from 'lucide-react';
 import { readContextProjectId, writeContextProjectId } from '@qre-theme/contextScope.js';
 import { api } from '../api.js';
 import { approvalsListPath } from '../lib/approvalsQuery.js';
+import { queueHashForProject } from '../lib/hashProject.js';
 import GovernPageShell from '../components/GovernPageShell.jsx';
+import { buildQrpBreadcrumbs } from '../nav/qrpNav.js';
 import ListViewToolbar from '../components/ListViewToolbar.jsx';
 import AdaptiveListView from '../components/AdaptiveListView.jsx';
 import { ConfirmDialog, EmptyState } from '../components/ui.jsx';
@@ -26,6 +28,7 @@ export default function ProjectDetail({ projectId, onBack, permissions = [], onO
   const [busy, setBusy] = useState(false);
   const [ctxProject, setCtxProject] = useState(() => readContextProjectId());
   const [openApprovals, setOpenApprovals] = useState(null);
+  const [holdCount, setHoldCount] = useState(null);
   const [pendingRemove, setPendingRemove] = useState(null);
 
   const canManage = permissions.includes('projects:update') || permissions.includes('platform:manage');
@@ -60,7 +63,16 @@ export default function ProjectDetail({ projectId, onBack, permissions = [], onO
     api(approvalsListPath({ projectId }))
       .then((body) => setOpenApprovals(body.count ?? (body.items || []).length))
       .catch(() => setOpenApprovals(null));
+    api(`/reservations?project_id=${encodeURIComponent(projectId)}`)
+      .then((body) => setHoldCount((body.items || []).length))
+      .catch(() => setHoldCount(null));
   }, [projectId]);
+
+  function openScoped(route) {
+    writeContextProjectId(projectId);
+    setCtxProject(projectId);
+    onOpen?.(route);
+  }
 
   async function removeMember(username, memberRole) {
     if (memberRole === 'owner' || !canManage) return;
@@ -102,6 +114,7 @@ export default function ProjectDetail({ projectId, onBack, permissions = [], onO
 
   return (
     <GovernPageShell
+      breadcrumbs={buildQrpBreadcrumbs('workspace', 'Projects')}
       eyebrow="Governance"
       title={project?.name ?? 'Project'}
       subtitle={project ? `Owner ${project.owner_username} · ${project.project_id}` : undefined}
@@ -143,7 +156,7 @@ export default function ProjectDetail({ projectId, onBack, permissions = [], onO
                 onClick={() => {
                   writeContextProjectId(projectId);
                   setCtxProject(projectId);
-                  onOpen('#/queue');
+                  onOpen(queueHashForProject(projectId));
                 }}
               >
                 Approvals ({openApprovals})
@@ -154,6 +167,35 @@ export default function ProjectDetail({ projectId, onBack, permissions = [], onO
       }
     >
       {project ? (
+      <>
+      <nav className="link-row page-related-nav" aria-label="Related" style={{ marginBottom: 12 }}>
+        <button type="button" className="fs-link" onClick={() => openScoped(queueHashForProject(projectId))}>
+          Review queue
+          {openApprovals != null && openApprovals > 0 ? ` (${openApprovals})` : ''}
+        </button>
+        <button
+          type="button"
+          className="fs-link"
+          onClick={() => openScoped(`#/reservations?project=${encodeURIComponent(projectId)}`)}
+        >
+          Holds & reservations
+          {holdCount != null && holdCount > 0 ? ` (${holdCount})` : ''}
+        </button>
+        <button
+          type="button"
+          className="fs-link"
+          onClick={() => openScoped(`#/usage?project_id=${encodeURIComponent(projectId)}`)}
+        >
+          Usage & quotas
+        </button>
+        <button
+          type="button"
+          className="fs-link"
+          onClick={() => openScoped(`#/audit${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ''}`)}
+        >
+          Audit
+        </button>
+      </nav>
       <div className="govern-review-grid">
         <div className="qre-card">
           <h3 className="govern-section-title">Project summary</h3>
@@ -291,6 +333,7 @@ export default function ProjectDetail({ projectId, onBack, permissions = [], onO
           )}
         </div>
       </div>
+      </>
       ) : null}
       <ConfirmDialog
         title={pendingRemove ? `Remove ${pendingRemove.username}?` : ''}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import InventoryCompatSummary from '../components/InventoryCompatSummary.jsx';
 import GovernPageShell from '../components/GovernPageShell.jsx';
+import { buildQrpBreadcrumbs } from '../nav/qrpNav.js';
 import { ConfirmDialog } from '../components/ui.jsx';
 
 export default function InventoryDetail({ assetId, onBack }) {
@@ -61,8 +62,10 @@ export default function InventoryDetail({ assetId, onBack }) {
 
   return (
     <GovernPageShell
-      eyebrow="Resource inventory"
+      breadcrumbs={buildQrpBreadcrumbs('resource-ops', 'Inventory')}
+      eyebrow="Catalogue"
       title={asset?.native_asset_id ?? 'Resource'}
+      onOpen={onBack}
       subtitle={asset ? `${asset.asset_class} · ${asset.provider_id}` : undefined}
       loading={loading && !asset}
       error={error}
@@ -70,16 +73,22 @@ export default function InventoryDetail({ assetId, onBack }) {
       onRetry={load}
       loadingLabel="Loading resource…"
       actions={
-        <>
-          <button type="button" className="qre-btn qre-btn--ghost" onClick={() => onBack('#/inventory')}>
-            Back
-          </button>
-          <button type="button" className="qre-btn qre-btn--ghost" onClick={() => onBack('#/pools')}>
-            Virtual pools
-          </button>
-        </>
+        <button type="button" className="qre-btn qre-btn--ghost" onClick={() => onBack('#/inventory')}>
+          Back to inventory
+        </button>
       }
     >
+      <nav className="link-row page-related-nav" aria-label="Related" style={{ marginBottom: 12 }}>
+        <button type="button" className="fs-link" onClick={() => onBack('#/pools')}>
+          Resource pools
+        </button>
+        <button type="button" className="fs-link" onClick={() => onBack('#/providers')}>
+          Providers
+        </button>
+        <button type="button" className="fs-link" onClick={() => onBack('#/reservations')}>
+          Holds
+        </button>
+      </nav>
       {asset ? (
       <>
       <div className="qre-card">

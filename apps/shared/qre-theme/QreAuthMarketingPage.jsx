@@ -60,9 +60,6 @@ export default function QreAuthMarketingPage({
           }}
         >
           <div className={`cert-auth-page__stage${showDevHost ? ' cert-auth-page__stage--with-dev' : ''}`}>
-            <button type="button" className="cert-auth-inline-back" onClick={onHome}>
-              ← Back to home
-            </button>
             <div className={cardClass}>
               <img src={CDAC_LOGO_SRC} alt="" className="cert-login-card__logo" width={120} height={64} aria-hidden />
               <p className="cert-auth-card__wordmark">{GOVERN_PRODUCT_NAME}</p>

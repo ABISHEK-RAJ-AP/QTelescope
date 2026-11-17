@@ -12,8 +12,6 @@ import {
   Zap,
   Radio,
   Server,
-  Terminal,
-  ExternalLink
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { QuantumBackground } from '@/components/ui/quantum-background'
@@ -118,15 +116,10 @@ const FAQ = [
 
 function FeatureCard({ icon: Icon, title, body }) {
   return (
-    <article className="group relative rounded-2xl border border-neutral-200/80 bg-white/80 p-7 backdrop-blur-md transition-all duration-300 hover:border-cyan-500/50 hover:shadow-xl hover:shadow-cyan-500/5 hover:-translate-y-1 dark:border-neutral-800/80 dark:bg-neutral-900/60 dark:hover:border-cyan-400/50">
-      {/* Standalone Icon without artificial background box/container */}
-      <Icon className="size-8 text-cyan-600 dark:text-cyan-400 mb-4 transition-transform duration-300 group-hover:scale-110" />
-      <h3 className="text-lg font-bold tracking-tight text-neutral-900 dark:text-white">
-        {title}
-      </h3>
-      <p className="mt-2.5 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
-        {body}
-      </p>
+    <article className="landing-tile group">
+      <Icon className="landing-tile__icon" aria-hidden />
+      <h3 className="landing-tile__title">{title}</h3>
+      <p className="landing-tile__body">{body}</p>
     </article>
   )
 }
@@ -175,7 +168,7 @@ export function LandingPage() {
         <div className="landing-hero__fade pointer-events-none absolute inset-x-0 bottom-0 h-32" aria-hidden />
       </section>
 
-      <main className="relative z-20 mx-auto max-w-7xl space-y-28 px-6 pb-24 pt-4 sm:px-8">
+      <main className="landing-main relative z-20 mx-auto max-w-7xl space-y-28 px-6 pb-24 pt-4 sm:px-8">
         {/* Core Capabilities */}
         <section id="capabilities" className="scroll-mt-28">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-neutral-200/80 dark:border-neutral-800/80">
@@ -217,7 +210,7 @@ export function LandingPage() {
         </section>
 
         {/* Workflow Steps */}
-        <section id="workflow" className="scroll-mt-28 rounded-3xl border border-neutral-200/80 bg-white/70 p-8 sm:p-12 backdrop-blur-md dark:border-neutral-800/80 dark:bg-neutral-900/40">
+        <section id="workflow" className="landing-workflow scroll-mt-28 p-8 sm:p-12">
           <div className="max-w-2xl">
             <span className="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Workflow</span>
             <h2 className="mt-1 text-3xl font-extrabold tracking-tight text-neutral-950 dark:text-white">
@@ -230,17 +223,10 @@ export function LandingPage() {
 
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {WORKFLOW_STEPS.map((s) => (
-              <div
-                key={s.n}
-                className="group rounded-2xl border border-neutral-200/80 bg-white/90 p-6 shadow-sm backdrop-blur-sm transition-all duration-300 hover:border-cyan-500/50 hover:shadow-lg dark:border-neutral-800 dark:bg-neutral-950/70"
-              >
-                <span className="font-mono text-base font-extrabold text-cyan-600 dark:text-cyan-400">
-                  {s.n}
-                </span>
-                <h3 className="mt-3 text-lg font-bold text-neutral-950 dark:text-white">{s.title}</h3>
-                <p className="mt-2 text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">
-                  {s.body}
-                </p>
+              <div key={s.n} className="landing-tile landing-tile--step group">
+                <span className="landing-tile__step">{s.n}</span>
+                <h3 className="landing-tile__title">{s.title}</h3>
+                <p className="landing-tile__body">{s.body}</p>
               </div>
             ))}
           </div>
@@ -286,7 +272,7 @@ export function LandingPage() {
         </section>
 
         {/* Bottom CTA Banner */}
-        <section className="rounded-lg border border-cyan-600/25 bg-white p-10 text-center dark:bg-slate-950 sm:p-14">
+        <section className="landing-cta p-10 text-center sm:p-14">
           <div className="mx-auto max-w-2xl space-y-4">
             <h2 className="text-3xl font-extrabold tracking-tight text-neutral-950 dark:text-white">
               Open the console

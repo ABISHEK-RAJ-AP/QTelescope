@@ -70,22 +70,19 @@ export function AuthShell({ title, subtitle, children, footer, maxWidth = 'max-w
   )
 }
 
-export function Field({ label, forId, children, hint }) {
+export function Field({ label, forId, children, hint, className = '' }) {
   return (
-    <div className="space-y-1.5">
-      <label
-        htmlFor={forId}
-        className="block text-sm font-medium text-[var(--text-secondary)]"
-      >
+    <div className={`auth-outline-field ${className}`.trim()}>
+      <label htmlFor={forId} className="auth-outline-field__name">
         {label}
       </label>
       {children}
-      {hint ? <p className="text-xs text-[var(--text-muted)]">{hint}</p> : null}
+      {hint ? <p className="auth-outline-field__hint">{hint}</p> : null}
     </div>
   )
 }
 
 export const fieldClass =
-  'flex h-11 w-full rounded-[calc(var(--ds-radius-card)-4px)] border border-[var(--border-color)] bg-[var(--bg-card)] px-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[var(--accent)] focus:ring-2 focus:ring-[color-mix(in_oklch,var(--accent)_25%,transparent)]'
+  'auth-outline-field__control flex h-10 w-full min-w-0 bg-transparent px-1 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none'
 
 export default AuthShell

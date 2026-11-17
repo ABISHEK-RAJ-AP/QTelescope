@@ -3,11 +3,14 @@ import { Filter } from 'lucide-react';
 import { readContextProjectId, writeContextProjectId } from '@qre-theme/contextScope.js';
 import { api } from '../api.js';
 import GovernPageShell from '../components/GovernPageShell.jsx';
+import { buildQrpBreadcrumbs } from '../nav/qrpNav.js';
 import ListViewToolbar from '../components/ListViewToolbar.jsx';
 import AdaptiveListView from '../components/AdaptiveListView.jsx';
 import { EmptyState, SortTh } from '../components/ui.jsx';
 import { useTablePrefs } from '../hooks/useTablePrefs.js';
 import { matchQuery, nextSort, sortBy } from '../lib/format.js';
+import { approvalsListPath } from '../lib/approvalsQuery.js';
+import { queueHashForProject } from '../lib/hashProject.js';
 
 const PROJECT_COLS = [
   {
@@ -27,7 +30,6 @@ const PROJECT_COLS = [
   { id: 'updated', label: 'Updated', gridRender: (p) => (p.updated_at ? new Date(p.updated_at).toLocaleString() : '—') },
   { id: 'actions', label: 'Actions' },
 ];
-import { approvalsListPath } from '../lib/approvalsQuery.js';
 
 export default function Projects({ onOpen }) {
   const [rows, setRows] = useState([]);
@@ -87,8 +89,8 @@ export default function Projects({ onOpen }) {
 
   return (
     <GovernPageShell
-      eyebrow="Governance"
-      title="Organizations & projects"
+      breadcrumbs={buildQrpBreadcrumbs('workspace', 'Projects')}
+      title="Projects"
       subtitle="Tenant projects for governance context. Pin a project to filter approvals, My work, and audit activity."
       loading={loading && rows.length === 0}
       error={error}
@@ -187,6 +189,20 @@ export default function Projects({ onOpen }) {
                             <Filter size={14} style={{ marginRight: 4, verticalAlign: 'middle' }} />
                             {isContext ? 'Context on' : 'Set context'}
                           </button>
+                          {(waitingByProject[p.project_id] || 0) > 0 ? (
+                            <button
+                              type="button"
+                              className="qre-btn qre-btn--ghost"
+                              style={{ padding: '4px 10px', fontSize: 'var(--text-xs)' }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setGovernContext(p.project_id);
+                                onOpen?.(queueHashForProject(p.project_id));
+                              }}
+                            >
+                              Queue ({waitingByProject[p.project_id]})
+                            </button>
+                          ) : null}
                           <button
                             type="button"
                             className="qre-btn qre-btn--ghost"

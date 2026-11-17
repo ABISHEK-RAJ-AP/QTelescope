@@ -40,18 +40,19 @@
 }
 
 .landing-bento__card {
-  background: var(--background);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--surface) 96%, var(--primary-light));
+  border: 1px solid color-mix(in srgb, var(--primary) 14%, var(--border));
+  border-radius: var(--radius-lg);
   padding: clamp(1.25rem, 2.5vw, 1.5rem);
   min-width: 0;
   box-sizing: border-box;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .landing-bento__card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-md);
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--border));
 }
 
 .landing-bento__card--span-2 {
@@ -959,6 +960,39 @@
   justify-content: space-between;
   align-items: center;
   gap: var(--space-3);
+}
+
+.cert-login-password-field {
+  position: relative;
+}
+
+.cert-login-password-field .qre-field__input {
+  padding-right: 2.75rem;
+}
+
+.cert-login-password-toggle {
+  position: absolute;
+  right: var(--space-2);
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.cert-login-password-toggle:hover {
+  color: var(--text-primary);
+}
+
+.cert-login-password-toggle:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 
 .cert-login-card .cert-auth-footer,

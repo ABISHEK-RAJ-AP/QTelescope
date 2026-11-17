@@ -1,12 +1,13 @@
 import base64
 import hashlib
+import hmac
 import io
 import json
 import os
 import random
+import secrets
 import threading
 import time
-import uuid
 import urllib.parse
 from typing import Any, Dict, Optional
 
@@ -19,6 +20,7 @@ from app.core.sessions import create_session, get_session, revoke_session
 from app.core.rate_limit import check_auth_rate_limit
 from app.core.bootstrap_security import bootstrap_security_report, reject_if_default_bootstrap_password
 from app.core import user_store
+from app.core.identity import bound_password, normalize_email, normalize_username
 
 router = APIRouter(prefix="/auth", tags=["Authentication & Security"])
 
@@ -163,7 +165,9 @@ def _consume_captcha(captcha_id: str, captcha_code: str) -> None:
             raise HTTPException(status_code=400, detail="Challenge expired. Request a new image.")
         expected = stored["code"]
         _CAPTCHA_STORE.pop(captcha_id, None)
-    if captcha_code.strip().upper() != expected.upper():
+    got = captcha_code.strip().upper()
+    want = expected.upper()
+    if len(got) != len(want) or not hmac.compare_digest(got, want):
         raise HTTPException(status_code=400, detail="Characters do not match the image. Try a new one.")
 
 
@@ -188,11 +192,10 @@ class VerifyCaptchaRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    username: str
-    password: str
+    username: str = Field(max_length=32)
+    password: str = Field(max_length=256)
     captcha_id: str = ""
     captcha_code: str = ""
-    role: Optional[str] = None
 
 
 class MfaLoginRequest(BaseModel):
@@ -216,11 +219,11 @@ class ResetPasswordRequest(BaseModel):
 
 
 class RegisterRequest(BaseModel):
-    username: str
-    password: str = Field(min_length=6)
-    full_name: Optional[str] = ""
-    email: str
-    org: Optional[str] = "C-DAC"
+    username: str = Field(min_length=3, max_length=32)
+    password: str = Field(min_length=6, max_length=256)
+    full_name: Optional[str] = Field(default="", max_length=120)
+    email: str = Field(max_length=254)
+    org: Optional[str] = Field(default="C-DAC", max_length=80)
     role: Optional[str] = "Operator"
     captcha_id: str
     captcha_code: str
@@ -253,7 +256,7 @@ def get_config_status():
 @router.get("/captcha", response_model=CaptchaResponse)
 def get_new_captcha():
     code = "".join(random.choices(CAPTCHA_CHARS, k=CAPTCHA_LEN))
-    captcha_id = f"cap_{uuid.uuid4().hex[:12]}"
+    captcha_id = f"cap_{secrets.token_urlsafe(12)}"
     with _LOCK:
         _cleanup_expired_captchas()
         _CAPTCHA_STORE[captcha_id] = {
@@ -277,7 +280,7 @@ def _maybe_mfa_or_session(username: str, role: str, extra: Optional[Dict[str, An
     from app.core.user_mfa import mfa_status
 
     if mfa_status(username).get("enabled"):
-        mfa_token = f"mfa_{uuid.uuid4().hex}"
+        mfa_token = f"mfa_{secrets.token_urlsafe(32)}"
         with _LOCK:
             expired = [k for k, v in _MFA_LOGIN_PENDING.items() if v.get("expires_at", 0) < time.time()]
             for k in expired:
@@ -318,21 +321,20 @@ def _issue_session(username: str, role: str, extra: Optional[Dict[str, Any]] = N
 def register_user(req: RegisterRequest, request: Request):
     check_auth_rate_limit(request, "register")
     _consume_captcha(req.captcha_id, req.captcha_code)
-    username = req.username.strip()
-    email = req.email.strip().lower()
-    if not username or not email:
-        raise HTTPException(status_code=400, detail="Username and email are required.")
+    username = normalize_username(req.username)
+    email = normalize_email(req.email)
+    bound_password(req.password)
     if username in (settings.ADMIN_USERNAME, settings.USER_USERNAME, settings.SUPERADMIN_USERNAME):
         raise HTTPException(status_code=409, detail="That username is reserved.")
 
-    role = (req.role or "Operator").strip()
-    if role == "Admin":
+    requested_role = (req.role or "").strip()
+    if requested_role == "Admin":
         raise HTTPException(
             status_code=403,
             detail="Admin accounts cannot be self-registered. Contact a platform administrator.",
         )
-    if role not in ("Operator", "Researcher"):
-        role = "Operator"
+    # Self-signup never picks a console role. Seeded admin assigns Operator / Researcher later.
+    role = "Operator"
 
     with _LOCK:
         users = user_store.load_all_users()
@@ -362,10 +364,12 @@ def register_user(req: RegisterRequest, request: Request):
 
 @router.post("/login")
 def authenticate_user(req: LoginRequest, request: Request):
-    username = req.username.strip()
-    password = req.password.strip()
+    username = (req.username or "").strip()
+    password = req.password or ""
     if not username or not password:
         raise HTTPException(status_code=400, detail="Username and password are required.")
+    if len(password) > 256:
+        raise HTTPException(status_code=400, detail="Password is too long.")
 
     check_auth_rate_limit(request, "login")
     _consume_captcha(req.captcha_id, req.captcha_code)
@@ -377,21 +381,30 @@ def authenticate_user(req: LoginRequest, request: Request):
         settings.SUPERADMIN_USERNAME,
     )
 
-    if username == settings.SUPERADMIN_USERNAME and password == settings.SUPERADMIN_PASSWORD:
+    def _pw_eq(left: str, right: str) -> bool:
+        a, b = (left or "").encode("utf-8"), (right or "").encode("utf-8")
+        if len(a) != len(b):
+            hmac.compare_digest(a, a)
+            return False
+        return hmac.compare_digest(a, b)
+
+    if _pw_eq(username, settings.SUPERADMIN_USERNAME) and _pw_eq(password, settings.SUPERADMIN_PASSWORD):
         return _maybe_mfa_or_session(
             username,
             "SuperAdmin",
             {"email": "", "full_name": "Super Administrator", "org": "C-DAC"},
         )
-    if username == settings.ADMIN_USERNAME and password == settings.ADMIN_PASSWORD:
+    if _pw_eq(username, settings.ADMIN_USERNAME) and _pw_eq(password, settings.ADMIN_PASSWORD):
         return _maybe_mfa_or_session(username, "Admin", {"email": "", "full_name": "Platform Admin", "org": "C-DAC"})
-    if username == settings.USER_USERNAME and password == settings.USER_PASSWORD:
+    if _pw_eq(username, settings.USER_USERNAME) and _pw_eq(password, settings.USER_PASSWORD):
         return _maybe_mfa_or_session(username, "Operator", {"email": "", "full_name": "Researcher", "org": "C-DAC"})
 
     with _LOCK:
         users = user_store.load_all_users()
         record = users.get(username)
-    if record and record.get("password_hash") == _hash_password(password):
+    candidate = _hash_password(password)
+    stored = str((record or {}).get("password_hash") or "")
+    if record and stored and hmac.compare_digest(stored, candidate):
         return _maybe_mfa_or_session(
             username,
             record.get("role") or "Operator",
@@ -418,18 +431,17 @@ def authenticate_user(req: LoginRequest, request: Request):
 def complete_mfa_login(req: MfaLoginRequest, request: Request):
     check_auth_rate_limit(request, "login_mfa")
     with _LOCK:
-        pending = _MFA_LOGIN_PENDING.get(req.mfa_token)
+        pending = _MFA_LOGIN_PENDING.pop(req.mfa_token, None)
         if pending and pending.get("expires_at", 0) < time.time():
-            _MFA_LOGIN_PENDING.pop(req.mfa_token, None)
             pending = None
     if not pending:
         raise HTTPException(status_code=401, detail="Authenticator step expired. Sign in again.")
     from app.core.user_mfa import verify_login_code
 
     if not verify_login_code(pending["username"], req.code):
+        with _LOCK:
+            _MFA_LOGIN_PENDING[req.mfa_token] = pending
         raise HTTPException(status_code=401, detail="Invalid authenticator code.")
-    with _LOCK:
-        _MFA_LOGIN_PENDING.pop(req.mfa_token, None)
     return _issue_session(pending["username"], pending["role"], pending.get("extra"))
 
 

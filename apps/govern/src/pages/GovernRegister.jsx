@@ -1,3 +1,4 @@
+import '../load-public-auth-css.js';
 import QreAuthMarketingPage from '@qre-theme/QreAuthMarketingPage.jsx';
 import QreInlineRegister from '@qre-theme/QreInlineRegister.jsx';
 
@@ -17,7 +18,7 @@ export default function GovernRegister({ onHome, onSignIn, onRegister, onRegiste
         <QreInlineRegister
           onFieldChange={fieldBridge}
           onSuccess={onRegistered}
-          footerLink={
+          footerSlot={
             <div className="cert-auth-footer">
               <p>
                 Already registered?{' '}

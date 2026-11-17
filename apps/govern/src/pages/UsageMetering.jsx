@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api.js';
 import GovernPageShell from '../components/GovernPageShell.jsx';
+import { buildQrpBreadcrumbs } from '../nav/qrpNav.js';
+import UsageCapacityTabs from '../components/UsageCapacityTabs.jsx';
 import ListViewToolbar from '../components/ListViewToolbar.jsx';
 import AdaptiveListView from '../components/AdaptiveListView.jsx';
 import { SparkBars } from '../components/GovernCharts.jsx';
 import { EmptyState, KpiStrip, ListCap, QuotaMeter, SortTh } from '../components/ui.jsx';
 import { useTablePrefs } from '../hooks/useTablePrefs.js';
 import { downloadCsv, nextSort, relativeTime, sortBy } from '../lib/format.js';
+import { projectIdFromHash } from '../lib/hashProject.js';
+import { writeContextProjectId } from '@qre-theme/contextScope.js';
 
 const LEDGER_COLS = [
   { id: 'project', label: 'Project' },
@@ -38,7 +42,7 @@ export default function UsageMetering({ onOpen }) {
   const [probing, setProbing] = useState(false);
   const [loadedAt, setLoadedAt] = useState(null);
   const [windowKey, setWindowKey] = useState('today');
-  const [projectId, setProjectId] = useState('');
+  const [projectId, setProjectId] = useState(() => projectIdFromHash(typeof window !== 'undefined' ? window.location.hash : ''));
   const [includeIncomplete, setIncludeIncomplete] = useState(false);
   const [sort, setSort] = useState({ key: 'completed_at', dir: 'desc' });
   const prefs = useTablePrefs('usage-ledger', LEDGER_COLS);
@@ -71,6 +75,14 @@ export default function UsageMetering({ onOpen }) {
       .catch((e) => setError(String(e.message || e)))
       .finally(() => setLoading(false));
   }
+
+  useEffect(() => {
+    const fromHash = projectIdFromHash(window.location.hash);
+    if (fromHash && fromHash !== projectId) {
+      setProjectId(fromHash);
+      writeContextProjectId(fromHash);
+    }
+  }, []);
 
   useEffect(() => {
     loadAll();
@@ -115,9 +127,10 @@ export default function UsageMetering({ onOpen }) {
   return (
     <GovernPageShell
       variant="band"
-      eyebrow="Governance"
-      title="Usage & metering"
-      subtitle="Operational quota ledger: daily simulation-shot cap, windowed consumption, project breakdown, and connector meter rollups when present."
+      breadcrumbs={buildQrpBreadcrumbs('governance', 'Usage & capacity')}
+      eyebrow="Govern"
+      title="Usage & capacity"
+      subtitle="Quota ledger and connector meters. Capacity rollups share this nav item."
       loading={loading && !quota}
       error={error}
       onRetry={loadAll}
@@ -125,6 +138,7 @@ export default function UsageMetering({ onOpen }) {
       loadingLabel="Loading tenant metering…"
       updatedAt={loadedAt ? relativeTime(loadedAt) : ''}
     >
+      <UsageCapacityTabs current="usage" onOpen={onOpen} />
       {quota ? (
         <>
           <KpiStrip
@@ -277,7 +291,14 @@ export default function UsageMetering({ onOpen }) {
               <ListViewToolbar prefs={prefs} columns={LEDGER_COLS} lockedIds={['project', 'shots']} />
             </div>
             {visible.length === 0 ? (
-              <EmptyState title="No jobs in this window" hint="Usage increments when Build marks simulation jobs completed for this tenant." />
+              <EmptyState
+                title="No jobs in this window"
+                hint={
+                  (quota?.used_shots > 0 || quota?.used_shots_lifetime > 0 || ledger?.used_shots > 0)
+                    ? 'Quota evaluate may report usage from other sources, but this ledger window has no matching completed jobs. Widen the window or enable “Include incomplete”.'
+                    : 'Usage increments when Build marks simulation jobs completed for this tenant.'
+                }
+              />
             ) : (
               <AdaptiveListView
                 prefs={prefs}

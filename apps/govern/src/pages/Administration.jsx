@@ -2,13 +2,17 @@ import { useEffect, useState } from 'react';
 import { readContextTenantId } from '@qre-theme/contextScope.js';
 import { api } from '../api.js';
 import GovernPageShell from '../components/GovernPageShell.jsx';
+import AdminUsersPanel from '../components/AdminUsersPanel.jsx';
+import { buildQrpBreadcrumbs } from '../nav/qrpNav.js';
 import { EmptyState } from '../components/ui.jsx';
 
-export default function Administration({ onOpen, me }) {
+export default function Administration({ onOpen, me, initialTab = 'boundary', permissions = [] }) {
+  const [tab, setTab] = useState(initialTab === 'users' ? 'users' : 'boundary');
   const [boundary, setBoundary] = useState(null);
   const [release, setRelease] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const canAssignRoles = me?.role === 'Admin' || permissions.includes('platform:manage');
 
   function load() {
     setLoading(true);
@@ -29,20 +33,53 @@ export default function Administration({ onOpen, me }) {
     load();
   }, []);
 
+  useEffect(() => {
+    setTab(initialTab === 'users' ? 'users' : 'boundary');
+  }, [initialTab]);
+
   const ctxTenant = readContextTenantId();
 
   return (
     <GovernPageShell
-      eyebrow="Operations"
+      breadcrumbs={buildQrpBreadcrumbs('administration', 'Administration')}
       title="Administration"
       subtitle="Institution boundary, tenant context, and platform access controls for this Govern workspace."
-      loading={loading && !boundary}
+      loading={loading && !boundary && !error}
       error={error}
       onRetry={load}
       onOpen={onOpen}
       loadingLabel="Loading institution boundary…"
     >
-      {me ? (
+      <nav className="link-row page-related-nav" aria-label="Related" style={{ marginBottom: 12 }}>
+        <button type="button" className="fs-link" onClick={() => onOpen?.('#/audit')}>
+          Audit & evidence
+        </button>
+        <button type="button" className="fs-link" onClick={() => onOpen?.('#/projects')}>
+          Projects
+        </button>
+      </nav>
+      <div className="qre-tabs page-filters__grow" role="tablist" aria-label="Administration views" style={{ marginBottom: 12 }}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'boundary'}
+          className={`qre-tab${tab === 'boundary' ? ' qre-tab--active' : ''}`}
+          onClick={() => setTab('boundary')}
+        >
+          Institution & session
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'users'}
+          className={`qre-tab${tab === 'users' ? ' qre-tab--active' : ''}`}
+          onClick={() => setTab('users')}
+        >
+          Users
+        </button>
+      </div>
+      {tab === 'users' ? <AdminUsersPanel canAssign={canAssignRoles} /> : null}
+      {tab === 'boundary' && me ? (
         <div className="qre-card dashboard-card govern-stack">
           <h3 className="dashboard-card-title">Signed-in session</h3>
           <div className="govern-meta-grid">
@@ -71,7 +108,7 @@ export default function Administration({ onOpen, me }) {
           ) : null}
         </div>
       ) : null}
-      {boundary ? (
+      {tab === 'boundary' && boundary ? (
         <>
           <div className="qre-card dashboard-card govern-stack">
             <h3 className="dashboard-card-title">Institution boundary</h3>
@@ -144,6 +181,12 @@ export default function Administration({ onOpen, me }) {
             </div>
           ) : null}
         </>
+      ) : tab === 'boundary' && !loading && !boundary && !error ? (
+        <EmptyState title="Institution boundary unavailable" hint="Retry or check tenant headers in development." action={
+          <button type="button" className="qre-btn qre-btn--ghost" onClick={load}>
+            Retry
+          </button>
+        } />
       ) : null}
     </GovernPageShell>
   );

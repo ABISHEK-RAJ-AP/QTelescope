@@ -219,8 +219,8 @@ export function LoginPage({ onLoginSuccess }) {
       ) : (
       <form onSubmit={handleSubmit} className="space-y-4">
         <Field label="Username" forId="login-username">
-          <div className="relative">
-            <User className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+          <div className="relative flex w-full items-center">
+            <User className="pointer-events-none absolute left-1 size-4 text-neutral-400" aria-hidden />
             <input
               id="login-username"
               type="text"
@@ -228,15 +228,14 @@ export function LoginPage({ onLoginSuccess }) {
               required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className={`${fieldClass} pl-9`}
-              placeholder="superadmin, admin, or user_researcher"
+              className={`${fieldClass} pl-8`}
             />
           </div>
         </Field>
 
         <Field label="Password" forId="login-password">
-          <div className="relative">
-            <Lock className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400" />
+          <div className="relative flex w-full items-center">
+            <Lock className="pointer-events-none absolute left-1 size-4 text-neutral-400" aria-hidden />
             <input
               id="login-password"
               type={showPw ? 'text' : 'password'}
@@ -244,12 +243,11 @@ export function LoginPage({ onLoginSuccess }) {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={`${fieldClass} pl-9 pr-10`}
-              placeholder="••••••••••••"
+              className={`${fieldClass} pl-8 pr-10`}
             />
             <button
               type="button"
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+              className="absolute right-0 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
               aria-label={showPw ? 'Hide password' : 'Show password'}
               onClick={() => setShowPw((v) => !v)}
             >

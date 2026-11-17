@@ -1,1 +1,12 @@
 @import 'tailwindcss';
+
+/* shadcn-compatible aliases on QRE tokens (Govern ops shell) */
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--text-primary);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--text-primary);
+  --color-muted-foreground: var(--text-muted);
+  --color-border: var(--border);
+  --color-ring: var(--primary);
+}

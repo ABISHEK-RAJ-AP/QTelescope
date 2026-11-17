@@ -1,21 +1,31 @@
 #!/usr/bin/env bash
-# Launch Quantum Resource Portal (QRP): shared Postgres/Redis + API (:8000) + QRP Vite (:5176).
-# Portal UI is QuantumResourcePortal; this script starts TeleScope API and that Vite app.
+# Launch Quantum Resource Portal (QRP): shared Postgres/Redis + API (:8000) + Govern UI.
+# Canonical in-repo UI: apps/govern (Vite :5175, base /govern/). Legacy external tree optional.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 # shellcheck source=/dev/null
 source "$ROOT/scripts/lib/qre-paths.sh"
-QRP_FE="$(qrp_frontend_dir || true)"
-if [[ -z "$QRP_FE" && -d "$ROOT/../QuantumResourcePortal/frontend" ]]; then
-  QRP_FE="$(cd "$ROOT/../QuantumResourcePortal/frontend" && pwd)"
-fi
-
 # shellcheck source=/dev/null
 source "$ROOT/scripts/lib/ensure-dev-path.sh"
 
 log() { printf '\033[1;36m[qrp]\033[0m %s\n' "$*"; }
+
+GOVERN_FE="$ROOT/apps/govern"
+QRP_FE=""
+QRP_PORT=5175
+QRP_URL_PATH="/govern/"
+if [[ -f "$GOVERN_FE/package.json" ]]; then
+  QRP_FE="$GOVERN_FE"
+else
+  QRP_FE="$(qrp_frontend_dir || true)"
+  QRP_PORT=5176
+  QRP_URL_PATH="/qrp"
+  if [[ -z "$QRP_FE" && -d "$ROOT/../QuantumResourcePortal/frontend" ]]; then
+    QRP_FE="$(cd "$ROOT/../QuantumResourcePortal/frontend" && pwd)"
+  fi
+fi
 pause_fail() {
   printf '\033[1;31m[qrp]\033[0m %s\n' "$*" >&2
   read -r -p "Press Enter to close… " _
@@ -55,7 +65,7 @@ spawn_term() {
   bash -lc "$wrapped"
 }
 
-[[ -n "$QRP_FE" && -d "$QRP_FE" ]] || pause_fail "QRP frontend missing at /home/cloud/QuantumResourcePortal (or QRP_ROOT)."
+[[ -n "$QRP_FE" && -d "$QRP_FE" ]] || pause_fail "QRP frontend missing (expected apps/govern or QRP_ROOT/QuantumResourcePortal)."
 command -v npm >/dev/null || pause_fail "npm not found (install Node.js / nvm). PATH=$PATH"
 
 export PATH="${MINIFORGE_BIN:-$HOME/miniforge3/bin}:${PATH:-}"
@@ -107,7 +117,7 @@ fi
 
 if [[ ! -d "$QRP_FE/node_modules" ]]; then
   log "Installing QRP frontend deps…"
-  (cd "$QRP_FE" && npm install) || pause_fail "npm install failed in quantum-resource-portal/frontend"
+  (cd "$QRP_FE" && npm install) || pause_fail "npm install failed in QRP frontend"
 fi
 
 API_UP=0
@@ -117,8 +127,8 @@ if curl -sf -m 2 http://127.0.0.1:8000/api/v1/auth/captcha >/dev/null 2>&1 \
   log "API already up on :8000"
   API_UP=1
 fi
-if curl -sf -m 1 -o /dev/null http://127.0.0.1:5176/ 2>/dev/null; then
-  log "QRP UI already up on :5176"
+if curl -sf -m 1 -o /dev/null "http://127.0.0.1:${QRP_PORT}/" 2>/dev/null; then
+  log "QRP UI already up on :${QRP_PORT}"
   UI_UP=1
 fi
 
@@ -134,19 +144,23 @@ if [[ "$API_UP" -eq 0 ]]; then
 fi
 
 if [[ "$UI_UP" -eq 0 ]]; then
-  if command -v ss >/dev/null && ss -ltn | grep -q ':5176 '; then
-    pause_fail "Port 5176 already in use. Open http://127.0.0.1:5176/qrp or stop that Vite."
+  if command -v ss >/dev/null && ss -ltn | grep -q ":${QRP_PORT} "; then
+    pause_fail "Port ${QRP_PORT} already in use. Open http://127.0.0.1:${QRP_PORT}${QRP_URL_PATH} or stop that Vite."
   fi
-  log "Opening terminal: QRP UI :5176"
-  spawn_term "QRP UI :5176" \
-    "export PATH=$(printf %q "${PATH}"); cd quantum-resource-portal/frontend && npm run dev -- --host 127.0.0.1 --port 5176"
+  if [[ "$QRP_FE" == "$GOVERN_FE" ]]; then
+    ui_cmd="export PATH=$(printf %q "${PATH}"); cd $(printf %q "$GOVERN_FE") && npm run dev"
+  else
+    ui_cmd="export PATH=$(printf %q "${PATH}"); cd $(printf %q "$QRP_FE") && npm run dev -- --host 127.0.0.1 --port ${QRP_PORT}"
+  fi
+  log "Opening terminal: QRP UI :${QRP_PORT} ($QRP_FE)"
+  spawn_term "QRP UI :${QRP_PORT}" "$ui_cmd"
 fi
 
 sleep 2
-command -v xdg-open >/dev/null && xdg-open "http://127.0.0.1:5176/qrp" >/dev/null 2>&1 || true
+command -v xdg-open >/dev/null && xdg-open "http://127.0.0.1:${QRP_PORT}${QRP_URL_PATH}" >/dev/null 2>&1 || true
 
 log "Infra ready. API + QRP UI in their own terminals."
 log "  API      http://127.0.0.1:8000"
-log "  Portal   http://127.0.0.1:5176/qrp"
+log "  Portal   http://127.0.0.1:${QRP_PORT}${QRP_URL_PATH}"
 echo
 pause_ok "Launcher OK — Press Enter to close this window (servers keep running)… "

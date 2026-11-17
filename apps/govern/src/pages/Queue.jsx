@@ -4,6 +4,8 @@ import { labelState } from '../labels.js';
 import { useContextProjectId } from '../hooks/useContextProject.js';
 import { approvalsListPath, governanceSummaryPath } from '../lib/approvalsQuery.js';
 import GovernPageShell from '../components/GovernPageShell.jsx';
+import { buildQrpBreadcrumbs } from '../nav/qrpNav.js';
+import LifecycleStrip from '../components/LifecycleStrip.jsx';
 import AdaptiveListView from '../components/AdaptiveListView.jsx';
 import ListViewToolbar from '../components/ListViewToolbar.jsx';
 import { EmptyState, KpiStrip, ListCap, SortTh, StatusBadge, WorkloadLink } from '../components/ui.jsx';
@@ -32,7 +34,7 @@ function waitLabel(iso) {
   return `${Math.floor(h / 24)}d`;
 }
 
-export default function Queue({ onOpen, initialState }) {
+export default function Queue({ onOpen, initialState, permissions = [] }) {
   const [items, setItems] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -117,8 +119,9 @@ export default function Queue({ onOpen, initialState }) {
 
   return (
     <GovernPageShell
+      breadcrumbs={buildQrpBreadcrumbs('workspace', 'Review queue')}
       eyebrow="Admission"
-      title="Approval queue"
+      title="Review queue"
       subtitle={
         contextProjectId
           ? 'Filtered to the selected project. Clear Project to see the full tenant queue.'
@@ -130,6 +133,7 @@ export default function Queue({ onOpen, initialState }) {
       onOpen={onOpen}
       loadingLabel="Loading approval queue…"
     >
+      <LifecycleStrip current="review" onOpen={onOpen} permissions={permissions} />
       {counts ? (
         <KpiStrip
           items={['submitted_for_review', 'in_review', 'changes_requested', 'approved'].map((state) => ({

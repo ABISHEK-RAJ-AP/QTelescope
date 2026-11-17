@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import GovernPageShell from '../components/GovernPageShell.jsx';
+import { buildQrpBreadcrumbs } from '../nav/qrpNav.js';
 import ListViewToolbar from '../components/ListViewToolbar.jsx';
 import AdaptiveListView from '../components/AdaptiveListView.jsx';
 import { EmptyState, KpiStrip } from '../components/ui.jsx';
@@ -50,6 +51,7 @@ export default function ProviderHealth({ onOpen }) {
 
   return (
     <GovernPageShell
+      breadcrumbs={buildQrpBreadcrumbs('resource-ops', 'Provider health')}
       eyebrow="Operations"
       title="Provider health"
       subtitle="Integration maturity from catalogue, manifests, and recorded collector runs — not simulated latency."
@@ -59,6 +61,17 @@ export default function ProviderHealth({ onOpen }) {
       onOpen={onOpen}
       loadingLabel="Loading provider status…"
     >
+      <nav className="link-row page-related-nav" aria-label="Related" style={{ marginBottom: 12 }}>
+        <button type="button" className="fs-link" onClick={() => onOpen?.('#/providers')}>
+          Providers catalogue
+        </button>
+        <button type="button" className="fs-link" onClick={() => onOpen?.('#/allocation')}>
+          Dispatch
+        </button>
+        <button type="button" className="fs-link" onClick={() => onOpen?.('#/inventory')}>
+          Inventory
+        </button>
+      </nav>
       {items.length > 0 ? (
         <KpiStrip
           items={['I1', 'I2', 'I3', 'I4', 'I5'].map((stage) => ({

@@ -21,6 +21,7 @@ function normalizeGroups(navGroups, navItems) {
 
 export default function StudioShell({
   workspaceId = 'build',
+  shellClassName = '',
   title,
   productSubtitle = 'Quantum Resource Engine',
   brandTitle = 'QRE Platform',
@@ -106,6 +107,7 @@ export default function StudioShell({
     <div
       className={[
         'qre-app-shell',
+        shellClassName,
         collapsed ? 'qre-app-shell--collapsed' : '',
         hoverExpand ? 'qre-app-shell--hover-expanded' : '',
         mobileNavOpen ? 'qre-app-shell--mobile-nav-open' : '',

@@ -5,6 +5,8 @@ import { labelDecision } from '../labels.js';
 import { useContextProjectId } from '../hooks/useContextProject.js';
 import { governanceActivityPath } from '../lib/approvalsQuery.js';
 import GovernPageShell from '../components/GovernPageShell.jsx';
+import { buildQrpBreadcrumbs } from '../nav/qrpNav.js';
+import LifecycleStrip from '../components/LifecycleStrip.jsx';
 import ListViewToolbar from '../components/ListViewToolbar.jsx';
 import AdaptiveListView from '../components/AdaptiveListView.jsx';
 import { EmptyState, ListCap, SortTh } from '../components/ui.jsx';
@@ -22,6 +24,19 @@ const AUDIT_COLS = [
 function formatAction(action) {
   if (action?.startsWith('approval.')) return labelDecision(action.replace('approval.', ''));
   return action?.replaceAll('.', ' · ') || 'Event';
+}
+
+function openAuditTarget(row, onOpen) {
+  if (!row?.target_id || !onOpen) return;
+  const action = String(row.action || '');
+  const type = String(row.target_type || '');
+  if (type === 'workload' || action.startsWith('approval.')) {
+    onOpen(`#/queue/${row.target_id}`);
+    return;
+  }
+  if (type === 'inventory_asset' || action.includes('inventory.')) {
+    onOpen(`#/inventory/${row.target_id}`);
+  }
 }
 
 export default function Audit({ permissions, onOpen }) {
@@ -110,6 +125,7 @@ export default function Audit({ permissions, onOpen }) {
 
   return (
     <GovernPageShell
+      breadcrumbs={buildQrpBreadcrumbs('governance', 'Audit & evidence')}
       eyebrow="Operations"
       title="Audit & evidence"
       subtitle={
@@ -132,8 +148,9 @@ export default function Audit({ permissions, onOpen }) {
         ) : null
       }
     >
+      <LifecycleStrip current="audit" onOpen={onOpen} permissions={permissions} />
       <div className="qre-card">
-        <div className="page-filters govern-toolbar">
+        <div className="page-filters govern-toolbar page-toolbar-unified">
           <div className="qre-tabs page-filters__grow" role="tablist" aria-label="Audit views" style={{ marginBottom: 0, borderBottom: 'none' }}>
             <button
               type="button"
@@ -210,12 +227,7 @@ export default function Audit({ permissions, onOpen }) {
             items={visible}
             columns={AUDIT_COLS}
             rowKey={(row) => row.id}
-            onRowClick={(row) => {
-              if (!row.target_id) return;
-              if (row.target_type === 'workload' || String(row.action || '').startsWith('approval.')) {
-                onOpen?.(`#/queue/${row.target_id}`);
-              }
-            }}
+            onRowClick={(row) => openAuditTarget(row, onOpen)}
             table={
           <div className="govern-table-wrap">
             <table className="govern-table">
@@ -233,12 +245,7 @@ export default function Audit({ permissions, onOpen }) {
                   <tr
                     key={row.id}
                     className={row.target_id ? 'govern-table__row--click' : undefined}
-                    onClick={() => {
-                      if (!row.target_id) return;
-                      if (row.target_type === 'workload' || String(row.action || '').startsWith('approval.')) {
-                        onOpen?.(`#/queue/${row.target_id}`);
-                      }
-                    }}
+                    onClick={() => openAuditTarget(row, onOpen)}
                   >
                     {prefs.isVisible('time') && (
                     <td className="govern-muted" title={row.timestamp ? new Date(row.timestamp).toLocaleString() : ''}>

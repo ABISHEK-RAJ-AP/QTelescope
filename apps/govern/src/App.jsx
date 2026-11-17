@@ -25,6 +25,7 @@ import Audit from './pages/Audit.jsx';
 import UsageMetering from './pages/UsageMetering.jsx';
 import CapacityUtilization from './pages/CapacityUtilization.jsx';
 import Reservations from './pages/Reservations.jsx';
+import SchedulingAdmin from './pages/SchedulingAdmin.jsx';
 import PageFrame from './components/PageFrame.jsx';
 import GovernCommandPalette from './components/GovernCommandPalette.jsx';
 import UiScaleControl from './components/UiScaleControl.jsx';
@@ -33,6 +34,7 @@ import { QRP_NAV_GROUPS, filterNavGroups, matchGovernRoute } from './nav/qrpNav.
 import { useGovernSession } from './hooks/useGovernSession.js';
 import { readContextProjectId } from '@qre-theme/contextScope.js';
 import { governanceSummaryPath } from './lib/approvalsQuery.js';
+import { syncProjectContextFromHash } from './lib/hashProject.js';
 import { observeUrl } from '@qre-theme/platformUrls.js';
 import { api } from './api.js';
 
@@ -86,6 +88,11 @@ export default function App() {
     if (current === '/sign-in' || current === '/register') {
       window.location.hash = '#/';
     }
+  }, [canEnterApp, hash]);
+
+  useEffect(() => {
+    if (!canEnterApp) return;
+    syncProjectContextFromHash(hash);
   }, [canEnterApp, hash]);
 
   function open(next) {
@@ -144,7 +151,7 @@ export default function App() {
     body = <Review workloadId={reviewId} onBack={open} onOpen={open} permissions={permissions} me={me} />;
   } else if (path === '/queue') {
     title = 'Approvals';
-    body = <Queue onOpen={open} initialState={queueQuery?.get('state') || ''} />;
+    body = <Queue onOpen={open} initialState={queueQuery?.get('state') || ''} permissions={permissions} />;
   } else if (path === '/my-work') {
     title = 'My work';
     body = <MyWork onOpen={open} />;
@@ -152,25 +159,25 @@ export default function App() {
     title = 'Resource detail';
     body = <InventoryDetail assetId={assetId} onBack={open} />;
   } else if (path === '/inventory') {
-    title = 'Resource inventory';
+    title = 'Inventory';
     body = <Inventory onOpen={open} permissions={permissions} />;
   } else if (path === '/pools') {
-    title = 'Virtual resource pools';
+    title = 'Resource pools';
     body = <VirtualPools onOpen={open} />;
   } else if (path === '/providers') {
-    title = 'Providers & facilities';
+    title = 'Providers';
     body = <Providers onOpen={open} />;
   } else if (projectId) {
     title = 'Project detail';
     body = <ProjectDetail projectId={projectId} onBack={open} onOpen={open} permissions={permissions} />;
   } else if (path === '/projects') {
-    title = 'Organizations & projects';
+    title = 'Projects';
     body = <Projects onOpen={open} />;
   } else if (path === '/allocation') {
-    title = 'Allocation & orchestration';
+    title = 'Dispatch';
     body = <Allocation onOpen={open} permissions={permissions} />;
   } else if (path === '/policies') {
-    title = 'Policies & entitlements';
+    title = 'Policies';
     body = <Policies onOpen={open} />;
   } else if (path === '/connectors') {
     title = 'Provider health';
@@ -178,22 +185,41 @@ export default function App() {
   } else if (path === '/403') {
     title = 'Permission required';
     body = <ErrorPage kind="forbidden" path={path} onOpen={open} />;
-  } else if (path === '/admin/access' || path === '/admin/platform') {
+  } else if (path === '/admin/access' || path === '/admin/platform' || path === '/admin/users') {
     const canAdmin = permissions.includes('users:read') || permissions.includes('platform:manage');
-    title = canAdmin ? 'Administration' : 'Permission required';
-    body = canAdmin ? <Administration onOpen={open} me={me} /> : <ErrorPage kind="forbidden" path={path} onOpen={open} />;
+    const adminTab = path === '/admin/users' ? 'users' : 'boundary';
+    title = canAdmin ? (adminTab === 'users' ? 'Users' : 'Administration') : 'Permission required';
+    body = canAdmin ? (
+      <Administration onOpen={open} me={me} permissions={permissions} initialTab={adminTab} />
+    ) : (
+      <ErrorPage kind="forbidden" path={path} onOpen={open} />
+    );
   } else if (path === '/audit') {
     title = 'Audit & evidence';
     body = <Audit permissions={permissions} onOpen={open} />;
   } else if (path === '/capacity') {
-    title = 'Capacity & utilization';
+    title = 'Usage & capacity';
     body = <CapacityUtilization onOpen={open} permissions={permissions} />;
   } else if (path === '/usage' || path === '/quotas') {
-    title = 'Usage & metering';
+    title = 'Usage & capacity';
     body = <UsageMetering onOpen={open} />;
-  } else if (path === '/reservations') {
-    title = 'Reservations';
-    body = <Reservations onOpen={open} permissions={permissions} />;
+  } else if (path === '/reservations' || path === '/schedule/hold' || path === '/holds') {
+    title = 'Holds & reservations';
+    body = (
+      <Reservations
+        onOpen={open}
+        permissions={permissions}
+        initialState={queueQuery?.get('state') || ''}
+      />
+    );
+  } else if (path === '/schedule/admin') {
+    const canPolicy = permissions.includes('platform:read') || permissions.includes('reservations:read');
+    title = canPolicy ? 'Scheduling policy' : 'Permission required';
+    body = canPolicy ? (
+      <SchedulingAdmin onOpen={open} />
+    ) : (
+      <ErrorPage kind="forbidden" path={path} onOpen={open} />
+    );
   } else if (PLACEHOLDERS[routeKey]) {
     const p = PLACEHOLDERS[routeKey];
     title = p.title;
@@ -261,6 +287,7 @@ export default function App() {
       <GovernCommandPalette commands={paletteCommands} onNavigate={(route) => route && open(route)} />
       <StudioShell
       workspaceId="govern"
+      shellClassName="qre-app-shell--govern"
       brandTitle="Govern"
       title={title}
       productSubtitle="C-DAC quantum programmes"

@@ -42,7 +42,10 @@ def get_current_tenant(
         sess = get_session(auth[7:].strip())
         if sess:
             return tenant_from_session_record(sess)
-    if not rbac_enforced() and x_tenant_id:
+    from app.core.env_profile import is_production_profile
+
+    # Lab tests may send X-Tenant-Id when RBAC is off. Production never trusts it.
+    if not is_production_profile() and not rbac_enforced() and x_tenant_id:
         return _slug_tenant(x_tenant_id)
     return default_tenant_id()
 

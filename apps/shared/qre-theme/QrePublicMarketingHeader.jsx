@@ -111,7 +111,7 @@ export default function QrePublicMarketingHeader({
                   onClick={onRegister}
                   aria-current={onRegisterPage ? 'page' : undefined}
                 >
-                  Get Started
+                  Sign up
                 </button>
               </nav>
             ) : null}
@@ -147,7 +147,7 @@ export default function QrePublicMarketingHeader({
                 Sign in
               </button>
               <button type="button" className="cert-public-header__auth-link cert-public-header__auth-link--primary" onClick={() => { closeMenu(); onRegister?.(); }}>
-                Get Started
+                Sign up
               </button>
             </div>
           ) : null}

@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { E2E_CAPTCHA_BYPASS, fillLoginForm } from './telescope-helpers';
 
 const api = process.env.E2E_API_URL || 'http://127.0.0.1:8000';
 const governBase = process.env.E2E_GOVERN_URL || 'http://127.0.0.1:5175';
@@ -42,6 +43,25 @@ test.describe('Govern SPA smoke', () => {
     await withDevSession(page);
     await page.goto(`${governBase}/govern/#/queue`);
     await expect(page.getByRole('heading', { name: /approval queue/i })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toContainText('Review queue');
+  });
+
+  test('sign-in → overview → queue breadcrumb', async ({ page }) => {
+    test.skip(
+      process.env.E2E_CAPTCHA_BYPASS !== '1' && process.env.E2E_CAPTCHA_BYPASS !== 'true',
+      'API must run with E2E_CAPTCHA_BYPASS=1',
+    );
+    const username = process.env.E2E_GOVERN_USER || process.env.E2E_TELESCOPE_USER || 'admin';
+    const password = process.env.E2E_GOVERN_PASSWORD || process.env.E2E_TELESCOPE_PASSWORD || 'quantum2026';
+    await page.goto(`${governBase}/govern/#/sign-in`);
+    await expect(page.getByRole('heading', { name: /sign in to govern/i })).toBeVisible({ timeout: 15_000 });
+    await fillLoginForm(page, { username, password, captcha: E2E_CAPTCHA_BYPASS });
+    await page.getByRole('button', { name: /sign in/i }).click();
+    await expect(page.getByRole('heading', { name: /^overview$/i })).toBeVisible({ timeout: 20_000 });
+    await page.goto(`${governBase}/govern/#/queue`);
+    await expect(page.getByRole('heading', { name: /approval queue/i })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toContainText('Workspace');
+    await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toContainText('Review queue');
   });
 
   test('missing review id is an error not a fake decision', async ({ page }) => {

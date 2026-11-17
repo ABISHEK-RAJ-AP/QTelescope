@@ -41,6 +41,8 @@ from app.api.governance.quotas import router as governance_quotas_router
 from app.api.governance.capacity import router as governance_capacity_router
 from app.api.governance.audit import router as governance_audit_router
 from app.api.governance.reservations import router as governance_reservations_router
+from app.api.governance.scheduling import router as governance_scheduling_router
+from app.api.governance.offerings import router as governance_offerings_router
 
 def ensure_runtime_directories():
     if settings.DATABASE_URL.startswith("sqlite:///./"):
@@ -258,6 +260,8 @@ app.include_router(governance_quotas_router, prefix=settings.API_V1_STR)
 app.include_router(governance_capacity_router, prefix=settings.API_V1_STR)
 app.include_router(governance_audit_router, prefix=settings.API_V1_STR)
 app.include_router(governance_reservations_router, prefix=settings.API_V1_STR)
+app.include_router(governance_scheduling_router, prefix=settings.API_V1_STR)
+app.include_router(governance_offerings_router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():

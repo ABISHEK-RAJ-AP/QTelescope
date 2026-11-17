@@ -69,6 +69,28 @@ def test_mfa_required_then_totp(monkeypatch, tmp_path):
     assert ok_login.json()["status"] == "SUCCESS"
     assert ok_login.json()["user"]["token"].startswith("qtok_")
 
+    replay = client.post(
+        "/api/v1/auth/login/mfa",
+        json={"mfa_token": body["mfa_token"], "code": totp},
+    )
+    assert replay.status_code == 401
+
+    second = client.post(
+        "/api/v1/auth/login",
+        json={
+            "username": uname,
+            "password": "secret12",
+            "captcha_id": "cap",
+            "captcha_code": "ABCD",
+        },
+    )
+    assert second.json()["status"] == "MFA_REQUIRED"
+    replay_code = client.post(
+        "/api/v1/auth/login/mfa",
+        json={"mfa_token": second.json()["mfa_token"], "code": totp},
+    )
+    assert replay_code.status_code == 401
+
 
 def test_forgot_password_hides_existence(monkeypatch):
     client = _client(monkeypatch)

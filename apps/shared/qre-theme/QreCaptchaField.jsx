@@ -9,7 +9,7 @@ export default function QreCaptchaField({
   id = 'captcha-code',
 }) {
   return (
-    <div className="qre-field qre-captcha-field">
+    <div className="qre-field qre-captcha-field" aria-busy={busy || undefined}>
       <span className="qre-field__label" id={`${id}-label`}>
         Verification
       </span>
@@ -17,7 +17,14 @@ export default function QreCaptchaField({
         {captchaImage ? (
           <img src={captchaImage} alt="Captcha challenge" className="qre-captcha-field__image" />
         ) : (
-          <div className="qre-captcha-field__image qre-captcha-field__image--placeholder" aria-hidden />
+          <div
+            className="qre-captcha-field__image qre-captcha-field__image--placeholder"
+            role="status"
+            aria-live="polite"
+            aria-busy={busy}
+          >
+            {busy ? 'Loading…' : 'Captcha unavailable'}
+          </div>
         )}
         <button
           type="button"

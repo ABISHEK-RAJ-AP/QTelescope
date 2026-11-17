@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { useContextProjectId } from '../hooks/useContextProject.js';
 import { approvalsListPath } from '../lib/approvalsQuery.js';
 import GovernPageShell from '../components/GovernPageShell.jsx';
+import { buildQrpBreadcrumbs } from '../nav/qrpNav.js';
 import ListViewToolbar from '../components/ListViewToolbar.jsx';
 import AdaptiveListView from '../components/AdaptiveListView.jsx';
 import { EmptyState, KpiStrip, StatusBadge, WorkloadLink } from '../components/ui.jsx';
@@ -65,6 +66,7 @@ export default function MyWork({ onOpen }) {
 
   return (
     <GovernPageShell
+      breadcrumbs={buildQrpBreadcrumbs('workspace', 'My work')}
       title="My work"
       subtitle={
         contextProjectId
@@ -77,6 +79,17 @@ export default function MyWork({ onOpen }) {
       onOpen={onOpen}
       loadingLabel="Loading your work queue…"
     >
+      <nav className="link-row page-related-nav" aria-label="Related" style={{ marginBottom: 12 }}>
+        <button type="button" className="fs-link" onClick={() => onOpen?.('#/')}>
+          Overview
+        </button>
+        <button type="button" className="fs-link" onClick={() => onOpen?.('#/queue')}>
+          Review queue
+        </button>
+        <button type="button" className="fs-link" onClick={() => onOpen?.('#/reservations')}>
+          Holds
+        </button>
+      </nav>
       {items.length > 0 ? (
         <KpiStrip
           items={['submitted_for_review', 'in_review', 'changes_requested', 'approved'].map((state) => ({

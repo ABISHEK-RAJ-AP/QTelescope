@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { fetchCaptcha, loginWithCredentials, saveSessionUser } from './auth.js';
 import DevAuthLocalPanel, { isDevAuthAllowed, QRE_DEV_AUTH_HOST_ID } from './DevAuthLocalPanel.jsx';
@@ -24,6 +25,7 @@ export default function QreInlineSignIn({
   const [busy, setBusy] = useState(false);
   const [captchaBusy, setCaptchaBusy] = useState(false);
   const [devBusy, setDevBusy] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [devMode, setDevMode] = useState('manual');
   const [devRole, setDevRole] = useState(() => localStorage.getItem('qre_role') || 'Researcher');
@@ -175,17 +177,28 @@ export default function QreInlineSignIn({
                   </button>
                 ) : null}
               </div>
-              <input
-                className="qre-field__input"
-                type="password"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  syncFields(username, e.target.value, captchaCode);
-                }}
-                autoComplete="current-password"
-                required={devMode === 'manual'}
-              />
+              <div className="cert-login-password-field">
+                <input
+                  className="qre-field__input"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    syncFields(username, e.target.value, captchaCode);
+                  }}
+                  autoComplete="current-password"
+                  required={devMode === 'manual'}
+                />
+                <button
+                  type="button"
+                  className="cert-login-password-toggle"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword((v) => !v)}
+                >
+                  {showPassword ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}
+                </button>
+              </div>
             </label>
           </>
         ) : null}
@@ -216,7 +229,7 @@ export default function QreInlineSignIn({
             <p>
               Need an account?{' '}
               <button type="button" className="cert-auth-link" onClick={onRegister}>
-                Register
+                Sign up
               </button>
             </p>
           </div>

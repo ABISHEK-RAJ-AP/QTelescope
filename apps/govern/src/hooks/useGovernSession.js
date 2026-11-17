@@ -1,8 +1,21 @@
-import { useEffect, useState } from 'react';
+import { createContext, createElement, useContext, useEffect, useState } from 'react';
 import { fetchAuthMe } from '@qre-theme/auth.js';
 import { syncContextTenantId } from '@qre-theme/contextScope.js';
 
+const GovernSessionContext = createContext(null);
+
+export function GovernSessionProvider({ children }) {
+  const value = useGovernSessionState();
+  return createElement(GovernSessionContext.Provider, { value }, children);
+}
+
 export function useGovernSession() {
+  const shared = useContext(GovernSessionContext);
+  if (shared) return shared;
+  return useGovernSessionState();
+}
+
+function useGovernSessionState() {
   const [me, setMe] = useState(null);
   const [loading, setLoading] = useState(true);
 

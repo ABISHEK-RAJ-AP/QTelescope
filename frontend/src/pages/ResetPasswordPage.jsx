@@ -67,12 +67,13 @@ export function ResetPasswordPage() {
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         {!tokenFromUrl && (
-          <Field label="Reset token">
-            <input value={token} onChange={(e) => setToken(e.target.value)} className={fieldClass} required />
+          <Field label="Reset token" forId="reset-token">
+            <input id="reset-token" value={token} onChange={(e) => setToken(e.target.value)} className={fieldClass} required />
           </Field>
         )}
-        <Field label="New password">
+        <Field label="New password" forId="reset-password" hint="Min. 6 characters">
           <input
+            id="reset-password"
             type="password"
             autoComplete="new-password"
             value={password}
@@ -82,8 +83,9 @@ export function ResetPasswordPage() {
             minLength={6}
           />
         </Field>
-        <Field label="Confirm password">
+        <Field label="Confirm password" forId="reset-confirm">
           <input
+            id="reset-confirm"
             type="password"
             autoComplete="new-password"
             value={confirm}

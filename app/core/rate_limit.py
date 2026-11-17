@@ -33,6 +33,8 @@ def _limits() -> tuple[int, int]:
 
 
 def _client_key(request: Request) -> str:
+    # Never trust X-Forwarded-For / X-Real-IP here — clients can spoof them.
+    # Peer address comes from the TCP socket (or the reverse proxy's real client).
     if request.client and request.client.host:
         return request.client.host
     return "unknown"

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import GovernPageShell from '../components/GovernPageShell.jsx';
+import { buildQrpBreadcrumbs } from '../nav/qrpNav.js';
 import ListViewToolbar from '../components/ListViewToolbar.jsx';
 import AdaptiveListView from '../components/AdaptiveListView.jsx';
 import { ConfirmDialog, EmptyState, KpiStrip } from '../components/ui.jsx';
@@ -13,6 +14,14 @@ const PROVIDER_COLS = [
   { id: 'id', label: 'Provider ID' },
   { id: 'integration', label: 'Integration' },
   { id: 'actions', label: 'Actions' },
+];
+
+const INVENTORY_COLS = [
+  { id: 'asset', label: 'Asset' },
+  { id: 'class', label: 'Class' },
+  { id: 'provider', label: 'Provider' },
+  { id: 'lifecycle', label: 'Lifecycle' },
+  { id: 'execution', label: 'Execution' },
 ];
 
 function useList(path, query = '') {
@@ -57,6 +66,8 @@ export function Inventory({ onOpen, permissions = [] }) {
   const [notice, setNotice] = useState('');
   const [search, setSearch] = useState('');
   const [providers, setProviders] = useState([]);
+  const [inventoryView, setInventoryView] = useState('grid');
+  const prefs = useTablePrefs('inventory', INVENTORY_COLS);
   const canImport = permissions.includes('inventory:import') || permissions.includes('platform:manage');
 
   useEffect(() => {
@@ -105,8 +116,9 @@ export function Inventory({ onOpen, permissions = [] }) {
 
   return (
     <GovernPageShell
-      eyebrow="Resources"
-      title="Institutional inventory"
+      breadcrumbs={buildQrpBreadcrumbs('resource-ops', 'Inventory')}
+      eyebrow="Catalogue"
+      title="Inventory"
       subtitle="Capability discovery filters the registry. Each row is one physical or simulated asset."
       loading={loading && items.length === 0}
       error={error}
@@ -115,6 +127,17 @@ export function Inventory({ onOpen, permissions = [] }) {
       onOpen={onOpen}
       loadingLabel="Loading inventory…"
     >
+      <nav className="link-row page-related-nav" aria-label="Related" style={{ marginBottom: 12 }}>
+        <button type="button" className="fs-link" onClick={() => onOpen?.('#/pools')}>
+          Resource pools
+        </button>
+        <button type="button" className="fs-link" onClick={() => onOpen?.('#/providers')}>
+          Providers
+        </button>
+        <button type="button" className="fs-link" onClick={() => onOpen?.('#/reservations')}>
+          Holds
+        </button>
+      </nav>
       {items.length > 0 ? (
         <KpiStrip
           items={[
@@ -190,7 +213,28 @@ export function Inventory({ onOpen, permissions = [] }) {
         <div className="qre-card">
           <div className="govern-section-head">
             <h3 className="govern-section-title">Registered assets</h3>
-            <span className="govern-status">{visible.length}</span>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span className="govern-status">{visible.length}</span>
+              <div className="qre-tabs" role="tablist" aria-label="Inventory layout">
+                <button
+                  type="button"
+                  className={`qre-tab${inventoryView === 'grid' ? ' qre-tab--active' : ''}`}
+                  onClick={() => setInventoryView('grid')}
+                >
+                  Cards
+                </button>
+                <button
+                  type="button"
+                  className={`qre-tab${inventoryView === 'table' ? ' qre-tab--active' : ''}`}
+                  onClick={() => setInventoryView('table')}
+                >
+                  Table
+                </button>
+              </div>
+              {inventoryView === 'table' ? (
+                <ListViewToolbar prefs={prefs} columns={INVENTORY_COLS} lockedIds={['asset']} />
+              ) : null}
+            </div>
           </div>
           {visible.length === 0 ? (
             <EmptyState
@@ -217,6 +261,45 @@ export function Inventory({ onOpen, permissions = [] }) {
                     Open providers
                   </button>
                 )
+              }
+            />
+          ) : inventoryView === 'table' ? (
+            <AdaptiveListView
+              prefs={prefs}
+              items={visible}
+              columns={INVENTORY_COLS}
+              rowKey={(row) => row.asset_id}
+              onRowClick={(row) => onOpen?.(`#/inventory/${row.asset_id}`)}
+              table={
+                <div className="govern-table-wrap">
+                  <table className="govern-table">
+                    <thead>
+                      <tr>
+                        {prefs.isVisible('asset') && <th>Asset</th>}
+                        {prefs.isVisible('class') && <th>Class</th>}
+                        {prefs.isVisible('provider') && <th>Provider</th>}
+                        {prefs.isVisible('lifecycle') && <th>Lifecycle</th>}
+                        {prefs.isVisible('execution') && <th>Execution</th>}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visible.map((row) => (
+                        <tr key={row.asset_id} className="govern-table__row--click" onClick={() => onOpen?.(`#/inventory/${row.asset_id}`)}>
+                          {prefs.isVisible('asset') && (
+                            <td>
+                              <strong>{row.native_asset_id}</strong>
+                              <span className="govern-table__sub govern-mono">{row.asset_id}</span>
+                            </td>
+                          )}
+                          {prefs.isVisible('class') && <td>{row.asset_class}</td>}
+                          {prefs.isVisible('provider') && <td className="govern-mono">{row.provider_id}</td>}
+                          {prefs.isVisible('lifecycle') && <td>{row.lifecycle_state || 'registered'}</td>}
+                          {prefs.isVisible('execution') && <td>{row.execution_class}</td>}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               }
             />
           ) : (
@@ -377,9 +460,10 @@ export function Providers({ onOpen }) {
 
   return (
     <GovernPageShell
-      eyebrow="Resources"
-      title="Providers & facilities"
-      subtitle="Register capability manifests for dispatch eligibility. Suspended providers block hardware authorization."
+      breadcrumbs={buildQrpBreadcrumbs('resource-ops', 'Providers')}
+      eyebrow="Catalogue"
+      title="Providers"
+      subtitle="Provider catalogue for discovery and manifests — dispatch still runs on Allocation after approval."
       loading={loading && items.length === 0}
       error={error}
       notice={notice}
@@ -387,6 +471,17 @@ export function Providers({ onOpen }) {
       onOpen={onOpen}
       loadingLabel="Loading providers…"
     >
+      <nav className="link-row page-related-nav" aria-label="Related" style={{ marginBottom: 12 }}>
+        <button type="button" className="fs-link" onClick={() => onOpen?.('#/connectors')}>
+          Provider health
+        </button>
+        <button type="button" className="fs-link" onClick={() => onOpen?.('#/inventory')}>
+          Inventory
+        </button>
+        <button type="button" className="fs-link" onClick={() => onOpen?.('#/allocation')}>
+          Dispatch
+        </button>
+      </nav>
       {items.length > 0 ? (
         <KpiStrip
           items={[

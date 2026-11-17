@@ -18,7 +18,10 @@ class RequestIdMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         incoming = (request.headers.get("x-request-id") or "").strip()
-        rid = incoming if incoming else f"req-{uuid.uuid4().hex[:16]}"
+        if incoming and incoming.isascii() and incoming.replace("-", "").replace("_", "").isalnum() and len(incoming) <= 64:
+            rid = incoming
+        else:
+            rid = f"req-{uuid.uuid4().hex[:16]}"
         request.state.request_id = rid
         from app.core.log_context import request_id_ctx
 

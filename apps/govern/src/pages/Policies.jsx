@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import PolicyDryRunSummary from '../components/PolicyDryRunSummary.jsx';
 import GovernPageShell from '../components/GovernPageShell.jsx';
+import { buildQrpBreadcrumbs } from '../nav/qrpNav.js';
 import ListViewToolbar from '../components/ListViewToolbar.jsx';
 import AdaptiveListView from '../components/AdaptiveListView.jsx';
 import { useTablePrefs } from '../hooks/useTablePrefs.js';
@@ -69,8 +70,9 @@ export default function Policies({ onOpen }) {
 
   return (
     <GovernPageShell
+      breadcrumbs={buildQrpBreadcrumbs('governance', 'Policies')}
       eyebrow="Governance"
-      title="Policies & entitlements"
+      title="Policies"
       subtitle={
         policy
           ? `Active approval policy · ${policy.policy_id || 'default'} · version ${policy.schema_version ?? policy.version ?? '—'}`

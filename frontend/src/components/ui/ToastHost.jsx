@@ -11,12 +11,13 @@ export function ToastHost() {
       autoClose={5200}
       hideProgressBar={false}
       newestOnTop
-      closeOnClick
+      closeOnClick={false}
       pauseOnFocusLoss
       draggable={false}
       pauseOnHover
       limit={4}
-      theme="light"
+      stacked={false}
+      theme="colored"
       icon={false}
       className="qts-toast-root"
       toastClassName="qts-toast"

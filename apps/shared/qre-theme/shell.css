@@ -1408,7 +1408,15 @@
 }
 
 .qre-captcha-field__image--placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 120px;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.2;
+  padding: 0 var(--space-2);
 }
 
 .qre-captcha-field__reload {
@@ -1874,6 +1882,115 @@
   border: 1px solid color-mix(in srgb, var(--warning) 40%, var(--border));
   background: color-mix(in srgb, var(--warning) 12%, var(--surface));
   color: var(--text-primary);
+  line-height: 1.5;
+}
+
+/* Cert Studio–style toast stack (Govern + shared shell) */
+.qre-toast-stack {
+  position: fixed;
+  top: calc(var(--app-topbar-height, 72px) + var(--space-3));
+  right: var(--space-4);
+  z-index: var(--z-toast, 500);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+  width: min(420px, calc(100vw - var(--space-8)));
+  pointer-events: none;
+}
+
+.qre-toast {
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: var(--space-3);
+  width: 100%;
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--text-primary);
+  box-sizing: border-box;
+}
+
+.qre-toast--ok {
+  border-left-color: var(--success);
+  background: color-mix(in srgb, var(--success) 8%, var(--surface));
+}
+
+.qre-toast--err {
+  border-left-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 8%, var(--surface));
+}
+
+.qre-toast--warn {
+  border-left-color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 10%, var(--surface));
+}
+
+.qre-toast__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.qre-toast--ok .qre-toast__icon {
+  color: var(--success);
+}
+
+.qre-toast--err .qre-toast__icon {
+  color: var(--danger);
+}
+
+.qre-toast--warn .qre-toast__icon {
+  color: var(--warning);
+}
+
+.qre-toast__message {
+  margin: 0;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.qre-toast__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin: -4px -6px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.qre-toast__close:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.qre-toast__close:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qre-toast {
+    transition: none;
+  }
 }
 
 .qre-wizard-steps {

@@ -1,3 +1,5 @@
+import '../load-public-marketing-css.js';
+import '../load-public-auth-css.js';
 import { useRef, useState } from 'react';
 import {
   ArrowRight,
@@ -35,8 +37,8 @@ const CAPABILITIES = [
   {
     icon: <Gauge size={ICON} strokeWidth={1.75} />,
     accent: 'var(--success)',
-    title: 'Quota & reservations',
-    description: 'Operational shot ledger, preflight evaluate, and reservation holds per tenant.',
+    title: 'Holds & usage',
+    description: 'Shot ledger, quotas, and governance hold windows on registered resources.',
   },
 ];
 
@@ -44,25 +46,25 @@ const PORTAL_TOOLS = [
   {
     icon: <Scale size={ICON} strokeWidth={1.75} />,
     accent: 'var(--primary)',
-    title: 'Policies & dry-run',
+    title: 'Policies',
     description: 'Evaluate policy versions before approvals commit capacity decisions.',
   },
   {
     icon: <Network size={ICON} strokeWidth={1.75} />,
     accent: 'var(--warning)',
-    title: 'Allocation & dispatch',
-    description: 'Dispatch ICD handoff, authorize, and reconcile with connector evidence.',
+    title: 'Dispatch',
+    description: 'Authorize handoff and reconcile with connector evidence.',
   },
   {
     icon: <FileSpreadsheet size={ICON} strokeWidth={1.75} />,
     accent: 'var(--success)',
-    title: 'Audit exports',
+    title: 'Audit & evidence',
     description: 'CSV trails and release-evidence gates for programme reviews.',
   },
   {
     icon: <Users size={ICON} strokeWidth={1.75} />,
     accent: 'var(--accent)',
-    title: 'Organizations & projects',
+    title: 'Projects',
     description: 'Tenant-scoped context on queues, summaries, and audit filters.',
   },
 ];
@@ -83,29 +85,29 @@ const BENTO = [
   },
   {
     icon: <Gauge size={20} strokeWidth={1.75} />,
-    title: 'Usage metering',
-    desc: 'Daily sim shot ledger with per-job contributions.',
+    title: 'Usage & capacity',
+    desc: 'Shot ledger, quotas, and connector meter rollups.',
     span: false,
   },
   {
     icon: <ClipboardList size={20} strokeWidth={1.75} />,
-    title: 'My work & queue',
-    desc: 'Researchers track submissions; approvers drain the queue.',
+    title: 'Review queue',
+    desc: 'Approvers drain submissions; researchers track via My work.',
     span: true,
   },
   {
     icon: <Database size={20} strokeWidth={1.75} />,
-    title: 'Reservations',
-    desc: 'Hold windows on registered quantum resources.',
+    title: 'Holds & reservations',
+    desc: 'Hold windows on registered resources — not booking, not dispatch.',
     span: false,
   },
 ];
 
 const STEPS = [
   { n: '01', title: 'Register or sign in', desc: 'Use your Quantum Resource Engine account to open the Govern portal (local dev may use role headers when enabled).' },
-  { n: '02', title: 'Submit for review', desc: 'Workloads enter the approval queue with policy version and project context pinned.' },
-  { n: '03', title: 'Review & decide', desc: 'Operators run the approval FSM with dry-run, quota hints, and full decision history.' },
-  { n: '04', title: 'Operate & evidence', desc: 'Track inventory, reservations, and usage; export audit records when capacity decisions must be demonstrated.' },
+  { n: '02', title: 'Submit for review', desc: 'Workloads enter the review queue with policy version and project context pinned.' },
+  { n: '03', title: 'Review → Hold → Dispatch', desc: 'Decide in the queue, request a hold window if needed, then authorize handoff. Hold ≠ dispatch.' },
+  { n: '04', title: 'Audit & evidence', desc: 'Export decision trails when capacity decisions must be demonstrated.' },
 ];
 
 const FAQ = [
@@ -118,12 +120,12 @@ const FAQ = [
     a: 'Researchers see queues and their submissions; approvers and resource managers decide and operate inventory; auditors export evidence. Navigation respects server-side permissions.',
   },
   {
-    q: 'Where are quota and reservations?',
-    a: 'Usage & metering shows the operational shot ledger; Reservations manages hold windows on registered resources. Both are tenant-scoped and backed by Govern APIs.',
+    q: 'Where are quota and holds?',
+    a: 'Usage & capacity covers the shot ledger and meter rollups. Holds & reservations manages hold windows on registered resources. Both are tenant-scoped Govern APIs.',
   },
   {
     q: 'How does Govern relate to Q-Forge?',
-    a: 'Q-Forge submits governed workload packages; Govern receives them in the approval queue with the same project scope for review and allocation.',
+    a: 'Q-Forge submits governed workload packages; Govern receives them in the review queue with the same project scope for review and dispatch.',
   },
 ];
 

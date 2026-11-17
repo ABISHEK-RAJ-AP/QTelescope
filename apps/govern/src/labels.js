@@ -32,3 +32,14 @@ export function labelTimelineEvent(type) {
     .map((part) => part.replaceAll('_', ' '))
     .join(' · ');
 }
+
+const WORKFLOW_STEP_LABEL = {
+  review: 'Review',
+  hold: 'Hold',
+  dispatch: 'Dispatch',
+  audit: 'Audit',
+};
+
+export function labelWorkflowStep(stepId) {
+  return WORKFLOW_STEP_LABEL[stepId] || stepId;
+}

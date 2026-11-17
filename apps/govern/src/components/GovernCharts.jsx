@@ -1,9 +1,16 @@
 /** Lightweight SVG charts — no extra dependency. */
 
 export function SparkBars({ values = [], color = 'var(--primary)', height = 88 }) {
+  if (!values.length || values.every((v) => !v)) {
+    return (
+      <div className="govern-chart govern-chart--empty" role="img" aria-label="No trend data" style={{ height }}>
+        <span className="govern-muted">No series in this window</span>
+      </div>
+    );
+  }
   const max = Math.max(...values, 1);
   const gap = 6;
-  const barW = values.length ? (100 - gap * (values.length - 1)) / values.length : 100;
+  const barW = (100 - gap * (values.length - 1)) / values.length;
   return (
     <svg viewBox={`0 0 100 ${height}`} className="govern-chart" role="img" aria-label="Queue trend">
       {values.map((v, i) => {
@@ -14,7 +21,7 @@ export function SparkBars({ values = [], color = 'var(--primary)', height = 88 }
             x={i * (barW + gap)}
             y={height - h}
             width={barW}
-            height={h}
+            height={Math.max(h, 0)}
             rx="2"
             fill={color}
             opacity={0.35 + (i / Math.max(values.length, 1)) * 0.65}

@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import GovernPageShell from '../components/GovernPageShell.jsx';
+import { buildQrpBreadcrumbs } from '../nav/qrpNav.js';
+import LifecycleStrip from '../components/LifecycleStrip.jsx';
 import ListViewToolbar from '../components/ListViewToolbar.jsx';
 import AdaptiveListView from '../components/AdaptiveListView.jsx';
+import WorkflowSteps from '../components/WorkflowSteps.jsx';
 import { ConfirmDialog, EmptyState, KpiStrip, WorkloadLink } from '../components/ui.jsx';
 import { useTablePrefs } from '../hooks/useTablePrefs.js';
 import { matchQuery } from '../lib/format.js';
@@ -146,11 +149,35 @@ export default function Allocation({ onOpen, permissions = [] }) {
 
   const visibleApproved = approved.filter((item) => matchQuery(query, item.workload_id, item.created_by));
 
+  const hasOpenHandoff = attempts.some(
+    (a) => a.dispatch_state === 'dispatch_authorized' || a.dispatch_state === 'dispatch_unresolved',
+  );
+  const dispatchSteps = [
+    { id: 'review', label: 'Review', status: 'done', href: '#/queue?state=approved' },
+    { id: 'hold', label: 'Hold', status: 'done', href: '#/reservations?state=active' },
+    {
+      id: 'eligibility',
+      label: 'Eligibility',
+      status: checkResult ? 'done' : 'current',
+    },
+    {
+      id: 'record',
+      label: 'Record attempt',
+      status: attempts.length ? 'done' : checkResult ? 'current' : '',
+    },
+    {
+      id: 'reconcile',
+      label: 'Reconcile',
+      status: hasOpenHandoff ? 'current' : attempts.length ? 'done' : '',
+    },
+  ];
+
   return (
     <GovernPageShell
-      eyebrow="Resource management"
-      title="Allocation & orchestration"
-      subtitle="Governance authorization and dispatch attempts are separate from Q-Forge execution. No provider job is started here unless a connector is configured."
+      breadcrumbs={buildQrpBreadcrumbs('resource-ops', 'Dispatch')}
+      eyebrow="Schedule"
+      title="Dispatch"
+      subtitle="Authorize handoff and reconcile attempts. Hold windows live under Holds & reservations — not here."
       loading={loading && attempts.length === 0 && approved.length === 0}
       error={error}
       notice={notice}
@@ -158,6 +185,7 @@ export default function Allocation({ onOpen, permissions = [] }) {
       onOpen={onOpen}
       loadingLabel="Loading allocation data…"
     >
+      <LifecycleStrip current="dispatch" onOpen={onOpen} permissions={permissions} />
       {attempts.length || approved.length ? (
         <KpiStrip
           items={[
@@ -172,17 +200,7 @@ export default function Allocation({ onOpen, permissions = [] }) {
           ]}
         />
       ) : null}
-      <div className="qre-wizard-steps" role="list" aria-label="Dispatch workflow">
-        <span className={`qre-wizard-step${checkResult ? ' qre-wizard-step--done' : ' qre-wizard-step--current'}`} role="listitem">
-          1 · Eligibility
-        </span>
-        <span className={`qre-wizard-step${attempts.length ? ' qre-wizard-step--done' : checkResult ? ' qre-wizard-step--current' : ''}`} role="listitem">
-          2 · Record attempt
-        </span>
-        <span className={`qre-wizard-step${attempts.some((a) => a.dispatch_state === 'dispatch_authorized' || a.dispatch_state === 'dispatch_unresolved') ? ' qre-wizard-step--current' : ''}`} role="listitem">
-          3 · Reconcile
-        </span>
-      </div>
+      <WorkflowSteps steps={dispatchSteps} ariaLabel="Review, hold, and dispatch" onOpen={onOpen} />
       {icd && (
         <div className="qre-card dashboard-card govern-stack">
           <h3 className="dashboard-card-title">Dispatch ICD ({icd.icd_version})</h3>

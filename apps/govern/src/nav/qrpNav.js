@@ -1,5 +1,4 @@
 import {
-  Activity,
   BarChart3,
   Boxes,
   ClipboardList,
@@ -11,40 +10,70 @@ import {
   Server,
   Shield,
   Sliders,
-  UserCircle,
   Users,
 } from 'lucide-react';
 
 /**
- * Canonical QRP navigation — target taxonomy (Resource management / Governance / Operations).
- * `implemented: false` → ModulePlaceholder only; no fabricated metrics (OD-QRP-02 for quota/reservation).
+ * Canonical QRP nav — enterprise IA (WORKSPACE · RESOURCE OPS · GOVERNANCE · ADMIN).
+ * Permission keys unchanged; filterNavGroups behavior unchanged.
  */
+export const QRP_IA_GROUP_META = {
+  workspace: { label: 'Workspace', hash: '#/' },
+  'resource-ops': { label: 'Resource operations' },
+  governance: { label: 'Governance' },
+  administration: { label: 'Administration', hash: '#/admin/access' },
+};
+
+export function buildQrpBreadcrumbs(groupId, pageLabel) {
+  const meta = QRP_IA_GROUP_META[groupId] || { label: String(groupId) };
+  const trail = [];
+  if (meta.hash) trail.push({ label: meta.label, hash: meta.hash });
+  else trail.push({ label: meta.label });
+  trail.push({ label: pageLabel });
+  return trail;
+}
+
 export const QRP_NAV_GROUPS = [
   {
     id: 'workspace',
     label: 'Workspace',
     items: [
       { key: 'overview', label: 'Overview', route: '#/', icon: LayoutDashboard, implemented: true, permission: 'approvals:read' },
-      { key: 'my-work', label: 'My Work', route: '#/my-work', icon: UserCircle, implemented: true, permission: 'approvals:read' },
       {
         key: 'approvals',
-        label: 'Approvals',
+        label: 'Review queue',
         route: '#/queue',
         icon: ClipboardList,
         implemented: true,
         permission: 'approvals:read',
         badgeKey: 'queue',
       },
+      {
+        key: 'my-work',
+        label: 'My work',
+        route: '#/my-work',
+        icon: ClipboardList,
+        implemented: true,
+        permission: 'approvals:read',
+      },
+      {
+        key: 'projects',
+        label: 'Projects',
+        route: '#/projects',
+        icon: Users,
+        implemented: true,
+        permission: 'projects:read',
+      },
     ],
   },
   {
-    id: 'resources',
-    label: 'Resource management',
+    id: 'resource-ops',
+    label: 'Resource operations',
     items: [
-      { key: 'inventory', label: 'Resource inventory', route: '#/inventory', icon: Boxes, implemented: true, permission: 'inventory:read' },
+      { key: 'inventory', label: 'Inventory', route: '#/inventory', icon: Boxes, implemented: true, permission: 'inventory:read' },
       {
         key: 'pools',
-        label: 'Virtual resource pools',
+        label: 'Resource pools',
         route: '#/pools',
         icon: Layers,
         implemented: true,
@@ -52,15 +81,23 @@ export const QRP_NAV_GROUPS = [
       },
       {
         key: 'providers',
-        label: 'Providers & facilities',
+        label: 'Providers',
         route: '#/providers',
         icon: Server,
         implemented: true,
         permission: 'inventory:read',
       },
       {
+        key: 'reservations',
+        label: 'Holds & reservations',
+        route: '#/reservations',
+        icon: CalendarClock,
+        implemented: true,
+        permission: 'reservations:read',
+      },
+      {
         key: 'allocation',
-        label: 'Allocation & orchestration',
+        label: 'Dispatch',
         route: '#/allocation',
         icon: Gauge,
         implemented: true,
@@ -73,60 +110,30 @@ export const QRP_NAV_GROUPS = [
     label: 'Governance',
     items: [
       {
-        key: 'projects',
-        label: 'Organizations & projects',
-        route: '#/projects',
-        icon: Users,
-        implemented: true,
-        permission: 'projects:read',
-      },
-      {
         key: 'policies',
-        label: 'Policies & entitlements',
+        label: 'Policies',
         route: '#/policies',
         icon: Sliders,
         implemented: true,
         permission: 'policies:read',
       },
       {
-        key: 'capacity',
-        label: 'Capacity & utilization',
-        route: '#/capacity',
-        icon: BarChart3,
-        implemented: true,
-        permission: 'metering:read',
-      },
-      {
         key: 'usage',
-        label: 'Usage & metering',
+        label: 'Usage & capacity',
         route: '#/usage',
         icon: BarChart3,
         implemented: true,
+        /* either ledger or meter rollups */
         permission: 'reports:read',
+        altPermission: 'metering:read',
       },
-      {
-        key: 'reservations',
-        label: 'Reservations',
-        route: '#/reservations',
-        icon: CalendarClock,
-        implemented: true,
-        permission: 'reservations:read',
-      },
+      { key: 'audit', label: 'Audit & evidence', route: '#/audit', icon: FileSearch, implemented: true, permission: 'approvals:read' },
     ],
   },
   {
-    id: 'operations',
-    label: 'Operations',
+    id: 'administration',
+    label: 'Administration',
     items: [
-      {
-        key: 'connectors',
-        label: 'Provider health',
-        route: '#/connectors',
-        icon: Activity,
-        implemented: true,
-        permission: 'inventory:read',
-      },
-      { key: 'audit', label: 'Audit & evidence', route: '#/audit', icon: FileSearch, implemented: true, permission: 'approvals:read' },
       {
         key: 'access',
         label: 'Administration',
@@ -135,17 +142,32 @@ export const QRP_NAV_GROUPS = [
         implemented: true,
         permission: 'users:read',
       },
+      {
+        key: 'admin-users',
+        label: 'Users',
+        route: '#/admin/users',
+        icon: Users,
+        implemented: true,
+        permission: 'users:read',
+      },
     ],
   },
 ];
 
+/** Hidden routes still reachable (aliases / deep links) — not listed in sidebar. */
+export const QRP_HIDDEN_ROUTES = {
+  capacity: '#/capacity',
+  connectors: '#/connectors',
+};
+
 export function filterNavGroups(groups, permissions = []) {
   const set = new Set(permissions);
   const has = (perm) => !perm || set.has(perm) || set.has('platform:manage');
+  const hasItem = (item) => has(item.permission) || (item.altPermission && has(item.altPermission));
   return groups
     .map((g) => ({
       ...g,
-      items: g.items.filter((item) => has(item.permission)),
+      items: g.items.filter((item) => hasItem(item)),
     }))
     .filter((g) => g.items.length > 0);
 }
@@ -167,11 +189,15 @@ export function matchGovernRoute(path) {
     if (projectId) return { key: 'projects', reviewId: null, projectId };
   }
   if (path === '/audit') return { key: 'audit', reviewId: null };
+  /* Schedule-hold alias → same page as reservations */
+  if (path === '/schedule/hold' || path === '/holds') return { key: 'reservations', reviewId: null };
+  if (path === '/schedule/admin') return { key: 'scheduling-admin', reviewId: null };
   const staticRoutes = ['pools', 'policies', 'capacity', 'usage', 'allocation', 'connectors', 'quotas', 'reservations'];
   for (const r of staticRoutes) {
-    if (path === `/${r}`) return { key: r, reviewId: null };
+    if (path === `/${r}`) return { key: r === 'quotas' ? 'usage' : r, reviewId: null };
   }
   if (path === '/admin/access') return { key: 'access', reviewId: null };
+  if (path === '/admin/users') return { key: 'admin-users', reviewId: null };
   if (path === '/admin/platform') return { key: 'platform', reviewId: null };
   if (path === '/403') return { key: 'forbidden', reviewId: null };
   return { key: 'unknown', unknown: true, reviewId: null, assetId: null };

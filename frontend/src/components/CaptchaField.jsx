@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { RotateCw } from 'lucide-react'
 import { api } from '@/services/api'
-import { fieldClass } from '@/components/AuthShell'
+import { Field, fieldClass } from '@/components/AuthShell'
 import { InfoTooltip } from '@/components/observability/InfoTooltip.jsx'
 
 export function CaptchaField({ value, onChange, onChallenge }) {
@@ -34,27 +34,9 @@ export function CaptchaField({ value, onChange, onChallenge }) {
   }, [])
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-2 min-h-11">
-        <label className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--text-secondary)]">
-          Image verification
-          <InfoTooltip label="Image verification">
-            Type the characters shown. Proves a person is signing in. After an API restart, click New image.
-          </InfoTooltip>
-        </label>
-        <button
-          type="button"
-          onClick={fetchNewCaptcha}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 min-h-11 px-2 text-sm font-medium text-[var(--accent)] hover:opacity-90 disabled:opacity-50"
-        >
-          <RotateCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} aria-hidden />
-          New image
-        </button>
-      </div>
-
+    <div className="space-y-1">
       <div className="flex items-stretch gap-3">
-        <div className="flex h-[72px] w-[220px] shrink-0 items-center justify-center overflow-hidden rounded-[calc(var(--ds-radius-card)-4px)] border border-[var(--border-color)] bg-[#efe8d8] dark:bg-neutral-950">
+        <div className="relative flex h-[52px] w-[min(42%,220px)] shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[var(--border-color)] bg-[#efe8d8] dark:bg-neutral-950">
           {loading ? (
             <span className="text-xs text-[var(--text-muted)]" aria-live="polite">
               Generating…
@@ -69,22 +51,39 @@ export function CaptchaField({ value, onChange, onChallenge }) {
           ) : (
             <span className="px-2 text-center text-xs text-[var(--text-muted)]">Challenge offline</span>
           )}
+          <button
+            type="button"
+            onClick={fetchNewCaptcha}
+            disabled={loading}
+            className="absolute right-1 top-1 inline-flex min-h-8 min-w-8 items-center justify-center rounded-md bg-[var(--bg-card)]/90 text-[var(--accent)] hover:opacity-90 disabled:opacity-50"
+            aria-label="New image"
+            title="New image"
+          >
+            <RotateCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} aria-hidden />
+          </button>
         </div>
-        <input
-          type="text"
-          inputMode="text"
-          autoComplete="off"
-          spellCheck={false}
-          placeholder="Characters"
-          value={value}
-          onChange={(e) => onChange(e.target.value.replace(/\s/g, ''))}
-          className={`${fieldClass} h-[72px] font-mono text-base tracking-widest tabular-nums uppercase`}
-          maxLength={8}
-          required
-          aria-label="Characters from the image"
-          aria-invalid={Boolean(error)}
-        />
+        <Field label="Characters" forId="auth-captcha" className="auth-outline-field--flush min-h-[52px] flex-1">
+          <input
+            id="auth-captcha"
+            type="text"
+            inputMode="text"
+            autoComplete="off"
+            spellCheck={false}
+            value={value}
+            onChange={(e) => onChange(e.target.value.replace(/\s/g, ''))}
+            className={`${fieldClass} font-mono text-base tracking-widest tabular-nums uppercase`}
+            maxLength={8}
+            required
+            aria-invalid={Boolean(error)}
+          />
+        </Field>
       </div>
+      <p className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+        Type the characters from the image.
+        <InfoTooltip label="Image verification">
+          Proves a person is signing in. After an API restart, click the refresh icon for a new image.
+        </InfoTooltip>
+      </p>
       {error ? (
         <p className="text-sm text-[var(--ds-status-critical)]" role="alert">
           {error}

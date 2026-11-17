@@ -117,6 +117,81 @@
   transform: scale(0.97);
 }
 
+/* Outlined auth fields — label sits on the border, same pattern as console filters. */
+.auth-outline-field--flush {
+  margin-top: 0;
+}
+
+.auth-outline-field {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  margin-top: 10px;
+  padding: 12px 12px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.auth-outline-field__name {
+  position: absolute;
+  top: 0;
+  left: 10px;
+  transform: translateY(-50%);
+  padding: 0 5px;
+  background: var(--bg-card);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.auth-outline-field:focus-within {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.auth-outline-field:focus-within .auth-outline-field__name {
+  color: var(--text-primary);
+}
+
+.auth-outline-field__control,
+.auth-outline-field input,
+.auth-outline-field select {
+  border: 0 !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+  min-width: 0;
+  width: 100%;
+}
+
+.auth-outline-field__control:focus,
+.auth-outline-field input:focus,
+.auth-outline-field select:focus {
+  outline: none;
+}
+
+.auth-outline-field__hint {
+  position: absolute;
+  right: 10px;
+  top: 0;
+  transform: translateY(-50%);
+  padding: 0 4px;
+  background: var(--bg-card);
+  font-size: 11px;
+  color: var(--text-muted);
+  max-width: 46%;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @keyframes auth-success-pulse {
   0% { transform: scale(1); }
   40% { transform: scale(1.01); }

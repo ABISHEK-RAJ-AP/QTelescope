@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
 import { api, apiBase, authHeaders } from '../api.js';
 import GovernPageShell from '../components/GovernPageShell.jsx';
+import { buildQrpBreadcrumbs } from '../nav/qrpNav.js';
+import UsageCapacityTabs from '../components/UsageCapacityTabs.jsx';
 import ListViewToolbar from '../components/ListViewToolbar.jsx';
 import AdaptiveListView from '../components/AdaptiveListView.jsx';
 import { EmptyState, KpiStrip, PeriodRange } from '../components/ui.jsx';
@@ -94,9 +96,10 @@ export default function CapacityUtilization({ onOpen, permissions = [] }) {
   return (
     <GovernPageShell
       variant="band"
-      eyebrow="Governance"
-      title="Capacity & utilization"
-      subtitle="Aggregates from ingested meter samples only. Missing or unknown units are stored as unavailable — never shown as zero."
+      breadcrumbs={buildQrpBreadcrumbs('governance', 'Usage & capacity')}
+      eyebrow="Govern"
+      title="Usage & capacity"
+      subtitle="Meter rollups only. Missing units stay unavailable — never shown as zero. Quotas share this nav item."
       loading={loading && !rollup}
       error={error}
       notice={notice}
@@ -115,6 +118,7 @@ export default function CapacityUtilization({ onOpen, permissions = [] }) {
         </>
       }
     >
+      <UsageCapacityTabs current="capacity" onOpen={onOpen} />
       {rollup ? (
         <KpiStrip
           items={[

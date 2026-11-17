@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Copy } from 'lucide-react';
+import { writeContextProjectId } from '@qre-theme/contextScope.js';
 import WorkloadTimeline from '@qre-theme/WorkloadTimeline.jsx';
 import useReviewHotkeys from '../hooks/useReviewHotkeys.js';
 import { api } from '../api.js';
@@ -7,8 +8,13 @@ import { labelState } from '../labels.js';
 import PolicyDryRunSummary from '../components/PolicyDryRunSummary.jsx';
 import ReviewQuotaHint from '../components/ReviewQuotaHint.jsx';
 import GovernPageShell from '../components/GovernPageShell.jsx';
+import { buildQrpBreadcrumbs } from '../nav/qrpNav.js';
+import LifecycleStrip from '../components/LifecycleStrip.jsx';
+import WorkflowSteps from '../components/WorkflowSteps.jsx';
+import { queueHashForProject } from '../lib/hashProject.js';
 import { ConfirmDialog, StatusBadge, shortWorkloadId } from '../components/ui.jsx';
 import { queueNeighbors } from '../lib/queueNav.js';
+import { formatGovernNotifyConfig } from '../lib/notifyConfigLabel.js';
 
 export default function Review({ workloadId, onBack, permissions = [], me = null, onOpen }) {
   const [row, setRow] = useState(null);
@@ -20,6 +26,7 @@ export default function Review({ workloadId, onBack, permissions = [], me = null
   const [noticeOk, setNoticeOk] = useState(false);
   const [timeline, setTimeline] = useState(null);
   const [notifyCfg, setNotifyCfg] = useState(null);
+  const [notifyFailed, setNotifyFailed] = useState(false);
   const [timelineFilter, setTimelineFilter] = useState('all');
   const [policySim, setPolicySim] = useState(null);
   const [policySimBusy, setPolicySimBusy] = useState(false);
@@ -32,7 +39,15 @@ export default function Review({ workloadId, onBack, permissions = [], me = null
     return Promise.all([
       api(`/approvals/${workloadId}`),
       api(`/workloads/${workloadId}/timeline`).catch(() => null),
-      api('/governance/notifications/config').catch(() => null),
+      api('/governance/notifications/config')
+        .then((body) => {
+          setNotifyFailed(false);
+          return body;
+        })
+        .catch(() => {
+          setNotifyFailed(true);
+          return null;
+        }),
       api(`/quotas/evaluate?workload_id=${encodeURIComponent(workloadId)}`).catch(() => null),
     ])
       .then(([body, tl, ncfg, quota]) => {
@@ -204,6 +219,7 @@ export default function Review({ workloadId, onBack, permissions = [], me = null
 
   return (
     <GovernPageShell
+      breadcrumbs={buildQrpBreadcrumbs('workspace', 'Review queue')}
       title={row ? shortWorkloadId(workloadId) : 'Review'}
       subtitle={row ? `Workload ${workloadId}` : undefined}
       loading={loading && !row}
@@ -229,6 +245,15 @@ export default function Review({ workloadId, onBack, permissions = [], me = null
         </>
       }
     >
+      <LifecycleStrip current="review" onOpen={onOpen || onBack} permissions={permissions} />
+      <nav className="link-row page-related-nav" aria-label="Related" style={{ marginBottom: 12 }}>
+        <button type="button" className="fs-link" onClick={() => (onOpen || onBack)('#/queue')}>
+          Review queue
+        </button>
+        <button type="button" className="fs-link" onClick={() => (onOpen || onBack)('#/audit')}>
+          Audit trail
+        </button>
+      </nav>
       {row ? (
       <div className="govern-nav-siblings">
         {neighbors.prev || neighbors.next ? (
@@ -257,9 +282,13 @@ export default function Review({ workloadId, onBack, permissions = [], me = null
       {row.governance_state === 'approved' && (
         <div className="qre-card govern-notice--ok" style={{ borderLeft: '4px solid var(--success)' }}>
           <p style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
-            Approved for governance. Dispatch eligibility and handoff are managed on{' '}
+            Approved for governance. Next:{' '}
+            <button type="button" className="govern-table__primary" style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }} onClick={() => onBack('#/reservations')}>
+              Hold
+            </button>
+            {' · '}
             <button type="button" className="govern-table__primary" style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer' }} onClick={() => onBack('#/allocation')}>
-              Allocation & orchestration
+              Dispatch
             </button>
             — execution still runs through Q-Forge / provider connectors.
           </p>
@@ -268,21 +297,17 @@ export default function Review({ workloadId, onBack, permissions = [], me = null
 
       <ReviewQuotaHint quota={quotaEval} />
 
-      {stageTotal > 0 && (
-        <div className="qre-wizard-steps" role="list" aria-label="Review stages">
-          {Array.from({ length: stageTotal }, (_, i) => {
-            let cls = 'qre-wizard-step';
-            if (i < stageIndex) cls += ' qre-wizard-step--done';
-            else if (i === stageIndex) cls += ' qre-wizard-step--current';
-            const label = i === stageIndex ? progress.current_stage?.label : `Stage ${i + 1}`;
-            return (
-              <span key={i} className={cls} role="listitem">
-                {label || `Stage ${i + 1}`}
-              </span>
-            );
-          })}
-        </div>
-      )}
+      {stageTotal > 0 ? (
+        <WorkflowSteps
+          ariaLabel="Review stages"
+          onOpen={onOpen || onBack}
+          steps={Array.from({ length: stageTotal }, (_, i) => ({
+            id: `stage-${i}`,
+            label: i === stageIndex ? progress.current_stage?.label || `Stage ${i + 1}` : `Stage ${i + 1}`,
+            status: i < stageIndex ? 'done' : i === stageIndex ? 'current' : '',
+          }))}
+        />
+      ) : null}
 
       <div className="govern-review-grid">
         <div className="govern-stack">
@@ -298,8 +323,31 @@ export default function Review({ workloadId, onBack, permissions = [], me = null
               {row.project_id && (
                 <div className="govern-meta-item">
                   <dt>Project</dt>
-                  <dd className="govern-mono" style={{ fontWeight: 400, fontSize: 'var(--text-xs)' }}>
-                    {row.project_id}
+                  <dd>
+                    <button
+                      type="button"
+                      className="fs-link govern-mono"
+                      style={{ fontWeight: 400, fontSize: 'var(--text-xs)' }}
+                      onClick={() => {
+                        writeContextProjectId(row.project_id);
+                        onOpen?.(`#/projects/${encodeURIComponent(row.project_id)}`);
+                      }}
+                    >
+                      {row.project_id}
+                    </button>
+                    {onOpen ? (
+                      <button
+                        type="button"
+                        className="qre-btn qre-btn--ghost qre-btn--sm"
+                        style={{ marginLeft: 8, padding: '2px 8px' }}
+                        onClick={() => {
+                          writeContextProjectId(row.project_id);
+                          onOpen(queueHashForProject(row.project_id));
+                        }}
+                      >
+                        Queue for project
+                      </button>
+                    ) : null}
                   </dd>
                 </div>
               )}
@@ -374,14 +422,28 @@ export default function Review({ workloadId, onBack, permissions = [], me = null
 
           <div className="qre-card">
             <div className="govern-section-head">
+              <h3 className="govern-section-title">Governance notifications</h3>
+            </div>
+            {(() => {
+              const label = formatGovernNotifyConfig(notifyCfg, { loadFailed: notifyFailed });
+              const cls =
+                label.tone === 'ok'
+                  ? 'govern-status govern-status--ok'
+                  : label.tone === 'warn'
+                    ? 'govern-status govern-status--warn'
+                    : 'govern-muted';
+              return (
+                <p className={cls} style={{ marginTop: 0, marginBottom: 12, fontSize: 'var(--text-sm)' }}>
+                  {label.text}
+                </p>
+              );
+            })()}
+          </div>
+
+          <div className="qre-card">
+            <div className="govern-section-head">
               <h3 className="govern-section-title">Registry timeline</h3>
             </div>
-            {notifyCfg && (
-              <p className="govern-muted" style={{ marginTop: 0, marginBottom: 12 }}>
-                Notifications: stub mode · subscribed events {notifyCfg.events?.length ?? 0}
-                {Object.entries(notifyCfg.channels || {}).every(([, ch]) => !ch?.enabled) ? ' · no channels enabled' : ''}
-              </p>
-            )}
             <WorkloadTimeline
               timeline={timeline}
               filter={timelineFilter}
