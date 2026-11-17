@@ -248,7 +248,7 @@ export function AlertDetailPage({
                     acknowledged_by: actorName,
                     comment: (text || '').trim() || undefined,
                   }),
-                  'Acknowledged.',
+                  { app: 'Alerts', title: 'Acknowledged', body: 'Status saved on this alert.' },
                 ),
               })}
             >

@@ -152,7 +152,7 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
                     acknowledged_by: actorName,
                     comment: (text || '').trim() || undefined,
                   }),
-                  'Acknowledged.',
+                  { app: 'Alerts', title: 'Acknowledged', body: 'Incident status updated.' },
                 ),
               })}
             >

@@ -44,6 +44,14 @@ export function OperatorToastNotice({
   );
 
   return (
-    <OperatorFeedItem app="Console" variant={variant} title={title} body={body} footer={foot} className="qts-feed-item--toast" />
+    <OperatorFeedItem
+      app="Console"
+      variant={variant}
+      title={title}
+      body={body}
+      footer={foot}
+      className="qts-feed-item--toast"
+      showMeta
+    />
   );
 }

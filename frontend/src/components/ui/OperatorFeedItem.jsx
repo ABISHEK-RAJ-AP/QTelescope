@@ -19,22 +19,26 @@ export function OperatorFeedItem({
   icon: IconProp,
   footer = null,
   className = '',
+  showMeta = true,
 }) {
   const Icon = IconProp || ICONS[variant] || Bell
   const detail = body ?? children
+  const showDescription = Boolean(detail) && String(detail).trim() !== String(title || '').trim()
   return (
     <article className={`qts-feed-item qts-feed-item--${variant} ${className}`.trim()} data-variant={variant}>
       <div className="qts-feed-item__media" aria-hidden>
-        <Icon className="qts-feed-item__icon" size={18} strokeWidth={2} />
+        <Icon className="qts-feed-item__icon" size={16} strokeWidth={2} />
       </div>
       <div className="qts-feed-item__content">
-        <div className="qts-feed-item__meta">
-          <span className="qts-feed-item__app">{app}</span>
-          <span className="qts-feed-item__dot" aria-hidden>·</span>
-          <time className="qts-feed-item__time">{time}</time>
-        </div>
+        {showMeta ? (
+          <div className="qts-feed-item__meta">
+            <span className="qts-feed-item__app">{app}</span>
+            <span className="qts-feed-item__dot" aria-hidden>·</span>
+            <time className="qts-feed-item__time">{time}</time>
+          </div>
+        ) : null}
         {title ? <h3 className="qts-feed-item__title">{title}</h3> : null}
-        {detail ? <p className="qts-feed-item__body">{detail}</p> : null}
+        {showDescription ? <p className="qts-feed-item__body">{detail}</p> : null}
         {footer}
       </div>
     </article>

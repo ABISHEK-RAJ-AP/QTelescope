@@ -1,7 +1,7 @@
 /* Cert Studio / govern pattern: flat surface, semantic border, 8px radius — no inset smears */
 
 .qts-toast-root.Toastify__toast-container {
-  --toastify-toast-width: min(22.5rem, calc(100vw - 2rem));
+  --toastify-toast-width: min(24rem, calc(100vw - 2rem));
   --toastify-toast-min-height: 0;
   z-index: 10900 !important;
   width: var(--toastify-toast-width) !important;
@@ -48,20 +48,20 @@
   font-family: inherit;
   font-size: var(--font-size-label, 1rem);
   line-height: var(--line-height-body, 1.5);
-  border-radius: var(--ds-radius-card, 8px) !important;
-  border: 1px solid var(--border-color) !important;
-  background: var(--bg-card) !important;
+  border: none !important;
+  background: transparent !important;
   color: var(--text-primary) !important;
-  box-shadow: var(--ds-shadow-card, 0 8px 24px -12px rgba(15, 23, 42, 0.18)) !important;
-  min-height: 3rem !important;
+  box-shadow: none !important;
+  min-height: 0 !important;
   height: auto !important;
   max-height: none !important;
   margin: 0 !important;
   padding: 0 !important;
-  overflow: hidden;
+  overflow: visible;
   max-width: 100%;
   width: 100% !important;
   box-sizing: border-box;
+  position: relative;
 }
 
 .qts-toast-root .Toastify__toast-theme--light,
@@ -71,36 +71,36 @@
   color: var(--text-primary) !important;
 }
 
-/* Semantic border tint (govern-toast pattern) */
-.qts-toast--simple.qts-toast--success {
-  border-color: color-mix(in srgb, var(--ds-status-healthy, #059669) 42%, var(--border-color)) !important;
-  background: color-mix(in srgb, var(--ds-status-healthy, #059669) 6%, var(--bg-card)) !important;
+/* Semantic tint on inner feed card (shadcn Item outline) */
+.qts-toast--simple.qts-toast--success .qts-feed-item--toast {
+  border-color: color-mix(in srgb, var(--ds-status-healthy, #059669) 38%, var(--border-color));
+  background: color-mix(in srgb, var(--ds-status-healthy, #059669) 7%, var(--bg-card));
 }
 
-.qts-toast--simple.qts-toast--error {
-  border-color: color-mix(in srgb, var(--ds-status-critical, #e11d48) 42%, var(--border-color)) !important;
-  background: color-mix(in srgb, var(--ds-status-critical, #e11d48) 6%, var(--bg-card)) !important;
+.qts-toast--simple.qts-toast--error .qts-feed-item--toast {
+  border-color: color-mix(in srgb, var(--ds-status-critical, #e11d48) 38%, var(--border-color));
+  background: color-mix(in srgb, var(--ds-status-critical, #e11d48) 7%, var(--bg-card));
 }
 
-.qts-toast--simple.qts-toast--warn {
-  border-color: color-mix(in srgb, var(--ds-status-warn, #d97706) 42%, var(--border-color)) !important;
-  background: color-mix(in srgb, var(--ds-status-warn, #d97706) 6%, var(--bg-card)) !important;
+.qts-toast--simple.qts-toast--warn .qts-feed-item--toast {
+  border-color: color-mix(in srgb, var(--ds-status-warn, #d97706) 38%, var(--border-color));
+  background: color-mix(in srgb, var(--ds-status-warn, #d97706) 7%, var(--bg-card));
 }
 
-.qts-toast--simple.qts-toast--info,
-.qts-toast--operator-info {
-  border-color: color-mix(in srgb, var(--ds-status-info, #0284c7) 42%, var(--border-color)) !important;
-  background: color-mix(in srgb, var(--ds-status-info, #0284c7) 6%, var(--bg-card)) !important;
+.qts-toast--simple.qts-toast--info .qts-feed-item--toast,
+.qts-toast--operator-info .qts-feed-item--toast {
+  border-color: color-mix(in srgb, var(--ds-status-info, #0284c7) 38%, var(--border-color));
+  background: color-mix(in srgb, var(--ds-status-info, #0284c7) 7%, var(--bg-card));
 }
 
-.qts-toast--operator-warn {
-  border-color: color-mix(in srgb, var(--ds-status-warn, #d97706) 42%, var(--border-color)) !important;
-  background: color-mix(in srgb, var(--ds-status-warn, #d97706) 6%, var(--bg-card)) !important;
+.qts-toast--operator-warn .qts-feed-item--toast {
+  border-color: color-mix(in srgb, var(--ds-status-warn, #d97706) 38%, var(--border-color));
+  background: color-mix(in srgb, var(--ds-status-warn, #d97706) 7%, var(--bg-card));
 }
 
-.qts-toast--operator-crit {
-  border-color: color-mix(in srgb, var(--ds-status-critical, #e11d48) 42%, var(--border-color)) !important;
-  background: color-mix(in srgb, var(--ds-status-critical, #e11d48) 6%, var(--bg-card)) !important;
+.qts-toast--operator-crit .qts-feed-item--toast {
+  border-color: color-mix(in srgb, var(--ds-status-critical, #e11d48) 38%, var(--border-color));
+  background: color-mix(in srgb, var(--ds-status-critical, #e11d48) 7%, var(--bg-card));
 }
 
 .qts-toast-root .qts-toast__body--rich {
@@ -111,13 +111,14 @@
 .qts-toast-root .Toastify__toast-body {
   display: block;
   align-items: unset;
-  padding: 12px 2.5rem 12px 14px;
+  padding: 0;
   margin: 0;
   width: 100%;
   box-sizing: border-box;
   font-size: var(--font-size-label, 1rem);
   line-height: var(--line-height-body, 1.5);
   color: var(--text-primary);
+  overflow: visible;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
@@ -128,10 +129,11 @@
 
 .qts-toast-root .Toastify__close-button {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 28px;
-  height: 28px;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  z-index: 3;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -159,12 +161,13 @@
 
 .qts-toast-root .Toastify__progress-bar,
 .qts-toast__progress {
-  height: 2px !important;
-  opacity: 0.85;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  border-radius: 0;
+  height: 3px !important;
+  opacity: 0.9;
+  bottom: 3px;
+  left: 12px;
+  right: 12px;
+  width: auto !important;
+  border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 55%, var(--border-color)) !important;
 }
 
@@ -188,10 +191,19 @@
 .qts-feed-item {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 16px;
   min-width: 0;
   width: 100%;
   text-align: left;
+}
+
+.qts-feed-item--toast {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-card);
+  padding: 16px 44px 16px 16px;
+  box-shadow: var(--ds-shadow-card, 0 10px 28px -14px rgba(15, 23, 42, 0.22));
+  box-sizing: border-box;
 }
 
 .qts-feed-item__media {
@@ -202,7 +214,7 @@
   place-items: center;
   border-radius: 6px;
   border: 1px solid var(--border-color);
-  background: color-mix(in srgb, var(--text-muted) 8%, var(--bg-card));
+  background: color-mix(in srgb, var(--text-muted) 10%, var(--bg-card));
   color: var(--accent);
 }
 
@@ -236,18 +248,20 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  padding-top: 1px;
 }
 
 .qts-feed-item__meta {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--text-muted);
+  line-height: 1.2;
 }
 
 .qts-feed-item__time {
@@ -259,28 +273,26 @@
 
 .qts-feed-item__title {
   margin: 0;
-  font-size: var(--font-size-label, 1rem);
+  font-size: 0.875rem;
   font-weight: 600;
-  line-height: 1.35;
+  line-height: 1.4;
   color: var(--text-primary);
 }
 
 .qts-feed-item__body {
   margin: 0;
-  font-size: var(--font-size-helper, 0.9375rem);
-  line-height: 1.45;
+  font-size: 0.8125rem;
+  line-height: 1.5;
   color: var(--text-secondary);
   overflow-wrap: anywhere;
+  padding-right: 4px;
 }
 
-.qts-feed-item--toast,
 .qts-feed-item--bell {
   padding: 2px 0;
-}
-
-.qts-toast-root .qts-toast__body,
-.qts-toast-root .Toastify__toast-body {
-  padding: 12px 2.25rem 12px 12px;
+  border: none;
+  box-shadow: none;
+  background: transparent;
 }
 
 .qts-toast-root .qts-feed-item--toast .qts-toast-notice__foot {
@@ -405,8 +417,12 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 0;
   min-width: 0;
+}
+
+.qts-toast-undo.qts-feed-item--toast {
+  flex-direction: row;
+  padding: 14px 44px 14px 16px;
 }
 
 .qts-toast-undo span {

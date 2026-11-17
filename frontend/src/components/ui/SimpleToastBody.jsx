@@ -1,34 +1,21 @@
 import React from 'react'
 import { OperatorFeedItem } from './OperatorFeedItem.jsx'
+import { normalizeToastContent } from '../../lib/toastMessage.js'
 
-/** Flat string or structured { app, title, body }. */
-export function SimpleToastBody({ variant = 'info', children, app, title, body }) {
-  if (typeof children === 'string' && !title && !body) {
-    const m = children.match(/^(Acknowledged|Resolved)\s+(\d+)\s+alert\(s\)(.*)$/i)
-    if (m) {
-      const rest = (m[3] || '').trim()
-      return (
-        <OperatorFeedItem
-          app="Alerts"
-          variant={variant}
-          title={m[1]}
-          body={`${m[2]} alert${Number(m[2]) === 1 ? '' : 's'} updated${rest ? ` ${rest}` : ''}`}
-        />
-      )
-    }
-  }
-  const detail = body ?? (typeof children === 'string' ? children : null)
-  if (title || app) {
-    return (
-      <OperatorFeedItem app={app || 'Console'} variant={variant} title={title} body={detail} />
-    )
-  }
+/** Flat string or structured { app, title, body, showMeta }. */
+export function SimpleToastBody({ variant = 'info', children, app, title, body, showMeta }) {
+  const merged =
+    title || body || app
+      ? { app, title, body: body ?? children, showMeta, variant }
+      : { ...normalizeToastContent(children, variant), variant }
   return (
     <OperatorFeedItem
-      app="Console"
+      app={merged.app || 'Console'}
       variant={variant}
-      title={variant === 'success' ? 'Done' : variant === 'error' ? 'Error' : variant === 'warn' ? 'Warning' : 'Notice'}
-      body={detail}
+      title={merged.title}
+      body={merged.body}
+      showMeta={merged.showMeta}
+      className="qts-feed-item--toast"
     />
   )
 }
