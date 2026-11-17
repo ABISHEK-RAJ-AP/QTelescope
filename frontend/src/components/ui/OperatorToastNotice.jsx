@@ -1,8 +1,10 @@
 import React from 'react';
+import { OperatorFeedItem } from './OperatorFeedItem.jsx';
 
 export function OperatorToastNotice({
   title,
   body,
+  variant = 'info',
   actions = [],
   onAction,
   onRemindLater,
@@ -10,11 +12,8 @@ export function OperatorToastNotice({
   const primary = actions.find((a) => a.href && !a.dismiss);
   const secondary = actions.filter((a) => a !== primary);
 
-  return (
-    <div className="qts-toast-notice" role="status">
-      {title ? <p className="qts-toast-notice__title">{title}</p> : null}
-      <p className="qts-toast-notice__body">{body}</p>
-      <div className="qts-toast-notice__foot">
+  const foot = (
+    <div className="qts-toast-notice__foot">
         {primary ? (
           <button
             type="button"
@@ -42,6 +41,9 @@ export function OperatorToastNotice({
           Remind later
         </button>
       </div>
-    </div>
+  );
+
+  return (
+    <OperatorFeedItem app="Console" variant={variant} title={title} body={body} footer={foot} className="qts-feed-item--toast" />
   );
 }

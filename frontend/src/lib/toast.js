@@ -28,13 +28,14 @@ function simpleToastOpts(variant, opts = {}) {
 }
 
 function showSimple(variant, message, opts = {}) {
-  toast(
-    createElement(SimpleToastBody, { variant }, message),
-    {
-      ...simpleToastOpts(variant, opts),
-      autoClose: opts.autoClose ?? 5200,
-    },
-  )
+  const props =
+    message && typeof message === 'object' && !message.$$typeof
+      ? { variant, ...message }
+      : { variant, body: message }
+  toast(createElement(SimpleToastBody, props), {
+    ...simpleToastOpts(variant, opts),
+    autoClose: opts.autoClose ?? 5200,
+  })
 }
 
 /** Persisted operator notice + optional toast (replaces inline scope banners). */
@@ -68,6 +69,7 @@ export function notifyOperatorNotice({
     createElement(OperatorToastNotice, {
       title,
       body,
+      variant,
       actions,
       onAction: runAction,
       onRemindLater: () => {

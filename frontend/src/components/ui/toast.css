@@ -184,6 +184,121 @@
   background: var(--ds-status-info, #0284c7) !important;
 }
 
+/* Item-style feed (shadcn Item pattern, ops tokens — no Tailwind runtime) */
+.qts-feed-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
+  text-align: left;
+}
+
+.qts-feed-item__media {
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--text-muted) 8%, var(--bg-card));
+  color: var(--accent);
+}
+
+.qts-feed-item--success .qts-feed-item__media {
+  color: var(--ds-status-healthy);
+  border-color: color-mix(in srgb, var(--ds-status-healthy) 35%, var(--border-color));
+  background: color-mix(in srgb, var(--ds-status-healthy) 10%, var(--bg-card));
+}
+
+.qts-feed-item--error .qts-feed-item__media,
+.qts-feed-item--critical .qts-feed-item__media {
+  color: var(--ds-status-critical);
+  border-color: color-mix(in srgb, var(--ds-status-critical) 35%, var(--border-color));
+  background: color-mix(in srgb, var(--ds-status-critical) 10%, var(--bg-card));
+}
+
+.qts-feed-item--warn .qts-feed-item__media {
+  color: var(--ds-status-warn);
+  border-color: color-mix(in srgb, var(--ds-status-warn) 35%, var(--border-color));
+  background: color-mix(in srgb, var(--ds-status-warn) 10%, var(--bg-card));
+}
+
+.qts-feed-item--info .qts-feed-item__media {
+  color: var(--ds-status-info);
+  border-color: color-mix(in srgb, var(--ds-status-info) 35%, var(--border-color));
+  background: color-mix(in srgb, var(--ds-status-info) 10%, var(--bg-card));
+}
+
+.qts-feed-item__content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.qts-feed-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.qts-feed-item__time {
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+  font-weight: 500;
+  letter-spacing: normal;
+}
+
+.qts-feed-item__title {
+  margin: 0;
+  font-size: var(--font-size-label, 1rem);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--text-primary);
+}
+
+.qts-feed-item__body {
+  margin: 0;
+  font-size: var(--font-size-helper, 0.9375rem);
+  line-height: 1.45;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.qts-feed-item--toast,
+.qts-feed-item--bell {
+  padding: 2px 0;
+}
+
+.qts-toast-root .qts-toast__body,
+.qts-toast-root .Toastify__toast-body {
+  padding: 12px 2.25rem 12px 12px;
+}
+
+.qts-toast-root .qts-feed-item--toast .qts-toast-notice__foot {
+  margin-top: 8px;
+}
+
+.op-notice-bell__item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 85%, transparent);
+  background: var(--bg-card);
+}
+
+.op-notice-bell__item .op-notice-bell__toolbar {
+  width: 100%;
+  margin-top: 4px;
+}
+
 /* Simple one-line toasts */
 .qts-toast-simple {
   display: flex;

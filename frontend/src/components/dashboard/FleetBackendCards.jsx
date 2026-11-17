@@ -128,7 +128,7 @@ export function FleetBackendCards({ rows = [], className = '' }) {
       <div className="fo-fleet-cards__head">
         <div className="fo-fleet-cards__heading">
           <h2 id="fo-fleet-cards-h" className="fo-fleet-cards__title">Backends</h2>
-          <InfoTooltip label="How these cards work">
+          <InfoTooltip label="How these cards work" align="start">
             Hover the summary for ops detail. Open workspace stays on the card.
           </InfoTooltip>
         </div>

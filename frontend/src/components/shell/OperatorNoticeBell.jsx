@@ -19,6 +19,8 @@ import {
   remindOperatorNoticeLater,
   unreadOperatorNoticeCount,
 } from '../../lib/operatorNotices.js';
+import { OperatorFeedItem } from '../ui/OperatorFeedItem.jsx';
+import '../ui/toast.css';
 import './operator-notice-bell.css';
 
 function runAction(navigate, action) {
@@ -116,7 +118,7 @@ export function OperatorNoticeBell({ className = '' }) {
               Clear done
             </button>
           </header>
-          <ul className="op-notice-bell__list">
+          <ul className="op-notice-bell__list" role="list">
             {notices.length === 0 ? (
               <li className="op-notice-bell__empty">No active notices. Toasts and reminders appear here.</li>
             ) : notices.map((n) => {
@@ -124,17 +126,7 @@ export function OperatorNoticeBell({ className = '' }) {
               const tone = toneClass(n.variant);
               const primary = (n.actions || []).find((a) => a.href && !a.dismiss);
               const ActionIcon = primary ? actionIcon(primary.label) : null;
-              return (
-                <li key={n.id} className={`op-notice-bell__item ${tone}`}>
-                  <div className="op-notice-bell__row">
-                    <div className={`op-notice-bell__glyph ${tone}`} aria-hidden>
-                      <Icon size={18} strokeWidth={2} />
-                    </div>
-                    <div className="op-notice-bell__copy">
-                      <p className="op-notice-bell__title">{n.title}</p>
-                      <p className="op-notice-bell__body">{n.body}</p>
-                    </div>
-                  </div>
+              const toolbar = (
                   <div className="op-notice-bell__toolbar">
                     {primary ? (
                       <button
@@ -175,6 +167,19 @@ export function OperatorNoticeBell({ className = '' }) {
                       <X size={16} aria-hidden />
                     </button>
                   </div>
+              );
+              return (
+                <li key={n.id} className={`op-notice-bell__item ${tone}`}>
+                  <OperatorFeedItem
+                    app="Console"
+                    variant={n.variant === 'critical' ? 'error' : n.variant || 'info'}
+                    title={n.title}
+                    body={n.body}
+                    icon={Icon}
+                    time="active"
+                    footer={toolbar}
+                    className="qts-feed-item--bell"
+                  />
                 </li>
               );
             })}

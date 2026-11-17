@@ -17,7 +17,7 @@ export function ToastHost() {
       pauseOnHover
       limit={4}
       stacked={false}
-      theme="colored"
+      theme="light"
       icon={false}
       className="qts-toast-root"
       toastClassName="qts-toast"

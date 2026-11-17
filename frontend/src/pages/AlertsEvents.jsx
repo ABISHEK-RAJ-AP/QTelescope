@@ -472,7 +472,11 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
         const failed = res.filter((r) => r.status === 'rejected');
         if (failed.length === res.length) throw new Error(failed[0].reason?.message || 'All requests failed');
         return { ok: res.length - failed.length, failed: failed.length };
-      }, (r) => `${isAck ? 'Acknowledged' : 'Resolved'} ${r.ok} alert(s)${r.failed ? `; ${r.failed} failed` : ''}.`, {
+      }, (r) => ({
+        app: 'Alerts',
+        title: isAck ? 'Acknowledged' : 'Resolved',
+        body: `${r.ok} alert${r.ok === 1 ? '' : 's'} updated${r.failed ? ` · ${r.failed} failed` : ''}`,
+      }), {
         optimistic: {
           apply: () => patchAlerts(items, () => (isAck
             ? { status: 'ACKNOWLEDGED', acknowledged_by: actorName }

@@ -1,19 +1,34 @@
 import React from 'react'
-import { AlertTriangle, CheckCircle2, Info, XCircle } from 'lucide-react'
+import { OperatorFeedItem } from './OperatorFeedItem.jsx'
 
-const ICONS = {
-  success: CheckCircle2,
-  error: XCircle,
-  warn: AlertTriangle,
-  info: Info,
-}
-
-export function SimpleToastBody({ variant = 'info', children }) {
-  const Icon = ICONS[variant] || Info
+/** Flat string or structured { app, title, body }. */
+export function SimpleToastBody({ variant = 'info', children, app, title, body }) {
+  if (typeof children === 'string' && !title && !body) {
+    const m = children.match(/^(Acknowledged|Resolved)\s+(\d+)\s+alert\(s\)(.*)$/i)
+    if (m) {
+      const rest = (m[3] || '').trim()
+      return (
+        <OperatorFeedItem
+          app="Alerts"
+          variant={variant}
+          title={m[1]}
+          body={`${m[2]} alert${Number(m[2]) === 1 ? '' : 's'} updated${rest ? ` ${rest}` : ''}`}
+        />
+      )
+    }
+  }
+  const detail = body ?? (typeof children === 'string' ? children : null)
+  if (title || app) {
+    return (
+      <OperatorFeedItem app={app || 'Console'} variant={variant} title={title} body={detail} />
+    )
+  }
   return (
-    <div className="qts-toast-simple">
-      <Icon className="qts-toast-simple__icon" aria-hidden />
-      <p className="qts-toast-simple__text">{children}</p>
-    </div>
+    <OperatorFeedItem
+      app="Console"
+      variant={variant}
+      title={variant === 'success' ? 'Done' : variant === 'error' ? 'Error' : variant === 'warn' ? 'Warning' : 'Notice'}
+      body={detail}
+    />
   )
 }
