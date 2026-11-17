@@ -10,6 +10,7 @@ import { landingPathForRole } from '@/lib/permissions.js'
 import { safePostLoginRedirect } from '@/lib/safePostLoginRedirect'
 import { usePublicFilmReady } from '@/hooks/usePublicFilmReady.js'
 import { AuthDemoPresets } from '@/components/AuthDemoPresets.jsx'
+import { COPY } from '@/copy/operator.js'
 
 export function LoginPage({ onLoginSuccess }) {
   usePublicFilmReady('login')
@@ -25,7 +26,7 @@ export function LoginPage({ onLoginSuccess }) {
   const [mfaToken, setMfaToken] = useState('')
   const [mfaCode, setMfaCode] = useState('')
   const [showDevPresets, setShowDevPresets] = useState(true)
-  const [ldapHint, setLdapHint] = useState('')
+  const [signInSubtitle, setSignInSubtitle] = useState(COPY.auth.signInSubtitle)
 
   const finishSession = async (res) => {
     let user = res.user
@@ -74,7 +75,7 @@ export function LoginPage({ onLoginSuccess }) {
           setShowDevPresets(Boolean(s.bootstrap.show_dev_login_presets))
         }
         if (s?.ldap?.enabled) {
-          setLdapHint(`Directory login on ${s.ldap.host || 'LDAP'} — local accounts still work.`)
+          setSignInSubtitle(COPY.auth.signInDirectory)
         }
       })
       .catch(() => setShowDevPresets(true))
@@ -122,7 +123,7 @@ export function LoginPage({ onLoginSuccess }) {
   return (
     <AuthShell
       title="Sign in"
-      subtitle={ldapHint || 'Operations console — local account or LDAP if configured.'}
+      subtitle={signInSubtitle}
       footer={
         <div className="space-y-3">
           <p className="text-center text-sm text-[var(--text-muted)]">

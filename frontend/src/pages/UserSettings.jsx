@@ -3,6 +3,7 @@ import { Check, Shield, SlidersHorizontal, User, Bell, Sun, Moon, Monitor } from
 import { api } from '../services/api';
 import { notifyError, notifySuccess } from '../lib/toast.js';
 import { unableToLoad } from '../constants/messages.js';
+import { COPY } from '../copy/operator.js';
 import { formatIST } from '../utils/time';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { useTheme } from '../components/ui/ThemeProvider';
@@ -360,7 +361,7 @@ export function UserSettings({ currentUser, onUserUpdate }) {
             <h3 className="us-card__title">
               Two-factor authentication
               <InfoTooltip label="Two-factor authentication">
-                Uses a TOTP app (Authenticator, Aegis). After enable, sign-in asks for a 6-digit code. This is not SMS. LDAP users can still enroll TOTP on this account name.
+                {COPY.auth.mfaHint}
               </InfoTooltip>
             </h3>
             <p className="us-card__desc">TOTP authenticator app. Not SMS or email OTP.</p>

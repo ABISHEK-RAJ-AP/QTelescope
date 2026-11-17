@@ -5,6 +5,7 @@ import { AuthShell, Field, fieldClass } from '@/components/AuthShell'
 import { CaptchaField } from '@/components/CaptchaField'
 import { Button } from '@/components/ui/Button'
 import { api } from '@/services/api'
+import { COPY } from '@/copy/operator.js'
 
 export function ForgotPasswordPage() {
   const [username, setUsername] = useState('')
@@ -52,7 +53,7 @@ export function ForgotPasswordPage() {
   return (
     <AuthShell
       title="Reset password"
-      subtitle="Enter your username. A reset link is issued only if the account exists."
+      subtitle={COPY.auth.forgotSubtitle}
       footer={
         <p className="text-center text-sm text-[var(--text-muted)]">
           <Link to="/login" className="font-semibold text-[var(--accent)] hover:opacity-90">

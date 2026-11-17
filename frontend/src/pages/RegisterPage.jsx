@@ -6,6 +6,7 @@ import { CaptchaField } from '@/components/CaptchaField'
 import { Button } from '@/components/ui/Button'
 import { api } from '@/services/api'
 import { markOnboardingPending } from '@/lib/onboardingState'
+import { COPY } from '@/copy/operator.js'
 
 export function RegisterPage() {
   const navigate = useNavigate()
@@ -73,7 +74,7 @@ export function RegisterPage() {
   return (
     <AuthShell
       title="Create account"
-      subtitle="Creates an operator login. Seeded admin assigns other roles later."
+      subtitle={COPY.auth.registerSubtitle}
       footer={
         <p className="text-center text-sm text-[var(--text-muted)]">
           Already registered?{' '}

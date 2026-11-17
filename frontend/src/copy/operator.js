@@ -36,6 +36,14 @@ export const COPY = {
     heroAlerts: 'Alerts and routing',
     heroFleet: 'Fleet summary',
   },
+  auth: {
+    signInSubtitle: 'Access the quantum telemetry console with your assigned credentials.',
+    signInDirectory: 'This deployment accepts organization directory credentials.',
+    registerSubtitle: 'Request operator access. Your facility administrator assigns roles after approval.',
+    forgotSubtitle: 'Enter your username. For security, the response does not indicate whether an account exists.',
+    resetSubtitle: 'Enter your reset token and set a new password.',
+    mfaHint: 'Requires a TOTP authenticator app (6-digit code at sign-in). SMS is not used.',
+  },
   shell: {
     notFoundTitle: 'Page not found',
     notFoundBody: 'This address is not part of Q-TeleScope. Check the path, or open a page from the navigation.',

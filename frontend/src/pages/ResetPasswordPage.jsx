@@ -5,6 +5,7 @@ import { AuthShell, Field, fieldClass } from '@/components/AuthShell'
 import { CaptchaField } from '@/components/CaptchaField'
 import { Button } from '@/components/ui/Button'
 import { api } from '@/services/api'
+import { COPY } from '@/copy/operator.js'
 
 export function ResetPasswordPage() {
   const [params] = useSearchParams()
@@ -56,7 +57,7 @@ export function ResetPasswordPage() {
   return (
     <AuthShell
       title="Choose a new password"
-      subtitle="Use the reset token from the request step, then set a new password."
+      subtitle={COPY.auth.resetSubtitle}
       footer={
         <p className="text-center text-sm text-[var(--text-muted)]">
           <Link to="/login" className="font-semibold text-[var(--accent)] hover:opacity-90">
