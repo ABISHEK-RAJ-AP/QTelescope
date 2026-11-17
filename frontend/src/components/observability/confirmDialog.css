@@ -12,11 +12,11 @@
 
 .confirm-dialog {
   width: min(440px, 100%);
-  padding: 22px 24px;
+  padding: var(--ds-surface-inset-y, 20px) var(--ds-surface-inset-x, 24px);
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  border-radius: 16px;
+  gap: var(--ds-surface-gap, 16px);
+  border-radius: var(--ds-surface-radius, 12px);
   border: 1px solid color-mix(in srgb, var(--border-color) 80%, rgba(255, 255, 255, 0.12));
   background: color-mix(in srgb, var(--bg-card) 92%, transparent);
   -webkit-backdrop-filter: blur(24px) saturate(1.6);

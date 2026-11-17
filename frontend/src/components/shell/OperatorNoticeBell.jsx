@@ -20,7 +20,7 @@ import {
   unreadOperatorNoticeCount,
 } from '../../lib/operatorNotices.js';
 import { OperatorFeedItem } from '../ui/OperatorFeedItem.jsx';
-import '../ui/toast.css';
+import { ItemGroup } from '../ui/item.jsx';
 import './operator-notice-bell.css';
 
 function runAction(navigate, action) {
@@ -118,9 +118,9 @@ export function OperatorNoticeBell({ className = '' }) {
               Clear done
             </button>
           </header>
-          <ul className="op-notice-bell__list" role="list">
+          <ItemGroup className="op-notice-bell__list" aria-label="Active notices">
             {notices.length === 0 ? (
-              <li className="op-notice-bell__empty">No active notices. Toasts and reminders appear here.</li>
+              <p className="op-notice-bell__empty">No active notices. Toasts and reminders appear here.</p>
             ) : notices.map((n) => {
               const Icon = noticeIcon(n);
               const tone = toneClass(n.variant);
@@ -169,21 +169,21 @@ export function OperatorNoticeBell({ className = '' }) {
                   </div>
               );
               return (
-                <li key={n.id} className={`op-notice-bell__item ${tone}`}>
-                  <OperatorFeedItem
-                    app="Console"
-                    variant={n.variant === 'critical' ? 'error' : n.variant || 'info'}
-                    title={n.title}
-                    body={n.body}
-                    icon={Icon}
-                    time="active"
-                    footer={toolbar}
-                    className="qts-feed-item--bell"
-                  />
-                </li>
+                <OperatorFeedItem
+                  key={n.id}
+                  app="Console"
+                  variant={n.variant === 'critical' ? 'error' : n.variant || 'info'}
+                  title={n.title}
+                  body={n.body}
+                  icon={Icon}
+                  time="active"
+                  footer={toolbar}
+                  className={`op-notice-bell__item ${tone}`}
+                  itemVariant="outline"
+                />
               );
             })}
-          </ul>
+          </ItemGroup>
           {notices.length > 0 ? (
             <footer className="op-notice-bell__foot">
               <button

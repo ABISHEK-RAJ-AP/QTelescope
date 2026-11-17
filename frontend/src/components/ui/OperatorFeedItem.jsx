@@ -1,5 +1,15 @@
 import React from 'react'
 import { AlertTriangle, Bell, CheckCircle2, Info, XCircle } from 'lucide-react'
+import { cn } from '@/lib/utils.js'
+import {
+  Item,
+  ItemContent,
+  ItemDescription,
+  ItemFooter,
+  ItemMedia,
+  ItemMeta,
+  ItemTitle,
+} from './item.jsx'
 
 const ICONS = {
   success: CheckCircle2,
@@ -20,27 +30,40 @@ export function OperatorFeedItem({
   footer = null,
   className = '',
   showMeta = true,
+  itemVariant = 'outline',
 }) {
   const Icon = IconProp || ICONS[variant] || Bell
   const detail = body ?? children
   const showDescription = Boolean(detail) && String(detail).trim() !== String(title || '').trim()
+  const isToast = className.includes('qts-feed-item--toast')
+
   return (
-    <article className={`qts-feed-item qts-feed-item--${variant} ${className}`.trim()} data-variant={variant}>
-      <div className="qts-feed-item__media" aria-hidden>
-        <Icon className="qts-feed-item__icon" size={16} strokeWidth={2} />
-      </div>
-      <div className="qts-feed-item__content">
+    <Item
+      variant={itemVariant}
+      size="default"
+      tone={variant}
+      className={cn(isToast ? 'ui-item--toast' : '', className)}
+    >
+      <ItemMedia variant="icon">
+        <Icon aria-hidden strokeWidth={2} />
+      </ItemMedia>
+      <ItemContent>
         {showMeta ? (
-          <div className="qts-feed-item__meta">
-            <span className="qts-feed-item__app">{app}</span>
-            <span className="qts-feed-item__dot" aria-hidden>·</span>
-            <time className="qts-feed-item__time">{time}</time>
-          </div>
+          <ItemMeta>
+            <span>{app}</span>
+            <span aria-hidden>·</span>
+            <time>{time}</time>
+          </ItemMeta>
         ) : null}
-        {title ? <h3 className="qts-feed-item__title">{title}</h3> : null}
-        {showDescription ? <p className="qts-feed-item__body">{detail}</p> : null}
+        {title ? <ItemTitle>{title}</ItemTitle> : null}
+        {showDescription ? <ItemDescription>{detail}</ItemDescription> : null}
         {footer}
-      </div>
-    </article>
+      </ItemContent>
+      {!showMeta && time ? (
+        <ItemFooter>
+          <time>{time}</time>
+        </ItemFooter>
+      ) : null}
+    </Item>
   )
 }

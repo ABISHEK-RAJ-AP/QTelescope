@@ -1,0 +1,111 @@
+/* Shared inset rhythm for modals, sheets, dialogs, feed cards */
+
+:root {
+  --ds-surface-inset-x: 24px;
+  --ds-surface-inset-y: 20px;
+  --ds-surface-gap: 16px;
+  --ds-surface-gap-sm: 12px;
+  --ds-surface-radius: 12px;
+}
+
+.confirm-dialog__actions {
+  margin-top: 8px;
+  padding-top: 4px;
+  gap: 10px;
+}
+
+.confirm-dialog__field textarea {
+  padding: 12px 14px;
+  margin-top: 4px;
+}
+
+.detail-drawer__head {
+  padding: 18px var(--ds-surface-inset-x) 14px;
+}
+
+.detail-drawer__body {
+  padding: var(--ds-surface-inset-y) var(--ds-surface-inset-x) var(--ds-surface-inset-x);
+}
+
+.detail-drawer__foot {
+  padding: 14px var(--ds-surface-inset-x) 18px;
+  gap: 10px;
+}
+
+.insight-modal__head {
+  padding: var(--ds-surface-inset-y) var(--ds-surface-inset-x) 14px;
+}
+
+.insight-modal__body {
+  padding: var(--ds-surface-inset-y) var(--ds-surface-inset-x);
+}
+
+.insight-modal__foot {
+  padding: 14px var(--ds-surface-inset-x) var(--ds-surface-inset-y);
+}
+
+.admin-modal-header {
+  padding: 18px var(--ds-surface-inset-x);
+}
+
+.admin-modal-body {
+  padding: var(--ds-surface-inset-x);
+  gap: var(--ds-surface-gap);
+}
+
+.admin-modal-footer {
+  padding: 14px var(--ds-surface-inset-x) 18px;
+}
+
+.dm-detail {
+  gap: var(--ds-surface-gap-sm);
+}
+
+.dm-detail__callout {
+  padding: 14px 16px;
+}
+
+.dm-detail__note {
+  padding: 14px 16px;
+}
+
+.dm-detail__field {
+  padding: 12px 14px;
+}
+
+.op-notice-bell__panel {
+  border-radius: var(--ds-surface-radius);
+  padding: 8px;
+}
+
+.op-notice-bell__head {
+  padding: 14px var(--ds-surface-gap) 12px;
+  margin: 0 4px;
+}
+
+.op-notice-bell__list {
+  padding: 8px 10px 12px;
+  gap: var(--ds-surface-gap-sm);
+}
+
+.op-notice-bell__item.ui-item--size-default {
+  padding: var(--ds-surface-gap) calc(var(--ds-surface-gap) + 4px);
+}
+
+.op-notice-bell__toolbar {
+  margin-top: 6px;
+  width: 100%;
+}
+
+.op-notice-bell__foot {
+  padding: 10px 12px 12px;
+}
+
+.ops-cal-day-modal__header {
+  padding: 18px var(--ds-surface-inset-x);
+}
+
+.ops-cal-day-modal__body {
+  padding: var(--ds-surface-inset-y) var(--ds-surface-inset-x);
+  gap: var(--ds-surface-gap);
+}

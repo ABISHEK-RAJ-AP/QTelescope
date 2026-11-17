@@ -113,7 +113,7 @@ export function notifyWithUndo(message, onUndo, opts = {}) {
   toast(
     createElement(
       'div',
-      { className: 'qts-feed-item qts-feed-item--toast qts-toast-undo' },
+      { className: 'ui-item ui-item--outline ui-item--toast qts-toast-undo' },
       createElement('span', null, message),
       createElement(
         'button',

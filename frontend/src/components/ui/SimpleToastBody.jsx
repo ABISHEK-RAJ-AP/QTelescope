@@ -15,7 +15,7 @@ export function SimpleToastBody({ variant = 'info', children, app, title, body, 
       title={merged.title}
       body={merged.body}
       showMeta={merged.showMeta}
-      className="qts-feed-item--toast"
+      className="qts-feed-item--toast ui-item--toast"
     />
   )
 }

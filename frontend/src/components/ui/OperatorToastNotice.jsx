@@ -50,7 +50,7 @@ export function OperatorToastNotice({
       title={title}
       body={body}
       footer={foot}
-      className="qts-feed-item--toast"
+      className="qts-feed-item--toast ui-item--toast"
       showMeta
     />
   );
