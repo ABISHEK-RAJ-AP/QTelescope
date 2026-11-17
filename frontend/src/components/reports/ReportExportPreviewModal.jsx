@@ -207,7 +207,12 @@ export function ReportExportPreviewModal({
 
         <footer className="rp-preview-modal__actions">
           <button type="button" className="btn btn-secondary" onClick={onClose} disabled={exporting}>Cancel</button>
-          <button type="button" className="btn btn-primary" onClick={runExport} disabled={exporting || loading || rowCount === 0}>
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={runExport}
+            disabled={exporting || loading || (format !== 'html' && rowCount === 0)}
+          >
             {exporting ? <><Loader2 size={14} className="rp-spin" /> Exporting…</> : <><Download size={14} /> Download export</>}
           </button>
         </footer>
