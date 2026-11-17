@@ -35,9 +35,22 @@ export function CaptchaField({ value, onChange, onChallenge }) {
 
   return (
     <div className="captcha-field">
-      <span className="captcha-field__legend" id="auth-captcha-legend">
-        Security check
-      </span>
+      <div className="captcha-field__head">
+        <span className="captcha-field__legend" id="auth-captcha-legend">
+          Security check
+        </span>
+        <button
+          type="button"
+          onClick={fetchNewCaptcha}
+          disabled={loading}
+          className="captcha-field__refresh"
+          aria-label="New image"
+          title="New image"
+        >
+          <RotateCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} aria-hidden />
+          <span className="captcha-field__refresh-label">New image</span>
+        </button>
+      </div>
       <div
         className="captcha-field__row"
         role="group"
@@ -58,16 +71,6 @@ export function CaptchaField({ value, onChange, onChallenge }) {
           ) : (
             <span className="captcha-field__placeholder">Challenge offline</span>
           )}
-          <button
-            type="button"
-            onClick={fetchNewCaptcha}
-            disabled={loading}
-            className="captcha-field__refresh"
-            aria-label="New image"
-            title="New image"
-          >
-            <RotateCw className={`size-3.5 ${loading ? 'animate-spin' : ''}`} aria-hidden />
-          </button>
         </div>
         <div className="auth-outline-field captcha-field__input">
           <label htmlFor="auth-captcha" className="auth-outline-field__name">

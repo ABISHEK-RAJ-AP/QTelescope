@@ -183,6 +183,14 @@
   gap: 8px;
 }
 
+.captcha-field__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+}
+
 .captcha-field__legend {
   font-size: 11px;
   font-weight: 600;
@@ -241,26 +249,32 @@
 }
 
 .captcha-field__refresh {
-  position: absolute;
-  right: 4px;
-  top: 4px;
   display: inline-flex;
-  min-height: 28px;
-  min-width: 28px;
   align-items: center;
-  justify-content: center;
-  border: 1px solid var(--border-color);
+  gap: 4px;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 0;
   border-radius: 6px;
-  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  background: transparent;
   color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.captcha-field__refresh-label {
+  letter-spacing: 0.02em;
 }
 
 .captcha-field__refresh:hover:not(:disabled) {
-  border-color: var(--accent-cyan);
+  background: color-mix(in srgb, var(--accent-cyan) 10%, transparent);
+  color: var(--accent-cyan);
 }
 
 .captcha-field__refresh:disabled {
   opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .auth-outline-field.captcha-field__input {
