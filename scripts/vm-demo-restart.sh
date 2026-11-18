@@ -35,5 +35,5 @@ verify_nginx_api_proxy "${NGINX_PORT:-4173}" || exit 1
 
 echo ""
 echo "Demo login: admin / quantum2026  |  superadmin / quantum2026  |  user_researcher / quantum2026"
-echo "Mock catalog ON. For VAPT later: ENABLE_MOCK_DATA=false BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS=true"
+echo "Hybrid demo: Rigetti live QCS ISA poll; IBM/IonQ/C-DAC simulated. For VAPT: ENABLE_MOCK_DATA=false BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS=true"
 STACK_VERIFY_SKIP_INFRA=1 NGINX_PORT="${NGINX_PORT:-4173}" "${ROOT}/scripts/verify-stack.sh"

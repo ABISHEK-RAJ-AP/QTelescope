@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.hybrid_demo import hybrid_demo_public_snapshot
 from app.core.database import get_db
 from app.core.provenance import database_storage_mode, platform_data_mode, MOCK_BACKEND_IDS
 from app.discovery.hardware_discovery import ensure_discovered
@@ -24,6 +25,25 @@ from app.infra.classical_metrics import list_classical_infra
 from app.core.cache import cache_health as _cache_health
 
 router = APIRouter(prefix="/operations", tags=["Operations Centre"])
+
+
+def _collection_scheduler_health() -> Dict[str, Any]:
+    try:
+        from app.core.database import SessionLocal
+        from app.scheduling.neutral_driver import scheduler_snapshot
+
+        db = SessionLocal()
+        try:
+            return scheduler_snapshot(db)
+        finally:
+            db.close()
+    except Exception as exc:
+        return {
+            "enabled": False,
+            "driver": "unknown",
+            "error": str(exc)[:160],
+            "note": "Scheduler snapshot unavailable",
+        }
 
 
 def _alert_backend_id(alert: AlertModel) -> str | None:
@@ -87,6 +107,7 @@ def _build_operations_centre(db: Session) -> Dict[str, Any]:
             "enable_mock_data": settings.ENABLE_MOCK_DATA,
             "database_storage": database_storage_mode(settings.DATABASE_URL),
             "platform_data_mode": platform_data_mode(settings.ENABLE_MOCK_DATA, bool(live_backends)),
+            "hybrid_demo": hybrid_demo_public_snapshot(),
         },
         "collectors": {
             "providers": collectors,
@@ -171,10 +192,7 @@ def _build_platform_health(db: Session) -> Dict[str, Any]:
             "stream_kind": "database_aggregate",
             "note": "UI refresh ticks — not vendor live push",
         },
-        "collection_scheduler": {
-            "mode": "on_demand",
-            "note": "Full cycle via Admin collection trigger; no separate daemon in default dev profile",
-        },
+        "collection_scheduler": _collection_scheduler_health(),
         "latest_backend_telemetry_at": latest_bt.timestamp.isoformat()
         if latest_bt and latest_bt.timestamp
         else None,
@@ -184,8 +202,8 @@ def _build_platform_health(db: Session) -> Dict[str, Any]:
                 settings.ENABLE_MOCK_DATA,
                 live_backends_exist,
             ),
+            "hybrid_demo": hybrid_demo_public_snapshot(),
         },
-        "ingestion_quality_latest": _ingestion_quality_snapshot(),
         "dependency_links": _dependency_snapshot(db),
         "slis": _sli_snapshot(),
         "synthetics": _synthetic_snapshot(),

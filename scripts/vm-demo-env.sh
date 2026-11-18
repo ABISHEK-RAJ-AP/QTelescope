@@ -44,7 +44,11 @@ apply_vm_demo_env() {
   ensure_sqlite_if_no_postgres
   upsert_env ENABLE_MOCK_DATA true
   upsert_env BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS false
-  upsert_env COLLECTION_SCHEDULER_ENABLED false
+  # Hybrid demo: Rigetti QCS ISA on a timer; IBM/IonQ/C-DAC stay simulated.
+  upsert_env HYBRID_DEMO_ENABLED true
+  upsert_env DEMO_LIVE_PROVIDERS rigetti_quantum
+  upsert_env COLLECTION_SCHEDULER_ENABLED true
+  upsert_env RIGETTI_ISA_CACHE_SECONDS 45
   if [[ -f "${ROOT}/scripts/vm-ensure-redis-cache.sh" ]]; then
     # shellcheck source=scripts/vm-ensure-redis-cache.sh
     source "${ROOT}/scripts/vm-ensure-redis-cache.sh"

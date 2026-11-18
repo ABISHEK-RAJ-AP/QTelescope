@@ -2,6 +2,8 @@
 
 What each **live** adapter can collect vs what the UI may still show (advisory math, demo paths, or partial public APIs). Demo mode (`ENABLE_MOCK_DATA`, `data/collector_health.json`) is intentional synthetic data for lab/VM runs — labels should say **Demo catalog** or **Live ingest**, not ambiguous **Unknown**.
 
+**VM hybrid demo** (`HYBRID_DEMO_ENABLED=true`, `DEMO_LIVE_PROVIDERS=rigetti_quantum`, `COLLECTION_SCHEDULER_ENABLED=true`): IBM / IonQ / C-DAC use **simulated** catalog only; **Rigetti** polls the public QCS ISA every `RIGETTI_ISA_CACHE_SECONDS` (default 45s on VM scripts). “Realtime” here means **scheduled ingest**, not sub-second vendor queue streaming.
+
 | Provider | Adapter | Typical lineage (demo VM) | Collected today | Not from vendor (UI must not imply) |
 |----------|---------|---------------------------|-----------------|-------------------------------------|
 | **IBM Quantum** | `ibm_adapter` | `simulated` in demo | Backend list, queue hints when token present, calibration-shaped metrics in mock path | Per-qubit live stream without token; mock queue depth is not IBM ops truth |

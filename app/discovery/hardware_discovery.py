@@ -8,7 +8,9 @@ from app.services.collector_runner import run_provider_collection
 from app.services.collector_health import record_provider_run
 from app.services.collector_dlq import record_failure as record_collector_dlq
 from app.services.circuit_breaker import is_open as circuit_is_open, record_outcome as circuit_record
+from app.core.hybrid_demo import hybrid_demo_enabled, provider_uses_live_collection
 from app.core.provenance import MOCK_BACKEND_IDS, infer_collection_lineage
+from app.providers.mock_provider import ProviderScopedMockAdapter
 from app.providers.ibm_adapter import IBMProviderAdapter
 from app.providers.rigetti_adapter import RigettiProviderAdapter
 from app.providers.ionq_adapter import IonQProviderAdapter
@@ -78,6 +80,15 @@ class HardwareDiscoveryEngine:
         provider_summaries = []
 
         for prov_id, adapter, prov_name in active_providers:
+            if hybrid_demo_enabled() and not provider_uses_live_collection(prov_id):
+                adapter = ProviderScopedMockAdapter(prov_id)
+                if prov_id == "ibm_quantum":
+                    prov_name = "IBM Quantum (simulated demo catalog)"
+                elif prov_id == "ionq_quantum":
+                    prov_name = "IonQ (simulated demo catalog)"
+                elif prov_id == "cdac_quantum":
+                    prov_name = "C-DAC (simulated demo catalog)"
+
             if circuit_is_open(prov_id):
                 provider_summaries.append({
                     "provider_id": prov_id,

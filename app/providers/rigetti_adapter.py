@@ -8,6 +8,7 @@ Optional RIGETTI_API_KEY / QCS_API_KEY is attached if present.
 """
 from __future__ import annotations
 
+import datetime
 import json
 import logging
 import os
@@ -17,6 +18,7 @@ import urllib.request
 from typing import Any, Dict, List, Optional
 
 from app.core.config import settings
+from app.core.hybrid_demo import is_demo_live_provider
 from app.core.mock_data import (
     get_mock_backend,
     get_mock_backend_properties,
@@ -49,6 +51,10 @@ def _processor_id_from_backend(backend_id: str) -> str:
     return DEFAULT_PROCESSOR
 
 
+def _utcnow_iso() -> str:
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+
 def parse_isa_backend(isa: Dict[str, Any], proc_id: str, source_url: str) -> Dict[str, Any]:
     nodes = (isa.get("architecture") or {}).get("nodes") or []
     node_ids = [n["node_id"] for n in nodes if "node_id" in n]
@@ -75,6 +81,8 @@ def parse_isa_backend(isa: Dict[str, Any], proc_id: str, source_url: str) -> Dic
             "coupling_edges_count": len(edges),
             "isa_source": source_url,
             "telemetry_scope": "instruction_set_architecture",
+            "isa_fetched_at": _utcnow_iso(),
+            "ingest_mode": "live_isa_poll",
         },
     }
 
@@ -179,7 +187,10 @@ class RigettiProviderAdapter(BaseProviderAdapter):
         self.is_authenticated = bool(self.api_key and len(self.api_key) > 10)
         self._cached_isa: Dict[str, Any] = {}
         self._cache_timestamps: Dict[str, float] = {}
-        self._cache_ttl_seconds = 120
+        try:
+            self._cache_ttl_seconds = max(15, int(os.getenv("RIGETTI_ISA_CACHE_SECONDS", "120")))
+        except ValueError:
+            self._cache_ttl_seconds = 120
         self._last_isa_ok = False
 
     def lineage_mode(self) -> str:
@@ -254,7 +265,7 @@ class RigettiProviderAdapter(BaseProviderAdapter):
 
         if backends:
             return backends
-        if settings.ENABLE_MOCK_DATA:
+        if settings.ENABLE_MOCK_DATA and not is_demo_live_provider("rigetti_quantum"):
             b = get_mock_backend("rigetti_aspen_m3")
             return [b] if b else []
         return []

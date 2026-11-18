@@ -26,7 +26,16 @@ class TelemetryCollector:
 
     def run_full_collection_cycle(self):
         adapter_cls = self.adapter.__class__.__name__
-        if "Rigetti" in adapter_cls:
+        if "ProviderScopedMock" in adapter_cls:
+            prov_id = getattr(self.adapter, "provider_id", "ibm_quantum")
+            names = {
+                "ibm_quantum": ("IBM Quantum Platform", "ibm"),
+                "rigetti_quantum": ("Rigetti Computing", "rigetti"),
+                "ionq_quantum": ("IonQ Trapped-Ion", "ionq"),
+                "cdac_quantum": ("C-DAC Quantum Platform", "cdac"),
+            }
+            prov_name, prov_type = names.get(prov_id, (prov_id, "custom"))
+        elif "Rigetti" in adapter_cls:
             prov_id, prov_name, prov_type = "rigetti_quantum", "Rigetti Computing", "rigetti"
         elif "IonQ" in adapter_cls:
             prov_id, prov_name, prov_type = "ionq_quantum", "IonQ Trapped-Ion", "ionq"
