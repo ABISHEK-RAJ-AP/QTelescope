@@ -80,21 +80,24 @@ if [[ "$RUN_DEMO_ENV" == "1" ]]; then
   apply_vm_demo_env "$ROOT"
 fi
 
+# shellcheck source=scripts/vm-demo-env.sh
+source "${ROOT}/scripts/vm-demo-env.sh"
+echo "==> Restart API"
+restart_uvicorn "$ROOT" || {
+  echo "WARN: API did not become healthy; see .backend.log" >&2
+  exit 1
+}
+verify_api_direct || exit 1
+
 if [[ "$RUN_NGINX" == "1" ]] && [[ -x "${ROOT}/scripts/setup-nginx-host.sh" ]]; then
   echo "==> nginx static + proxy"
   FORCE_FREE_PORT=1 "${ROOT}/scripts/setup-nginx-host.sh"
+  verify_nginx_api_proxy "${NGINX_PORT:-4173}" || exit 1
 fi
 
-echo "==> Restart API"
-# shellcheck source=scripts/vm-demo-env.sh
-source "${ROOT}/scripts/vm-demo-env.sh"
-restart_uvicorn "$ROOT" || {
-  echo "WARN: API did not become healthy; see .backend.log" >&2
-}
-
 echo "==> Health check"
-sleep 2
-STACK_VERIFY_SKIP_INFRA="${STACK_VERIFY_SKIP_INFRA:-1}" "${ROOT}/scripts/verify-stack.sh" || true
+sleep 1
+STACK_VERIFY_SKIP_INFRA="${STACK_VERIFY_SKIP_INFRA:-1}" NGINX_PORT="${NGINX_PORT:-4173}" "${ROOT}/scripts/verify-stack.sh"
 
 echo ""
 echo "Done. Hard-refresh browser (Ctrl+Shift+R)."

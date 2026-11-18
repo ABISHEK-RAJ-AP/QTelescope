@@ -91,6 +91,44 @@ activate_python_venv() {
   fi
 }
 
+free_lab_port() {
+  local port="${1:-4173}"
+  pkill -f 'vite preview' 2>/dev/null || true
+  local line pid name
+  while IFS= read -r line; do
+    pid="$(echo "$line" | sed -n 's/.*pid=\([0-9][0-9]*\).*/\1/p' | head -1)"
+    [[ -z "$pid" ]] && continue
+    name="$(ps -p "$pid" -o comm= 2>/dev/null || true)"
+    case "$name" in
+      node|node-vite|MainThread) sudo kill "$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true ;;
+      nginx) ;;
+      *) ;;
+    esac
+  done < <(ss -lntp 2>/dev/null | grep -E ":${port}[[:space:]]" || true)
+  sleep 1
+}
+
+verify_api_direct() {
+  local url="${1:-http://127.0.0.1:8000/api/v1/auth/config-status}"
+  curl -sf -m 10 "$url" >/dev/null || {
+    echo "FAIL: API not healthy at $url" >&2
+    return 1
+  }
+}
+
+verify_nginx_api_proxy() {
+  local port="${1:-4173}"
+  local url="http://127.0.0.1:${port}/api/v1/auth/config-status"
+  local code
+  code="$(curl -s -m 10 -o /dev/null -w '%{http_code}' "$url" 2>/dev/null || echo 000)"
+  if [[ "$code" != "200" ]]; then
+    echo "FAIL: nginx on :${port} did not proxy /api/v1 (HTTP ${code} from $url)" >&2
+    echo "    Something other than nginx+API may own :${port} (e.g. vite preview without /api proxy)." >&2
+    ss -lntp 2>/dev/null | grep -E ":${port}[[:space:]]" || true
+    return 1
+  fi
+}
+
 wait_for_api() {
   local url="${1:-http://127.0.0.1:8000/api/v1/auth/captcha}"
   local log="${2:-}"

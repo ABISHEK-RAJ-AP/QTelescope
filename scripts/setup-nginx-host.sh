@@ -9,6 +9,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# shellcheck source=scripts/vm-demo-env.sh
+source "${ROOT}/scripts/vm-demo-env.sh"
 SERVER_NAME="${SERVER_NAME:-_}"
 # Default 4173 — your LAN already reaches Vite on this port; :80 often filtered
 NGINX_PORT="${NGINX_PORT:-4173}"
@@ -35,16 +37,12 @@ if ! command -v nginx >/dev/null 2>&1; then
   sudo apt install -y nginx
 fi
 
-# Free port if vite preview / old nginx still holds it
-if ss -lntp 2>/dev/null | grep -qE ":${NGINX_PORT}\\s"; then
-  echo "==> Port $NGINX_PORT in use — stop vite preview (Ctrl+C) if running"
-  echo "    Holding PIDs:"
-  ss -lntp 2>/dev/null | grep -E ":${NGINX_PORT}\\s" || true
-  # Drop default site on 80 only; for 4173 kill node preview if user agrees via env
+if ss -lntp 2>/dev/null | grep -qE ":${NGINX_PORT}[[:space:]]"; then
+  echo "==> Port $NGINX_PORT in use"
+  ss -lntp 2>/dev/null | grep -E ":${NGINX_PORT}[[:space:]]" || true
   if [[ "${FORCE_FREE_PORT:-}" == "1" ]]; then
-    PIDS="$(ss -lntp 2>/dev/null | grep -E ":${NGINX_PORT}\\s" | grep -oE 'pid=[0-9]+' | cut -d= -f2 | sort -u || true)"
-    for p in $PIDS; do sudo kill "$p" 2>/dev/null || true; done
-    sleep 1
+    echo "==> Freeing $NGINX_PORT from Node/Vite (keeping nginx)"
+    free_lab_port "$NGINX_PORT"
   fi
 fi
 
@@ -89,14 +87,14 @@ if command -v ufw >/dev/null 2>&1; then
 fi
 
 HEALTH="http://127.0.0.1:${NGINX_PORT}/healthz"
-if curl -fsS -o /dev/null "$HEALTH" 2>/dev/null; then
-  echo "==> healthz OK ($HEALTH)"
-else
-  echo "==> Warning: $HEALTH failed — is port free? Stop: npx vite preview"
-  echo "    Then: FORCE_FREE_PORT=1 $0"
-  ss -lntp 2>/dev/null | grep -E ":${NGINX_PORT}\\s" || true
+curl -fsS -o /dev/null "$HEALTH" 2>/dev/null || {
+  echo "==> Warning: $HEALTH failed"
+  ss -lntp 2>/dev/null | grep -E ":${NGINX_PORT}[[:space:]]" || true
   sudo tail -15 /var/log/nginx/error.log 2>/dev/null || true
-fi
+}
+
+echo "==> Verify /api/v1 proxy (needs uvicorn on :8000)"
+verify_nginx_api_proxy "$NGINX_PORT"
 
 LAN_IPS="$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9.]+$' | grep -v '^127\.' || true)"
 

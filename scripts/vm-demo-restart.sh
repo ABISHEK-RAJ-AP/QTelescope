@@ -22,14 +22,15 @@ git pull --ff-only origin main || {
 echo "==> demo .env (mock data + bootstrap accounts)"
 apply_vm_demo_env "$ROOT"
 
+echo "==> Restart API (must be up before nginx proxy check)"
+restart_uvicorn "$ROOT" || exit 1
+verify_api_direct || exit 1
+
 echo "==> Frontend nginx (port ${NGINX_PORT:-4173})"
 FORCE_FREE_PORT=1 "${ROOT}/scripts/setup-nginx-host.sh"
+verify_nginx_api_proxy "${NGINX_PORT:-4173}" || exit 1
 
 echo ""
 echo "Demo login: admin / quantum2026  |  superadmin / quantum2026  |  user_researcher / quantum2026"
 echo "Mock catalog ON. For VAPT later: ENABLE_MOCK_DATA=false BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS=true"
-echo "==> Restart API"
-restart_uvicorn "$ROOT" || exit 1
-curl -sf -m 5 "http://127.0.0.1:8000/api/v1/auth/config-status" >/dev/null \
-  || { echo "FAIL: auth API not responding on :8000" >&2; exit 1; }
-STACK_VERIFY_SKIP_INFRA=1 "${ROOT}/scripts/verify-stack.sh" || true
+STACK_VERIFY_SKIP_INFRA=1 NGINX_PORT="${NGINX_PORT:-4173}" "${ROOT}/scripts/verify-stack.sh"

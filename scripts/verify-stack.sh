@@ -3,6 +3,8 @@
 set -euo pipefail
 API="${API_BASE:-http://127.0.0.1:8000/api/v1}"
 PROXY="${VITE_PROXY:-http://127.0.0.1:5173/api/v1}"
+NGINX_PORT="${NGINX_PORT:-4173}"
+NGINX_PROXY="${NGINX_PROXY:-http://127.0.0.1:${NGINX_PORT}/api/v1}"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
@@ -32,17 +34,22 @@ else
 fi
 
 echo "=== API (direct :8000) ==="
+curl_ok "$API/auth/config-status" "auth/config-status"
 curl_ok "$API/auth/captcha" "captcha"
 curl_ok "$API/alerts/summary" "alerts/summary"
 curl_ok "$API/backends/status-all" "backends/status-all"
 curl -sf -m 60 "$API/health/vector" >/dev/null || fail "health/vector timeout"
 echo "OK health/vector"
 
-echo "=== API (Vite proxy :5173) ==="
+echo "=== API (nginx :${NGINX_PORT}) ==="
+curl_ok "$NGINX_PROXY/auth/config-status" "nginx auth/config-status"
+curl_ok "$NGINX_PROXY/auth/captcha" "nginx captcha"
+
+echo "=== API (Vite dev :5173) ==="
 if curl -sf -m 3 -o /dev/null "$PROXY/auth/captcha" 2>/dev/null; then
-  curl_ok "$PROXY/auth/captcha" "proxy captcha"
+  curl_ok "$PROXY/auth/captcha" "vite proxy captcha"
 else
-  echo "SKIP vite proxy (frontend not on :5173)"
+  echo "SKIP vite proxy (frontend dev not on :5173)"
 fi
 
 echo "=== All checks passed ==="
