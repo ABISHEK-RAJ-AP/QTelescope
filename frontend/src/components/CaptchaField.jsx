@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { RotateCw } from 'lucide-react';
 import { api } from '@/services/api';
+import { COPY } from '@/copy/operator.js';
 import { fieldClass } from '@/components/AuthShell';
 import { InfoTooltip } from '@/components/observability/InfoTooltip.jsx';
 
@@ -20,7 +21,7 @@ export function CaptchaField({ value, onChange, onChallenge }) {
         onChallenge?.(res.captcha_id);
       }
     } catch {
-      setError('Could not load the image. Confirm the API is up, then retry.');
+      setError(COPY.auth.captchaUnavailable);
       onChallenge?.('');
     } finally {
       setLoading(false);

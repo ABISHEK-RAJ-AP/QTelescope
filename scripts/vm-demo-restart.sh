@@ -30,4 +30,6 @@ echo "Demo login: admin / quantum2026  |  superadmin / quantum2026  |  user_rese
 echo "Mock catalog ON. For VAPT later: ENABLE_MOCK_DATA=false BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS=true"
 echo "==> Restart API"
 restart_uvicorn "$ROOT" || exit 1
+curl -sf -m 5 "http://127.0.0.1:8000/api/v1/auth/config-status" >/dev/null \
+  || { echo "FAIL: auth API not responding on :8000" >&2; exit 1; }
 STACK_VERIFY_SKIP_INFRA=1 "${ROOT}/scripts/verify-stack.sh" || true

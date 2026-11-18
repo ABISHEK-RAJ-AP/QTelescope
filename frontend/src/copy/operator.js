@@ -38,6 +38,9 @@ export const COPY = {
   },
   auth: {
     signInSubtitle: 'Access the quantum telemetry console with your assigned credentials.',
+    signInFailed: 'Sign-in failed. Check the image and credentials.',
+    serviceUnavailable: 'Sign-in is temporarily unavailable. Try again in a moment.',
+    captchaUnavailable: 'Could not load the security image. Try again.',
     signInDirectory: 'This deployment accepts organization directory credentials.',
     registerSubtitle: 'Request operator access. Your facility administrator assigns roles after approval.',
     forgotSubtitle: 'Enter your username. For security, the response does not indicate whether an account exists.',
