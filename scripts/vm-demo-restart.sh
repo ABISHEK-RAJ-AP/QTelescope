@@ -26,7 +26,7 @@ echo "==> Frontend nginx (port ${NGINX_PORT:-4173})"
 FORCE_FREE_PORT=1 "${ROOT}/scripts/setup-nginx-host.sh"
 
 echo ""
-echo "Demo login: admin / quantum2026  or  user_researcher / quantum2026"
+echo "Demo login: admin / quantum2026  |  superadmin / quantum2026  |  user_researcher / quantum2026"
 echo "Mock catalog ON. For VAPT later: ENABLE_MOCK_DATA=false BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS=true"
 echo "==> Restart API"
 restart_uvicorn "$ROOT" || exit 1

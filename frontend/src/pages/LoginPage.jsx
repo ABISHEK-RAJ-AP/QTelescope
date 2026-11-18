@@ -27,6 +27,7 @@ export function LoginPage({ onLoginSuccess }) {
   const [mfaCode, setMfaCode] = useState('')
   const [showDevPresets, setShowDevPresets] = useState(true)
   const [signInSubtitle, setSignInSubtitle] = useState(COPY.auth.signInSubtitle)
+  const [apiReachable, setApiReachable] = useState(true)
 
   const finishSession = async (res) => {
     let user = res.user
@@ -71,6 +72,7 @@ export function LoginPage({ onLoginSuccess }) {
   useEffect(() => {
     api.getConfigStatus()
       .then((s) => {
+        setApiReachable(true)
         if (s?.bootstrap && Object.prototype.hasOwnProperty.call(s.bootstrap, 'show_dev_login_presets')) {
           setShowDevPresets(Boolean(s.bootstrap.show_dev_login_presets))
         }
@@ -78,7 +80,10 @@ export function LoginPage({ onLoginSuccess }) {
           setSignInSubtitle(COPY.auth.signInDirectory)
         }
       })
-      .catch(() => setShowDevPresets(true))
+      .catch(() => {
+        setApiReachable(false)
+        setShowDevPresets(true)
+      })
   }, [])
 
   const handleSubmit = async (e) => {
@@ -146,6 +151,13 @@ export function LoginPage({ onLoginSuccess }) {
         </div>
       }
     >
+      {!apiReachable ? (
+        <p className="auth-api-down" role="alert">
+          API not reachable at <code>/api/v1</code>. Start FastAPI on port 8000, or use host nginx (
+          <code>./scripts/vm-demo-restart.sh</code>
+          ). Plain <code>npm run preview</code> needs the API running locally.
+        </p>
+      ) : null}
       {mfaToken ? (
       <form
         className="space-y-4"

@@ -59,6 +59,8 @@ apply_vm_demo_env() {
   upsert_env ADMIN_PASSWORD quantum2026
   upsert_env USER_USERNAME user_researcher
   upsert_env USER_PASSWORD quantum2026
+  upsert_env SUPERADMIN_USERNAME superadmin
+  upsert_env SUPERADMIN_PASSWORD quantum2026
 }
 
 load_env_file() {

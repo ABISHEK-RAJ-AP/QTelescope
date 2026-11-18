@@ -30,7 +30,19 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    // `::` is dual-stack. `127.0.0.1` alone drops localhost→::1 (HMR + /vite.svg).
+    // `::` is dual-stack. `127.0.0.1` alone drops localhost→::1 (HMR + /vite/svg).
+    host: '::',
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
+    },
+  },
+  // npm run preview on :4173 has no nginx — must proxy /api like dev server or login 404s.
+  preview: {
+    port: 4173,
+    strictPort: false,
     host: '::',
     proxy: {
       '/api': {
