@@ -75,10 +75,22 @@ rm -f "$TMP"
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo ln -sfn "$SITE" "$ENABLED"
 
-echo "==> Testing & reloading nginx"
+echo "==> Testing & starting nginx"
 sudo nginx -t
 sudo systemctl enable nginx
+free_lab_port "$NGINX_PORT"
 sudo systemctl restart nginx
+sleep 1
+ensure_nginx_ui_port "$NGINX_PORT" || exit 1
+if ! nginx_ui_ok "$NGINX_PORT"; then
+  echo "==> Retrying nginx after port clear"
+  free_lab_port "$NGINX_PORT"
+  sudo fuser -k "${NGINX_PORT}/tcp" 2>/dev/null || true
+  sleep 2
+  sudo systemctl restart nginx
+  sleep 1
+  ensure_nginx_ui_port "$NGINX_PORT" || exit 1
+fi
 
 if command -v ufw >/dev/null 2>&1; then
   if sudo ufw status 2>/dev/null | grep -qi 'Status: active'; then
@@ -88,18 +100,12 @@ if command -v ufw >/dev/null 2>&1; then
   fi
 fi
 
-HEALTH="http://127.0.0.1:${NGINX_PORT}/healthz"
-curl -fsS -o /dev/null "$HEALTH" 2>/dev/null || {
-  echo "==> Warning: $HEALTH failed"
-  ss -lntp 2>/dev/null | grep -E ":${NGINX_PORT}[[:space:]]" || true
-  sudo tail -15 /var/log/nginx/error.log 2>/dev/null || true
-}
-
-if ! ss -lntp 2>/dev/null | grep -E ":${NGINX_PORT}[[:space:]]" | grep -q nginx; then
-  echo "FAIL: nginx is not listening on :${NGINX_PORT}" >&2
-  ss -lntp 2>/dev/null | grep -E ":${NGINX_PORT}[[:space:]]" || true
+if ! nginx_ui_ok "$NGINX_PORT"; then
+  echo "FAIL: nginx healthz on :${NGINX_PORT}" >&2
+  sudo tail -20 /var/log/nginx/error.log 2>/dev/null || true
   exit 1
 fi
+echo "==> healthz OK on :${NGINX_PORT}"
 
 echo "==> Verify /api/v1 proxy (needs Q-TeleScope uvicorn on :${API_UPSTREAM##*:})"
 verify_nginx_api_proxy "$NGINX_PORT"

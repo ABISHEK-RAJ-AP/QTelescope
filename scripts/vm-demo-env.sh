@@ -108,6 +108,39 @@ free_lab_port() {
   sleep 1
 }
 
+port_is_listening() {
+  local port="${1:?}"
+  ss -lnt 2>/dev/null | grep -qE ":${port}[[:space:]]"
+}
+
+# Nginx serves plain ok — Vite preview does not.
+nginx_ui_ok() {
+  local port="${1:-4173}"
+  curl -sf -m 5 "http://127.0.0.1:${port}/healthz" 2>/dev/null | grep -qx 'ok'
+}
+
+ensure_nginx_ui_port() {
+  local port="${1:-4173}"
+  local try
+  for try in 1 2 3; do
+    free_lab_port "$port"
+    if port_is_listening "$port" && ! nginx_ui_ok "$port"; then
+      echo "==> :${port} held by non-nginx process — freeing (try ${try})" >&2
+      sudo fuser -k "${port}/tcp" 2>/dev/null || true
+      sleep 2
+    fi
+    if ! port_is_listening "$port"; then
+      return 0
+    fi
+    if nginx_ui_ok "$port"; then
+      return 0
+    fi
+  done
+  echo "FAIL: :${port} not serving Q-TeleScope nginx (healthz)" >&2
+  ss -lntp 2>/dev/null | grep -E ":${port}[[:space:]]" || ss -lnt 2>/dev/null | grep -E ":${port}[[:space:]]" || true
+  return 1
+}
+
 qtelescope_api_ok() {
   local base="${1:-http://127.0.0.1:8000}"
   curl -sf -m 8 "${base}/api/v1/auth/config-status" 2>/dev/null | grep -q '"enable_mock_data"'

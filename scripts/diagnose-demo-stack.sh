@@ -13,7 +13,11 @@ curl -s -m 5 -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8000/api/v1/auth/
 qtelescope_api_ok "http://127.0.0.1:8000" && echo "Q-TeleScope API: yes" || echo "Q-TeleScope API: NO (wrong app or down)"
 
 echo "=== :${PORT} (UI) ==="
-ss -lntp 2>/dev/null | grep -E ":${PORT}[[:space:]]" || echo "(not listening)"
+ss -lntp 2>/dev/null | grep -E ":${PORT}[[:space:]]" || ss -lnt 2>/dev/null | grep -E ":${PORT}[[:space:]]" || echo "(not listening)"
+echo -n "healthz: "
+curl -sf -m 5 "http://127.0.0.1:${PORT}/healthz" 2>/dev/null || echo "fail"
+echo
+nginx_ui_ok "$PORT" && echo "nginx UI: yes" || echo "nginx UI: NO (vite or stale listener)"
 echo -n "config-status via nginx: "
 curl -s -m 5 -o /dev/null -w '%{http_code}\n' "http://127.0.0.1:${PORT}/api/v1/auth/config-status" || echo "fail"
 
