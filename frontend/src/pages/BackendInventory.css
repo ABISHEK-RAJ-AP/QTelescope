@@ -285,10 +285,11 @@ button.bk-chip:focus-visible, .bk-link:focus-visible, .bk-th:focus-visible { out
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  min-width: 2rem;
+  gap: 0;
+  width: 1.75rem;
+  min-width: 1.75rem;
   min-height: 1.75rem;
-  padding: 2px 8px;
+  padding: 0;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background: var(--bg-card-hover);
@@ -309,9 +310,9 @@ button.bk-chip:focus-visible, .bk-link:focus-visible, .bk-th:focus-visible { out
   outline: 2px solid var(--accent-cyan);
   outline-offset: 2px;
 }
-.bk-id-chip__label {
-  font-size: 0.6875rem;
-  letter-spacing: 0.04em;
+.bk-tag--source {
+  color: var(--text-secondary);
+  border-style: dashed;
 }
 
 .bk-lineage { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--border-color); white-space: nowrap; color: var(--text-secondary); background: var(--bg-card-hover); }

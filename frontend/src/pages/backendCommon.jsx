@@ -25,8 +25,7 @@ export function BackendRegistryIdChip({ backendId, className = '', onCopy }) {
       aria-label={`Registry ID ${id}. Activate to copy.`}
       onClick={copy}
     >
-      <Hash size={13} strokeWidth={2.25} aria-hidden />
-      <span className="bk-id-chip__label">ID</span>
+      <Hash size={14} strokeWidth={2.25} aria-hidden />
     </button>
   );
 }

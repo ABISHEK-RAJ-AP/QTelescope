@@ -14,12 +14,8 @@ _PATH = os.path.join(
     "backend_catalog.json",
 )
 
-_DEFAULT_FACILITY_BY_PROVIDER = {
-    "ibm_quantum": "IBM Quantum",
-    "rigetti_quantum": "Rigetti QCS",
-    "ionq_quantum": "IonQ Cloud",
-    "cdac_quantum": "C-DAC PARAM",
-}
+# Facility is operator catalogue (site/lab) — not auto-filled from vendor product marketing names.
+_DEFAULT_FACILITY_BY_PROVIDER: Dict[str, str] = {}
 
 
 def _ensure_dir() -> None:

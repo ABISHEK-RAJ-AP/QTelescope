@@ -17,6 +17,7 @@ import { MetricCard } from '../components/ds/MetricCard.jsx';
 import { FilterBar } from '../components/ds/FilterBar.jsx';
 import { unableToLoad } from '../constants/messages.js';
 import { formatBackendTitle, formatLineageFilterLabel, formatOperationalStatus } from '../lib/displayLabels.js';
+import { shouldShowFacilityTag } from '../lib/fleetCardLabels.js';
 import './BackendInventory.css';
 import './fleetShared.css';
 
@@ -345,7 +346,8 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
                   <div className="bk-card__tags">
                     <span className="bk-tag">{r.modality}</span>
                     <span className="bk-tag">{r.provider}</span>
-                    {r.facility !== '—' && <span className="bk-tag">{r.facility}</span>}
+                    {r.source ? <span className="bk-tag bk-tag--source">{formatLineageFilterLabel(r.source)}</span> : null}
+                    {shouldShowFacilityTag(r) ? <span className="bk-tag">{r.facility}</span> : null}
                     {isStale(r.age) ? <span className="bk-tag bk-tag--warn">Stale telemetry</span> : null}
                     {r.unlisted ? <span className="bk-tag bk-tag--warn">Unlisted provider</span> : null}
                   </div>
@@ -440,7 +442,7 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
               <button type="button" className="bk-modal-close" aria-label="Close" onClick={() => setCatalogEdit(null)}><X size={18} /></button>
             </header>
             <div className="bk-modal-body">
-              <p className="page-hint">Owner, facility, and tags for inventory search — not vendor cloud configuration.</p>
+              <p className="page-hint">Owner, site/lab (facility), and tags for search — optional. Vendor integration is configured under Admin → Integrations (C-DAC, Custom URL, etc.).</p>
               <label className="admin-form-field">
                 <span className="admin-form-label">Owner</span>
                 <input className="input-control" value={catalogEdit.owner} onChange={(e) => setCatalogEdit({ ...catalogEdit, owner: e.target.value })} />

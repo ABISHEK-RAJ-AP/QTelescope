@@ -193,14 +193,30 @@ CATALOG: List[Dict[str, Any]] = [
     },
     {
         "id": "cdac_quantum",
-        "name": "C-DAC / on-prem lab controller",
+        "name": "C-DAC on-prem / QSim",
         "vendor": "C-DAC",
         "modality": "on-prem / simulator",
         "adapter": "live",
         "credential_type": "REST endpoint",
         "docs": "",
         "env_key": "ONPREM_QPU_URL",
-        "fields": [{"key": "endpoint_url", "label": "Controller URL", "secret": False, "in": "endpoint_url"}],
+        "fields": [
+            {"key": "endpoint_url", "label": "Controller or QSim ingest URL", "secret": False, "in": "endpoint_url"},
+            {"key": "token", "label": "Optional API bearer", "secret": True, "in": "token", "required": False},
+        ],
+    },
+    {
+        "id": "custom_integration",
+        "name": "Custom integration",
+        "vendor": "Custom",
+        "modality": "multi-QPU",
+        "adapter": "stub",
+        "credential_type": "Discovery URL + optional API key",
+        "docs": "",
+        "fields": [
+            {"key": "endpoint_url", "label": "Discovery or telemetry base URL", "secret": False, "in": "endpoint_url", "required": True},
+            {"key": "token", "label": "API key (optional)", "secret": True, "in": "token", "required": False},
+        ],
     },
     {
         "id": "facility_env",
