@@ -16,8 +16,7 @@ export function AuthDemoPresets({ visible, onSelect }) {
 
   return (
     <details className="auth-demo-presets">
-      <summary className="auth-demo-presets__summary">Demo accounts (lab)</summary>
-      <p className="auth-demo-presets__hint">Laboratory shortcuts only. Not for production deployments.</p>
+      <summary className="auth-demo-presets__summary">Preset accounts</summary>
       <div className="auth-demo-presets__grid" role="group" aria-label="Demo account shortcuts">
         {PRESETS.map((p) => (
           <button

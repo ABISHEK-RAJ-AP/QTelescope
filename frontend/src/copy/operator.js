@@ -36,6 +36,9 @@ export const COPY = {
     heroAlerts: 'Alerts and routing',
     heroFleet: 'Fleet summary',
   },
+  landing: {
+    ctaBody: 'Use organization-issued credentials to open the fleet monitoring console.',
+  },
   auth: {
     signInSubtitle: 'Access the quantum telemetry console with your assigned credentials.',
     signInFailed: 'Sign-in failed. Check the image and credentials.',

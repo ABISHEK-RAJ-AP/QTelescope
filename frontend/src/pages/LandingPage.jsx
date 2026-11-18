@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
+import { usePublicFilmReady } from '@/hooks/usePublicFilmReady.js'
 import { Link } from 'react-router-dom'
 import {
   ArrowRight,
@@ -20,6 +21,7 @@ import { PublicMarketingFooter } from '@/components/marketing/PublicMarketingFoo
 import { LandingChrome } from '@/components/marketing/LandingChrome'
 import '@/components/marketing/landing-chrome.css'
 import { cn } from '@/lib/utils'
+import { COPY } from '@/copy/operator.js'
 
 const CAPABILITIES = [
   {
@@ -126,9 +128,33 @@ function FeatureCard({ icon: Icon, title, body }) {
 
 export function LandingPage() {
   const [openFaq, setOpenFaq] = useState(0)
+  usePublicFilmReady('landing')
+  const mainRef = useRef(null)
+
+  useEffect(() => {
+    const root = mainRef.current
+    if (!root) return undefined
+    const nodes = root.querySelectorAll('.landing-reveal')
+    if (!nodes.length) return undefined
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reduce) {
+      nodes.forEach((n) => n.classList.add('is-visible'))
+      return undefined
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) e.target.classList.add('is-visible')
+        })
+      },
+      { rootMargin: '0px 0px -8% 0px', threshold: 0.12 },
+    )
+    nodes.forEach((n) => io.observe(n))
+    return () => io.disconnect()
+  }, [])
 
   return (
-    <div className="relative min-h-screen flex flex-col justify-between bg-[#f8fafc] text-neutral-900 dark:bg-[#070a0f] dark:text-neutral-100 transition-colors duration-200">
+    <div className="relative min-h-screen flex flex-col justify-between bg-[#f8fafc] text-neutral-900 dark:bg-[#070a0f] dark:text-neutral-100 transition-colors duration-200" data-qt-public="landing">
       <QuantumBackground />
       <LandingChrome />
 
@@ -168,9 +194,9 @@ export function LandingPage() {
         <div className="landing-hero__fade pointer-events-none absolute inset-x-0 bottom-0 h-32" aria-hidden />
       </section>
 
-      <main className="landing-main relative z-20 mx-auto max-w-7xl space-y-28 px-6 pb-24 pt-4 sm:px-8">
+      <main ref={mainRef} className="landing-main relative z-20 mx-auto max-w-7xl space-y-28 px-6 pb-24 pt-4 sm:px-8">
         {/* Core Capabilities */}
-        <section id="capabilities" className="scroll-mt-28">
+        <section id="capabilities" className="scroll-mt-28 landing-reveal">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-neutral-200/80 dark:border-neutral-800/80">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Console</span>
@@ -191,7 +217,7 @@ export function LandingPage() {
         </section>
 
         {/* Modules Grid */}
-        <section id="features" className="scroll-mt-28">
+        <section id="features" className="scroll-mt-28 landing-reveal">
           <div className="text-center max-w-3xl mx-auto space-y-2">
             <span className="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Modules</span>
             <h2 className="text-3xl font-extrabold tracking-tight text-neutral-950 dark:text-white">
@@ -210,7 +236,7 @@ export function LandingPage() {
         </section>
 
         {/* Workflow Steps */}
-        <section id="workflow" className="landing-workflow scroll-mt-28 p-8 sm:p-12">
+        <section id="workflow" className="landing-workflow scroll-mt-28 landing-reveal p-8 sm:p-12">
           <div className="max-w-2xl">
             <span className="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">Workflow</span>
             <h2 className="mt-1 text-3xl font-extrabold tracking-tight text-neutral-950 dark:text-white">
@@ -233,7 +259,7 @@ export function LandingPage() {
         </section>
 
         {/* Interactive FAQ Accordion */}
-        <section id="faq" className="scroll-mt-28 max-w-3xl mx-auto">
+        <section id="faq" className="scroll-mt-28 landing-reveal max-w-3xl mx-auto">
           <div className="text-center space-y-2">
             <span className="text-xs font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400">FAQ</span>
             <h2 className="text-3xl font-extrabold tracking-tight text-neutral-950 dark:text-white">
@@ -278,7 +304,7 @@ export function LandingPage() {
               Open the console
             </h2>
             <p className="text-base text-neutral-600 dark:text-neutral-400">
-              Sign in with a lab account. Demo backends appear when mock data is on.
+              {COPY.landing.ctaBody}
             </p>
             <div className="pt-4 flex flex-wrap justify-center gap-4">
               <Link to="/login">

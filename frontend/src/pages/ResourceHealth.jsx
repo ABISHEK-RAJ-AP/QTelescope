@@ -18,6 +18,7 @@ import { useAppScope } from '../hooks/useAppScope.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { formatBackendTitle, formatModalityLabel } from '../lib/displayLabels.js';
 import { STATE_LABEL } from './backendUtils.js';
+import { BackendRegistryIdChip } from './backendCommon.jsx';
 import './ResourceHealth.css';
 
 const STATES = ['GREEN', 'YELLOW', 'RED', 'UNKNOWN'];
@@ -232,6 +233,11 @@ export const ResourceHealth = () => {
   }, [active, selected]);
 
   const qubits = useMemo(() => active?.qubits || [], [active]);
+  const gridCols = useMemo(() => {
+    const n = qubits.length;
+    if (!n) return 8;
+    return Math.min(16, Math.max(4, Math.ceil(Math.sqrt(n))));
+  }, [qubits.length]);
   const mode = COLOR_MODES[colorBy];
   const scale = useMemo(() => (mode.key ? metricScaler(qubits, mode) : null), [qubits, mode]);
   const visible = (q) => (stateFilter === 'ALL' || q.state === stateFilter)
@@ -357,43 +363,58 @@ export const ResourceHealth = () => {
       <section className="hv-workspace">
         <div className="card" style={{ padding: 0 }}>
           <div className="hv-toolbar">
-            <strong style={{ fontSize: 14 }}>{formatBackendTitle(active)}</strong>
-            <button type="button" className="fs-link" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0, marginLeft: 8 }} onClick={() => nav({ pathname: buildBackendDetailsPath(active.backend_id), search: `?backend=${encodeURIComponent(active.backend_id)}` })}>Backend details</button>
-            <label className="outline-field">
-              <span>Color</span>
-              <select className="input-control" value={colorBy} onChange={(e) => setColorBy(e.target.value)} aria-label="Color by">
-                {Object.entries(COLOR_MODES).map(([k, m]) => <option key={k} value={k}>{m.label}</option>)}
-              </select>
-            </label>
-            <span className="hv-chips" role="group" aria-label="Filter by state">
-              {['ALL', ...STATES].map((s) => (
-                <button key={s} type="button" className="hv-chip" aria-pressed={stateFilter === s} onClick={() => setStateFilter(s)}>{s === 'ALL' ? 'All' : s[0] + s.slice(1).toLowerCase()}</button>
-              ))}
-            </span>
-            <label className="outline-field">
-              <span>Qubit</span>
-              <input type="search" className="input-control" placeholder="#" aria-label="Find qubit by index" value={search} onChange={(e) => setSearch(e.target.value)} />
-            </label>
-            <span className="page-hint" style={{ margin: '0 0 0 auto' }}>{shown} / {qubits.length} qubits</span>
-            <InfoTooltip label="Health scoring">
-              <div className="hv-model-tip">
-                <p><strong>Vector H</strong> = F_limit, η_cal, δ_cal, C_exec · {payload.health_model_version}</p>
-                <ul>
-                  <li>T1 floor: {payload.t1_crit_us} µs</li>
-                  <li>GREEN: η_cal ≤ 1.2 and limits OK</li>
-                  <li>YELLOW: η_cal &gt; 1.5 (recalibrate)</li>
-                  <li>RED: T1 or C_exec breach</li>
-                </ul>
-                <p className="hv-model-tip__note">Advisory readiness — not vendor calibration or scheduler exclusion.</p>
+            <div className="hv-toolbar__row hv-toolbar__row--title">
+              <div className="hv-toolbar__title">
+                <strong className="hv-toolbar__name">{formatBackendTitle(active)}</strong>
+                <BackendRegistryIdChip backendId={active.backend_id} />
+                <button type="button" className="hv-toolbar__link fs-link" onClick={() => nav({ pathname: buildBackendDetailsPath(active.backend_id), search: `?backend=${encodeURIComponent(active.backend_id)}` })}>Backend details</button>
               </div>
-            </InfoTooltip>
+              <span className="hv-toolbar__count">{shown} / {qubits.length} qubits</span>
+            </div>
+            <div className="hv-toolbar__row hv-toolbar__row--filters">
+              <label className="outline-field hv-toolbar__field">
+                <span>Color by</span>
+                <select className="input-control" value={colorBy} onChange={(e) => setColorBy(e.target.value)} aria-label="Color by">
+                  {Object.entries(COLOR_MODES).map(([k, m]) => <option key={k} value={k}>{m.label}</option>)}
+                </select>
+              </label>
+              <div className="hv-toolbar__states">
+                <span className="hv-toolbar__states-label" id="hv-state-filter-label">Health state</span>
+                <span className="hv-chips" role="group" aria-labelledby="hv-state-filter-label">
+                  {['ALL', ...STATES].map((s) => (
+                    <button key={s} type="button" className="hv-chip" aria-pressed={stateFilter === s} onClick={() => setStateFilter(s)}>{s === 'ALL' ? 'All' : STATE_LABEL[s] || s}</button>
+                  ))}
+                </span>
+              </div>
+              <label className="outline-field hv-toolbar__field hv-toolbar__field--search">
+                <span>Qubit index</span>
+                <input type="search" className="input-control" placeholder="e.g. 12" aria-label="Find qubit by index" value={search} onChange={(e) => setSearch(e.target.value)} />
+              </label>
+              <InfoTooltip label="Health scoring">
+                <div className="hv-model-tip">
+                  <p><strong>Vector H</strong> = F_limit, η_cal, δ_cal, C_exec · {payload.health_model_version}</p>
+                  <ul>
+                    <li>T1 floor: {payload.t1_crit_us} µs</li>
+                    <li>GREEN: η_cal ≤ 1.2 and limits OK</li>
+                    <li>YELLOW: η_cal &gt; 1.5 (recalibrate)</li>
+                    <li>RED: T1 or C_exec breach</li>
+                  </ul>
+                  <p className="hv-model-tip__note">Advisory readiness — not vendor calibration or scheduler exclusion.</p>
+                </div>
+              </InfoTooltip>
+            </div>
           </div>
 
           {qubits.length === 0 ? (
             <EmptyState variant="panel" compact title="No qubit telemetry" message="No qubit records for this backend; health score unavailable." />
           ) : (
             <>
-              <div className="hv-grid" role="list" aria-label="Qubit health map">
+              <div
+                className="hv-grid"
+                role="list"
+                aria-label="Qubit health map"
+                style={{ gridTemplateColumns: `repeat(${gridCols}, minmax(44px, 1fr))`, maxWidth: `min(100%, ${gridCols * 52}px)` }}
+              >
                 {qubits.map((q) => {
                   const s = scale ? scale(q[mode.key]) : null;
                   const dim = !visible(q);
@@ -453,7 +474,7 @@ export const ResourceHealth = () => {
       <InsightModal
         open={selected != null && !!selectedQubit}
         size="xl"
-        title={selectedQubit ? `${active.backend_name} · Q${selectedQubit.qubit_index}` : ''}
+        title={selectedQubit ? `${formatBackendTitle(active)} · Q${selectedQubit.qubit_index}` : ''}
         subtitle={selectedQubit ? STATE_MEANING[selectedQubit.state] : ''}
         onClose={() => selectQubit(null)}
         footer={selectedQubit && (
