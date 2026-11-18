@@ -108,25 +108,58 @@ free_lab_port() {
   sleep 1
 }
 
+qtelescope_api_ok() {
+  local base="${1:-http://127.0.0.1:8000}"
+  curl -sf -m 8 "${base}/api/v1/auth/config-status" 2>/dev/null | grep -q '"enable_mock_data"'
+}
+
 verify_api_direct() {
   local url="${1:-http://127.0.0.1:8000/api/v1/auth/config-status}"
-  curl -sf -m 10 "$url" >/dev/null || {
-    echo "FAIL: API not healthy at $url" >&2
-    return 1
-  }
+  if qtelescope_api_ok "http://127.0.0.1:8000"; then
+    return 0
+  fi
+  echo "FAIL: Q-TeleScope API not healthy at $url (wrong app on :8000 or stale uvicorn?)" >&2
+  ss -lntp 2>/dev/null | grep -E ':8000[[:space:]]' || true
+  return 1
+}
+
+stop_foreign_api_port() {
+  local port="${1:-8000}"
+  if qtelescope_api_ok "http://127.0.0.1:${port}"; then
+    return 0
+  fi
+  if ! ss -lntp 2>/dev/null | grep -qE ":${port}[[:space:]]"; then
+    return 0
+  fi
+  echo "==> Port ${port} in use but not Q-TeleScope (e.g. old QRP) — stopping uvicorn listeners"
+  pkill -f "uvicorn.*--port[ =]${port}" 2>/dev/null || true
+  pkill -f "uvicorn.*:${port}" 2>/dev/null || true
+  pkill -f 'uvicorn app.main:app' 2>/dev/null || true
+  sleep 2
+  if ss -lntp 2>/dev/null | grep -qE ":${port}[[:space:]]" && ! qtelescope_api_ok "http://127.0.0.1:${port}"; then
+    echo "WARN: port ${port} still busy after uvicorn stop; trying fuser" >&2
+    sudo fuser -k "${port}/tcp" 2>/dev/null || true
+    sleep 2
+  fi
 }
 
 verify_nginx_api_proxy() {
   local port="${1:-4173}"
   local url="http://127.0.0.1:${port}/api/v1/auth/config-status"
-  local code
+  local code body
   code="$(curl -s -m 10 -o /dev/null -w '%{http_code}' "$url" 2>/dev/null || echo 000)"
-  if [[ "$code" != "200" ]]; then
-    echo "FAIL: nginx on :${port} did not proxy /api/v1 (HTTP ${code} from $url)" >&2
-    echo "    Something other than nginx+API may own :${port} (e.g. vite preview without /api proxy)." >&2
-    ss -lntp 2>/dev/null | grep -E ":${port}[[:space:]]" || true
-    return 1
+  if [[ "$code" == "200" ]] && curl -sf -m 8 "$url" | grep -q '"enable_mock_data"'; then
+    return 0
   fi
+  echo "FAIL: nginx on :${port} did not proxy Q-TeleScope /api/v1 (HTTP ${code} from $url)" >&2
+  local direct
+  direct="$(curl -s -m 5 -o /dev/null -w '%{http_code}' http://127.0.0.1:8000/api/v1/auth/config-status 2>/dev/null || echo 000)"
+  echo "    Direct :8000 auth/config-status → HTTP ${direct}" >&2
+  ss -lntp 2>/dev/null | grep -E ":${port}[[:space:]]" || true
+  if command -v nginx >/dev/null 2>&1; then
+    sudo grep -E 'location|proxy_pass|listen' /etc/nginx/sites-enabled/qtelescope 2>/dev/null | head -20 >&2 || true
+  fi
+  return 1
 }
 
 wait_for_api() {
@@ -151,6 +184,7 @@ wait_for_api() {
 restart_uvicorn() {
   local ROOT="${1:?}"
   local log="${ROOT}/.backend.log"
+  stop_foreign_api_port 8000
   pkill -f 'uvicorn app.main:app' 2>/dev/null || true
   sleep 1
   export PYTHONPATH="${ROOT}"
@@ -159,5 +193,10 @@ restart_uvicorn() {
   mkdir -p "${ROOT}/data"
   nohup python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 >"$log" 2>&1 &
   echo "API log: $log"
-  wait_for_api "http://127.0.0.1:8000/api/v1/auth/captcha" "$log" || return 1
+  wait_for_api "http://127.0.0.1:8000/api/v1/auth/config-status" "$log" || return 1
+  qtelescope_api_ok "http://127.0.0.1:8000" || {
+    echo "FAIL: uvicorn on :8000 is not Q-TeleScope (check .backend.log)" >&2
+    tail -30 "$log" >&2 || true
+    return 1
+  }
 }

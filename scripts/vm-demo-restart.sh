@@ -22,6 +22,9 @@ git pull --ff-only origin main || {
 echo "==> demo .env (mock data + bootstrap accounts)"
 apply_vm_demo_env "$ROOT"
 
+echo "==> Stop foreign listeners on :8000 (QRP/other uvicorn)"
+stop_foreign_api_port 8000
+
 echo "==> Restart API (must be up before nginx proxy check)"
 restart_uvicorn "$ROOT" || exit 1
 verify_api_direct || exit 1

@@ -14,6 +14,7 @@ source "${ROOT}/scripts/vm-demo-env.sh"
 SERVER_NAME="${SERVER_NAME:-_}"
 # Default 4173 — your LAN already reaches Vite on this port; :80 often filtered
 NGINX_PORT="${NGINX_PORT:-4173}"
+API_UPSTREAM="${TELESCOPE_API_UPSTREAM:-127.0.0.1:8000}"
 BUILD_DIST="$ROOT/frontend/dist"
 WWW_ROOT=/var/www/qtelescope
 SITE=/etc/nginx/sites-available/qtelescope
@@ -66,6 +67,7 @@ TMP="$(mktemp)"
 sed -e "s|__SERVER_NAME__|${SERVER_NAME}|g" \
     -e "s|__DIST_ROOT__|${WWW_ROOT}|g" \
     -e "s|__LISTEN_PORT__|${NGINX_PORT}|g" \
+    -e "s|__API_UPSTREAM__|${API_UPSTREAM}|g" \
     "$TEMPLATE" > "$TMP"
 sudo cp "$TMP" "$SITE"
 rm -f "$TMP"
@@ -76,7 +78,7 @@ sudo ln -sfn "$SITE" "$ENABLED"
 echo "==> Testing & reloading nginx"
 sudo nginx -t
 sudo systemctl enable nginx
-sudo systemctl reload nginx || sudo systemctl restart nginx
+sudo systemctl restart nginx
 
 if command -v ufw >/dev/null 2>&1; then
   if sudo ufw status 2>/dev/null | grep -qi 'Status: active'; then
@@ -93,7 +95,13 @@ curl -fsS -o /dev/null "$HEALTH" 2>/dev/null || {
   sudo tail -15 /var/log/nginx/error.log 2>/dev/null || true
 }
 
-echo "==> Verify /api/v1 proxy (needs uvicorn on :8000)"
+if ! ss -lntp 2>/dev/null | grep -E ":${NGINX_PORT}[[:space:]]" | grep -q nginx; then
+  echo "FAIL: nginx is not listening on :${NGINX_PORT}" >&2
+  ss -lntp 2>/dev/null | grep -E ":${NGINX_PORT}[[:space:]]" || true
+  exit 1
+fi
+
+echo "==> Verify /api/v1 proxy (needs Q-TeleScope uvicorn on :${API_UPSTREAM##*:})"
 verify_nginx_api_proxy "$NGINX_PORT"
 
 LAN_IPS="$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^[0-9.]+$' | grep -v '^127\.' || true)"
