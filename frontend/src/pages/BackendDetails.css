@@ -15,30 +15,59 @@
   .bd-head__top { grid-template-columns: 1fr; }
 }
 .bd-head__id { min-width: 0; }
+.bd-back {
+  margin: 0 0 8px;
+  font-size: var(--font-size-helper, 0.9375rem);
+}
 .bd-title {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--text-primary);
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
+  line-height: 1.25;
 }
 .bd-meta {
-  margin: 6px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 8px 0 0;
   font-size: var(--font-size-body, 1.0625rem);
   line-height: 1.45;
   color: var(--text-muted);
   overflow-wrap: anywhere;
 }
+.bd-meta__id {
+  margin-left: auto;
+}
+@media (max-width: 640px) {
+  .bd-meta__id { margin-left: 0; }
+  .bd-head__top { gap: 12px; }
+  .bd-actions { grid-template-columns: 1fr; }
+  .bd-actions__link { white-space: normal; text-align: center; min-height: 44px; }
+}
 .bd-title { font-size: var(--font-size-section-title, 1.25rem); }
 .bd-badges {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 8px 10px;
   align-items: center;
   margin-top: 12px;
+  width: 100%;
+}
+
+.bd-badges .badge,
+.bd-badges .bk-lineage {
+  min-height: 32px;
+  align-items: center;
+}
+
+.bd-provenance-hint {
+  margin: 8px 0 0;
+  font-size: var(--font-size-helper, 0.9375rem);
+  line-height: 1.45;
+  color: var(--text-secondary);
+  max-width: 52rem;
 }
 .bd-actions {
   display: grid;
@@ -125,21 +154,27 @@
   text-underline-offset: 2px;
 }
 
-.bd-health {
+.bd-health,
+.bd-routing {
   display: inline-flex;
   gap: 6px;
   align-items: center;
   font-size: var(--font-size-helper, 0.9375rem);
   font-weight: 600;
-  padding: 3px 10px;
+  padding: 4px 11px;
   border-radius: 999px;
   border: 1px solid currentColor;
   white-space: nowrap;
+  background: color-mix(in srgb, currentColor 8%, transparent);
 }
-.bd-health[data-s='GREEN'] { color: var(--accent-emerald); }
-.bd-health[data-s='YELLOW'] { color: var(--accent-amber); }
-.bd-health[data-s='RED'] { color: var(--accent-rose); }
-.bd-health[data-s='UNKNOWN'] { color: var(--text-muted); }
+.bd-health[data-s='GREEN'],
+.bd-routing[data-s='GREEN'] { color: var(--accent-emerald); }
+.bd-health[data-s='YELLOW'],
+.bd-routing[data-s='YELLOW'] { color: var(--accent-amber); }
+.bd-health[data-s='RED'],
+.bd-routing[data-s='RED'] { color: var(--accent-rose); }
+.bd-health[data-s='UNKNOWN'],
+.bd-routing[data-s='UNKNOWN'] { color: var(--text-muted); }
 
 .bd-tabs {
   display: flex;

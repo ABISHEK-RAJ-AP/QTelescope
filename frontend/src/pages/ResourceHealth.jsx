@@ -16,6 +16,8 @@ import { ConfirmDialog } from '../components/observability/ConfirmDialog.jsx';
 import { buildBackendDetailsPath, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
 import { useAppScope } from '../hooks/useAppScope.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
+import { formatBackendTitle, formatModalityLabel } from '../lib/displayLabels.js';
+import { STATE_LABEL } from './backendUtils.js';
 import './ResourceHealth.css';
 
 const STATES = ['GREEN', 'YELLOW', 'RED', 'UNKNOWN'];
@@ -338,14 +340,14 @@ export const ResourceHealth = () => {
               <button key={b.backend_id} type="button" className="hv-backend" aria-pressed={active?.backend_id === b.backend_id}
                 onClick={() => selectBackend(b.backend_id)}>
                 <div>
-                  <div className="hv-backend__name">{b.backend_name}</div>
-                  <div className="hv-backend__id">{b.backend_id} · {b.qpu_modality}</div>
+                  <div className="hv-backend__name">{formatBackendTitle(b)}</div>
+                  <div className="hv-backend__id">{formatModalityLabel(b.qpu_modality)}</div>
                 </div>
                 <div>
                   {total ? <StateBar counts={b.counts} total={total} /> : <span className="page-hint">No qubits reported</span>}
                   <div className="hv-backend__nums">G {b.counts?.GREEN || 0} · Y {b.counts?.YELLOW || 0} · R {b.counts?.RED || 0}{b.counts?.UNKNOWN ? ` · ? ${b.counts.UNKNOWN}` : ''}</div>
                 </div>
-                <span className={`badge badge-${b.router === 'GREEN' ? 'healthy' : b.router === 'YELLOW' ? 'warning' : b.router === 'RED' ? 'critical' : 'info'}`}>{b.router}</span>
+                <span className={`badge badge-${b.router === 'GREEN' ? 'healthy' : b.router === 'YELLOW' ? 'warning' : b.router === 'RED' ? 'critical' : 'info'}`} title="Routing advisory">{STATE_LABEL[b.router] || b.router}</span>
               </button>
             );
           })}
@@ -355,7 +357,7 @@ export const ResourceHealth = () => {
       <section className="hv-workspace">
         <div className="card" style={{ padding: 0 }}>
           <div className="hv-toolbar">
-            <strong style={{ fontSize: 14 }}>{active.backend_name}</strong>
+            <strong style={{ fontSize: 14 }}>{formatBackendTitle(active)}</strong>
             <button type="button" className="fs-link" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0, marginLeft: 8 }} onClick={() => nav({ pathname: buildBackendDetailsPath(active.backend_id), search: `?backend=${encodeURIComponent(active.backend_id)}` })}>Backend details</button>
             <label className="outline-field">
               <span>Color</span>

@@ -679,6 +679,23 @@ pre,
     justify-content: center;
     flex-wrap: wrap;
   }
+
+  .app-page-head .page-header__trailing {
+    width: 100%;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  .app-page-head .page-header__actions--center {
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 520px) {
+  .app-page-head .page-header__title {
+    font-size: clamp(1.125rem, 4.5vw, 1.5rem);
+  }
 }
 
 .page-title-section {

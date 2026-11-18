@@ -1,17 +1,52 @@
 import React, { useMemo } from 'react';
+import { Hash } from 'lucide-react';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { getChartTheme } from '../components/observability/chartTheme.js';
 import { STATES, STATE_GLYPH, STATE_LABEL } from './backendUtils.js';
+import { formatEnumLabel, formatOperationalStatus } from '../lib/displayLabels.js';
 import { COPY } from '../copy/operator.js';
 import './BackendInventory.css';
 
-export function LineageTag({ lineage, compact = false }) {
-  const l = lineage || 'unknown';
-  if (l === 'simulated' || l === 'mock_catalog') return null;
-  const text = l === 'live' ? (compact ? 'Live' : 'Live vendor') : (compact ? 'Unknown' : 'Unknown source');
+/** Registry id — hover or focus shows full technical id; not primary chrome. */
+export function BackendRegistryIdChip({ backendId, className = '', onCopy }) {
+  const id = String(backendId || '').trim();
+  if (!id) return null;
+  const copy = (e) => {
+    e?.stopPropagation?.();
+    if (onCopy) { onCopy(id); return; }
+  void navigator.clipboard?.writeText(id).catch(() => {});
+  };
   return (
-    <span className={`bk-lineage bk-lineage--${l}${compact ? ' bk-lineage--compact' : ''}`} title={`Adapter lineage: ${l}`}>
+    <button
+      type="button"
+      className={`bk-id-chip${className ? ` ${className}` : ''}`}
+      title={`Registry ID: ${id}`}
+      aria-label={`Registry ID ${id}. Activate to copy.`}
+      onClick={copy}
+    >
+      <Hash size={13} strokeWidth={2.25} aria-hidden />
+      <span className="bk-id-chip__label">ID</span>
+    </button>
+  );
+}
+
+const LINEAGE_COPY = {
+  live: { short: 'Live ingest', title: 'Last collector run used a live vendor path' },
+  simulated: { short: 'Demo catalog', title: 'Synthetic telemetry for lab demo — not live hardware' },
+  mock_catalog: { short: 'Demo catalog', title: 'Seeded demo backend' },
+  stub: { short: 'Catalog stub', title: 'Credential slot only — no live collector' },
+  replay: { short: 'Replay', title: 'Stored replay snapshot' },
+  unknown: { short: 'Source pending', title: 'Collector lineage not recorded yet — refresh or run collectors' },
+};
+
+export function LineageTag({ lineage, compact = false, showDemo = true }) {
+  const l = (lineage || 'unknown').toLowerCase();
+  if (!showDemo && (l === 'simulated' || l === 'mock_catalog')) return null;
+  const copy = LINEAGE_COPY[l] || LINEAGE_COPY.unknown;
+  const text = compact ? copy.short : copy.short;
+  return (
+    <span className={`bk-lineage bk-lineage--${l}${compact ? ' bk-lineage--compact' : ''}`} title={copy.title}>
       <span className="bk-lineage__dot" aria-hidden />
       {text}
     </span>
@@ -38,10 +73,44 @@ export function StateBar({ counts, total, label, emptyLabel = 'No qubit health' 
   );
 }
 
-export function StatusText({ status }) {
-  const ok = status === 'ONLINE';
-  const cls = ok ? 'badge-online' : status === 'DEGRADED' || status === 'MAINTENANCE' ? 'badge-warning' : 'badge-offline';
-  return <span className={`badge ${cls}`}>{status || 'UNKNOWN'}</span>;
+export function StatusText({ status, showKey = false }) {
+  const { key, label, title } = formatOperationalStatus(status);
+  const ok = key === 'ONLINE';
+  const cls = ok ? 'badge-online' : key === 'DEGRADED' || key === 'MAINTENANCE' ? 'badge-warning' : 'badge-offline';
+  return (
+    <span className={`badge ${cls}`} title={title} data-ops-status={key}>
+      {label}{showKey && key !== label ? ` (${key})` : ''}
+    </span>
+  );
+}
+
+/** Reachability vs data source vs routing — three different signals, one row. */
+export function BackendStatusStrip({ operationalStatus, routingState, routingAction, lineage, lineageLoaded = true }) {
+  const routeTitle = routingAction
+    ? `Advisory routing — ${formatEnumLabel(routingAction)} (rule engine; not vendor health)`
+    : 'Advisory routing from health vector rules';
+  return (
+    <dl className="bk-status-strip">
+      <div>
+        <dt>Reachability</dt>
+        <dd><StatusText status={operationalStatus} /></dd>
+      </div>
+      <div>
+        <dt>Data source</dt>
+        <dd><LineageTag lineage={lineageLoaded ? lineage : 'unknown'} compact showDemo /></dd>
+      </div>
+      {routingState ? (
+        <div>
+          <dt>Routing advisory</dt>
+          <dd>
+            <span className="bd-routing bk-status-strip__route" data-s={routingState} title={routeTitle}>
+              {STATE_LABEL[routingState] || formatEnumLabel(routingState)}
+            </span>
+          </dd>
+        </div>
+      ) : null}
+    </dl>
+  );
 }
 
 export function Sparkline({ values, label, height = 36 }) {

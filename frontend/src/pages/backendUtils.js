@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { fetchApi } from '../services/api';
 import { parseDate } from '../utils/time';
+import { formatModalityLabel, formatProviderLabel } from '../lib/displayLabels.js';
 
 export const STATES = ['GREEN', 'YELLOW', 'RED', 'UNKNOWN'];
 export const STATE_LABEL = { GREEN: 'Green', YELLOW: 'Yellow', RED: 'Red', UNKNOWN: 'Unknown' };
@@ -22,8 +23,8 @@ export const MODALITY_NAMES = {
   trapped_ion: 'Trapped ion',
   simulator: 'Simulator',
 };
-export const providerName = (id) => PROVIDER_NAMES[id] || id || 'Unknown';
-export const modalityName = (m) => MODALITY_NAMES[m] || m || 'Unknown';
+export const providerName = (id, fallbackName) => formatProviderLabel(id, fallbackName || PROVIDER_NAMES[id]);
+export const modalityName = (m) => formatModalityLabel(m);
 
 export function ageMinutes(ts) {
   const d = parseDate(ts);

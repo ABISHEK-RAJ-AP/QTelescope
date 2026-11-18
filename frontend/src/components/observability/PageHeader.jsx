@@ -1,6 +1,7 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
 import { InfoTooltip } from './InfoTooltip.jsx';
+import { BackendRegistryIdChip } from '../../pages/backendCommon.jsx';
 
 function splitBreadcrumbs(breadcrumbs, title) {
   const interactive = breadcrumbs.filter((c) => c.href || c.onClick);
@@ -49,7 +50,8 @@ export function PageHeader({
         <div className="page-header__main">
           {kicker && <p className="page-header__kicker">{kicker}</p>}
           <h1 className="page-header__title">
-            {title}
+            <span className="page-header__title-text">{title}</span>
+            {backendId ? <BackendRegistryIdChip backendId={backendId} className="page-header__id-chip" /> : null}
             {description ? (
               <InfoTooltip label={`About ${title}`}>
                 {description}
@@ -57,16 +59,11 @@ export function PageHeader({
             ) : null}
           </h1>
           {description && !embedded ? <p className="page-header__desc">{description}</p> : null}
-          <div className="page-header__context">
-            {backendId && (
-              <span className="page-header__backend">
-                Backend: <code>{backendId}</code>
-              </span>
-            )}
-            {lastUpdated && (
+          {lastUpdated ? (
+            <div className="page-header__context">
               <span className="page-header__updated">Updated {lastUpdated}</span>
-            )}
-          </div>
+            </div>
+          ) : null}
         </div>
         <div className="page-header__actions page-header__actions--center">
           {help}

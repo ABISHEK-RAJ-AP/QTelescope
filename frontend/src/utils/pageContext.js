@@ -1,5 +1,7 @@
 /** Route-aware page titles and breadcrumbs for the app shell (Sprint 1). */
 
+import { formatBackendTitle, formatEnumLabel } from '../lib/displayLabels.js';
+
 const TELEMETRY_LABELS = {
   live: 'Live telemetry',
   calibration: 'Calibration status',
@@ -101,10 +103,11 @@ export function resolvePageContext(state) {
       breadcrumbs.push({ label: 'Backends' });
       if (sub === 'details' && selectedBackendId) {
         breadcrumbs.push({ label: BACKEND_LABELS.inventory });
+        const displayName = formatBackendTitle({ backend_id: selectedBackendId });
         const ws = backendWorkspaceTab && backendWorkspaceTab !== 'overview'
-          ? ` · ${backendWorkspaceTab}`
+          ? ` · ${formatEnumLabel(backendWorkspaceTab)}`
           : '';
-        title = `${selectedBackendId.replace(/_/g, ' ')}${ws}`;
+        title = `${displayName}${ws}`;
         description = 'Overview, qubits, calibration, connectivity, execution, and alerts for this backend.';
       } else {
         title = BACKEND_LABELS.inventory;

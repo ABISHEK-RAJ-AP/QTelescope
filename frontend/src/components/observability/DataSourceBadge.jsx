@@ -54,9 +54,9 @@ const META = {
   },
 };
 
-export function DataSourceBadge({ kind = 'unknown', showHelp = true, className = '' }) {
+export function DataSourceBadge({ kind = 'unknown', showHelp = true, className = '', showDemo = false }) {
   const key = String(kind || 'unknown').toLowerCase().replace(/-/g, '_');
-  if (key === 'simulated' || key === 'mock_catalog') return null;
+  if (!showDemo && (key === 'simulated' || key === 'mock_catalog')) return null;
   const meta = META[key] || META.unknown;
   return (
     <span className={`ds-badge ${meta.className} ${className}`}>

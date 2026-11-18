@@ -9,6 +9,10 @@ describe('formatBackendTitle', () => {
   it('humanizes id when name missing', () => {
     expect(formatBackendTitle({ backend_id: 'ibm_brisbane' })).toBe('IBM Brisbane');
   });
+
+  it('prefers display name over snake id', () => {
+    expect(formatBackendTitle({ backend_id: 'rigetti_cepheus_1_108q', backend_name: 'Cepheus-1-108Q' })).toBe('Cepheus-1-108Q');
+  });
 });
 
 describe('formatProviderLabel', () => {

@@ -81,7 +81,8 @@
 }
 
 .page-header__title {
-  display: inline-flex;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   font-size: var(--font-size-page-title);
@@ -90,6 +91,17 @@
   margin: 0;
   letter-spacing: -0.3px;
   color: var(--text-primary);
+  min-width: 0;
+  row-gap: 6px;
+}
+
+.page-header__title-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.page-header__id-chip {
+  flex-shrink: 0;
 }
 
 .page-header__desc {

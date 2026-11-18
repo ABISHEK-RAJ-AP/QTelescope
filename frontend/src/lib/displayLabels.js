@@ -16,15 +16,24 @@ function titleCaseWord(w) {
 /**
  * @param {{ backend_id?: string, backend_name?: string, name?: string }} row
  */
-export function formatBackendTitle(row = {}) {
-  const id = String(row.backend_id || '').trim();
-  const apiName = String(row.backend_name || row.name || '').trim();
-  if (apiName && apiName !== id && !apiName.includes(id)) return apiName;
-  if (!id) return apiName || 'Unknown backend';
+function humanizeBackendId(id) {
   const parts = id.split('_').filter(Boolean);
   const provider = PROVIDER_PREFIX[parts[0]?.toLowerCase()] || titleCaseWord(parts[0]);
   const tail = parts.slice(1).map(titleCaseWord).join(' ');
   return [provider, tail].filter(Boolean).join(' ') || id;
+}
+
+export function formatBackendTitle(row = {}) {
+  const id = String(row.backend_id || '').trim();
+  const apiName = String(row.backend_name || row.name || '').trim();
+  if (apiName && apiName !== id) {
+    const apiNorm = apiName.replace(/[\s_-]+/g, '').toLowerCase();
+    const idNorm = id.replace(/_/g, '').toLowerCase();
+    if (!apiNorm.includes(idNorm) && idNorm !== apiNorm) return apiName;
+    if (!apiName.includes('_')) return apiName;
+  }
+  if (!id) return apiName || 'Unknown backend';
+  return humanizeBackendId(id);
 }
 
 /** Rule / alert_type → sentence label */
@@ -69,4 +78,57 @@ export function formatRuleLabel(alertType) {
     .split('_')
     .map((w) => (w.length <= 3 ? w.toUpperCase() : titleCaseWord(w)))
     .join(' ');
+}
+
+const OPERATIONAL_STATUS = {
+  ONLINE: 'Reachable',
+  OFFLINE: 'Offline',
+  DEGRADED: 'Degraded',
+  MAINTENANCE: 'Maintenance',
+  UNKNOWN: 'Not reported',
+};
+
+const OPERATIONAL_STATUS_TITLE = {
+  ONLINE: 'Registered in catalog; last poll did not report offline',
+  OFFLINE: 'Catalog reports this backend offline',
+  DEGRADED: 'Catalog reports reduced availability',
+  MAINTENANCE: 'Scheduled or vendor maintenance window',
+  UNKNOWN: 'No operational status in registry',
+};
+
+/** SCREAMING_SNAKE or snake_case API enums → operator phrase */
+export function formatEnumLabel(value) {
+  if (value == null || value === '') return '—';
+  const raw = String(value).trim();
+  if (!raw.includes('_') && raw === raw.toUpperCase() && raw.length <= 24) {
+    return OPERATIONAL_STATUS[raw] || titleCaseWord(raw.toLowerCase());
+  }
+  return raw
+    .split('_')
+    .filter(Boolean)
+    .map((w) => (w.length <= 3 ? w.toUpperCase() : titleCaseWord(w)))
+    .join(' ');
+}
+
+export function formatOperationalStatus(status) {
+  const key = String(status || 'UNKNOWN').toUpperCase();
+  return {
+    key,
+    label: OPERATIONAL_STATUS[key] || formatEnumLabel(key),
+    title: OPERATIONAL_STATUS_TITLE[key] || 'Operational status from backend registry',
+  };
+}
+
+const LINEAGE_FILTER_LABEL = {
+  live: 'Live ingest',
+  simulated: 'Demo catalog',
+  mock_catalog: 'Demo catalog',
+  stub: 'Catalog stub',
+  unknown: 'Source pending',
+  replay: 'Replay',
+};
+
+export function formatLineageFilterLabel(lineage) {
+  const k = String(lineage || 'unknown').toLowerCase();
+  return LINEAGE_FILTER_LABEL[k] || formatEnumLabel(k);
 }

@@ -16,7 +16,8 @@ import { PageRelatedLink, PageRelatedNav } from '../components/observability/Pag
 import { baseTooltip, getChartTheme, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { BACKEND_WORKSPACE_TABS } from '../lib/investigationLinks.js';
 import { STATES, STATE_GLYPH, STATE_LABEL, ageMinutes, formatAge, isStale, lineageOf, median, modalityName, num, providerName, scopeSearch, useProviderLineage } from './backendUtils.js';
-import { LineageTag, Sparkline, StateBar, StatusText } from './backendCommon.jsx';
+import { BackendRegistryIdChip, BackendStatusStrip, Sparkline, StateBar } from './backendCommon.jsx';
+import { formatEnumLabel } from '../lib/displayLabels.js';
 import { ListPager } from '../components/observability/ListPager.jsx';
 import { unableToLoad, unableToLoadLabel } from '../constants/messages.js';
 import { formatBackendTitle } from '../lib/displayLabels.js';
@@ -25,7 +26,7 @@ import './BackendDetails.css';
 const TAB_LABEL = { overview: 'Overview', qubits: 'Qubits', calibration: 'Calibration', connectivity: 'Connectivity', execution: 'Execution' };
 const PAGE_SIZE = 25;
 const JOB_PAGE_SIZE = 15;
-const label = (k) => String(k).replace(/_/g, ' ');
+const label = (k) => formatEnumLabel(k);
 
 /** Durations arrive in µs; trapped-ion T1 is seconds-scale. */
 const fmtDur = (us) => {
@@ -243,28 +244,32 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
       <header className="card bd-head">
         <div className="bd-head__top">
           <div className="bd-head__id">
-            <h2 className="bd-title">
-              {onBack && (
+            {onBack ? (
+              <nav className="bd-back" aria-label="Back to inventory">
                 <PageRelatedLink onClick={onBack}>
                   <ArrowLeft size={14} aria-hidden style={{ marginInlineEnd: 4, verticalAlign: 'middle' }} />
-                  Inventory
+                  Back to inventory
                 </PageRelatedLink>
-              )}
-              <span>{formatBackendTitle(backend)}</span>
-            </h2>
+              </nav>
+            ) : null}
+            <h2 className="sr-only">{formatBackendTitle(backend)}</h2>
             <p className="bd-meta">
               {providerName(backend.provider_id)} · {modalityName(backend.qpu_modality)} · {backend.qubit_count} qubits
               {backend.quantum_volume ? ` · QV ${backend.quantum_volume}` : ''}{backend.clops ? ` · CLOPS ${backend.clops}` : ''}
+              <BackendRegistryIdChip backendId={backend.backend_id} className="bd-meta__id" />
             </p>
-            <div className="bd-badges">
-              <StatusText status={backend.operational_status} />
-              {hv && (
-                <span className="bd-health" data-s={hv.router} title={`Advisory router: ${hv.recommended_action || 'n/a'}`}>
-                  Health {STATE_LABEL[hv.router] || hv.router}
-                </span>
-              )}
-              <LineageTag lineage={src} compact />
-            </div>
+            <BackendStatusStrip
+              operationalStatus={backend.operational_status}
+              routingState={hv?.router}
+              routingAction={hv?.recommended_action}
+              lineage={src}
+              lineageLoaded={lineage.loaded}
+            />
+            {hv?.counts?.UNKNOWN > 0 ? (
+              <p className="bd-provenance-hint" role="status">
+                {hv.counts.UNKNOWN} of {backend.qubit_count ?? hv.qubit_count ?? '—'} qubits lack T1/T2 in stored telemetry — counted as Unknown, not failed hardware.
+              </p>
+            ) : null}
           </div>
           <PageRelatedNav className="bd-actions" aria-label="Related views">
             <Link className="bd-actions__link" to={link('/app/investigate/timeline')}>Ops timeline</Link>
@@ -278,14 +283,14 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
             <dd className={stale ? 'bd-facts--warn' : undefined}>{stale ? 'Stale' : 'Fresh'} · {formatAge(age)} ago</dd>
           </div>
           {calibration?.freshness_status ? (
-            <div><dt>Calibration</dt><dd>{calibration.freshness_status}</dd></div>
+            <div><dt>Calibration</dt><dd>{formatEnumLabel(calibration.freshness_status)}</dd></div>
           ) : null}
           {d.ingestionQuality ? (
             <div>
               <dt>Ingestion</dt>
               <dd>
                 <button type="button" className="bd-facts__link" onClick={() => nav('/app/admin/collectors')}>
-                  {d.ingestionQuality.quality_outcome || d.ingestionQuality.status}
+                  {formatEnumLabel(d.ingestionQuality.quality_outcome || d.ingestionQuality.status)}
                   {d.ingestionQuality.completeness_pct != null ? ` · ${d.ingestionQuality.completeness_pct}%` : ''}
                 </button>
               </dd>
@@ -342,7 +347,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
               <div className="bk-kpi">
                 <div className="bk-kpi__label">Calibration age</div>
                 <div className="bk-kpi__value">{calAgeH != null ? `${num(calAgeH, 1)} h` : '—'}</div>
-                <div className="bk-kpi__sub">{calibration?.freshness_status || (secErr('calibration') ? unableToLoadLabel('calibration') : 'No calibration record')}</div>
+                <div className="bk-kpi__sub">{calibration?.freshness_status ? formatEnumLabel(calibration.freshness_status) : (secErr('calibration') ? unableToLoadLabel('calibration') : 'No calibration record')}</div>
               </div>
               <div className={`bk-kpi${activeAlerts.length ? ' bk-kpi--warn' : ''}`}>
                 <div className="bk-kpi__label">Active alerts</div>
@@ -580,7 +585,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
             <section className="bk-kpis" aria-label="Queue">
               <div className="bk-kpi bd-spark-kpi"><div className="bk-kpi__label">Pending jobs</div><div className="bk-kpi__value">{pending ?? '—'}</div><Sparkline values={pendingSeries} label="Pending jobs" /></div>
               <div className="bk-kpi bd-spark-kpi"><div className="bk-kpi__label">Est. wait</div><div className="bk-kpi__value">{wait != null ? `${Math.round(wait)} s` : '—'}</div><Sparkline values={waitSeries} label="Estimated wait" /></div>
-              <div className="bk-kpi"><div className="bk-kpi__label">Queue condition</div><div className="bk-kpi__value" style={{ fontSize: 18 }}>{queue?.queue_condition || (secErr('queue') ? 'Unavailable' : '—')}</div><div className="bk-kpi__sub">Trend {queue?.trend || '—'}</div></div>
+              <div className="bk-kpi"><div className="bk-kpi__label">Queue condition</div><div className="bk-kpi__value" style={{ fontSize: 18 }}>{queue?.queue_condition ? formatEnumLabel(queue.queue_condition) : (secErr('queue') ? 'Unavailable' : '—')}</div><div className="bk-kpi__sub">Trend {queue?.trend ? formatEnumLabel(queue.trend) : '—'}</div></div>
               <div className="bk-kpi"><div className="bk-kpi__label">Recent jobs</div><div className="bk-kpi__value">{jobs.length}</div><div className="bk-kpi__sub">{Object.entries(jobCounts).map(([k, n]) => `${n} ${k.toLowerCase()}`).join(' · ') || 'None'}</div></div>
             </section>
             <section className="card" style={{ padding: 0 }}>

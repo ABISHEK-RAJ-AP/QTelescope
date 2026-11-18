@@ -10,13 +10,13 @@ import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { STATES, ageMinutes, formatAge, isStale, lineageOf, modalityName, providerName, useProviderLineage, STALE_MIN, KNOWN_PROVIDER_IDS } from './backendUtils.js';
-import { StateBar, StatusText } from './backendCommon.jsx';
+import { BackendRegistryIdChip, StateBar, StatusText } from './backendCommon.jsx';
 import { AddBackendWizard } from './AddBackendWizard.jsx';
 import { BackendPreviewDrawer } from '../components/backends/BackendPreviewDrawer.jsx';
 import { MetricCard } from '../components/ds/MetricCard.jsx';
 import { FilterBar } from '../components/ds/FilterBar.jsx';
 import { unableToLoad } from '../constants/messages.js';
-import { formatBackendTitle } from '../lib/displayLabels.js';
+import { formatBackendTitle, formatLineageFilterLabel, formatOperationalStatus } from '../lib/displayLabels.js';
 import './BackendInventory.css';
 import './fleetShared.css';
 
@@ -124,6 +124,8 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
       modality: modalityName(b.qpu_modality),
       qubits: b.qubit_count,
       counts: hv?.counts || null,
+      router: hv?.router,
+      routingAction: hv?.recommended_action,
       red: hv?.counts?.RED || 0,
       health: hv?.counts ? (hv.counts.RED || 0) * 1e6 + (hv.counts.YELLOW || 0) : null,
       status: b.operational_status || 'UNKNOWN',
@@ -186,10 +188,10 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
     switch (key) {
       case 'name':
         return (
-          <>
+          <span className="bk-name-cell">
             <button type="button" className="bk-link" onClick={(e) => { e.stopPropagation(); openPreview(r.id); }} aria-label={`Preview ${r.name}`}>{r.name}</button>
-            <span className="bk-id" title="Technical id">{r.id}</span>
-          </>
+            <BackendRegistryIdChip backendId={r.id} className="bk-name-cell__id" />
+          </span>
         );
       case 'owner':
         return (
@@ -237,7 +239,11 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
       <span>{label}</span>
       <select className="input-control" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })}>
         <option value="ALL">All</option>
-        {options.map((o) => <option key={o} value={o}>{k === 'source' ? (o === 'live' ? 'Live vendor' : o === 'simulated' ? 'Simulated' : 'Unknown') : o}</option>)}
+        {options.map((o) => (
+          <option key={o} value={o}>
+            {k === 'source' ? formatLineageFilterLabel(o) : k === 'status' ? formatOperationalStatus(o).label : o}
+          </option>
+        ))}
       </select>
     </label>
   );
@@ -330,10 +336,12 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
               >
                 <button type="button" className="bk-card__hit" onClick={() => openPreview(r.id)} aria-label={`Preview ${r.name}`}>
                   <header className="bk-card__head">
-                    <div className="bk-card__title">{r.name}</div>
+                    <div className="bk-card__title-row">
+                      <div className="bk-card__title">{r.name}</div>
+                      <BackendRegistryIdChip backendId={r.id} className="bk-card__id-chip" />
+                    </div>
                     <StatusText status={r.status} />
                   </header>
-                  <code className="bk-card__id">{r.id}</code>
                   <div className="bk-card__tags">
                     <span className="bk-tag">{r.modality}</span>
                     <span className="bk-tag">{r.provider}</span>
