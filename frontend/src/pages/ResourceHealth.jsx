@@ -18,7 +18,7 @@ import { useAppScope } from '../hooks/useAppScope.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { formatBackendTitle, formatModalityLabel } from '../lib/displayLabels.js';
 import { STATE_LABEL } from './backendUtils.js';
-import { BackendRegistryIdChip } from './backendCommon.jsx';
+import { BackendRegistryIdChip, TelemetryCoverageCallout } from './backendCommon.jsx';
 import './ResourceHealth.css';
 
 const STATES = ['GREEN', 'YELLOW', 'RED', 'UNKNOWN'];
@@ -330,7 +330,7 @@ export const ResourceHealth = () => {
             ))}
           </div>
           <div style={{ marginTop: 14 }}><StateBar counts={fleet} total={fleet.total} /></div>
-          {fleet.UNKNOWN > 0 && <p className="page-hint" style={{ margin: '8px 0 0' }}>{fleet.UNKNOWN} qubit(s) UNKNOWN: missing inputs, not treated as healthy.</p>}
+          <TelemetryCoverageCallout unknownCount={fleet.UNKNOWN} totalCount={fleet.total} />
           <div style={{ marginTop: 14, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <button type="button" className="btn btn-secondary" onClick={applyRouter} disabled={busy || fleet.RED === 0}>
               {busy ? 'Applying…' : `Advisory-quarantine all RED (${fleet.RED})`}

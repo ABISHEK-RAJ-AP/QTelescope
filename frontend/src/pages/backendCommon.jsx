@@ -84,6 +84,28 @@ export function StatusText({ status, showKey = false }) {
 }
 
 /** Reachability vs data source vs routing — three different signals, one row. */
+/** ISA / partial-ingest honesty — full-width callout, not crammed under status strip. */
+export function TelemetryCoverageCallout({ unknownCount, totalCount }) {
+  const unknown = Number(unknownCount) || 0;
+  if (unknown <= 0) return null;
+  const total = totalCount ?? '—';
+  return (
+    <div className="bk-coverage-callout" role="status">
+      <p className="bk-coverage-callout__title">Partial coherence coverage</p>
+      <p className="bk-coverage-callout__body">
+        <span className="bk-coverage-callout__nums" aria-hidden>
+          {unknown}
+          <span className="bk-coverage-callout__sep">/</span>
+          {total}
+        </span>
+        <span className="bk-coverage-callout__desc">
+          qubits lack T1/T2 in stored telemetry. Scored as <strong>Unknown</strong> — not a hardware failure.
+        </span>
+      </p>
+    </div>
+  );
+}
+
 export function BackendStatusStrip({ operationalStatus, routingState, routingAction, lineage, lineageLoaded = true }) {
   const routeTitle = routingAction
     ? `Advisory routing — ${formatEnumLabel(routingAction)} (rule engine; not vendor health)`

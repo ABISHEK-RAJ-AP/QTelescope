@@ -62,12 +62,8 @@
   align-items: center;
 }
 
-.bd-provenance-hint {
-  margin: 8px 0 0;
-  font-size: var(--font-size-helper, 0.9375rem);
-  line-height: 1.45;
-  color: var(--text-secondary);
-  max-width: 52rem;
+.bd-head .bk-coverage-callout {
+  width: 100%;
 }
 .bd-actions {
   display: grid;

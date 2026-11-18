@@ -33,6 +33,24 @@ Live harness (optional, needs credentials):
 python -m app.providers.live_harness --provider rigetti_quantum
 ```
 
+## Production showcase — what to buy (honest economics)
+
+You do not buy a QPU for a monitoring demo; you buy **cloud access + API keys**. Ranked for Q-TeleScope “show everything” (queue, jobs, calibration-shaped telemetry):
+
+| Option | Typical cost | What goes live in Q-TeleScope | Gaps |
+|--------|----------------|------------------------------|------|
+| **Rigetti QCS public ISA** | **$0** | Topology, partial T1/T2, coupling (hybrid VM default) | No queue/jobs on public OpenAPI; some qubits lack T1/T2 → UI **Unknown** |
+| **IBM Quantum (Open / free tier)** | **$0–low** with token | Backend list, runtime jobs, calibration jobs when token valid | Rate limits; not your hardware |
+| **IonQ Cloud API** | **Paid plans** from ~hundreds/mo | Backend metadata, jobs when keyed | Needs `IONQ_API_KEY`; no on-prem box |
+| **AWS Braket** | **Pay per task** | Multi-vendor jobs + metadata via AWS | AWS account + IAM; adapter wiring beyond demo stubs |
+| **On-prem simulator (C-DAC PARAM)** | **Lab cost** | File/MQTT ingest you control | Not vendor cloud “realtime” unless you drive the feed |
+
+**Recommended ladder for C-DAC demo → production story:**
+
+1. **Today:** hybrid demo — **Rigetti live ISA** + simulated IBM/IonQ/C-DAC (no spend).
+2. **Next step for queues/jobs:** add **IBM Quantum token** (`IBM_QUANTUM_TOKEN`) and set `DEMO_LIVE_PROVIDERS=rigetti_quantum,ibm_quantum` (IBM still hits cloud; others mock).
+3. **Paid “full vendor console” feel:** IonQ or Braket key + adapter completion — budget cloud quota, not capital hardware.
+
 ## UI copy rules
 
 1. **Routing** — advisory router state (RED/YELLOW/GREEN/UNKNOWN).
