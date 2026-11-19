@@ -48,8 +48,10 @@ export const COPY = {
     registerSubtitle: 'Select organisation type, enter your details, then verify email.',
     registerTypeAside:
       'Choose the category that matches your organisation. Government and university paths include ministry, department, branch, and facility masters.',
-    registerProfileAside:
-      'Complete the organisation fields for your category, then your account credentials. We will email a one-time verification code.',
+    registerOrgStepSubtitle: 'Fill organisation masters for your selected type.',
+    registerAccountStepSubtitle: 'Username, email, and password for sign-in.',
+    registerOrgAside: 'Select ministry, department, branch, and facility for your category.',
+    registerAccountAside: 'Create your sign-in credentials. We will send a verification code to your email.',
     registerOtpAside:
       'Enter the six-digit code from your email to finish creating your account.',
     registerClosed: 'Registration is managed by your organisation administrator.',

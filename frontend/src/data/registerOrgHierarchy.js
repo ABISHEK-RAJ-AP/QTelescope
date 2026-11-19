@@ -490,8 +490,9 @@ export function buildOrgString(typeId, values) {
   const segments = visibleOrgFields(typeId, values)
     .map((f) => (values[f.id] || '').trim())
     .filter(Boolean);
-  if (!segments.length) return '';
-  return `${tile.label} · ${segments.join(' · ')}`;
+  const deduped = segments.filter((s, i) => i === 0 || s.localeCompare(segments[i - 1], undefined, { sensitivity: 'accent' }) !== 0);
+  if (!deduped.length) return '';
+  return `${tile.label} · ${deduped.join(' · ')}`;
 }
 
 export function validateOrgDetail(typeId, values) {

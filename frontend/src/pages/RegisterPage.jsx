@@ -22,6 +22,7 @@ import {
   getFieldsForOrgType,
 } from '@/data/registerOrgHierarchy'
 import { RegisterOrgFields } from '@/components/auth/RegisterOrgFields'
+import { RegisterStepTrail } from '@/components/auth/RegisterStepTrail'
 import { AuthFridgeVisual } from '@/components/marketing/AuthFridgeVisual'
 import { Field, fieldClass } from '@/components/AuthShell'
 import { CaptchaField } from '@/components/CaptchaField'
@@ -88,7 +89,7 @@ function OtpInput({ value, onChange, disabled, invalid }) {
 
 export function RegisterPage() {
   const navigate = useNavigate()
-  const [step, setStep] = useState('profile')
+  const [flowStep, setFlowStep] = useState('type')
   const [selectedTypeId, setSelectedTypeId] = useState('')
   const [orgDetail, setOrgDetail] = useState({})
   const [username, setUsername] = useState('')
@@ -148,13 +149,20 @@ export function RegisterPage() {
     setError('');
     setSelectedTypeId(typeId);
     setOrgDetail({});
-    setFieldErrors((f) => ({ ...f, org: undefined }));
+    setFieldErrors({});
+    setFlowStep('org');
   };
 
-  const clearType = () => {
+  const goToTypeStep = () => {
     setSelectedTypeId('');
     setOrgDetail({});
-    setStep('profile');
+    setFlowStep('type');
+    setError('');
+    setFieldErrors({});
+  };
+
+  const goToOrgStep = () => {
+    setFlowStep('org');
     setError('');
     setFieldErrors({});
   };
@@ -185,34 +193,51 @@ export function RegisterPage() {
     return false;
   };
 
-  const validateDetails = () => {
-    const next = {}
-    if (!selectedTypeId) next.org = 'Choose an organisation type.'
+  const validateOrgStep = () => {
+    const next = {};
+    if (!selectedTypeId) next.org = 'Choose an organisation type.';
     const orgFieldErrors = selectedTypeId ? validateOrgDetail(selectedTypeId, orgDetail) : {};
     Object.assign(next, orgFieldErrors);
     if (orgFieldErrors._org) next.org = orgFieldErrors._org;
     delete next._org;
     if (orgValue && registeredSet.has(normOrg(orgValue))) {
-      next.org = 'This organisation is already registered.'
+      next.org = 'This organisation is already registered.';
     }
-    const u = username.trim()
-    if (!u || u.length < 3) next.username = 'At least 3 characters.'
-    if (!email.trim()) next.email = 'Required.'
-    else if (!EMAIL_RE.test(email.trim())) next.email = 'Enter a valid email.'
-    if (!password || password.length < 6) next.password = 'At least 6 characters.'
-    if (password !== confirmPassword) next.confirmPassword = 'Passwords must match.'
-    if (!captchaCode.trim()) next.captcha = 'Enter the image characters.'
-    setFieldErrors(next)
-    return Object.keys(next).length === 0
-  }
+    setFieldErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const validateAccountStep = () => {
+    const next = {};
+    const u = username.trim();
+    if (!u || u.length < 3) next.username = 'At least 3 characters.';
+    if (!email.trim()) next.email = 'Required.';
+    else if (!EMAIL_RE.test(email.trim())) next.email = 'Enter a valid email.';
+    if (!password || password.length < 6) next.password = 'At least 6 characters.';
+    if (password !== confirmPassword) next.confirmPassword = 'Passwords must match.';
+    if (!captchaCode.trim()) next.captcha = 'Enter the image characters.';
+    if (!orgValue) next.org = 'Complete organisation details on the previous step.';
+    setFieldErrors(next);
+    return Object.keys(next).length === 0;
+  };
+
+  const handleOrgContinue = (e) => {
+    e.preventDefault();
+    setError('');
+    if (!validateOrgStep()) {
+      setError('Check the highlighted organisation fields.');
+      return;
+    }
+    setFlowStep('account');
+  };
 
   const handleSendOtp = async (e) => {
     e.preventDefault()
     setError('')
     setSuccess('')
-    if (!validateDetails()) {
-      setError('Check the highlighted fields.')
-      return
+    if (!validateAccountStep()) {
+      setError('Check the highlighted fields.');
+      return;
     }
 
     setBusy(true)
@@ -230,7 +255,7 @@ export function RegisterPage() {
       if (res?.status !== 'SUCCESS') throw new Error(res?.message || 'Could not send code.')
       setOtpSessionId(res.otp_session_id || '')
       setOtpDelivery(res.delivery || 'email')
-      setStep('otp')
+      setFlowStep('otp')
       setOtpCode('')
       if (res.delivery === 'screen' && res.screen_otp) {
         notifyInfo(`Verification code: ${res.screen_otp}`, { toastId: 'register-otp-demo', autoClose: 45000 })
@@ -275,10 +300,24 @@ export function RegisterPage() {
     </>
   );
 
+  const panelHeadCopy = {
+    type: { title: 'Create account', subtitle: COPY.auth.registerSubtitle },
+    org: { title: 'Organisation details', subtitle: COPY.auth.registerOrgStepSubtitle },
+    account: { title: 'Account details', subtitle: COPY.auth.registerAccountStepSubtitle },
+    otp: { title: 'Verify email', subtitle: COPY.auth.registerOtpSubtitle },
+  }[flowStep] || { title: 'Create account', subtitle: COPY.auth.registerSubtitle };
+
+  const asideText = {
+    type: COPY.auth.registerTypeAside,
+    org: COPY.auth.registerOrgAside,
+    account: COPY.auth.registerAccountAside,
+    otp: COPY.auth.registerOtpAside,
+  }[flowStep];
+
   const panelHead = (
     <header className="reg-cert-head">
-      <h1>{step === 'otp' ? 'Verify email' : 'Create account'}</h1>
-      <p>{step === 'otp' ? COPY.auth.registerOtpSubtitle : COPY.auth.registerSubtitle}</p>
+      <h1>{panelHeadCopy.title}</h1>
+      <p>{panelHeadCopy.subtitle}</p>
     </header>
   );
 
@@ -305,37 +344,27 @@ export function RegisterPage() {
       ) : null}
 
       {panelHead}
+      <RegisterStepTrail current={flowStep} requiresAdminApproval={requiresAdminApproval} />
 
       {success ? (
         <p className="auth-inline-alert auth-inline-alert--success" role="status">{success}</p>
       ) : (
-        <div className={`reg-stage${selectedTypeId ? ' reg-stage--detail' : ''}`}>
+        <div className={`reg-stage reg-stage--flow reg-stage--step-${flowStep}${flowStep !== 'type' ? ' reg-stage--detail' : ''}`}>
           <div className="reg-stage__brand">
             <img src={cdacLogo} alt="" className="reg-stage__logo" width={120} height={40} />
             <p className="reg-stage__wordmark">Q-TeleScope</p>
             <div className="reg-stage__fridge">
               <AuthFridgeVisual />
             </div>
-            <aside className="reg-stage__aside" aria-label="Registration guidance">
-              {step === 'otp' ? (
-                <p className="reg-stage__aside-text">{COPY.auth.registerOtpAside}</p>
-              ) : selectedTypeId ? (
-                <>
-                  <p className="reg-stage__aside-text">{COPY.auth.registerProfileAside}</p>
-                  {requiresAdminApproval ? (
-                    <p className="reg-stage__aside-note" role="note">
-                      {COPY.auth.registerApprovalNote}
-                    </p>
-                  ) : null}
-                </>
-              ) : (
-                <p className="reg-stage__aside-text">{COPY.auth.registerTypeAside}</p>
-              )}
-            </aside>
+            {asideText ? (
+              <aside className="reg-stage__aside" aria-label="Registration guidance">
+                <p className="reg-stage__aside-text">{asideText}</p>
+              </aside>
+            ) : null}
           </div>
 
-          {!selectedTypeId ? (
-            <div className="reg-stage__types">
+          {flowStep === 'type' ? (
+            <div className="reg-stage__types reg-stage__types--hero">
               <p className="reg-stage__label">Organisation type</p>
               <div className="reg-type-grid reg-type-grid--tiles" role="listbox" aria-label="Organisation type">
                 {ORG_TYPES.map((type) => (
@@ -358,59 +387,17 @@ export function RegisterPage() {
             </div>
           ) : (
           <div className="reg-stage__form">
-            {selectedType ? (
-              <div className="reg-form-type-bar">
-                <div className="reg-form-type-bar__meta">
-                  <span className="reg-form-type-bar__label">Organisation</span>
-                  <span className="reg-form-type-bar__value">{orgTypeLabel}</span>
-                  {orgValue ? (
-                    <span className="reg-form-type-bar__org-preview" title={orgValue}>{orgValue}</span>
-                  ) : null}
+            {flowStep === 'org' ? (
+              <form onSubmit={handleOrgContinue} className="reg-form-stack" noValidate>
+                <div className="reg-form-type-bar">
+                  <div className="reg-form-type-bar__meta">
+                    <span className="reg-form-type-bar__label">Type</span>
+                    <span className="reg-form-type-bar__value">{orgTypeLabel}</span>
+                  </div>
+                  <button type="button" className="reg-form-type-bar__back" onClick={goToTypeStep} disabled={busy}>
+                    Change type
+                  </button>
                 </div>
-                <button type="button" className="reg-form-type-bar__back" onClick={clearType} disabled={busy}>
-                  Change
-                </button>
-              </div>
-            ) : null}
-            {step === 'otp' ? (
-              <form onSubmit={handleConfirmOtp} className="reg-form-stack reg-otp-step" noValidate>
-                <div className="auth-otp-panel reg-otp-panel">
-                  <p className="auth-otp-panel__lead">
-                    {otpDelivery === 'screen'
-                      ? COPY.auth.registerOtpHintScreen
-                      : (
-                        <>
-                          {COPY.auth.registerOtpHintEmail}
-                          {' '}
-                          <span className="reg-otp-panel__email">{email.trim()}</span>
-                        </>
-                      )}
-                  </p>
-                  <Field label="Verification code" forId="reg-otp" hint={fieldErrors.otp}>
-                    <OtpInput
-                      value={otpCode}
-                      onChange={(v) => { setOtpCode(v); setFieldErrors((f) => ({ ...f, otp: undefined })); }}
-                      disabled={busy}
-                      invalid={Boolean(fieldErrors.otp)}
-                    />
-                  </Field>
-                </div>
-                {error ? <p className="auth-field-error" role="alert">{error}</p> : null}
-                <Button type="submit" className="auth-cta reg-form-submit" disabled={busy}>
-                  {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-                  Confirm code
-                </Button>
-                <button
-                  type="button"
-                  className="reg-otp-back"
-                  disabled={busy}
-                  onClick={() => { setStep('profile'); setError(''); }}
-                >
-                  Back to profile
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleSendOtp} className="reg-form-stack reg-form-stack--profile" noValidate>
                 <RegisterOrgFields
                   typeId={selectedTypeId}
                   values={orgDetail}
@@ -419,7 +406,26 @@ export function RegisterPage() {
                   onChange={setOrgField}
                 />
                 {fieldErrors.org ? <p className="auth-field-error">{fieldErrors.org}</p> : null}
+                {error ? <p className="auth-field-error" role="alert">{error}</p> : null}
+                <div className="reg-flow-nav">
+                  <button type="button" className="reg-flow-nav__back" onClick={goToTypeStep} disabled={busy}>
+                    Back
+                  </button>
+                  <Button type="submit" className="auth-cta reg-flow-nav__next" disabled={busy}>
+                    Continue
+                  </Button>
+                </div>
+              </form>
+            ) : null}
 
+            {flowStep === 'account' ? (
+              <form onSubmit={handleSendOtp} className="reg-form-stack reg-form-stack--profile" noValidate>
+                {orgValue ? (
+                  <p className="reg-org-crumb" title={orgValue}>
+                    <span className="reg-org-crumb__label">Organisation</span>
+                    {orgValue}
+                  </p>
+                ) : null}
                 <div className="reg-form-row reg-form-row--split">
                   <Field label="Username" forId="reg-username" hint={fieldErrors.username}>
                     <input
@@ -492,13 +498,53 @@ export function RegisterPage() {
                 />
                 {fieldErrors.captcha ? <p className="auth-field-error">{fieldErrors.captcha}</p> : null}
                 {error ? <p className="auth-field-error qt-shake" role="alert">{error}</p> : null}
-
-                <Button type="submit" className="auth-cta reg-form-submit" disabled={busy || !orgValue}>
-                  {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-                  Send verification code
-                </Button>
+                <div className="reg-flow-nav">
+                  <button type="button" className="reg-flow-nav__back" onClick={goToOrgStep} disabled={busy}>
+                    Back
+                  </button>
+                  <Button type="submit" className="auth-cta reg-flow-nav__next" disabled={busy}>
+                    {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+                    Send verification code
+                  </Button>
+                </div>
               </form>
-            )}
+            ) : null}
+
+            {flowStep === 'otp' ? (
+              <form onSubmit={handleConfirmOtp} className="reg-form-stack reg-otp-step" noValidate>
+                <div className="auth-otp-panel reg-otp-panel">
+                  <p className="auth-otp-panel__lead">
+                    {otpDelivery === 'screen'
+                      ? COPY.auth.registerOtpHintScreen
+                      : (
+                        <>
+                          {COPY.auth.registerOtpHintEmail}
+                          {' '}
+                          <span className="reg-otp-panel__email">{email.trim()}</span>
+                        </>
+                      )}
+                  </p>
+                  <Field label="Verification code" forId="reg-otp" hint={fieldErrors.otp}>
+                    <OtpInput
+                      value={otpCode}
+                      onChange={(v) => { setOtpCode(v); setFieldErrors((f) => ({ ...f, otp: undefined })); }}
+                      disabled={busy}
+                      invalid={Boolean(fieldErrors.otp)}
+                    />
+                  </Field>
+                </div>
+                {error ? <p className="auth-field-error" role="alert">{error}</p> : null}
+                <div className="reg-flow-nav">
+                  <button type="button" className="reg-flow-nav__back" disabled={busy} onClick={() => { setFlowStep('account'); setError(''); }}>
+                    Back
+                  </button>
+                  <Button type="submit" className="auth-cta reg-flow-nav__next" disabled={busy}>
+                    {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+                    Confirm code
+                  </Button>
+                </div>
+              </form>
+            ) : null}
           </div>
           )}
         </div>
