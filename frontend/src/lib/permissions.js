@@ -166,13 +166,14 @@ export function visibleAdminNav(user) {
     (canManageFleet(user) ? { value: 'collectors', label: 'Collectors' } : null),
     (can(user, 'platform:read') || canManageFleet(user) ? { value: 'logs', label: 'Audit log' } : null),
     ((can(user, 'alert_rules:read') || can(user, 'alert_rules:manage')) ? { value: 'rules', label: 'Alert rules' } : null),
+    (can(user, 'users:read') ? { value: 'access', label: 'Access & approvals' } : null),
     (can(user, 'users:read') ? { value: 'users', label: 'Users & roles' } : null),
   ].filter(Boolean);
 }
 
 export function landingPathForRole(role) {
   if (FULL_ACCESS_ROLES.has(role) || role === 'QuantumOpsAdmin') return '/app/overview';
-  if (role === 'SecurityAdmin') return '/app/admin/users';
+  if (role === 'SecurityAdmin') return '/app/admin/access';
   if (role === 'Auditor') return '/app/reports';
   if (role === 'Operator' || role === 'OpsEngineer' || role === 'IncidentCommander') return '/app/operate';
   return '/app/overview';

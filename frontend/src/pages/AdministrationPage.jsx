@@ -13,6 +13,7 @@ import { TableEmpty } from '../components/observability/EmptyState.jsx';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { ConfirmDialog } from '../components/observability/ConfirmDialog.jsx';
 import { Toggle } from '../components/ui/Toggle.jsx';
+import { AccessApprovalsPanel } from '../components/admin/AccessApprovalsPanel.jsx';
 import { RoleMatrix } from '../components/admin/RoleMatrix.jsx';
 import { roleLabel } from '../lib/permissions.js';
 import { ListPager } from '../components/observability/ListPager.jsx';
@@ -25,6 +26,7 @@ const TEST_RULE_ID = /^e2e_rule_/i;
 const TEST_USER = /^(chg_|mail_|mfa_|e2e_)/i;
 
 const ADMIN_SECTIONS = [
+  { id: 'access', label: 'Access & approvals' },
   { id: 'integrations', label: 'Integrations' },
   { id: 'collectors', label: 'Collectors' },
   { id: 'rules', label: 'Alert rules' },
@@ -997,7 +999,7 @@ function UsersDirectory({ canEdit }) {
           Public registration cannot create administrator accounts.
         </p>
         {pendingCount > 0 ? (
-          <Notice note={{ type: 'warn', text: `${pendingCount} registration(s) awaiting approval.` }} />
+          <Notice note={{ type: 'warn', text: `${pendingCount} registration(s) awaiting approval. Open Access & approvals to review.` }} />
         ) : null}
         {err && <Notice note={{ type: 'error', text: err }} />}
         <div className="admin-users-toolbar">
@@ -1265,6 +1267,7 @@ function AdminAuditLog() {
 /* ------------------------------- Page ------------------------------- */
 export const AdministrationPage = ({ section = 'integrations', onNavigateSection }) => {
   const navigate = useNavigate();
+  const [accessNote, setAccessNote] = useState(null);
   const knownSection = new Set([...ADMIN_SECTIONS.map((s) => s.id), 'logs']);
   const active = section === 'hub' ? 'integrations' : (knownSection.has(section) ? section : 'integrations');
   const go = useCallback((id) => (onNavigateSection ? onNavigateSection(id) : navigate(`/app/admin/${id === 'hub' ? 'integrations' : id}`)), [onNavigateSection, navigate]);
@@ -1307,6 +1310,16 @@ export const AdministrationPage = ({ section = 'integrations', onNavigateSection
     <div className="admin-container page-stack">
       {!canEdit && <Notice note={{ type: 'info', text: 'Read-only: Admin role required to change configuration.' }} />}
       {data.miss.length > 0 && <Notice note={{ type: 'error', text: `Could not load ${data.miss.join(', ')}. Refresh the page or open Platform health.` }} />}
+      {accessNote ? <Notice note={accessNote} /> : null}
+      {active === 'access' && (
+        <AccessApprovalsPanel
+          canEdit={canEdit}
+          onNotice={(note) => {
+            setAccessNote(note);
+            if (note?.type === 'success') setTimeout(() => setAccessNote(null), 5000);
+          }}
+        />
+      )}
       {active === 'users' && <UsersDirectory canEdit={canEdit} />}
       {active === 'integrations' && <Integrations navigate={navigate} providers={data.providers} health={data.health} verification={verification} setVerification={setVerification} canEdit={canEdit} reload={load} />}
       {active === 'collectors' && <Collectors {...data} canEdit={canEdit} reload={load} />}

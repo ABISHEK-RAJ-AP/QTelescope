@@ -225,6 +225,8 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ account_status: accountStatus }),
     }),
+  inviteUser: (body) =>
+    fetchApi('/users/invite', { method: 'POST', body: JSON.stringify(body) }),
   getConfigStatus: () => fetchApi('/auth/config-status'),
   logout: () => fetchApi('/auth/logout', { method: 'POST', body: '{}' }),
   issueStreamTicket: () => fetchApi('/auth/stream-ticket', { method: 'POST' }),

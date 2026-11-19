@@ -72,6 +72,146 @@
   color: var(--accent-emerald);
 }
 
+.admin-access {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.admin-access-intro__foot {
+  margin: 12px 0 0;
+}
+
+.admin-access-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 12px;
+}
+
+.admin-access-flow__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-card);
+}
+
+.admin-access-flow__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--border-color) 55%, var(--bg-card));
+}
+
+.admin-access-flow__check {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+.admin-access-flow__step--done {
+  border-color: color-mix(in srgb, var(--accent-emerald) 45%, var(--border-color));
+  color: var(--accent-emerald);
+  background: color-mix(in srgb, var(--accent-emerald) 12%, var(--bg-card));
+}
+
+.admin-access-flow__step--current {
+  border-color: color-mix(in srgb, var(--accent-cyan) 55%, var(--border-color));
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--accent-cyan) 14%, var(--bg-card));
+}
+
+.admin-access-queue__head,
+.admin-access-invite__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.admin-access-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
+  gap: 12px;
+}
+
+.admin-access-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-card-hover);
+}
+
+.admin-access-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.admin-access-card__name {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+.admin-access-card__meta,
+.admin-access-card__org {
+  margin: 2px 0 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.admin-access-card__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.admin-access-card__role {
+  margin: 0;
+}
+
+.admin-access-card__btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-access-invite__form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 720px;
+}
+
+.admin-access-invite__row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .admin-access-invite__row {
+    grid-template-columns: 1fr;
+  }
+}
+
 .admin-users-toolbar {
   display: flex;
   flex-wrap: wrap;

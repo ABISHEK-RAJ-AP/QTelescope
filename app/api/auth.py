@@ -360,7 +360,7 @@ def _registration_success_message(*, pending_admin: bool) -> str:
     if pending_admin:
         return (
             "Registration received. Your account is pending administrator approval. "
-            "You can sign in after an admin approves your request in Administration → Users & roles."
+            "You can sign in after an admin approves your request in Administration → Access & approvals."
         )
     return (
         "Account created. Sign in with your username and password. "

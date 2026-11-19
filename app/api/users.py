@@ -55,6 +55,15 @@ class RolePatch(BaseModel):
     role: str = Field(..., min_length=2, max_length=40)
 
 
+class UserInviteBody(BaseModel):
+    username: str = Field(min_length=2, max_length=64)
+    email: str = Field(min_length=3, max_length=200)
+    full_name: str = Field(default="", max_length=120)
+    org: str = Field(default="", max_length=200)
+    role: str = Field(default="Operator", min_length=2, max_length=40)
+    password: str = Field(min_length=6, max_length=128)
+
+
 class CustomRoleBody(BaseModel):
     id: Optional[str] = Field(None, min_length=2, max_length=40)
     label: str = Field("", max_length=80)
@@ -295,6 +304,64 @@ def assign_role(
 
 
 _VALID_ACCOUNT_STATUS = frozenset({"active", "pending_admin", "rejected", "suspended"})
+
+
+@router.post("/invite")
+def invite_user(
+    body: UserInviteBody,
+    actor: str = Depends(get_current_username),
+    role: str = Depends(require_admin),
+):
+    """Pre-provision an active account (skips self-registration approval queue)."""
+    from app.api.auth import _hash_password
+    from app.core.config import settings
+    from app.core.identity import bound_password, normalize_email, normalize_username
+    from app.core.registration_flow import registration_user_record
+
+    username = normalize_username(body.username)
+    email = normalize_email(body.email)
+    bound_password(body.password)
+    if username in (settings.ADMIN_USERNAME, settings.USER_USERNAME, settings.SUPERADMIN_USERNAME):
+        raise HTTPException(status_code=409, detail="That username is reserved.")
+    users = load_all_users()
+    if username in users:
+        raise HTTPException(status_code=409, detail="Username already registered.")
+    if any((rec.get("email") or "").strip().lower() == email for rec in users.values()):
+        raise HTTPException(status_code=409, detail="Email already registered.")
+    from app.core.custom_roles import as_permission_map
+    from app.core.permissions import builtin_role_ids
+
+    new_role = (body.role or "Operator").strip()
+    known = set(builtin_role_ids()) | set(as_permission_map())
+    if new_role not in known:
+        raise HTTPException(status_code=400, detail=f"Unknown role: {new_role}")
+    if new_role == "SuperAdmin" and role not in ("SuperAdmin", "PlatformAdmin"):
+        raise HTTPException(status_code=403, detail="Only SuperAdmin or PlatformAdmin can assign SuperAdmin.")
+
+    record = registration_user_record(
+        username=username,
+        email=email,
+        full_name=(body.full_name or "").strip() or username,
+        org=(body.org or "").strip(),
+        role=new_role,
+        password_hash=_hash_password(body.password),
+        account_status="active",
+    )
+    upsert_user(username, record)
+    record_audit(
+        "user.invite",
+        actor=actor,
+        role=role,
+        resource_type="user",
+        resource_id=username,
+        detail={"role": new_role, "org": record.get("org")},
+    )
+    return {
+        "username": username,
+        "account_status": "active",
+        "role": new_role,
+        "message": "Invitation created. Share sign-in URL and temporary password with the operator.",
+    }
 
 
 @router.patch("/{target_username}/account-status")

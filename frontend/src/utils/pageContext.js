@@ -39,7 +39,9 @@ const ADMIN_LABELS = {
   integrations: 'Integrations',
   rules: 'Alert rules',
   collectors: 'Collectors',
+  access: 'Access & approvals',
   users: 'Users & roles',
+  logs: 'Audit log',
 };
 
 const GROUP = {
@@ -198,8 +200,12 @@ export function resolvePageContext(state) {
         description = 'Alert threshold rules driven from stored telemetry.';
       } else if (sub === 'collectors') {
         description = 'Collection schedules, last run, and failure queue.';
+      } else if (sub === 'access') {
+        description = 'Pending registrations, invites, and approval before first sign-in.';
       } else if (sub === 'users') {
         description = 'Directory, role assignment, and MFA enrollment status.';
+      } else if (sub === 'logs') {
+        description = 'Audit and application log search.';
       } else {
         description = 'Provider credentials, discovery, and adapter status.';
       }
