@@ -287,7 +287,9 @@ export function RegisterPage() {
                     onClick={() => pickType(type.id)}
                   >
                     <span className="reg-type-tile__row">
-                      <Icon className="size-4 shrink-0 opacity-80" aria-hidden />
+                      <span className="reg-type-tile__icon-wrap" aria-hidden>
+                        <Icon className="size-5 shrink-0" strokeWidth={2} />
+                      </span>
                       <span className="reg-type-tile__title">{type.label}</span>
                       {active ? (
                         <Check
