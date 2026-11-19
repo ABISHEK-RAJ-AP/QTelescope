@@ -339,13 +339,14 @@ def register_user(req: RegisterRequest, request: Request):
         raise HTTPException(status_code=409, detail="That username is reserved.")
 
     requested_role = (req.role or "").strip()
-    if requested_role == "Admin":
+    if requested_role in ("Admin", "SuperAdmin", "PlatformAdmin", "SecurityAdmin", "QuantumOpsAdmin"):
         raise HTTPException(
             status_code=403,
-            detail="Admin accounts cannot be self-registered. Contact a platform administrator.",
+            detail="Administrator accounts cannot be self-registered. Ask your organisation admin to invite you.",
         )
-    # Self-signup never picks a console role. Seeded admin assigns Operator / Researcher later.
-    role = "Operator"
+    from app.core.self_registration import resolve_self_registration_role
+
+    role = resolve_self_registration_role(req.role)
 
     with _LOCK:
         users = user_store.load_all_users()
@@ -368,7 +369,7 @@ def register_user(req: RegisterRequest, request: Request):
 
     return {
         "status": "SUCCESS",
-        "message": "Account created. Sign in with your username and password.",
+        "message": "Account created. Sign in with your username and password. Your organisation admin can change your role in Admin → Users & roles.",
         "user": {"username": username, "role": role, "email": email},
     }
 

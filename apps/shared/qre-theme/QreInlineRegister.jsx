@@ -123,11 +123,12 @@ export default function QreInlineRegister({ onSuccess, onFieldChange = null, foo
           <input className="qre-field__input" value={org} onChange={(e) => setOrg(e.target.value)} />
         </label>
         <label className="qre-field">
-          <span className="qre-field__label">Role</span>
-          <select className="qre-field__input" value={role} onChange={(e) => setRole(e.target.value)}>
-            <option value="Researcher">Researcher</option>
-            <option value="Operator">Operator</option>
+          <span className="qre-field__label">Requested access</span>
+          <select className="qre-field__input" value={role} onChange={(e) => setRole(e.target.value)} aria-describedby="qre-reg-access-hint">
+            <option value="Operator">Operations console</option>
+            <option value="Researcher">Research &amp; analysis</option>
           </select>
+          <span id="qre-reg-access-hint" className="qre-field__hint">Admins assign elevated roles after approval.</span>
         </label>
       </div>
       <label className="qre-field">

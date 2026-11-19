@@ -151,10 +151,20 @@ role_has_permission = role_has
 
 
 def list_assignable_roles() -> List[dict]:
+    # Canonical roles for admin assignment (legacy Operator/Researcher/Admin kept for existing accounts).
     keys = [
-        "Viewer", "ResearchAnalyst", "OpsEngineer", "IncidentCommander",
-        "QuantumOpsAdmin", "SecurityAdmin", "PlatformAdmin", "SuperAdmin",
-        "Admin", "Operator", "Researcher",
+        "Viewer",
+        "ResearchAnalyst",
+        "OpsEngineer",
+        "IncidentCommander",
+        "Auditor",
+        "QuantumOpsAdmin",
+        "SecurityAdmin",
+        "PlatformAdmin",
+        "SuperAdmin",
+        "Admin",
+        "Operator",
+        "Researcher",
     ]
     seen = set()
     out = []

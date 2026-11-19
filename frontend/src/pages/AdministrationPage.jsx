@@ -920,10 +920,12 @@ function UsersDirectory({ canEdit }) {
   };
 
   const roleOptions = useMemo(() => {
+    const legacyAlias = new Set(['Admin', 'Operator', 'Researcher']);
     const seen = new Set();
     return (roles || []).filter((r) => {
       const id = r.id || r.role;
       if (!id || seen.has(id)) return false;
+      if (legacyAlias.has(id)) return false;
       seen.add(id);
       return true;
     });
@@ -963,7 +965,11 @@ function UsersDirectory({ canEdit }) {
       <RoleMatrix canEditAccess={canEdit} />
       <div className="card admin-users" data-tour="page-admin-users">
         <h3 className="admin-card-title">User directory</h3>
-        <p className="page-hint">Search accounts and assign roles. Capabilities follow the matrix above.</p>
+        <p className="page-hint">
+          Organisation master is the <strong>Organization</strong> column — users set it at registration.
+          Assign roles here after signup (operations engineer, research analyst, incident commander, platform administrator).
+          Public registration cannot create administrator accounts.
+        </p>
         {err && <Notice note={{ type: 'error', text: err }} />}
         <div className="admin-users-toolbar">
           <label className="admin-users-search outline-field">
