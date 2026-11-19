@@ -75,9 +75,6 @@ export const DeviceCapabilities = () => {
   const devices = payload?.devices || [];
   const active = devices.find((d) => d.backend_id === selected) || null;
   const sheet = active?.device;
-  const covered = payload?.coverage?.covered || [];
-  const planned = payload?.coverage?.planned || [];
-
   if (loading && !payload) {
     return (
       <div className="page-stack dc-page">
@@ -295,29 +292,6 @@ export const DeviceCapabilities = () => {
         </section>
       </div>
 
-      <details className="dc-schema">
-        <summary>API schema coverage (operator reference)</summary>
-        <div className="dc-compat">
-          <div>
-            <h4>Included</h4>
-            <ul>
-              {covered.map((c) => (
-                <li key={c}>{c}</li>
-              ))}
-            </ul>
-          </div>
-          {planned.length > 0 && (
-            <div>
-              <h4>Planned (not in UI)</h4>
-              <ul>
-                {planned.map((c) => (
-                  <li key={c}>{c}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </details>
     </div>
   );
 };

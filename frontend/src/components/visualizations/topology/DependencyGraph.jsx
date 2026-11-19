@@ -18,13 +18,14 @@ const statusColor = (status, sem) => {
   return sem.unknown;
 };
 
-export function DependencyGraph({ platformData, className = '' }) {
+export function DependencyGraph({ platformData, className = '', size = 'default' }) {
   const { resolved } = useTheme();
   const isDark = resolved === 'dark';
   const nav = useNavigate();
   const chartRef = useRef(null);
   const wrapRef = useRef(null);
-  const [chartHeight, setChartHeight] = useState(480);
+  const compact = size === 'compact';
+  const [chartHeight, setChartHeight] = useState(compact ? 320 : 480);
   const [layoutKey, setLayoutKey] = useState(0);
 
   useEffect(() => {
@@ -32,13 +33,16 @@ export function DependencyGraph({ platformData, className = '' }) {
     if (!el || typeof ResizeObserver === 'undefined') return undefined;
     const measure = () => {
       const w = el.clientWidth || 800;
-      setChartHeight(Math.max(420, Math.min(680, Math.round(w * 0.42))));
+      const ratio = compact ? 0.3 : 0.42;
+      const minH = compact ? 260 : 420;
+      const maxH = compact ? 420 : 680;
+      setChartHeight(Math.max(minH, Math.min(maxH, Math.round(w * ratio))));
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [compact]);
 
   useEffect(() => {
     const inst = chartRef.current?.getEchartsInstance?.();

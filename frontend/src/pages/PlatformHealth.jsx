@@ -153,6 +153,12 @@ export const PlatformHealth = () => {
   );
   const telAge = ageMin(data?.latest_backend_telemetry_at);
   const sse = data?.sse_stream || {};
+  const cache = data?.cache || {};
+  const dataMode = data?.data_platform?.platform_data_mode;
+  const backendCount = useMemo(() => {
+    const links = data?.dependency_links || [];
+    return links.reduce((n, row) => n + (row.backends?.length || 0), 0);
+  }, [data?.dependency_links]);
 
   const providersWithDuration = useMemo(
     () => providers.filter((p) => Number.isFinite(p.duration_ms) && p.duration_ms > 0),
@@ -197,41 +203,87 @@ export const PlatformHealth = () => {
   const breakers = (coll.circuit_breakers_open || []).length;
   const mode = data?.collection_scheduler?.mode;
   const telTone = telAge == null ? 'bad' : telAge > STALE_MIN ? 'warn' : 'ok';
+  const cacheTone = !cache.enabled ? 'off' : cache.connected ? 'ok' : 'bad';
+  const cacheDetail = cache.connected
+    ? (cache.latency_ms != null ? `${cache.latency_ms} ms ping` : 'Connected')
+    : (cache.error || (cache.enabled ? 'Unreachable' : 'In-memory only'));
   return (
-    <div className="page-stack">
-      <section className="ph-tiles" aria-label="Platform status" data-tour="page-platform">
-        <Tile title="Data store" tone={db.reachable ? 'ok' : 'bad'} value={db.reachable ? 'Connected' : 'Unreachable'} detail={db.error ? db.error : (db.reachable ? COPY.platform.dbOk : COPY.platform.dbUnreachable)} />
-        <Tile title="Collectors" tone={failed ? 'bad' : 'ok'} value={failed ? `${failed} failing` : `${providers.length - failed} of ${providers.length} OK`} detail={`DLQ ${coll.dlq_recent_count ?? 0} · breakers open ${breakers} · run history in admin`} to="/app/admin/collectors" onOpen={nav} />
-        <Tile title="Telemetry store" tone={telTone} value={ageText(telAge)} detail={data?.latest_backend_telemetry_at ? formatISTTime(data.latest_backend_telemetry_at) : 'No samples stored'} />
-        <Tile title="Scheduler" tone={mode === 'on_demand' ? 'warn' : 'ok'} value={mode === 'on_demand' ? 'On demand' : (mode || '—')} detail={data?.collection_scheduler?.note || 'Collection cycle control'} to="/app/admin/collectors" onOpen={nav} />
-        <Tile
-          title="Live refresh"
-          tone="ok"
-          value={sse.staleness_seconds != null ? `${Math.round(sse.staleness_seconds)}s stale` : 'Active'}
-          detail="Updates about every 5s from stored measurements"
-        />
-        {vitals && (
+    <div className="page-stack ph-page">
+      <section className="card page-panel ph-status" aria-label="Platform status" data-tour="page-platform">
+        <h3 className="ph-status__title">Data store &amp; ingestion</h3>
+        <div className="ph-tiles ph-tiles--4x2">
+          <Tile
+            title="Data store"
+            tone={db.reachable ? 'ok' : 'bad'}
+            value={db.reachable ? 'Connected' : 'Unreachable'}
+            detail={
+              db.error
+                ? db.error
+                : [db.reachable ? COPY.platform.dbOk : COPY.platform.dbUnreachable, db.storage].filter(Boolean).join(' · ')
+            }
+          />
+          <Tile
+            title="Collectors"
+            tone={failed ? 'bad' : 'ok'}
+            value={failed ? `${failed} failing` : `${providers.length - failed} of ${providers.length} OK`}
+            detail={`DLQ ${coll.dlq_recent_count ?? 0} · breakers ${breakers}`}
+            to="/app/admin/collectors"
+            onOpen={nav}
+          />
+          <Tile
+            title="Telemetry store"
+            tone={telTone}
+            value={ageText(telAge)}
+            detail={data?.latest_backend_telemetry_at ? formatISTTime(data.latest_backend_telemetry_at) : 'No samples stored'}
+          />
+          <Tile
+            title="Scheduler"
+            tone={mode === 'on_demand' ? 'warn' : 'ok'}
+            value={mode === 'on_demand' ? 'On demand' : (mode || '—')}
+            detail={data?.collection_scheduler?.note || 'Collection cycle control'}
+            to="/app/admin/collectors"
+            onOpen={nav}
+          />
+          <Tile
+            title="Live refresh"
+            tone="ok"
+            value={sse.staleness_seconds != null ? `${Math.round(sse.staleness_seconds)}s stale` : 'Active'}
+            detail="~5s from stored measurements"
+          />
           <Tile
             title="Browser load"
-            tone="ok"
-            value={vitals.fcpMs != null ? `${vitals.fcpMs} ms FCP` : vitals.ttfbMs != null ? `${vitals.ttfbMs} ms TTFB` : 'Measured'}
-            detail={[
-              vitals.ttfbMs != null ? `TTFB ${vitals.ttfbMs} ms` : null,
-              vitals.domContentLoadedMs != null ? `DOM ${vitals.domContentLoadedMs} ms` : null,
-              vitals.loadMs != null ? `Load ${vitals.loadMs} ms` : null,
-            ].filter(Boolean).join(' · ') || 'Navigation timing from this tab'}
+            tone={vitals ? 'ok' : 'off'}
+            value={vitals?.fcpMs != null ? `${vitals.fcpMs} ms FCP` : (vitals?.ttfbMs != null ? `${vitals.ttfbMs} ms TTFB` : '—')}
+            detail={
+              vitals
+                ? [
+                  vitals.ttfbMs != null ? `TTFB ${vitals.ttfbMs} ms` : null,
+                  vitals.domContentLoadedMs != null ? `DOM ${vitals.domContentLoadedMs} ms` : null,
+                  vitals.loadMs != null ? `Load ${vitals.loadMs} ms` : null,
+                ].filter(Boolean).join(' · ') || 'This tab'
+                : 'Measured after first paint'
+            }
           />
-        )}
+          <Tile title="Response cache" tone={cacheTone} value={cache.connected ? 'Warm' : (cache.enabled ? 'Down' : 'Off')} detail={cacheDetail} />
+          <Tile
+            title="Registered backends"
+            tone={backendCount > 0 ? 'ok' : 'warn'}
+            value={String(backendCount)}
+            detail={[dataMode, data?.data_platform?.hybrid_demo ? 'demo slice' : null].filter(Boolean).join(' · ') || 'From discovery registry'}
+            to="/app/backends/inventory"
+            onOpen={nav}
+          />
+        </div>
       </section>
 
       <section className="card page-panel ph-deps" data-tour="page-platform-dependencies">
         <header className="chart-panel__head">
           <h3 className="chart-panel__title">Infrastructure dependencies</h3>
         </header>
-        <DependencyGraph platformData={data} />
+        <DependencyGraph platformData={data} size="compact" />
       </section>
 
-      <section className="ph-split">
+      <section className="ph-providers-block">
         <div className="card page-panel ph-providers dvt-panel">
           <DataPanelToolbar
             title="Provider adapters"
@@ -241,7 +293,7 @@ export const PlatformHealth = () => {
             countLabel={`${providers.length} provider${providers.length === 1 ? '' : 's'}`}
           />
           {layout === 'grid' ? (
-            <div className="dvt-grid">
+            <div className={`dvt-grid ph-provider-grid${providers.length <= 4 ? ' ph-provider-grid--quad' : ''}`}>
               {providers.length === 0 && <p className="page-hint" style={{ gridColumn: '1 / -1', padding: '0 14px 14px' }}>No collector runs recorded.</p>}
               {providers.map((p) => {
                 const m = ageMin(p.last_success_at || p.last_run_at);
@@ -276,7 +328,7 @@ export const PlatformHealth = () => {
           )}
         </div>
 
-        <div className="ph-charts-col">
+        <div className="ph-charts-row">
           <ChartPanel title="Last collection duration" titleTo="/app/admin/collectors" question="Slowest adapter on the most recent run." sourceKind="derived"
             state={providersWithDuration.length ? 'ready' : 'empty'} emptyMessage={providers.length ? 'Collectors ran but duration was not recorded.' : 'No collector runs yet.'} minHeight={220}
             tableAlternative={(
