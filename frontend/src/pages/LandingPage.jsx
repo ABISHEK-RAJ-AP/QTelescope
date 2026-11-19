@@ -22,6 +22,7 @@ import { LandingChrome } from '@/components/marketing/LandingChrome'
 import '@/components/marketing/landing-chrome.css'
 import { cn } from '@/lib/utils'
 import { COPY } from '@/copy/operator.js'
+import { usePublicRegistration } from '@/lib/usePublicRegistration'
 
 const CAPABILITIES = [
   {
@@ -128,6 +129,7 @@ function FeatureCard({ icon: Icon, title, body }) {
 
 export function LandingPage() {
   const [openFaq, setOpenFaq] = useState(0)
+  const { allowed: registrationOpen } = usePublicRegistration()
   usePublicFilmReady('landing')
   const mainRef = useRef(null)
 
@@ -176,20 +178,26 @@ export function LandingPage() {
               Sign in <ArrowRight className="size-5" aria-hidden />
             </Button>
           </Link>
-          <Link to="/register" className="sm:min-w-[188px]">
-            <Button size="lg" variant="outline" className="w-full min-h-[3.25rem] border-neutral-300 bg-white/75 px-10 py-7 text-lg font-semibold backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-950/45">
-              Sign up
-            </Button>
-          </Link>
+          {registrationOpen ? (
+            <Link to="/register" className="sm:min-w-[188px]">
+              <Button size="lg" variant="outline" className="w-full min-h-[3.25rem] border-neutral-300 bg-white/75 px-10 py-7 text-lg font-semibold backdrop-blur-sm dark:border-neutral-700 dark:bg-neutral-950/45">
+                Sign up
+              </Button>
+            </Link>
+          ) : null}
         </div>
         <p className="mt-8 text-sm text-neutral-500 dark:text-neutral-400">
           <Link to="/login" className="font-semibold text-cyan-700 hover:text-cyan-600 dark:text-cyan-400 dark:hover:text-cyan-300">
             Sign in
           </Link>
-          {' · '}
-          <Link to="/register" className="font-semibold text-cyan-700 hover:text-cyan-600 dark:text-cyan-400 dark:hover:text-cyan-300">
-            Create an account
-          </Link>
+          {registrationOpen ? (
+            <>
+              {' · '}
+              <Link to="/register" className="font-semibold text-cyan-700 hover:text-cyan-600 dark:text-cyan-400 dark:hover:text-cyan-300">
+                Create an account
+              </Link>
+            </>
+          ) : null}
         </p>
         <div className="landing-hero__fade pointer-events-none absolute inset-x-0 bottom-0 h-32" aria-hidden />
       </section>
@@ -312,11 +320,13 @@ export function LandingPage() {
                   Sign in <ArrowRight className="size-4" />
                 </Button>
               </Link>
-              <Link to="/register">
-                <Button size="lg" variant="outline" className="font-semibold">
-                  Sign up
-                </Button>
-              </Link>
+              {registrationOpen ? (
+                <Link to="/register">
+                  <Button size="lg" variant="outline" className="font-semibold">
+                    Sign up
+                  </Button>
+                </Link>
+              ) : null}
             </div>
           </div>
         </section>

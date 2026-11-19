@@ -114,8 +114,9 @@
 
 | Finding | Change | Re-test | Commit |
 |---------|--------|---------|--------|
-| SEC-ABUSE-02 | Registration policy + tests + UI gate | `pytest tests/test_public_registration.py` | pending |
-| LAW-PRIV/TERMS | Legal pages + footer links | Manual `/privacy` | pending |
+| SEC-ABUSE-02 | Registration policy + tests + UI gate | `pytest tests/test_public_registration.py` | `5bfd202` |
+| LAW-PRIV/TERMS | Legal pages + footer links | Manual `/privacy` | `5bfd202` |
+| SEC-ABUSE-02 UI | Hide signup when registration closed (landing/header/footer/login) | config-status | pending |
 
 ## Still open (owner)
 

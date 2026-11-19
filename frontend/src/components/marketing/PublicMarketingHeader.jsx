@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { ArrowRight, Moon, Sun, Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useTheme } from '@/components/ui/ThemeProvider'
+import { usePublicRegistration } from '@/lib/usePublicRegistration'
 import cdacLogo from '../../assets/cdaclogo.png'
 
 export function PublicMarketingHeader({ className = '' }) {
@@ -10,6 +11,7 @@ export function PublicMarketingHeader({ className = '' }) {
   const { resolved, setTheme } = useTheme()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  const { allowed: registrationOpen } = usePublicRegistration()
   const isDark = resolved === 'dark'
   const onLogin = pathname.startsWith('/login')
   const onRegister = pathname.startsWith('/register')
@@ -66,7 +68,7 @@ export function PublicMarketingHeader({ className = '' }) {
             type="button"
             onClick={() => setTheme(isDark ? 'light' : 'dark')}
             aria-label="Toggle theme"
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-700 shadow-sm transition hover:bg-neutral-100 hover:text-neutral-900 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
+            className="qt-pressable flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-200 bg-white text-neutral-700 shadow-sm hover:bg-neutral-100 hover:text-neutral-900 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
           >
             {isDark ? <Sun className="size-4 text-amber-400" /> : <Moon className="size-4" />}
           </button>
@@ -83,15 +85,17 @@ export function PublicMarketingHeader({ className = '' }) {
             Sign In
           </Link>
 
-          <Link to="/register">
-            <Button
-              size="sm"
-              className="gap-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold shadow-sm px-4 py-2 text-sm whitespace-nowrap"
-            >
-              Sign up
-              <ArrowRight className="size-4" aria-hidden />
-            </Button>
-          </Link>
+          {registrationOpen ? (
+            <Link to="/register">
+              <Button
+                size="sm"
+                className="gap-2 bg-cyan-600 hover:bg-cyan-500 text-white font-semibold shadow-sm px-4 py-2 text-sm whitespace-nowrap"
+              >
+                Sign up
+                <ArrowRight className="size-4" aria-hidden />
+              </Button>
+            </Link>
+          ) : null}
 
           {/* Mobile Menu Hamburger */}
           <button
@@ -126,13 +130,15 @@ export function PublicMarketingHeader({ className = '' }) {
             >
               Sign In
             </Link>
-            <Link
-              to="/register"
-              onClick={() => setMobileMenuOpen(false)}
-              className="w-full text-center py-2 text-sm font-semibold rounded-lg bg-cyan-600 text-white"
-            >
-              Register
-            </Link>
+            {registrationOpen ? (
+              <Link
+                to="/register"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full text-center py-2 text-sm font-semibold rounded-lg bg-cyan-600 text-white qt-pressable"
+              >
+                Register
+              </Link>
+            ) : null}
           </div>
         </div>
       )}

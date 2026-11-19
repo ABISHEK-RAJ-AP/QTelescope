@@ -1,0 +1,184 @@
+/**
+ * Ops motion — press, spring enters, shake errors, transform-only slides.
+ * Respects prefers-reduced-motion (DESIGN.md).
+ */
+
+:root {
+  --qt-press-scale: 0.97;
+  --qt-motion-spring: cubic-bezier(0.34, 1.28, 0.64, 1);
+  --qt-motion-spring-out: cubic-bezier(0.22, 0.9, 0.24, 1);
+  --qt-motion-shake: cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+/* —— Instant theme switch (no color transition flash) —— */
+html[data-theme-instant],
+html[data-theme-instant] *,
+html[data-theme-instant] *::before,
+html[data-theme-instant] *::after {
+  transition-duration: 0.01ms !important;
+  transition-delay: 0ms !important;
+  animation-duration: 0.01ms !important;
+  animation-delay: 0ms !important;
+}
+
+/* —— Press feedback —— */
+.qt-pressable {
+  transform-origin: center;
+  transition:
+    transform 120ms var(--qt-motion-spring-out),
+    opacity 120ms ease-out,
+    background-color var(--ds-motion-fast) ease,
+    border-color var(--ds-motion-fast) ease,
+    color var(--ds-motion-fast) ease,
+    box-shadow var(--ds-motion-fast) ease;
+  touch-action: manipulation;
+}
+
+.qt-pressable:active:not(:disabled) {
+  transform: scale(var(--qt-press-scale));
+}
+
+.btn:not(:disabled),
+button.btn-primary,
+button.btn-secondary {
+  transform-origin: center;
+  transition:
+    transform 120ms var(--qt-motion-spring-out),
+    opacity 120ms ease-out,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.btn:active:not(:disabled),
+button.btn-primary:active:not(:disabled),
+button.btn-secondary:active:not(:disabled) {
+  transform: scale(var(--qt-press-scale));
+}
+
+/* —— Error shake (auth + inline alerts) —— */
+@keyframes qt-shake {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  18% { transform: translate3d(-7px, 0, 0); }
+  36% { transform: translate3d(7px, 0, 0); }
+  54% { transform: translate3d(-4px, 0, 0); }
+  72% { transform: translate3d(4px, 0, 0); }
+}
+
+@keyframes qt-enter-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translate3d(0, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+}
+
+@keyframes qt-slide-in-end {
+  from {
+    opacity: 0;
+    transform: translate3d(12px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes qt-slide-in-start {
+  from {
+    opacity: 0;
+    transform: translate3d(-12px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.qt-shake {
+  animation: qt-shake 420ms var(--qt-motion-shake);
+}
+
+.auth-inline-alert--error.qt-shake {
+  animation: qt-shake 420ms var(--qt-motion-shake);
+}
+
+.qt-enter {
+  animation: qt-enter-scale 280ms var(--qt-motion-spring) both;
+}
+
+.qt-slide-from-end {
+  animation: qt-slide-in-end 320ms var(--qt-motion-spring) both;
+}
+
+.qt-slide-from-start {
+  animation: qt-slide-in-start 320ms var(--qt-motion-spring) both;
+}
+
+/* Height auto via grid (transform-friendly; no left/top animation) */
+.qt-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 320ms var(--qt-motion-spring);
+}
+
+.qt-collapse[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+
+.qt-collapse__inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Tooltips — no hover delay; enter on transform */
+.info-tooltip__panel,
+.info-tooltip__panel--portaled {
+  transform-origin: var(--qt-tooltip-origin, top center);
+  transition-delay: 0ms !important;
+  animation: qt-enter-scale 160ms var(--qt-motion-spring) both;
+}
+
+/* Rubber-band scroll surfaces (carousels, bento grids) */
+.qt-scroll-rubber,
+.hero-cycle__viewport,
+.dash-bento,
+.hv-backends {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.hero-cycle__track {
+  transition: transform 720ms var(--qt-motion-spring);
+}
+
+.dashboard-bento-grid {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qt-shake,
+  .auth-inline-alert--error.qt-shake,
+  .qt-enter,
+  .qt-slide-from-end,
+  .qt-slide-from-start,
+  .info-tooltip__panel,
+  .info-tooltip__panel--portaled,
+  .hero-cycle__track {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .qt-pressable:active:not(:disabled),
+  .btn:active:not(:disabled) {
+    transform: none;
+  }
+
+  .qt-collapse {
+    transition: none;
+  }
+}

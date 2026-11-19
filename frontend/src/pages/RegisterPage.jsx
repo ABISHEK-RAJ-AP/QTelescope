@@ -206,7 +206,7 @@ export function RegisterPage() {
         />
 
         {error ? (
-          <div className="auth-inline-alert auth-inline-alert--error" role="alert">
+          <div key={error} className="auth-inline-alert auth-inline-alert--error qt-shake" role="alert">
             {error}
           </div>
         ) : null}

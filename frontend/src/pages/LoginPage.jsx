@@ -11,9 +11,11 @@ import { safePostLoginRedirect } from '@/lib/safePostLoginRedirect'
 import { usePublicFilmReady } from '@/hooks/usePublicFilmReady.js'
 import { AuthDemoPresets } from '@/components/AuthDemoPresets.jsx'
 import { COPY } from '@/copy/operator.js'
+import { usePublicRegistration } from '@/lib/usePublicRegistration'
 
 export function LoginPage({ onLoginSuccess }) {
   usePublicFilmReady('login')
+  const { allowed: registrationOpen } = usePublicRegistration()
   const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -133,10 +135,14 @@ export function LoginPage({ onLoginSuccess }) {
             <Link to="/forgot-password" className="font-semibold text-[var(--accent)] hover:opacity-90">
               Forgot password
             </Link>
-            {' · '}
-            <Link to="/register" className="font-semibold text-[var(--accent)] hover:opacity-90">
-              Register
-            </Link>
+            {registrationOpen ? (
+              <>
+                {' · '}
+                <Link to="/register" className="font-semibold text-[var(--accent)] hover:opacity-90">
+                  Register
+                </Link>
+              </>
+            ) : null}
           </p>
           <AuthDemoPresets
             visible={showDevPresets}
@@ -185,7 +191,7 @@ export function LoginPage({ onLoginSuccess }) {
           />
         </Field>
         {error ? (
-          <div className="auth-inline-alert auth-inline-alert--error" role="alert">
+          <div key={error} className="auth-inline-alert auth-inline-alert--error qt-shake" role="alert">
             {error}
           </div>
         ) : null}
@@ -249,7 +255,7 @@ export function LoginPage({ onLoginSuccess }) {
         />
 
         {error ? (
-          <div data-testid="login-error" className="auth-inline-alert auth-inline-alert--error" role="alert">
+          <div data-testid="login-error" key={error} className="auth-inline-alert auth-inline-alert--error qt-shake" role="alert">
             {error}
           </div>
         ) : null}

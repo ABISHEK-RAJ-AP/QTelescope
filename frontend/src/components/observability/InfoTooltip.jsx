@@ -112,6 +112,7 @@ export function InfoTooltip({ label = 'More information', children, className = 
         left: coords.left,
         maxWidth: coords.maxWidth,
         zIndex: 10950,
+        '--qt-tooltip-origin': coords.top < (triggerRef.current?.getBoundingClientRect().top ?? 0) ? 'bottom center' : 'top center',
       }}
     >
       {children}

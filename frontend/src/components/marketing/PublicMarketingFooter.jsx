@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
+import { usePublicRegistration } from '@/lib/usePublicRegistration'
 import { Activity, Cpu, Layers, ExternalLink } from 'lucide-react'
 import cdacLogo from '../../assets/cdaclogo.png'
 
@@ -40,7 +41,12 @@ const LEGAL_LINKS = [
 ]
 
 export function PublicMarketingFooter({ className = '', compact = false }) {
+  const { allowed: registrationOpen } = usePublicRegistration()
   const currentYear = new Date().getFullYear()
+  const footerSections = useMemo(() => FOOTER_SECTIONS.map((section) => ({
+    ...section,
+    links: section.links.filter((l) => registrationOpen || l.href !== '/register'),
+  })), [registrationOpen])
 
   if (compact) {
     return (
@@ -96,7 +102,7 @@ export function PublicMarketingFooter({ className = '', compact = false }) {
 
           {/* Nav Link Columns */}
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:col-span-3">
-            {FOOTER_SECTIONS.map((section) => (
+            {footerSections.map((section) => (
               <div key={section.title} className="space-y-3">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-900 dark:text-neutral-100">
                   {section.title}

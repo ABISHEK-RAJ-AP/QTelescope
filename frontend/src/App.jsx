@@ -40,6 +40,7 @@ import {
 import { BoneyardSkeleton } from './components/ui/Skeleton';
 import { api } from './services/api';
 import { warmConsoleCache, resetConsoleWarmCache } from './lib/warmConsoleCache.js';
+import { filmWarmEnabled, warmFilmJourney } from './lib/qtFilmWarm.js';
 import { invalidateApiGetCache } from './services/api';
 import { useTheme } from './components/ui/ThemeProvider';
 import { PageHeader } from './components/observability/PageHeader.jsx';
@@ -823,7 +824,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
                 <IstClock />
                 <button
                   type="button"
-                  className="btn btn-secondary"
+                  className="btn btn-secondary qt-pressable"
                   onClick={() => setTheme(resolved === 'dark' ? 'light' : 'dark')}
                   title={resolved === 'dark' ? 'Switch to light' : 'Switch to dark'}
                   aria-label="Toggle theme"
@@ -924,6 +925,7 @@ export const App = () => {
   useEffect(() => {
     if (!currentUser?.token || !sessionChecked) return;
     warmConsoleCache();
+    if (filmWarmEnabled()) warmFilmJourney().catch(() => {});
   }, [currentUser?.token, sessionChecked]);
 
   useEffect(() => {

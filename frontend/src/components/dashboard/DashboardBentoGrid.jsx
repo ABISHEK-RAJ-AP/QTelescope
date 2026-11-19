@@ -56,7 +56,7 @@ function SortableDashboardItem({
         <div className="dash-bento__toolbar" role="toolbar" aria-label={`Layout controls for ${id}`}>
           <button
             type="button"
-            className="dash-bento__handle"
+            className="dash-bento__handle qt-pressable"
             aria-label={`Drag to reorder ${id}`}
             title="Drag to reorder"
             {...attributes}
@@ -67,7 +67,7 @@ function SortableDashboardItem({
           </button>
           <button
             type="button"
-            className="dash-bento__resize"
+            className="dash-bento__resize qt-pressable"
             aria-label={`Cycle width for ${id}, currently ${span}`}
             title="Cycle width: compact → half → full"
             onClick={() => onSpanChange?.(id, nextSpan(span))}

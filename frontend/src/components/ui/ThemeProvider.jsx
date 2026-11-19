@@ -13,11 +13,15 @@ function getSystemTheme() {
 
 function applyThemeClass(theme) {
   const root = document.documentElement;
+  root.setAttribute("data-theme-instant", "true");
   root.classList.remove("dark");
   const resolved = theme === "system" ? getSystemTheme() : theme;
   if (resolved === "dark") {
     root.classList.add("dark");
   }
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => root.removeAttribute("data-theme-instant"));
+  });
 }
 
 export function ThemeProvider({
