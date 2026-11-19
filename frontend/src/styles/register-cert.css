@@ -64,37 +64,107 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   flex-shrink: 0;
+  width: 100%;
+  max-width: 100%;
+  padding: 0 0.15rem;
 }
 
 .reg-step-trail {
-  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  max-width: min(40rem, 100%);
+}
+
+.reg-step-trail__list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
+  width: 100%;
 }
 
-.reg-step-trail .auth-register-steps__item {
-  --reg-muted: var(--text-secondary, var(--reg-muted));
-  font-size: 0.8125rem;
-  padding: 0.3rem 0.65rem;
-  border-radius: 999px;
+.reg-step-trail__step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 0;
+  padding: 0.5rem 0.35rem 0.55rem;
   border: 1px solid var(--reg-border);
+  border-right-width: 0;
+  background: color-mix(in srgb, var(--reg-surface) 96%, var(--reg-muted) 4%);
   color: var(--reg-muted);
 }
 
-.reg-step-trail__item--active {
-  color: var(--reg-text) !important;
-  border-color: color-mix(in srgb, var(--reg-accent) 45%, var(--reg-border)) !important;
-  background: color-mix(in srgb, var(--reg-accent) 8%, var(--reg-surface));
+.reg-step-trail__list > .reg-step-trail__step:first-child {
+  border-radius: 10px 0 0 10px;
 }
 
-.reg-step-trail__item--done {
-  opacity: 0.72;
+.reg-step-trail__list > .reg-step-trail__step:last-child {
+  border-radius: 0 10px 10px 0;
+  border-right-width: 1px;
+}
+
+.reg-step-trail__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+  background: color-mix(in srgb, var(--reg-border) 55%, var(--reg-surface));
+  color: var(--reg-text);
+  flex-shrink: 0;
+}
+
+.reg-step-trail__text {
+  display: block;
+  max-width: 100%;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reg-step-trail__text--short {
+  display: none;
+}
+
+.reg-step-trail__connector {
+  display: none;
+}
+
+.reg-step-trail__step--active {
+  color: var(--reg-text);
+  background: color-mix(in srgb, var(--reg-accent) 10%, var(--reg-surface));
+  border-color: color-mix(in srgb, var(--reg-accent) 40%, var(--reg-border));
+  z-index: 1;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--reg-accent) 22%, transparent);
+}
+
+.reg-step-trail__step--active .reg-step-trail__num {
+  background: color-mix(in srgb, var(--reg-accent) 85%, #000 5%);
+  color: var(--reg-surface, #fff);
+}
+
+.reg-step-trail__step--done {
+  opacity: 0.88;
+}
+
+.reg-step-trail__step--done .reg-step-trail__num {
+  background: color-mix(in srgb, var(--reg-accent) 35%, var(--reg-surface));
 }
 
 .reg-step-trail__info {
@@ -174,6 +244,14 @@
   grid-template-columns: minmax(168px, 13.5rem) minmax(0, 1fr);
   min-height: 0;
   align-items: start;
+  gap: clamp(1rem, 2.5vw, 1.75rem);
+}
+
+.reg-stage--flow.reg-stage--detail .reg-stage__form {
+  width: 100%;
+  max-width: none;
+  align-self: stretch;
+  padding-top: 0.1rem;
 }
 
 .reg-stage--detail .reg-stage__brand {
@@ -494,8 +572,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  flex-wrap: wrap;
-  padding-bottom: 0.35rem;
+  flex-wrap: nowrap;
+  margin-bottom: 0.25rem;
+  padding: 0 0 0.75rem;
   border-bottom: 1px solid var(--reg-border);
 }
 
@@ -530,7 +609,15 @@
 .reg-org-detail {
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: clamp(0.65rem, 1.2vh, 0.85rem);
+}
+
+.reg-org-detail .auth-outline-field {
+  margin: 0;
+}
+
+.reg-org-detail .auth-outline-field__name {
+  margin-bottom: 0.3rem;
 }
 
 .reg-org-select {
@@ -676,7 +763,7 @@
 .reg-form-stack {
   display: flex;
   flex-direction: column;
-  gap: clamp(0.45rem, 1vh, 0.65rem);
+  gap: clamp(0.7rem, 1.25vh, 0.9rem);
 }
 
 .reg-form-stack .captcha-field {
@@ -725,9 +812,36 @@
   grid-template-columns: 1fr 1fr;
 }
 
+@media (max-width: 560px) {
+  .reg-step-trail__text--full {
+    display: none;
+  }
+
+  .reg-step-trail__text--short {
+    display: block;
+    font-size: 0.6875rem;
+  }
+
+  .reg-step-trail__step {
+    padding: 0.45rem 0.2rem 0.5rem;
+  }
+}
+
 @media (max-width: 720px) {
   .reg-form-row--split {
     grid-template-columns: 1fr;
+  }
+
+  .reg-stage--flow.reg-stage--detail {
+    grid-template-columns: 1fr;
+  }
+
+  .reg-stage--detail .reg-stage__brand {
+    position: static;
+    border-right: none;
+    border-bottom: 1px solid var(--reg-border);
+    padding-right: 0;
+    padding-bottom: 0.65rem;
   }
 
   .reg-type-grid--tiles {
