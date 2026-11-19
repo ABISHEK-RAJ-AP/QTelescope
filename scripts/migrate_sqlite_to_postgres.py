@@ -134,8 +134,18 @@ def reset_sequences(dst_engine) -> None:
             ).scalar()
             if not seq:
                 continue
-            mx = conn.execute(text(f'SELECT COALESCE(MAX("{col}"), 0) FROM "{table}"')).scalar_one()
-            conn.execute(text("SELECT setval(:seq, :v, true)"), {"seq": seq, "v": mx})
+            try:
+                mx = conn.execute(
+                    text(f'SELECT COALESCE(MAX("{col}"), 0) FROM "{table}"'),
+                ).scalar_one()
+                next_val = int(mx or 0)
+                # Empty tables → MAX is 0; PostgreSQL setval minimum is 1.
+                if next_val < 1:
+                    conn.execute(text("SELECT setval(:seq, 1, false)"), {"seq": seq})
+                else:
+                    conn.execute(text("SELECT setval(:seq, :v, true)"), {"seq": seq, "v": next_val})
+            except Exception as exc:
+                print(f"  WARN: sequence reset skipped for {table}.{col}: {exc}", flush=True)
         conn.commit()
 
 
