@@ -40,7 +40,7 @@ test.describe('Q-TeleScope journeys E17–E24', () => {
 
   test('E19 user and role management', async ({ page }) => {
     await loginAsAdmin(page);
-    await page.goto('/app/admin/users');
+    await page.goto('/app/admin/access');
     await expect(page.locator('[data-tour="page-admin-users"]')).toBeVisible({ timeout: 20_000 });
     const roleSelect = page.locator('.admin-users-role-select').first();
     await expect(roleSelect).toBeVisible();

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Save, RefreshCw, CheckCircle2, Cpu, AlertTriangle, Key, Eye, EyeOff, Plus, Trash2, X,
   Compass, Pencil, ShieldCheck,
@@ -14,27 +14,21 @@ import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { ConfirmDialog } from '../components/observability/ConfirmDialog.jsx';
 import { Toggle } from '../components/ui/Toggle.jsx';
 import { AccessApprovalsPanel } from '../components/admin/AccessApprovalsPanel.jsx';
-import { RoleMatrix } from '../components/admin/RoleMatrix.jsx';
 import {
   canEditPlatformAdminSections,
   canManageUserAccess,
-  roleLabel,
 } from '../lib/permissions.js';
 import { ListPager } from '../components/observability/ListPager.jsx';
-import { CollapsibleSection } from '../components/observability/CollapsibleSection.jsx';
-import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
 import { summarizeOperatorError } from '../utils/operatorFault.js';
 import './AdministrationPage.css';
 
 const TEST_RULE_ID = /^e2e_rule_/i;
-const TEST_USER = /^(chg_|mail_|mfa_|e2e_)/i;
 
 const ADMIN_SECTIONS = [
-  { id: 'access', label: 'Access & approvals' },
+  { id: 'access', label: 'People & access' },
   { id: 'integrations', label: 'Integrations' },
   { id: 'collectors', label: 'Collectors' },
   { id: 'rules', label: 'Alert rules' },
-  { id: 'users', label: 'Users & roles' },
 ];
 
 const METRICS = [
@@ -876,278 +870,6 @@ function Rules({ rules, canEdit, reload }) {
   );
 }
 
-/* ------------------------------ Users ------------------------------ */
-const USER_SORTS = [
-  { key: 'username', label: 'Username (A–Z)' },
-  { key: 'role', label: 'Role' },
-  { key: 'mfa', label: 'MFA status' },
-  { key: 'org', label: 'Organization' },
-];
-
-const ACCOUNT_STATUS_LABEL = {
-  active: 'Active',
-  pending_admin: 'Pending approval',
-  rejected: 'Rejected',
-  suspended: 'Suspended',
-};
-
-function UsersDirectory({ canEdit }) {
-  const [rows, setRows] = useState([]);
-  const [roles, setRoles] = useState([]);
-  const [err, setErr] = useState(null);
-  const [busy, setBusy] = useState(null);
-  const [search, setSearch] = useState('');
-  const debouncedSearch = useDebouncedValue(search, 300);
-  const [sortKey, setSortKey] = useState('username');
-  const [showTestAccounts, setShowTestAccounts] = useState(false);
-  const [pendingOnly, setPendingOnly] = useState(false);
-  const [page, setPage] = useState(1);
-  const USER_PAGE = 20;
-  const pendingCount = rows.filter((u) => (u.account_status || 'active') === 'pending_admin').length;
-
-  const load = useCallback(async () => {
-    try {
-      const [users, catalog] = await Promise.all([
-        api.listUsers(),
-        api.getRolesCatalog().catch(() => ({ roles: [] })),
-      ]);
-      setRows(users || []);
-      setRoles(catalog?.roles || []);
-      setErr(null);
-    } catch (e) {
-      setErr(errText(e));
-    }
-  }, []);
-
-  useEffect(() => { load(); }, [load]);
-
-  const onRole = async (username, role) => {
-    setBusy(username);
-    const prev = rows;
-    setRows((list) => list.map((u) => (u.username === username ? { ...u, role } : u)));
-    try {
-      await api.assignUserRole(username, role);
-    } catch (e) {
-      setRows(prev);
-      setErr(errText(e));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const onAccountStatus = async (username, accountStatus) => {
-    setBusy(`status:${username}`);
-    const prev = rows;
-    setRows((list) => list.map((u) => (u.username === username ? { ...u, account_status: accountStatus } : u)));
-    try {
-      await api.setUserAccountStatus(username, accountStatus);
-    } catch (e) {
-      setRows(prev);
-      setErr(errText(e));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  const roleOptions = useMemo(() => {
-    const legacyAlias = new Set(['Admin', 'Operator', 'Researcher']);
-    const seen = new Set();
-    return (roles || []).filter((r) => {
-      const id = r.id || r.role;
-      if (!id || seen.has(id)) return false;
-      if (legacyAlias.has(id)) return false;
-      seen.add(id);
-      return true;
-    });
-  }, [roles]);
-
-  const visible = useMemo(() => {
-    const q = debouncedSearch.trim().toLowerCase();
-    let list = showTestAccounts ? rows : rows.filter((u) => !TEST_USER.test(u.username || ''));
-    if (pendingOnly) {
-      list = list.filter((u) => (u.account_status || 'active') === 'pending_admin');
-    }
-    if (q) {
-      list = list.filter((u) => (
-        `${u.username} ${u.full_name || ''} ${u.email || ''} ${u.role || ''} ${u.org || ''}`.toLowerCase().includes(q)
-      ));
-    }
-    const sorted = [...list].sort((a, b) => {
-      if (sortKey === 'mfa') {
-        return Number(Boolean(b.mfa_enabled)) - Number(Boolean(a.mfa_enabled))
-          || String(a.username).localeCompare(String(b.username));
-      }
-      if (sortKey === 'role') {
-        return roleLabel(a.role).localeCompare(roleLabel(b.role)) || String(a.username).localeCompare(String(b.username));
-      }
-      if (sortKey === 'org') {
-        return String(a.org || '').localeCompare(String(b.org || '')) || String(a.username).localeCompare(String(b.username));
-      }
-      return String(a.username).localeCompare(String(b.username));
-    });
-    return sorted;
-  }, [rows, debouncedSearch, sortKey, showTestAccounts, pendingOnly]);
-  const hiddenTestUsers = rows.filter((u) => TEST_USER.test(u.username || '')).length;
-  useEffect(() => { setPage(1); }, [debouncedSearch, sortKey]);
-  const userPages = Math.max(1, Math.ceil(visible.length / USER_PAGE));
-  const userPage = Math.min(page, userPages);
-  const pageUsers = visible.slice((userPage - 1) * USER_PAGE, userPage * USER_PAGE);
-
-  return (
-    <>
-      <RoleMatrix canEditAccess={canEdit} />
-      <div className="card admin-users" data-tour="page-admin-users">
-        <h3 className="admin-card-title">User directory</h3>
-        <p className="page-hint">
-          Organisation is chosen at registration. Approve pending requests before users can sign in.
-          Assign roles after approval (operations engineer, research analyst, incident commander, platform administrator).
-          Public registration cannot create administrator accounts.
-        </p>
-        {pendingCount > 0 ? (
-          <Notice note={{
-            type: 'warn',
-            text: `${pendingCount} registration(s) awaiting approval.`,
-          }} />
-        ) : null}
-        {pendingCount > 0 && canEdit ? (
-          <p className="page-hint">
-            <Link className="fs-link" to="/app/admin/access">Open Access &amp; approvals</Link>
-            {' '}to approve or reject (register → verify → approve).
-          </p>
-        ) : null}
-        {err && <Notice note={{ type: 'error', text: err }} />}
-        <div className="admin-users-toolbar">
-          <label className="admin-users-search outline-field">
-            <span>Search</span>
-            <input
-              type="search"
-              className="input-control"
-              placeholder="Search name, email, role, org…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </label>
-          <label>
-            Sort
-            <select className="input-control" value={sortKey} onChange={(e) => setSortKey(e.target.value)} aria-label="Sort users">
-              {USER_SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-            </select>
-          </label>
-          {pendingCount > 0 && (
-            <label className="admin-sub" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <input type="checkbox" checked={pendingOnly} onChange={(e) => setPendingOnly(e.target.checked)} />
-              Pending only ({pendingCount})
-            </label>
-          )}
-          {hiddenTestUsers > 0 && (
-            <label className="admin-sub" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-              <input type="checkbox" checked={showTestAccounts} onChange={(e) => setShowTestAccounts(e.target.checked)} />
-              Show test accounts ({hiddenTestUsers} hidden)
-            </label>
-          )}
-          <span className="admin-users-count" role="status">{visible.length} of {rows.length} users</span>
-        </div>
-        <div className="table-container">
-          <table className="custom-table">
-            <thead>
-              <tr>
-                <th>User</th>
-                <th>Role</th>
-                <th>MFA</th>
-                <th>Organization</th>
-                <th>Status</th>
-                {canEdit ? <th aria-label="Registration actions" /> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 ? (
-                <TableEmpty colSpan={canEdit ? 6 : 5} title="No users" message="Registered accounts appear here." />
-              ) : visible.length === 0 ? (
-                <TableEmpty colSpan={canEdit ? 6 : 5} title="No matches" message="Try a different search term." />
-              ) : pageUsers.map((u) => (
-                <tr key={u.username}>
-                  <td>
-                    <div>{u.full_name || u.username}</div>
-                    <div className="al-sub">{u.email || u.username}</div>
-                  </td>
-                  <td>
-                    {canEdit ? (
-                      <select
-                        className="input-control admin-users-role-select"
-                        value={u.role || 'Operator'}
-                        disabled={busy === u.username}
-                        aria-label={`Role for ${u.username}`}
-                        onChange={(e) => onRole(u.username, e.target.value)}
-                      >
-                        {[
-                          ...roleOptions,
-                          ...(u.role && !roleOptions.some((r) => (r.id || r.role) === u.role)
-                            ? [{ id: u.role, label: roleLabel(u.role) }]
-                            : []),
-                        ].map((r) => (
-                          <option key={r.id || r.role} value={r.id || r.role}>{r.label || roleLabel(r.id || r.role) || r.id}</option>
-                        ))}
-                      </select>
-                    ) : (roleLabel(u.role) || u.role || 'Operator')}
-                  </td>
-                  <td>{u.mfa_enabled ? 'Enrolled' : 'Off'}</td>
-                  <td>{u.org || '—'}</td>
-                  <td>{ACCOUNT_STATUS_LABEL[u.account_status] || ACCOUNT_STATUS_LABEL.active}</td>
-                  {canEdit ? (
-                    <td>
-                      {(u.account_status || 'active') === 'pending_admin' ? (
-                        <div className="admin-users-status-actions">
-                          <button
-                            type="button"
-                            className="btn btn--sm btn--primary"
-                            disabled={busy === `status:${u.username}`}
-                            onClick={() => onAccountStatus(u.username, 'active')}
-                          >
-                            Approve
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn--sm btn--ghost"
-                            disabled={busy === `status:${u.username}`}
-                            onClick={() => onAccountStatus(u.username, 'rejected')}
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      ) : (u.account_status || 'active') === 'active' ? (
-                        <button
-                          type="button"
-                          className="btn btn--sm btn--ghost"
-                          disabled={busy === `status:${u.username}`}
-                          onClick={() => onAccountStatus(u.username, 'suspended')}
-                        >
-                          Suspend
-                        </button>
-                      ) : (u.account_status || '') === 'suspended' ? (
-                        <button
-                          type="button"
-                          className="btn btn--sm btn--primary"
-                          disabled={busy === `status:${u.username}`}
-                          onClick={() => onAccountStatus(u.username, 'active')}
-                        >
-                          Reactivate
-                        </button>
-                      ) : (
-                        '—'
-                      )}
-                    </td>
-                  ) : null}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <ListPager page={userPage} pages={userPages} onPage={setPage} />
-      </div>
-    </>
-  );
-}
-
 /* ----------------------------- Logs explorer ----------------------------- */
 function isoWindow(hours, anchorIso) {
   const end = anchorIso ? new Date(anchorIso.includes('Z') ? anchorIso : `${anchorIso}Z`) : new Date();
@@ -1306,7 +1028,8 @@ export const AdministrationPage = ({ section = 'integrations', onNavigateSection
   const me = sessionUser();
   const canEditPlatform = canEditPlatformAdminSections(me);
   const canEditUsers = canManageUserAccess(me);
-  const canEdit = active === 'access' || active === 'users' ? canEditUsers : canEditPlatform;
+  const peopleSection = active === 'access' || active === 'users';
+  const canEdit = peopleSection ? canEditUsers : canEditPlatform;
 
   const [data, setData] = useState(null);
   const [loadError, setLoadError] = useState(null);
@@ -1346,14 +1069,14 @@ export const AdministrationPage = ({ section = 'integrations', onNavigateSection
       {!canEdit && (
         <Notice note={{
           type: 'info',
-          text: active === 'access' || active === 'users'
+          text: peopleSection
             ? 'Read-only: you can view the directory but cannot approve, invite, or suspend accounts.'
             : 'Read-only: platform administrator role required to change configuration.',
         }} />
       )}
       {data.miss.length > 0 && <Notice note={{ type: 'error', text: `Could not load ${data.miss.join(', ')}. Refresh the page or open Platform health.` }} />}
       {accessNote ? <Notice note={accessNote} /> : null}
-      {active === 'access' && (
+      {peopleSection && (
         <AccessApprovalsPanel
           canEdit={canEdit}
           onNotice={(note) => {
@@ -1362,7 +1085,6 @@ export const AdministrationPage = ({ section = 'integrations', onNavigateSection
           }}
         />
       )}
-      {active === 'users' && <UsersDirectory canEdit={canEdit} />}
       {active === 'integrations' && <Integrations navigate={navigate} providers={data.providers} health={data.health} verification={verification} setVerification={setVerification} canEdit={canEdit} reload={load} />}
       {active === 'collectors' && <Collectors {...data} canEdit={canEdit} reload={load} />}
       {active === 'logs' && <AdminAuditLog />}

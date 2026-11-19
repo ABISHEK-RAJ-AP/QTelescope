@@ -22,8 +22,7 @@ export const CONSOLE_ROUTES = [
   { id: 'admin-int', label: 'Integrations', nav: 'admin', group: 'Configure', state: { mainTopic: 'admin', adminSubTab: 'integrations' } },
   { id: 'admin-coll', label: 'Collectors', nav: 'admin', group: 'Configure', state: { mainTopic: 'admin', adminSubTab: 'collectors' } },
   { id: 'admin-rules', label: 'Alert rules', nav: 'admin', group: 'Configure', state: { mainTopic: 'admin', adminSubTab: 'rules' } },
-  { id: 'admin-access', label: 'Access & approvals', nav: 'admin', group: 'Configure', state: { mainTopic: 'admin', adminSubTab: 'access' } },
-  { id: 'admin-users', label: 'Users & roles', nav: 'admin', group: 'Configure', state: { mainTopic: 'admin', adminSubTab: 'users' } },
+  { id: 'admin-access', label: 'People & access', nav: 'admin', group: 'Configure', state: { mainTopic: 'admin', adminSubTab: 'access' } },
   { id: 'admin-logs', label: 'Audit log', nav: 'admin', group: 'Configure', state: { mainTopic: 'admin', adminSubTab: 'logs' } },
 ];
 

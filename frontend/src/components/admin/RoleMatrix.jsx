@@ -19,7 +19,7 @@ function currentViewerRole() {
   }
 }
 
-export function RoleMatrix({ canEditAccess = false }) {
+export function RoleMatrix({ canEditAccess = false, compact = false }) {
   const [editRoleId, setEditRoleId] = useState(null);
   const [customRoleIds, setCustomRoleIds] = useState(() => new Set());
   const roles = useMemo(
@@ -41,14 +41,8 @@ export function RoleMatrix({ canEditAccess = false }) {
       .catch(() => setCustomRoleIds(new Set()));
   }, [showEdit]);
 
-  return (
-    <section className="card admin-rbac-matrix" aria-label="Role capability matrix">
-      <div className="admin-rbac-matrix__head">
-        <div>
-          <h3 className="admin-card-title">Role capability matrix</h3>
-          <p className="page-hint">Effective access by role. Assign roles in the directory below. Built-in bundles are fixed — create a custom role under Security to tailor access.</p>
-        </div>
-      </div>
+  const inner = (
+    <>
       <div className="table-container admin-rbac-matrix__scroll">
         <table className="custom-table admin-rbac-table">
           <thead>
@@ -94,6 +88,19 @@ export function RoleMatrix({ canEditAccess = false }) {
           onSaved={() => setEditRoleId(null)}
         />
       )}
+    </>
+  );
+
+  if (compact) {
+    return <div className="admin-rbac-matrix admin-rbac-matrix--embedded" aria-label="Role capability matrix">{inner}</div>;
+  }
+
+  return (
+    <section className="card admin-rbac-matrix" aria-label="Role capability matrix">
+      <div className="admin-rbac-matrix__head">
+        <h3 className="admin-card-title">Role capability matrix</h3>
+      </div>
+      {inner}
     </section>
   );
 }

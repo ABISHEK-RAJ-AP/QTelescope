@@ -200,8 +200,7 @@ export function visibleAdminNav(user) {
     (canManageFleet(user) ? { value: 'collectors', label: 'Collectors' } : null),
     (can(user, 'platform:read') || canManageFleet(user) ? { value: 'logs', label: 'Audit log' } : null),
     ((can(user, 'alert_rules:read') || can(user, 'alert_rules:manage')) ? { value: 'rules', label: 'Alert rules' } : null),
-    (can(user, 'users:read') ? { value: 'access', label: 'Access & approvals' } : null),
-    (can(user, 'users:read') ? { value: 'users', label: 'Users & roles' } : null),
+    (can(user, 'users:read') ? { value: 'access', label: 'People & access' } : null),
   ].filter(Boolean);
 }
 
