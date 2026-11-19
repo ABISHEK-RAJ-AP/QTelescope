@@ -13,7 +13,6 @@ import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { getChartTheme, baseTooltip, getFleetStateChartColors, getModalityChartPalette } from '../components/observability/chartTheme.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
-import { useProviderLineage } from './useLineage.jsx';
 import { isSimulatorBackend } from './fleetData.js';
 import { ScopeBanner } from '../components/ds/ScopeBanner.jsx';
 import './BackendComparison.css';
@@ -151,7 +150,7 @@ export const BackendComparison = () => {
   const [queues, setQueues] = useState({});
   const [selected, setSelected] = useState(() => {
     const raw = params.get('backends') || params.get('backend');
-    return raw ? raw.split(',').filter(Boolean).slice(0, MAX_COMPARE) : null;
+    return raw ? raw.split(',').filter(Boolean).slice(0, MAX_COMPARE) : [];
   });
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -165,17 +164,7 @@ export const BackendComparison = () => {
     api.getQueues().then((r) => setQueues(Object.fromEntries((r || []).map((q) => [q.backend_id, q])))).catch(() => {});
   }, [tick]);
 
-  // preselect two eligible: first modality with >=2 backends, live provider first
-  useEffect(() => {
-    if (!backends || selected || !lineage) return;
-    const byMod = {};
-    backends.forEach((b) => { (byMod[b.qpu_modality || 'unknown'] ||= []).push(b); });
-    const pool = Object.values(byMod).filter((l) => l.length >= 2)
-      .sort((a, b) => b.filter((x) => lineage[x.provider_id] === 'live').length - a.filter((x) => lineage[x.provider_id] === 'live').length)[0];
-    setSelected(pool ? pool.slice().sort((a, b) => (lineage[b.provider_id] === 'live') - (lineage[a.provider_id] === 'live')).slice(0, 2).map((b) => b.backend_id) : []);
-  }, [backends, lineage, selected]);
-
-  const sel = selected || [];
+  const sel = selected;
   const key = sel.join('|');
 
   useEffect(() => {
