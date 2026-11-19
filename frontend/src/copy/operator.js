@@ -45,7 +45,7 @@ export const COPY = {
     serviceUnavailable: 'Sign-in is temporarily unavailable. Try again in a moment.',
     captchaUnavailable: 'Could not load the security image. Try again.',
     signInDirectory: 'This deployment accepts organization directory credentials.',
-    registerSubtitle: 'Select your organisation, then complete your profile. Email verification is required.',
+    registerSubtitle: 'Choose organisation type, enter your facility name, verify email.',
     registerClosed: 'Registration is managed by your organisation administrator.',
     registerOtpHint: 'Enter the 6-digit code shown in the notification when email delivery is not configured.',
     forgotSubtitle: 'Enter your username. For security, the response does not indicate whether an account exists.',

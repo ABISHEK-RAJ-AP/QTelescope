@@ -18,6 +18,25 @@ export function AuthShell({
   layout = 'split',
 }) {
   const isCert = layout === 'cert';
+  const isRegisterStudio = layout === 'register-studio';
+
+  if (isRegisterStudio) {
+    return (
+      <div
+        id={AUTH_LAYOUT_ID}
+        className="auth-shell auth-shell--register-studio relative min-h-screen flex flex-col bg-[var(--bg-dark)]"
+      >
+        <QuantumBackground />
+        <PublicMarketingHeader />
+        <div className="reg-auth-main">
+          <div className="reg-cert-panel">
+            {children}
+            {footer ? <div className="reg-cert-footer">{footer}</div> : null}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

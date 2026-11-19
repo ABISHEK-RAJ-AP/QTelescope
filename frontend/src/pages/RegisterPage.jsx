@@ -1,20 +1,39 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Loader2, Building2, Check } from 'lucide-react'
-import { AuthShell, Field, fieldClass } from '@/components/AuthShell'
+import {
+  Eye,
+  EyeOff,
+  Loader2,
+  Landmark,
+  GraduationCap,
+  Building2,
+  Rocket,
+  FlaskConical,
+  Network,
+  Check,
+} from 'lucide-react'
+import cdacLogo from '../assets/cdaclogo.png'
+import { AuthFridgeVisual } from '@/components/marketing/AuthFridgeVisual'
+import { Field, fieldClass } from '@/components/AuthShell'
 import { CaptchaField } from '@/components/CaptchaField'
+import { AuthShell } from '@/components/AuthShell'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/observability/ConfirmDialog'
 import { api } from '@/services/api'
 import { markOnboardingPending } from '@/lib/onboardingState'
 import { notifyInfo } from '@/lib/toast'
 import { COPY } from '@/copy/operator.js'
+import '@/styles/register-cert.css'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const CUSTOM_ORG_ID = '__custom__';
-const ACCESS_OPTIONS = [
-  { value: 'Operator', label: 'Operations' },
-  { value: 'Researcher', label: 'Research' },
+
+const ORG_TYPES = [
+  { id: 'government', label: 'Government', hint: 'Public sector & national labs', icon: Landmark },
+  { id: 'university', label: 'University', hint: 'Academic institutions', icon: GraduationCap },
+  { id: 'private', label: 'Private enterprise', hint: 'Industry & corporates', icon: Building2 },
+  { id: 'startup', label: 'Startup', hint: 'SME & venture teams', icon: Rocket },
+  { id: 'research', label: 'Research lab', hint: 'Dedicated R&D facilities', icon: FlaskConical },
+  { id: 'programme', label: 'National programme', hint: 'Consortium & funded programmes', icon: Network },
 ];
 
 function normOrg(s) {
@@ -51,12 +70,11 @@ function OtpInput({ value, onChange, disabled, invalid }) {
 export function RegisterPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState('profile')
-  const [selectedOrgId, setSelectedOrgId] = useState('')
-  const [orgCustom, setOrgCustom] = useState('')
+  const [selectedTypeId, setSelectedTypeId] = useState('')
+  const [facilityName, setFacilityName] = useState('')
   const [username, setUsername] = useState('')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
-  const [access, setAccess] = useState('Operator')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
@@ -69,31 +87,26 @@ export function RegisterPage() {
   const [registrationOpen, setRegistrationOpen] = useState(true)
   const [policyLoading, setPolicyLoading] = useState(true)
   const [fieldErrors, setFieldErrors] = useState({})
-  const [orgOptions, setOrgOptions] = useState([])
   const [registeredOrgs, setRegisteredOrgs] = useState([])
   const [otpSessionId, setOtpSessionId] = useState('')
   const [otpCode, setOtpCode] = useState('')
   const [otpDelivery, setOtpDelivery] = useState('email')
   const [orgDialog, setOrgDialog] = useState(null)
 
+  const selectedType = useMemo(
+    () => ORG_TYPES.find((t) => t.id === selectedTypeId) || null,
+    [selectedTypeId],
+  );
+
   const registeredSet = useMemo(
     () => new Set(registeredOrgs.map(normOrg)),
     [registeredOrgs],
   );
 
-  const catalogue = useMemo(() => {
-    const otherLabel = 'Other facility';
-    const fromApi = (orgOptions || []).filter(
-      (o) => o && !/other|contact admin/i.test(o),
-    );
-    return [...fromApi, { id: otherLabel, label: otherLabel, custom: true }];
-  }, [orgOptions]);
-
   const orgValue = useMemo(() => {
-    if (!selectedOrgId) return '';
-    if (selectedOrgId === CUSTOM_ORG_ID) return orgCustom.trim();
-    return selectedOrgId;
-  }, [selectedOrgId, orgCustom]);
+    if (!selectedType || !facilityName.trim()) return '';
+    return `${selectedType.label} · ${facilityName.trim()}`;
+  }, [selectedType, facilityName]);
 
   useEffect(() => {
     let cancelled = false
@@ -101,7 +114,6 @@ export function RegisterPage() {
       .then((reg) => {
         if (cancelled) return;
         setRegistrationOpen(reg?.allow_public_registration !== false);
-        setOrgOptions(reg?.org_options || []);
         setRegisteredOrgs(reg?.registered_orgs || []);
       })
       .catch(() => { if (!cancelled) setRegistrationOpen(true) })
@@ -109,29 +121,30 @@ export function RegisterPage() {
     return () => { cancelled = true }
   }, [])
 
-  const trySelectOrg = (tile) => {
+  const pickType = (typeId) => {
     setError('');
-    const name = tile.custom ? '' : tile.label;
-    if (tile.custom) {
-      setSelectedOrgId(CUSTOM_ORG_ID);
-      setOrgCustom('');
-      return;
-    }
-    if (registeredSet.has(normOrg(name))) {
+    setSelectedTypeId(typeId);
+    setFacilityName('');
+    setFieldErrors((f) => ({ ...f, org: undefined }));
+  };
+
+  const checkFacilityDuplicate = (name) => {
+    const full = selectedType ? `${selectedType.label} · ${name.trim()}` : name.trim();
+    if (full && registeredSet.has(normOrg(full))) {
       setOrgDialog({
-        title: 'Organisation already on file',
-        body: `${name} already has accounts in this console. Ask that organisation's platform administrator to invite you, or sign in with credentials they issued.`,
+        title: 'Organisation already registered',
+        body: 'This organisation already has console accounts. Contact its platform administrator for an invitation.',
         confirm: 'Understood',
       });
-      return;
+      return true;
     }
-    setSelectedOrgId(name);
-    setOrgCustom('');
+    return false;
   };
 
   const validateDetails = () => {
     const next = {}
-    if (!orgValue) next.org = 'Select an organisation and complete the name if needed.'
+    if (!selectedTypeId) next.org = 'Choose an organisation type.'
+    if (!facilityName.trim()) next.org = next.org || 'Enter your facility or programme name.'
     if (orgValue && registeredSet.has(normOrg(orgValue))) {
       next.org = 'This organisation is already registered.'
     }
@@ -150,10 +163,6 @@ export function RegisterPage() {
     e.preventDefault()
     setError('')
     setSuccess('')
-    if (!selectedOrgId) {
-      setError('Select your organisation.')
-      return
-    }
     if (!validateDetails()) {
       setError('Check the highlighted fields.')
       return
@@ -166,7 +175,7 @@ export function RegisterPage() {
         full_name: fullName.trim() || username.trim(),
         email: email.trim(),
         org: orgValue,
-        role: access,
+        role: 'Operator',
         password,
         captcha_id: captchaId,
         captcha_code: captchaCode.trim(),
@@ -214,31 +223,32 @@ export function RegisterPage() {
   }
 
   const footer = (
-    <p className="auth-cert-card__footer-text">
-      Already have an account?{' '}
-      <Link to="/login" className="auth-cert-card__link">Sign in</Link>
-    </p>
+    <>
+      Already have an account? <Link to="/login">Sign in</Link>
+    </>
+  );
+
+  const panelHead = (
+    <header className="reg-cert-head">
+      <h1>Create account</h1>
+      <p>{COPY.auth.registerSubtitle}</p>
+    </header>
   );
 
   if (!policyLoading && !registrationOpen) {
     return (
-      <AuthShell layout="cert" title="Create account" subtitle={COPY.auth.registerClosed} footer={footer} maxWidth="max-w-lg">
-        <p className="text-sm text-[var(--text-muted)]">
-          Self-service registration is off for this deployment.{' '}
-          <Link to="/login" className="auth-cert-card__link">Sign in</Link> or contact your platform administrator.
+      <AuthShell layout="register-studio" footer={footer}>
+        {panelHead}
+        <p className="text-sm" style={{ color: 'var(--reg-muted)', textAlign: 'center' }}>
+          {COPY.auth.registerClosed}{' '}
+          <Link to="/login">Sign in</Link>
         </p>
       </AuthShell>
     );
   }
 
   return (
-    <AuthShell
-      layout="cert"
-      title="Create account"
-      subtitle={COPY.auth.registerSubtitle}
-      footer={footer}
-      maxWidth="max-w-3xl"
-    >
+    <AuthShell layout="register-studio" footer={footer}>
       {orgDialog ? (
         <ConfirmDialog
           dlg={orgDialog}
@@ -247,41 +257,56 @@ export function RegisterPage() {
         />
       ) : null}
 
+      {panelHead}
+
       {success ? (
         <p className="auth-inline-alert auth-inline-alert--success" role="status">{success}</p>
       ) : (
-        <div className={`reg-org-layout${selectedOrgId ? ' reg-org-layout--detail' : ''}`}>
-          <div className="reg-org-layout__picker" aria-label="Organisation">
-            <p className="reg-org-layout__aside-title">Organisation</p>
-            <ul className="reg-org-tiles" role="listbox" aria-label="Select organisation">
-              {catalogue.map((tile) => {
-                const id = tile.custom ? CUSTOM_ORG_ID : tile.label;
-                const active = selectedOrgId === id || (tile.custom && selectedOrgId === CUSTOM_ORG_ID);
-                const taken = !tile.custom && registeredSet.has(normOrg(tile.label));
-                return (
-                  <li key={tile.label}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={active}
-                      className={`reg-org-tile${active ? ' reg-org-tile--active' : ''}${taken ? ' reg-org-tile--taken' : ''}`}
-                      onClick={() => trySelectOrg(tile)}
-                    >
-                      <Building2 className="size-4 shrink-0 opacity-70" aria-hidden />
-                      <span className="reg-org-tile__label">{tile.label}</span>
-                      {active ? <Check className="size-4 shrink-0 reg-org-tile__check" aria-hidden /> : null}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+        <div className={`reg-stage${selectedTypeId ? ' reg-stage--open' : ''}`}>
+          <div className="reg-stage__brand">
+            <img src={cdacLogo} alt="" className="reg-stage__logo" width={120} height={40} />
+            <p className="reg-stage__wordmark">Q-TeleScope</p>
+            <div className="reg-stage__fridge">
+              <AuthFridgeVisual />
+            </div>
           </div>
 
-          <div className="reg-org-layout__panel">
-            {!selectedOrgId ? (
-              <p className="reg-org-layout__placeholder">Select your lab or facility to continue.</p>
-            ) : step === 'otp' ? (
-              <form onSubmit={handleConfirmOtp} className="reg-org-form" noValidate>
+          <div className="reg-stage__types">
+            <p className="reg-stage__label">Organisation type</p>
+            <div className="reg-type-grid" role="listbox" aria-label="Organisation type">
+              {ORG_TYPES.map((type) => {
+                const Icon = type.icon;
+                const active = selectedTypeId === type.id;
+                return (
+                  <button
+                    key={type.id}
+                    type="button"
+                    role="option"
+                    aria-selected={active}
+                    className={`reg-type-tile${active ? ' reg-type-tile--active' : ''}`}
+                    onClick={() => pickType(type.id)}
+                  >
+                    <span className="reg-type-tile__row">
+                      <Icon className="size-4 shrink-0 opacity-80" aria-hidden />
+                      <span className="reg-type-tile__title">{type.label}</span>
+                      {active ? (
+                        <Check
+                          className="size-3.5 shrink-0"
+                          style={{ color: 'var(--reg-accent)', marginLeft: 'auto' }}
+                          aria-hidden
+                        />
+                      ) : null}
+                    </span>
+                    <span className="reg-type-tile__hint">{type.hint}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="reg-stage__form" aria-hidden={!selectedTypeId}>
+            {!selectedTypeId ? null : step === 'otp' ? (
+              <form onSubmit={handleConfirmOtp} className="reg-form-stack" noValidate>
                 <p className="reg-org-form__lead">
                   {otpDelivery === 'screen'
                     ? COPY.auth.registerOtpHint
@@ -296,44 +321,38 @@ export function RegisterPage() {
                   />
                 </Field>
                 {error ? <p className="auth-field-error" role="alert">{error}</p> : null}
-                <div className="reg-org-form__actions">
+                <div className="reg-form-actions">
                   <Button type="button" variant="outline" disabled={busy} onClick={() => { setStep('profile'); setError(''); }}>
                     Back
                   </Button>
-                  <Button type="submit" className="auth-cta flex-1" disabled={busy}>
+                  <Button type="submit" className="auth-cta reg-form-submit flex-1" disabled={busy}>
                     {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-                    Verify and finish
+                    Verify
                   </Button>
                 </div>
               </form>
             ) : (
-              <form onSubmit={handleSendOtp} className="reg-org-form" noValidate>
-                <p className="reg-org-form__org-name">{orgValue || '—'}</p>
-                {selectedOrgId === CUSTOM_ORG_ID ? (
-                  <Field label="Facility name" forId="reg-org-custom" hint={fieldErrors.org}>
-                    <input
-                      id="reg-org-custom"
-                      type="text"
-                      className={`${fieldClass} ${fieldErrors.org ? 'auth-field--invalid' : ''}`}
-                      value={orgCustom}
-                      onChange={(e) => {
-                        setOrgCustom(e.target.value);
-                        setFieldErrors((f) => ({ ...f, org: undefined }));
-                        if (registeredSet.has(normOrg(e.target.value))) {
-                          setOrgDialog({
-                            title: 'Name already registered',
-                            body: "This organisation name matches an existing directory entry. Contact that facility's administrator for an invitation.",
-                            confirm: 'OK',
-                          });
-                        }
-                      }}
-                      placeholder="Facility or programme"
-                      autoComplete="organization"
-                    />
-                  </Field>
-                ) : null}
+              <form onSubmit={handleSendOtp} className="reg-form-stack" noValidate>
+                <Field label="Facility or programme" forId="reg-facility" hint={fieldErrors.org}>
+                  <input
+                    id="reg-facility"
+                    type="text"
+                    className={`${fieldClass} ${fieldErrors.org ? 'auth-field--invalid' : ''}`}
+                    placeholder={selectedType ? `e.g. ${selectedType.label === 'University' ? 'IIT Bombay' : 'Your unit name'}` : ''}
+                    value={facilityName}
+                    onChange={(e) => {
+                      setFacilityName(e.target.value);
+                      setFieldErrors((f) => ({ ...f, org: undefined }));
+                      if (selectedType && checkFacilityDuplicate(e.target.value)) {
+                        /* dialog shown */
+                      }
+                    }}
+                    autoComplete="organization"
+                    required
+                  />
+                </Field>
 
-                <div className="reg-org-form__grid">
+                <div className="reg-form-row">
                   <Field label="Username" forId="reg-username" hint={fieldErrors.username}>
                     <input
                       id="reg-username"
@@ -345,24 +364,29 @@ export function RegisterPage() {
                     />
                   </Field>
                   <Field label="Full name" forId="reg-fullname">
-                    <input id="reg-fullname" className={fieldClass} value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" />
-                  </Field>
-                  <Field label="Email" forId="reg-email" hint={fieldErrors.email}>
                     <input
-                      id="reg-email"
-                      type="email"
-                      className={`${fieldClass} ${fieldErrors.email ? 'auth-field--invalid' : ''}`}
-                      value={email}
-                      onChange={(e) => { setEmail(e.target.value); setFieldErrors((f) => ({ ...f, email: undefined })); }}
-                      autoComplete="email"
-                      required
+                      id="reg-fullname"
+                      className={fieldClass}
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      autoComplete="name"
                     />
                   </Field>
-                  <Field label="Access" forId="reg-access">
-                    <select id="reg-access" className={fieldClass} value={access} onChange={(e) => setAccess(e.target.value)}>
-                      {ACCESS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                  </Field>
+                </div>
+
+                <Field label="Email" forId="reg-email" hint={fieldErrors.email}>
+                  <input
+                    id="reg-email"
+                    type="email"
+                    className={`${fieldClass} ${fieldErrors.email ? 'auth-field--invalid' : ''}`}
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setFieldErrors((f) => ({ ...f, email: undefined })); }}
+                    autoComplete="email"
+                    required
+                  />
+                </Field>
+
+                <div className="reg-form-row">
                   <Field label="Password" forId="reg-password" hint={fieldErrors.password}>
                     <div className="reg-org-password">
                       <input
@@ -401,7 +425,7 @@ export function RegisterPage() {
                 {fieldErrors.captcha ? <p className="auth-field-error">{fieldErrors.captcha}</p> : null}
                 {error ? <p className="auth-field-error qt-shake" role="alert">{error}</p> : null}
 
-                <Button type="submit" className="auth-cta w-full" disabled={busy || !orgValue}>
+                <Button type="submit" className="auth-cta reg-form-submit" disabled={busy || !orgValue}>
                   {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
                   Send verification code
                 </Button>
