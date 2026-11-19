@@ -44,18 +44,35 @@ The migrate script:
 1. Uses **existing Postgres on :5432** when `pg_isready` succeeds (creates `quantum_telemetry` DB if missing).
 2. Otherwise starts Timescale in Docker on **:5433** (or next free port) — avoids `bind: address already in use` on 5432.
 
-If system Postgres uses a different password, set before running:
+**Auto behaviour** (`vm-postgres-migrate.sh`):
+
+1. Tries `.env` `DATABASE_URL` if already Postgres.
+2. Tries `PG_PASS` / `PGPASSWORD` / `root` / `postgrespassword`.
+3. If `:5432` is up but passwords fail: **`sudo -u postgres`** creates DB + sets lab password (`QTELESCOPE_DB_PASSWORD`, default `postgrespassword`). Disable with `QTELESCOPE_PG_AUTO_SETUP=0`.
+4. Else **Docker Timescale on :5433+** (known `postgrespassword`).
+
+**One-shot on VM:**
 
 ```bash
-export PG_USER=postgres PG_PASS=yourpassword
+cd ~/QTelescope
+git pull --ff-only origin main
+chmod +x scripts/vm-postgres-autosetup.sh
+./scripts/vm-postgres-autosetup.sh
 ```
 
+Or step-by-step:
+
 ```bash
-git pull --ff-only origin main   # includes qtFilmWarm.js + this script
 chmod +x scripts/vm-postgres-migrate.sh scripts/performance-smoke.sh
 ./scripts/vm-postgres-migrate.sh
 ./scripts/vm-demo-restart.sh
 ./scripts/performance-smoke.sh
+```
+
+Skip broken system Postgres and force Docker only:
+
+```bash
+TIMESCALE_PREFER_DOCKER=1 ./scripts/vm-postgres-migrate.sh
 ```
 
 Manual equivalent:
