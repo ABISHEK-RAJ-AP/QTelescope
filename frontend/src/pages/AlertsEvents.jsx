@@ -27,7 +27,7 @@ import {
   DetailModalCallout,
 } from '../components/observability/DetailModalLayout.jsx';
 import { useAppScope } from '../hooks/useAppScope.js';
-import { buildBackendDetailsPath, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
+import { buildBackendDetailsLocation, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
 import { formatActivity, formatIST } from '../utils/time';
 import { SevBadge, StatusBadge } from './opsShared.jsx';
 import { dropAlertsCoveredByIncidents, sevRank, toMs, timelineTo, healthTo, qubitOf } from './opsHelpers.js';
@@ -53,6 +53,41 @@ import './AlertsEvents.css';
 
 const FETCH_LIMIT = 500; // API max for /alerts
 const PAGE_SIZE = 20;
+
+function BackendNavLink({
+  backendId,
+  label,
+  onOpen,
+  onFilter,
+  stopRow,
+}) {
+  if (!backendId) return label || '—';
+  const text = label || backendId;
+  return (
+    <button
+      type="button"
+      className="al-backend-link"
+      title="Open backend workspace (Alt+click: filter this list)"
+      onClick={(e) => {
+        stopRow?.(e);
+        if (e.altKey) {
+          onFilter(backendId);
+          return;
+        }
+        onOpen(backendId);
+      }}
+      onAuxClick={(e) => {
+        if (e.button === 1) {
+          e.preventDefault();
+          stopRow?.(e);
+          onOpen(backendId);
+        }
+      }}
+    >
+      {text}
+    </button>
+  );
+}
 const CHILD_PAGE = 12;
 const SEVERITIES = ['CRITICAL', 'WARNING', 'INFO'];
 const STATUSES = ['ACTIVE', 'ACKNOWLEDGED', 'RESOLVED'];
@@ -518,7 +553,11 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
     setDlg({ ...cfg, onConfirm: (t) => run(() => cfg.fn(t), cfg.ok) });
   };
 
-  const openBackend = (id) => nav(buildBackendDetailsPath(id, 'qubits'));
+  const openBackend = useCallback((id) => {
+    if (!id) return;
+    const { pathname, search } = buildBackendDetailsLocation(id, 'overview');
+    nav({ pathname, search });
+  }, [nav]);
   const clearFilters = () => {
     setSevF('ALL');
     setStatusF('ALL');
@@ -610,7 +649,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   );
 
   return (
-    <div className="alerts-container page-stack">
+    <div className="alerts-container page-stack" data-qt-page-pending="false">
       <div className="al-view-bar">
         <nav className="al-view-switch" aria-label="Alerts workspace">
           <button type="button" className={`al-view-switch__btn ${view === 'alerts' ? 'is-active' : ''}`} onClick={() => onViewChange?.('alerts')}>
@@ -722,6 +761,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                   ).length;
                   return {
                     id: inc.incident_id,
+                    backend_id: inc.backend_id,
                     backend: backendLabel || inc.backend_id,
                     rule: rule || inc.backend_id,
                     severity_rank: sevRank(inc.severity),
@@ -736,7 +776,19 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                   };
                 })}
                 columns={[
-                  { key: 'backend', label: 'Backend' },
+                  {
+                    key: 'backend',
+                    label: 'Backend',
+                    render: (row) => (
+                      <BackendNavLink
+                        backendId={row.backend_id}
+                        label={row.backend}
+                        onOpen={openBackend}
+                        onFilter={toggleBackendFilter}
+                        stopRow={stopRow}
+                      />
+                    ),
+                  },
                   { key: 'rule', label: 'Rule' },
                   {
                     key: 'severity_rank',
@@ -793,7 +845,16 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                     <header className="al-inc-card__head">
                       <div>
                         <span className="al-inc-card__title">{headline}</span>
-                        <p className="al-inc-card__meta">{backend} · {inc.alert_count} alerts · {activeNow} active · {activity}</p>
+                        <p className="al-inc-card__meta">
+                          <BackendNavLink
+                            backendId={inc.backend_id}
+                            label={backend}
+                            onOpen={openBackend}
+                            onFilter={toggleBackendFilter}
+                            stopRow={stopRow}
+                          />
+                          {' · '}{inc.alert_count} alerts · {activeNow} active · {activity}
+                        </p>
                       </div>
                       <div className="al-inc-card__badges">
                         <SevBadge severity={inc.severity} />
@@ -894,7 +955,16 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                       <header className="dvt-card__head">
                         <div>
                           <h4 className="dvt-card__title">{g.type}</h4>
-                          <p className="dvt-card__meta">{g.backend}{multi ? ` · ${g.count} alerts` : ''}</p>
+                          <p className="dvt-card__meta">
+                            <BackendNavLink
+                              backendId={g.backend}
+                              label={formatBackendTitle({ backend_id: g.backend })}
+                              onOpen={openBackend}
+                              onFilter={toggleBackendFilter}
+                              stopRow={stopRow}
+                            />
+                            {multi ? ` · ${g.count} alerts` : ''}
+                          </p>
                         </div>
                         <SevBadge severity={g.worst} />
                       </header>
@@ -978,14 +1048,13 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                     key: 'backend',
                     label: 'Backend',
                     render: (row) => (
-                      <button
-                        type="button"
-                        className="al-backend-filter"
-                        onClick={(e) => { e.stopPropagation(); toggleBackendFilter(row.backend); }}
-                        aria-pressed={scopeBackend === row.backend}
-                      >
-                        {row.backend}
-                      </button>
+                      <BackendNavLink
+                        backendId={row.backend}
+                        label={formatBackendTitle({ backend_id: row.backend })}
+                        onOpen={openBackend}
+                        onFilter={toggleBackendFilter}
+                        stopRow={stopRow}
+                      />
                     ),
                   },
                   {
@@ -1062,14 +1131,13 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                           <td><SevBadge severity={g.worst} />{multi && <div className="al-sub"><Breakdown counts={g.sev} order={SEVERITIES} /></div>}</td>
                           <td><b>{g.type}</b>{!multi && qubitOf(a) && <div className="al-sub">{qubitOf(a)}</div>}</td>
                           <td>
-                            <button
-                              type="button"
-                              className="al-backend-filter"
-                              aria-pressed={scopeBackend === g.backend}
-                              onClick={(e) => { stopRow(e); toggleBackendFilter(g.backend); }}
-                            >
-                              {g.backend}
-                            </button>
+                            <BackendNavLink
+                              backendId={g.backend}
+                              label={formatBackendTitle({ backend_id: g.backend })}
+                              onOpen={openBackend}
+                              onFilter={toggleBackendFilter}
+                              stopRow={stopRow}
+                            />
                           </td>
                           <td>{multi ? <><b>{g.count}</b><div className="al-sub"><Breakdown counts={g.st} order={STATUSES} /></div></> : <StatusBadge status={a.status} />}</td>
                           <td className="al-nowrap">{formatObservedVsThresholdGroup(g)}</td>
