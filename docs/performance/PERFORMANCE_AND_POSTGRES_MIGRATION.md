@@ -69,11 +69,14 @@ chmod +x scripts/vm-postgres-migrate.sh scripts/performance-smoke.sh
 ./scripts/performance-smoke.sh
 ```
 
-Skip broken system Postgres and force Docker only:
+Skip broken system Postgres and force Docker only (empty/new DB — **do not** run after a successful :5432 migrate):
 
 ```bash
+docker rm -f quantum_timescaledb 2>/dev/null || true
 TIMESCALE_PREFER_DOCKER=1 ./scripts/vm-postgres-migrate.sh
 ```
+
+**Already on system Postgres :5432 with data migrated?** Hypertable init may print *TimescaleDB extension not installed* — **that is OK**. Run `./scripts/vm-demo-restart.sh` and use the app; Timescale is optional.
 
 Manual equivalent:
 

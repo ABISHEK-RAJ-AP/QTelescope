@@ -142,6 +142,27 @@ ensure_database() {
   fi
 }
 
+docker_timescale_publish_port() {
+  docker_invoke port quantum_timescaledb 5432/tcp 2>/dev/null | awk -F: '{print $NF}' | head -1
+}
+
+reuse_running_timescale() {
+  if ! docker_invoke ps --format '{{.Names}}' 2>/dev/null | grep -qx quantum_timescaledb; then
+    return 1
+  fi
+  local pub
+  pub="$(docker_timescale_publish_port)"
+  [[ -n "$pub" ]] || return 1
+  if ! docker_invoke exec quantum_timescaledb pg_isready -U postgres -d "$PG_DB" >/dev/null 2>&1; then
+    return 1
+  fi
+  echo "==> Reusing running TimescaleDB container on host port ${pub}"
+  PG_PASS="$LAB_PASSWORD"
+  PG_URL="postgresql+psycopg2://${PG_USER}:${PG_PASS}@${PG_HOST}:${pub}/${PG_DB}"
+  export PG_URL PG_PASS PGPASSWORD="$PG_PASS"
+  return 0
+}
+
 start_docker_timescale() {
   if ! command -v docker >/dev/null 2>&1; then
     echo "FAIL: Docker not installed" >&2
@@ -151,12 +172,18 @@ start_docker_timescale() {
     echo "FAIL: Docker not accessible (try: sudo usermod -aG docker \$USER && re-login)" >&2
     return 1
   fi
+  if reuse_running_timescale; then
+    return 0
+  fi
+  echo "==> Removing stale quantum_timescaledb container (if any)"
+  docker_invoke rm -f quantum_timescaledb 2>/dev/null || true
+  docker_invoke compose -f docker-compose.timescale.yml --profile timescale down 2>/dev/null || true
   local publish="${TIMESCALE_PUBLISH_PORT:-5433}"
   while port_listening "$publish"; do
     publish=$((publish + 1))
   done
   export TIMESCALE_PUBLISH_PORT="$publish"
-  echo "==> TimescaleDB Docker on host port ${publish} (known password: ${LAB_PASSWORD})"
+  echo "==> TimescaleDB Docker on host port ${publish} (password: ${LAB_PASSWORD})"
   docker_invoke compose -f docker-compose.timescale.yml --profile timescale up -d db
   for _ in $(seq 1 60); do
     if docker_invoke exec quantum_timescaledb pg_isready -U postgres -d "$PG_DB" >/dev/null 2>&1; then
