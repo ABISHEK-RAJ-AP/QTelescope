@@ -62,8 +62,8 @@
   align-items: center;
 }
 
-.bd-head .bk-coverage-callout {
-  width: 100%;
+.bd-meta .bk-coverage-hint {
+  margin-inline-start: 4px;
 }
 .bd-actions {
   display: grid;

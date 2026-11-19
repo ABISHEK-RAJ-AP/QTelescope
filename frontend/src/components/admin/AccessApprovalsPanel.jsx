@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { RefreshCw, UserPlus } from 'lucide-react';
 import { api } from '@/services/api';
 import {
@@ -17,6 +18,7 @@ import { ListPager } from '@/components/observability/ListPager.jsx';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue.js';
 import { formatISTTime } from '@/utils/time';
 import { COPY } from '@/copy/operator.js';
+import '@/components/observability/confirmDialog.css';
 
 const TEST_USER = /^(chg_|mail_|mfa_|e2e_)/i;
 const USER_SORTS = [
@@ -56,7 +58,6 @@ function PeopleTabBar({ tab, onTab, pendingCount }) {
   const items = [
     { id: 'queue', label: 'Queue', badge: pendingCount || null },
     { id: 'directory', label: 'Directory' },
-    { id: 'invite', label: 'Invite' },
   ];
   return (
     <div className="admin-people-tabs" role="tablist" aria-label="People views">
@@ -154,7 +155,6 @@ function RejectedCard({ user, canEdit, busy, onReopen }) {
 export function AccessApprovalsPanel({ canEdit, onNotice }) {
   const me = sessionUser();
   const fleetAdmin = isFleetUserAdmin(me);
-  const inviteStepTimer = useRef(null);
   const [rows, setRows] = useState([]);
   const [roles, setRoles] = useState([]);
   const [policy, setPolicy] = useState(null);
@@ -163,6 +163,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
   const [loading, setLoading] = useState(true);
   const [confirm, setConfirm] = useState(null);
   const [tab, setTab] = useState('queue');
+  const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteOrgPick, setInviteOrgPick] = useState('');
   const [invite, setInvite] = useState({
     username: '',
@@ -173,7 +174,6 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
   });
   const [inviteFieldErr, setInviteFieldErr] = useState({});
   const [inviteErr, setInviteErr] = useState('');
-  const [inviteOk, setInviteOk] = useState('');
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 300);
   const [sortKey, setSortKey] = useState('username');
@@ -200,10 +200,6 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
   }, [onNotice]);
 
   useEffect(() => { load(); }, [load]);
-
-  useEffect(() => () => {
-    if (inviteStepTimer.current) clearTimeout(inviteStepTimer.current);
-  }, []);
 
   const scopedRows = useMemo(() => {
     if (me?.role === 'OrgAdmin' && me.org) {
@@ -344,7 +340,6 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
   const submitInvite = async (e) => {
     e.preventDefault();
     setInviteErr('');
-    setInviteOk('');
     if (!canEdit) return;
     if (!validateInvite()) {
       setInviteErr(fleetAdmin && !orgFilter.trim() && !inviteOrgPick
@@ -363,7 +358,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
         role: invite.role,
         password: invite.password,
       });
-      setInviteOk(res?.message || `${invite.username.trim()} invited.`);
+      onNotice?.({ type: 'success', text: res?.message || `${invite.username.trim()} invited.` });
       setInvite({
         username: '',
         email: '',
@@ -372,13 +367,9 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
         password: '',
       });
       setInviteFieldErr({});
+      setInviteOpen(false);
       await load();
       setTab('directory');
-      if (inviteStepTimer.current) clearTimeout(inviteStepTimer.current);
-      inviteStepTimer.current = setTimeout(() => {
-        setInviteOk('');
-        inviteStepTimer.current = null;
-      }, 5000);
     } catch (err) {
       setInviteErr(err?.message || 'Invite failed.');
     } finally {
@@ -438,6 +429,19 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
             >
               <RefreshCw size={14} aria-hidden className={loading ? 'admin-access-spin' : undefined} />
             </button>
+            {canEdit ? (
+              <button
+                type="button"
+                className="btn btn-primary btn--sm"
+                onClick={() => {
+                  setInviteErr('');
+                  setInviteOpen(true);
+                }}
+              >
+                <UserPlus size={14} aria-hidden />
+                Invite member
+              </button>
+            ) : null}
           </div>
         </div>
         <PeopleTabBar tab={tab} onTab={setTab} pendingCount={pending.length} />
@@ -611,114 +615,122 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
         </section>
       )}
 
-      {tab === 'invite' && canEdit ? (
-        <section className="card admin-people-panel reg-cert-panel" aria-labelledby="admin-invite-h">
-          <div className="admin-access-invite__head">
-            <UserPlus size={18} aria-hidden />
+      {inviteOpen && canEdit ? createPortal(
+        <div
+          className="confirm-dialog-backdrop"
+          role="presentation"
+          onClick={() => busy !== 'invite' && setInviteOpen(false)}
+        >
+          <div
+            className="confirm-dialog invite-member-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-invite-modal-h"
+            onClick={(e) => e.stopPropagation()}
+          >
             <PeopleTitleRow className="admin-people-panel__head">
-              <h3 id="admin-invite-h" className="admin-card-title">Invite</h3>
+              <h3 id="admin-invite-modal-h" className="admin-card-title">Invite member</h3>
               <InfoTooltip label="Invite operator">{INVITE_HELP}</InfoTooltip>
             </PeopleTitleRow>
-          </div>
-          {me?.role !== 'OrgAdmin' && fleetAdmin && !orgFilter.trim() ? (
-            <p className="admin-people-muted admin-people-invite-scope-hint">Pick organisation scope above or below — invites use that org automatically.</p>
-          ) : (
-            <p className="admin-people-muted admin-people-invite-scope-hint">
-              Organisation: <strong>{resolveOrgForInvite(me, orgFilter, inviteOrgPick) || scopeOrgLabel}</strong>
-            </p>
-          )}
-          <form className="admin-access-invite__form" onSubmit={submitInvite} noValidate>
-            <div className="admin-access-invite__row">
-              <Field label="Username" forId="inv-username">
-                <input
-                  id="inv-username"
-                  className={`${fieldClass}${inviteFieldErr.username ? ' auth-field--invalid qt-shake' : ''}`}
-                  value={invite.username}
-                  onChange={(e) => setInvite((s) => ({ ...s, username: e.target.value }))}
-                  autoComplete="off"
-                  required
-                />
-              </Field>
-              <Field label="Email" forId="inv-email">
-                <input
-                  id="inv-email"
-                  type="email"
-                  className={`${fieldClass}${inviteFieldErr.email ? ' auth-field--invalid qt-shake' : ''}`}
-                  value={invite.email}
-                  onChange={(e) => setInvite((s) => ({ ...s, email: e.target.value }))}
-                  required
-                />
-              </Field>
-            </div>
-            <div className="admin-access-invite__row">
-              <Field label="Full name" forId="inv-name">
-                <input
-                  id="inv-name"
-                  className={fieldClass}
-                  value={invite.full_name}
-                  onChange={(e) => setInvite((s) => ({ ...s, full_name: e.target.value }))}
-                />
-              </Field>
-              <Field label="Role" forId="inv-role">
-                <select
-                  id="inv-role"
-                  className={fieldClass}
-                  value={invite.role}
-                  onChange={(e) => setInvite((s) => ({ ...s, role: e.target.value }))}
-                >
-                  {(roleOptions.length ? roleOptions : [{ id: 'Operator' }, { id: 'Researcher' }]).map((r) => (
-                    <option key={r.id || r.role} value={r.id || r.role}>
-                      {r.label || roleLabel(r.id || r.role)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-            </div>
-            {fleetAdmin && me?.role !== 'OrgAdmin' && !orgFilter.trim() ? (
-              <Field label="Organisation" forId="inv-org-pick">
-                <select
-                  id="inv-org-pick"
-                  className={`${fieldClass}${inviteFieldErr.org ? ' auth-field--invalid qt-shake' : ''}`}
-                  value={inviteOrgPick}
-                  onChange={(e) => setInviteOrgPick(e.target.value)}
-                  required
-                >
-                  <option value="">Select organisation…</option>
-                  {orgChoices.map((org) => (
-                    <option key={org} value={org}>{org}</option>
-                  ))}
-                </select>
-              </Field>
-            ) : null}
-            <Field label="Temporary password" forId="inv-pass">
-              <div className="admin-access-invite__pass-row">
-                <input
-                  id="inv-pass"
-                  type="password"
-                  className={`${fieldClass}${inviteFieldErr.password ? ' auth-field--invalid qt-shake' : ''}`}
-                  value={invite.password}
-                  onChange={(e) => setInvite((s) => ({ ...s, password: e.target.value }))}
-                  autoComplete="new-password"
-                  required
-                />
-                <button type="button" className="btn btn-secondary btn--sm" onClick={generateTempPassword}>
-                  Generate
-                </button>
+            {me?.role !== 'OrgAdmin' && fleetAdmin && !orgFilter.trim() ? (
+              <p className="admin-people-muted admin-people-invite-scope-hint">Set organisation scope in the toolbar or pick below.</p>
+            ) : (
+              <p className="admin-people-muted admin-people-invite-scope-hint">
+                Org: <strong>{resolveOrgForInvite(me, orgFilter, inviteOrgPick) || scopeOrgLabel}</strong>
+              </p>
+            )}
+            <form className="admin-access-invite__form admin-access-invite__form--modal" onSubmit={submitInvite} noValidate>
+              <div className="admin-access-invite__row">
+                <Field label="Username" forId="inv-username">
+                  <input
+                    id="inv-username"
+                    className={`${fieldClass}${inviteFieldErr.username ? ' auth-field--invalid qt-shake' : ''}`}
+                    value={invite.username}
+                    onChange={(e) => setInvite((s) => ({ ...s, username: e.target.value }))}
+                    autoComplete="off"
+                    required
+                  />
+                </Field>
+                <Field label="Email" forId="inv-email">
+                  <input
+                    id="inv-email"
+                    type="email"
+                    className={`${fieldClass}${inviteFieldErr.email ? ' auth-field--invalid qt-shake' : ''}`}
+                    value={invite.email}
+                    onChange={(e) => setInvite((s) => ({ ...s, email: e.target.value }))}
+                    required
+                  />
+                </Field>
               </div>
-            </Field>
-            {inviteErr ? <p className="auth-field-error qt-shake" role="alert">{inviteErr}</p> : null}
-            {inviteOk ? <p className="auth-inline-alert auth-inline-alert--success" role="status">{inviteOk}</p> : null}
-            <Button type="submit" className="auth-cta" disabled={busy === 'invite'}>
-              {busy === 'invite' ? 'Creating…' : 'Create account'}
-            </Button>
-          </form>
-        </section>
-      ) : null}
-
-      {tab === 'invite' && !canEdit ? (
-        <section className="card admin-people-panel">
-          <TableEmpty colSpan={1} title="Invite disabled" message="You need user-management permission to invite operators." />
-        </section>
+              <div className="admin-access-invite__row">
+                <Field label="Full name" forId="inv-name">
+                  <input
+                    id="inv-name"
+                    className={fieldClass}
+                    value={invite.full_name}
+                    onChange={(e) => setInvite((s) => ({ ...s, full_name: e.target.value }))}
+                  />
+                </Field>
+                <Field label="Role" forId="inv-role">
+                  <select
+                    id="inv-role"
+                    className={fieldClass}
+                    value={invite.role}
+                    onChange={(e) => setInvite((s) => ({ ...s, role: e.target.value }))}
+                  >
+                    {(roleOptions.length ? roleOptions : [{ id: 'Operator' }, { id: 'Researcher' }]).map((r) => (
+                      <option key={r.id || r.role} value={r.id || r.role}>
+                        {r.label || roleLabel(r.id || r.role)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
+              {fleetAdmin && me?.role !== 'OrgAdmin' && !orgFilter.trim() ? (
+                <Field label="Organisation" forId="inv-org-pick">
+                  <select
+                    id="inv-org-pick"
+                    className={`${fieldClass}${inviteFieldErr.org ? ' auth-field--invalid qt-shake' : ''}`}
+                    value={inviteOrgPick}
+                    onChange={(e) => setInviteOrgPick(e.target.value)}
+                    required
+                  >
+                    <option value="">Select organisation…</option>
+                    {orgChoices.map((org) => (
+                      <option key={org} value={org}>{org}</option>
+                    ))}
+                  </select>
+                </Field>
+              ) : null}
+              <Field label="Temporary password" forId="inv-pass">
+                <div className="admin-access-invite__pass-row">
+                  <input
+                    id="inv-pass"
+                    type="password"
+                    className={`${fieldClass}${inviteFieldErr.password ? ' auth-field--invalid qt-shake' : ''}`}
+                    value={invite.password}
+                    onChange={(e) => setInvite((s) => ({ ...s, password: e.target.value }))}
+                    autoComplete="new-password"
+                    required
+                  />
+                  <button type="button" className="btn btn-secondary btn--sm" onClick={generateTempPassword}>
+                    Generate
+                  </button>
+                </div>
+              </Field>
+              {inviteErr ? <p className="auth-field-error qt-shake" role="alert">{inviteErr}</p> : null}
+              <div className="confirm-dialog__actions invite-member-modal__actions">
+                <button type="button" className="btn btn-secondary" disabled={busy === 'invite'} onClick={() => setInviteOpen(false)}>
+                  Cancel
+                </button>
+                <Button type="submit" className="auth-cta" disabled={busy === 'invite'}>
+                  {busy === 'invite' ? 'Creating…' : 'Create account'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body,
       ) : null}
 
       <CollapsibleSection

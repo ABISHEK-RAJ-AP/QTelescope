@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
-import { Hash } from 'lucide-react';
+import { AlertTriangle, Hash } from 'lucide-react';
+import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { getChartTheme } from '../components/observability/chartTheme.js';
@@ -84,26 +85,28 @@ export function StatusText({ status, showKey = false }) {
 }
 
 /** Reachability vs data source vs routing — three different signals, one row. */
-/** ISA / partial-ingest honesty — full-width callout, not crammed under status strip. */
-export function TelemetryCoverageCallout({ unknownCount, totalCount }) {
+const COVERAGE_HELP = 'Qubits lack T1/T2 in stored telemetry. Scored as Unknown — not a hardware failure.';
+
+/** Compact coherence coverage signal — icon + counts; detail in tooltip. */
+export function TelemetryCoverageHint({ unknownCount, totalCount, className = '' }) {
   const unknown = Number(unknownCount) || 0;
   if (unknown <= 0) return null;
   const total = totalCount ?? '—';
   return (
-    <div className="bk-coverage-callout" role="status">
-      <p className="bk-coverage-callout__title">Partial coherence coverage</p>
-      <p className="bk-coverage-callout__body">
-        <span className="bk-coverage-callout__nums" aria-hidden>
-          {unknown}
-          <span className="bk-coverage-callout__sep">/</span>
-          {total}
-        </span>
-        <span className="bk-coverage-callout__desc">
-          qubits lack T1/T2 in stored telemetry. Scored as <strong>Unknown</strong> — not a hardware failure.
-        </span>
-      </p>
-    </div>
+    <span className={`bk-coverage-hint${className ? ` ${className}` : ''}`} role="status">
+      <AlertTriangle size={14} aria-hidden className="bk-coverage-hint__icon" />
+      <span className="bk-coverage-hint__nums" title={COVERAGE_HELP}>
+        {unknown}/{total}
+      </span>
+      <span className="bk-coverage-hint__label">partial coherence</span>
+      <InfoTooltip label="Partial coherence coverage">{COVERAGE_HELP}</InfoTooltip>
+    </span>
   );
+}
+
+/** @deprecated Use TelemetryCoverageHint — alias for existing imports. */
+export function TelemetryCoverageCallout(props) {
+  return <TelemetryCoverageHint {...props} />;
 }
 
 export function BackendStatusStrip({ operationalStatus, routingState, routingAction, lineage, lineageLoaded = true }) {

@@ -16,7 +16,7 @@ import { PageRelatedLink, PageRelatedNav } from '../components/observability/Pag
 import { baseTooltip, getChartTheme, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { BACKEND_WORKSPACE_TABS } from '../lib/investigationLinks.js';
 import { STATES, STATE_GLYPH, STATE_LABEL, ageMinutes, formatAge, isStale, lineageOf, median, modalityName, num, providerName, scopeSearch, useProviderLineage } from './backendUtils.js';
-import { BackendRegistryIdChip, BackendStatusStrip, Sparkline, StateBar, TelemetryCoverageCallout } from './backendCommon.jsx';
+import { BackendRegistryIdChip, BackendStatusStrip, Sparkline, StateBar, TelemetryCoverageHint } from './backendCommon.jsx';
 import { formatEnumLabel } from '../lib/displayLabels.js';
 import { ListPager } from '../components/observability/ListPager.jsx';
 import { unableToLoad, unableToLoadLabel } from '../constants/messages.js';
@@ -256,6 +256,12 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
             <p className="bd-meta">
               {providerName(backend.provider_id)} · {modalityName(backend.qpu_modality)} · {backend.qubit_count} qubits
               {backend.quantum_volume ? ` · QV ${backend.quantum_volume}` : ''}{backend.clops ? ` · CLOPS ${backend.clops}` : ''}
+              {hv?.counts?.UNKNOWN > 0 ? (
+                <TelemetryCoverageHint
+                  unknownCount={hv.counts.UNKNOWN}
+                  totalCount={backend.qubit_count ?? hv.qubit_count}
+                />
+              ) : null}
               <BackendRegistryIdChip backendId={backend.backend_id} className="bd-meta__id" />
             </p>
             <BackendStatusStrip
@@ -272,12 +278,6 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
             <Link className="bd-actions__link" to={link('/app/telemetry/drift')}>Drift</Link>
           </PageRelatedNav>
         </div>
-        {hv?.counts?.UNKNOWN > 0 ? (
-          <TelemetryCoverageCallout
-            unknownCount={hv.counts.UNKNOWN}
-            totalCount={backend.qubit_count ?? hv.qubit_count}
-          />
-        ) : null}
         <dl className="bd-facts">
           <div>
             <dt>Telemetry</dt>

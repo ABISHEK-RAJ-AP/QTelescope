@@ -187,6 +187,20 @@
   margin-bottom: 10px;
 }
 
+.invite-member-modal.confirm-dialog {
+  width: min(520px, 100%);
+  max-height: min(90vh, 720px);
+  overflow-y: auto;
+}
+
+.admin-access-invite__form--modal {
+  max-width: none;
+}
+
+.invite-member-modal__actions {
+  margin-top: 4px;
+}
+
 .admin-rbac-matrix--embedded .admin-rbac-matrix__scroll {
   margin: 0;
 }
