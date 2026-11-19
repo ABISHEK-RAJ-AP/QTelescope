@@ -52,10 +52,19 @@ def ensure_runtime_directories():
 ensure_runtime_directories()
 
 def execute_startup_hardware_discovery():
-    """Autonomous zero-touch hardware discovery on startup."""
+    """Optional startup discovery — default off when background scheduler is enabled."""
+    mode = os.getenv("STARTUP_HARDWARE_DISCOVERY", "auto").strip().lower()
+    if mode in ("0", "false", "no", "skip"):
+        return
+    if mode == "auto" and scheduler_enabled():
+        _startup_log.info("Skipping startup discovery (COLLECTION_SCHEDULER_ENABLED; use admin trigger if needed)")
+        return
     db = SessionLocal()
     try:
-        HardwareDiscoveryEngine.run_auto_discovery(db)
+        from app.discovery.status_store import record_discovery_run
+
+        result = HardwareDiscoveryEngine.run_auto_discovery(db)
+        record_discovery_run(result, trigger="startup")
     finally:
         db.close()
 

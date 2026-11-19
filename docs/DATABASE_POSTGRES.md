@@ -64,3 +64,5 @@ See also [DATABASE_BACKUP.md](./DATABASE_BACKUP.md).
 **Recommended path:** stay on Postgres URL; when volume hurts, convert
 `qubit_telemetry`, `gate_telemetry`, `backend_telemetry` to hypertables on `timestamp`
 and keep the same ORM models (Timescale is Postgres-compatible).
+
+**VM migration runbook:** [performance/PERFORMANCE_AND_POSTGRES_MIGRATION.md](./performance/PERFORMANCE_AND_POSTGRES_MIGRATION.md) (`scripts/vm-postgres-migrate.sh`, `docker-compose.timescale.yml`).

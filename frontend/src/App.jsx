@@ -839,7 +839,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
         <div id="page-content" tabIndex={-1} className={`page-container page-container--${density}`}>
           <ConsoleErrorBoundary resetKey={location.pathname}>
             <Suspense fallback={<BoneyardSkeleton layout={skeletonFor(mainTopic, backendSubTab)} />}>
-              <div key={location.pathname} className="page-enter">
+              <div className="page-enter" data-route={location.pathname}>
                 {renderContent()}
               </div>
             </Suspense>

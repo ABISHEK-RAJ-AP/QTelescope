@@ -13,7 +13,7 @@ from app.core.config import settings
 from app.core.hybrid_demo import hybrid_demo_public_snapshot
 from app.core.database import get_db
 from app.core.provenance import database_storage_mode, platform_data_mode, MOCK_BACKEND_IDS
-from app.discovery.hardware_discovery import ensure_discovered
+from app.discovery.status_store import get_discovery_status
 from sqlalchemy import text
 
 from app.models.entities import AlertModel, BackendModel, BackendTelemetryModel, IncidentModel
@@ -64,8 +64,13 @@ def get_operations_centre(db: Session = Depends(get_db)):
     return get_or_set_json(key, ttl, lambda: _build_operations_centre(db))
 
 
+@router.get("/discovery-status")
+def discovery_status():
+    """Last scheduler/admin discovery run — catalogue reads do not trigger discovery."""
+    return get_discovery_status()
+
+
 def _build_operations_centre(db: Session) -> Dict[str, Any]:
-    ensure_discovered(db)
     try:
         sync_incidents_from_alerts_if_stale(db)
     except Exception:
@@ -108,6 +113,7 @@ def _build_operations_centre(db: Session) -> Dict[str, Any]:
             "database_storage": database_storage_mode(settings.DATABASE_URL),
             "platform_data_mode": platform_data_mode(settings.ENABLE_MOCK_DATA, bool(live_backends)),
             "hybrid_demo": hybrid_demo_public_snapshot(),
+            "discovery": get_discovery_status(),
         },
         "collectors": {
             "providers": collectors,
@@ -144,7 +150,6 @@ def _build_operations_centre(db: Session) -> Dict[str, Any]:
 
 def _build_platform_health(db: Session) -> Dict[str, Any]:
     """Self-observability: DB, collectors, SSE honesty, collection freshness."""
-    ensure_discovered(db)
     db_ok = True
     db_error = None
     try:

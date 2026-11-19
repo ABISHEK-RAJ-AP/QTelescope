@@ -8,7 +8,7 @@ from app.schemas.schemas import BackendResponse, BackendStatusResponse, Connecti
 
 from app.core.config import settings
 from app.core.provenance import MOCK_BACKEND_IDS
-from app.discovery.hardware_discovery import ensure_discovered
+from app.discovery.hardware_discovery import bootstrap_catalog_if_empty
 from app.services.backend_catalog import get_catalog_entry
 
 router = APIRouter(prefix="/backends", tags=["Backends"])
@@ -44,7 +44,7 @@ def get_backends(provider_id: Optional[str] = None, db: Session = Depends(get_db
     from app.core.cache import cache_key, default_ttl, get_or_set_json
 
     if provider_id:
-        ensure_discovered(db)
+        bootstrap_catalog_if_empty(db)
         query = _fleet_query(db).filter(BackendModel.provider_id == provider_id)
         return [_backend_response(b) for b in query.all()]
 
@@ -52,7 +52,7 @@ def get_backends(provider_id: Optional[str] = None, db: Session = Depends(get_db
     key = cache_key("backends", "list")
 
     def build():
-        ensure_discovered(db)
+        bootstrap_catalog_if_empty(db)
         rows = [_backend_response(b) for b in _fleet_query(db).all()]
         return [r.model_dump(mode="json") for r in rows]
 
@@ -69,7 +69,7 @@ def get_all_backend_status(db: Session = Depends(get_db)):
     key = cache_key("backends", "status-all")
 
     def build():
-        ensure_discovered(db)
+        bootstrap_catalog_if_empty(db)
         return [r.model_dump(mode="json") for r in _build_all_backend_status(db)]
 
     payload = get_or_set_json(key, ttl, build)

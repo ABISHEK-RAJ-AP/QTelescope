@@ -48,6 +48,8 @@ apply_vm_demo_env() {
   upsert_env HYBRID_DEMO_ENABLED true
   upsert_env DEMO_LIVE_PROVIDERS rigetti_quantum
   upsert_env COLLECTION_SCHEDULER_ENABLED true
+  upsert_env STARTUP_HARDWARE_DISCOVERY auto
+  upsert_env BOOTSTRAP_DISCOVERY_ON_EMPTY true
   upsert_env RIGETTI_ISA_CACHE_SECONDS 45
   upsert_env ALLOW_PUBLIC_REGISTRATION true
   if [[ -f "${ROOT}/scripts/vm-ensure-redis-cache.sh" ]]; then

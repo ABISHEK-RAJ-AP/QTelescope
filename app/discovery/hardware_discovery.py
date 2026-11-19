@@ -1,7 +1,6 @@
 import os
 import logging
-import time
-from typing import List, Dict, Any, Tuple, Set
+from typing import List, Dict, Any, Tuple
 from sqlalchemy.orm import Session
 
 from app.providers.base import BaseProviderAdapter
@@ -24,18 +23,6 @@ from app.models.entities import BackendModel
 
 logger = logging.getLogger("HardwareDiscoveryEngine")
 
-_LAST_ENSURE_DISCOVERY = 0.0
-_ENSURE_DISCOVERY_MIN_SEC = 120.0
-
-
-def _mock_catalog_satisfied(ids: Set[str]) -> bool:
-    if MOCK_BACKEND_IDS <= ids:
-        return True
-    missing = MOCK_BACKEND_IDS - ids
-    # Hybrid demo: live Rigetti ISA id can replace template rigetti_aspen_m3.
-    if missing == {"rigetti_aspen_m3"} and any(bid.startswith("rigetti_") for bid in ids):
-        return True
-    return False
 
 class HardwareDiscoveryEngine:
     """
@@ -174,44 +161,37 @@ class HardwareDiscoveryEngine:
                     "duration_ms": round(duration_ms, 2),
                 })
 
-        return {
+        payload = {
             "status": "SUCCESS",
             "total_backends_discovered": discovered_backends_count,
-            "providers": provider_summaries
+            "providers": provider_summaries,
         }
+        try:
+            from app.discovery.status_store import record_discovery_run
 
-def ensure_discovered(db: Session):
-    """
-    Ensures that database state matches the active ENABLE_MOCK_DATA and provider credentials.
-    Runs auto-discovery automatically if:
-    1. Database is completely empty.
-    2. Mock data is DISABLED and database currently contains mock backends that should be pruned.
+            record_discovery_run(payload, trigger=trigger_type)
+        except Exception:
+            logger.debug("discovery status write skipped", exc_info=True)
+        return payload
 
-    Read-path calls are throttled so a stale mock id (e.g. rigetti_aspen_m3 vs live Rigetti)
-    cannot trigger full provider collection on every /backends cache miss.
+def bootstrap_catalog_if_empty(db: Session) -> None:
     """
-    global _LAST_ENSURE_DISCOVERY
+    Read-path only: seed inventory when the database has zero backends.
+    Provider polling belongs in the collection scheduler or admin triggers.
+    """
     try:
-        has_any_backends = db.query(BackendModel.backend_id).first() is not None
-        should_run = False
-        if not has_any_backends:
-            should_run = True
-        elif settings.ENABLE_MOCK_DATA:
-            ids = {r[0] for r in db.query(BackendModel.backend_id).all()}
-            if not _mock_catalog_satisfied(ids):
-                should_run = True
-        elif not settings.ENABLE_MOCK_DATA:
-            has_mock = db.query(BackendModel.backend_id).filter(
-                BackendModel.backend_id.in_(MOCK_BACKEND_IDS)
-            ).first() is not None
-            if has_mock:
-                should_run = True
-        if not should_run:
+        if db.query(BackendModel.backend_id).first() is not None:
             return
-        now = time.monotonic()
-        if has_any_backends and now - _LAST_ENSURE_DISCOVERY < _ENSURE_DISCOVERY_MIN_SEC:
+        if os.getenv("BOOTSTRAP_DISCOVERY_ON_EMPTY", "true").lower() not in ("1", "true", "yes"):
             return
-        HardwareDiscoveryEngine.run_auto_discovery(db)
-        _LAST_ENSURE_DISCOVERY = now
+        from app.discovery.status_store import record_discovery_run
+
+        result = HardwareDiscoveryEngine.run_auto_discovery(db)
+        record_discovery_run(result, trigger="bootstrap_empty")
     except Exception as err:
-        logger.error(f"Error during ensure_discovered check: {err}", exc_info=True)
+        logger.error("bootstrap_catalog_if_empty failed: %s", err, exc_info=True)
+
+
+def ensure_discovered(db: Session) -> None:
+    """Deprecated alias — never runs provider collection when inventory exists."""
+    bootstrap_catalog_if_empty(db)
