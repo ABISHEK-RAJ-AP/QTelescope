@@ -19,10 +19,27 @@ HYPERTABLES = (
 )
 
 
+def _resolve_database_url() -> str:
+    url = os.getenv("DATABASE_URL", "").strip()
+    if url.startswith("postgresql"):
+        return url
+    envf = ROOT / ".env"
+    if envf.is_file():
+        for line in envf.read_text(encoding="utf-8").splitlines():
+            if line.startswith("DATABASE_URL="):
+                url = line.split("=", 1)[1].strip().strip("'\"")
+                if url.startswith("postgresql"):
+                    return url
+    return url
+
+
 def main() -> int:
-    url = os.getenv("DATABASE_URL", "")
+    url = _resolve_database_url()
     if not url.startswith("postgresql"):
-        print("DATABASE_URL must be PostgreSQL", file=sys.stderr)
+        print(
+            "DATABASE_URL must be PostgreSQL (export DATABASE_URL=... or set in .env)",
+            file=sys.stderr,
+        )
         return 1
     engine = create_engine(url)
     with engine.connect() as conn:

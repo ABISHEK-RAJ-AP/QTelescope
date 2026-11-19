@@ -19,9 +19,16 @@ SKIP_TESTS="${SKIP_TESTS:-0}"
 echo "==> git pull ($BRANCH)"
 git fetch origin "$BRANCH"
 # Lab VMs often dirty scripts/vm-demo-env.sh; remote wins so --ff-only can proceed.
-if ! git diff --quiet -- scripts/vm-demo-env.sh scripts/vm-demo-restart.sh scripts/vm-update-from-git.sh 2>/dev/null; then
-  echo "==> discarding local edits under scripts/vm-*.sh (git stash if you need them)"
-  git checkout -- scripts/vm-demo-env.sh scripts/vm-demo-restart.sh scripts/vm-update-from-git.sh 2>/dev/null || true
+VM_SCRIPTS=(
+  scripts/vm-demo-env.sh
+  scripts/vm-demo-restart.sh
+  scripts/vm-update-from-git.sh
+  scripts/vm-postgres-migrate.sh
+  scripts/migrate_sqlite_to_postgres.py
+)
+if ! git diff --quiet -- "${VM_SCRIPTS[@]}" 2>/dev/null; then
+  echo "==> discarding local edits on VM migration scripts (git stash if you need them)"
+  git checkout -- "${VM_SCRIPTS[@]}" 2>/dev/null || true
 fi
 git pull --ff-only origin "$BRANCH" || {
   echo "WARN: ff-only pull failed; resolve conflicts manually" >&2
