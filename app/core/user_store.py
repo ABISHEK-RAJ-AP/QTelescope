@@ -48,6 +48,7 @@ def _save_json_users(users: Dict[str, Dict[str, Any]]) -> None:
 
 
 def _row_to_dict(row: UserAccountModel) -> Dict[str, Any]:
+    status = getattr(row, "account_status", None) or "active"
     return {
         "username": row.username,
         "email": row.email,
@@ -55,6 +56,7 @@ def _row_to_dict(row: UserAccountModel) -> Dict[str, Any]:
         "org": row.org,
         "role": row.role,
         "password_hash": row.password_hash,
+        "account_status": status,
         "created_at": row.created_at.isoformat() if row.created_at else None,
     }
 
@@ -78,6 +80,7 @@ def migrate_json_users_to_db() -> int:
                     org=rec.get("org"),
                     role=rec.get("role") or "Operator",
                     password_hash=rec.get("password_hash") or "",
+                    account_status=rec.get("account_status") or "active",
                 )
             )
         db.commit()
@@ -110,6 +113,8 @@ def upsert_user(username: str, record: Dict[str, Any]) -> None:
                     row.org = record.get("org")
                     row.role = record.get("role") or row.role
                     row.password_hash = record.get("password_hash") or row.password_hash
+                    if record.get("account_status") is not None:
+                        row.account_status = record.get("account_status") or "active"
                 else:
                     db.add(
                         UserAccountModel(
@@ -119,6 +124,7 @@ def upsert_user(username: str, record: Dict[str, Any]) -> None:
                             org=record.get("org"),
                             role=record.get("role") or "Operator",
                             password_hash=record.get("password_hash") or "",
+                            account_status=record.get("account_status") or "active",
                         )
                     )
                 db.commit()

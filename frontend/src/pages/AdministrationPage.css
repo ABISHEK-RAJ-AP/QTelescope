@@ -95,6 +95,11 @@
   font-size: 12px;
 }
 
+.admin-users-status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
 .admin-users-count {
   font-size: 12px;
   color: var(--text-muted);

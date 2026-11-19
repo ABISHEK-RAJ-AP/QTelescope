@@ -46,7 +46,11 @@ export const COPY = {
     captchaUnavailable: 'Could not load the security image. Try again.',
     signInDirectory: 'This deployment accepts organization directory credentials.',
     registerSubtitle: 'Create your sign-in. Organisation admins assign elevated roles in Admin → Users & roles.',
-    registerHowItWorks: 'You register with your lab or facility name. Platform administrators, security roles, and incident command are never self-service — they are assigned after review.',
+    registerHowItWorks:
+      'Verify your email, then submit your request. Platform administrators assign elevated roles after review. Already invited? Sign in with credentials from your administrator.',
+    registerInviteHint:
+      'If your organisation uses invite-only access, contact your platform administrator for credentials instead of self-service registration.',
+    registerOtpHint: 'Enter the 6-digit verification code. On lab deployments without SMTP, the code appears as an on-screen notice.',
     registerOrgHint: 'Facility or programme name (not a job title). Admins use this in the user directory.',
     registerAccessHint: 'Starting access only. Admins can promote to operations engineer, incident commander, or platform administrator.',
     forgotSubtitle: 'Enter your username. For security, the response does not indicate whether an account exists.',

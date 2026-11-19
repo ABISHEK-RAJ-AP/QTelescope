@@ -97,8 +97,8 @@ export async function loginWithCredentials(body, apiBase = '/api/v1') {
   return user;
 }
 
-export async function registerWithCredentials(body, apiBase = '/api/v1') {
-  const r = await fetch(`${apiBase}/auth/register`, {
+export async function registerSendOtp(body, apiBase = '/api/v1') {
+  const r = await fetch(`${apiBase}/auth/register/send-otp`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -107,4 +107,28 @@ export async function registerWithCredentials(body, apiBase = '/api/v1') {
   if (!r.ok) throw new Error(data.detail || data.message || 'Registration failed');
   if (data.status !== 'SUCCESS') throw new Error(data.message || 'Registration failed');
   return data;
+}
+
+export async function registerConfirm(payload, apiBase = '/api/v1') {
+  const r = await fetch(`${apiBase}/auth/register/confirm`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.detail || data.message || 'Registration failed');
+  if (data.status !== 'SUCCESS') throw new Error(data.message || 'Registration failed');
+  return data;
+}
+
+/** @deprecated Use registerSendOtp + registerConfirm */
+export async function registerWithCredentials(body, apiBase = '/api/v1') {
+  const send = await registerSendOtp(body, apiBase);
+  if (!send.screen_otp) {
+    throw new Error('Enter the verification code from your email (OTP step required).');
+  }
+  return registerConfirm(
+    { otp_session_id: send.otp_session_id, otp_code: send.screen_otp },
+    apiBase,
+  );
 }

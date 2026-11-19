@@ -229,6 +229,11 @@ class RegisterRequest(BaseModel):
     captcha_code: str
 
 
+class RegisterConfirmRequest(BaseModel):
+    otp_session_id: str = Field(min_length=8, max_length=128)
+    otp_code: str = Field(min_length=4, max_length=16)
+
+
 class AuthStatusResponse(BaseModel):
     enable_mock_data: bool
     project_name: str
@@ -236,12 +241,20 @@ class AuthStatusResponse(BaseModel):
     bootstrap: dict
     ldap: dict = {}
     allow_public_registration: bool = True
+    registration_require_admin_approval: bool = False
+    registration_org_options: list = []
+    registration_otp_email: bool = False
 
 
 @router.get("/config-status", response_model=AuthStatusResponse)
 def get_config_status():
     from app.core.ldap_auth import ldap_public_status
-    from app.core.registration_policy import public_registration_allowed
+    from app.core.mail_delivery import registration_smtp_ready
+    from app.core.registration_policy import (
+        public_registration_allowed,
+        registration_org_options,
+        registration_requires_admin_approval,
+    )
 
     return AuthStatusResponse(
         enable_mock_data=settings.ENABLE_MOCK_DATA,
@@ -254,7 +267,27 @@ def get_config_status():
         ),
         ldap=ldap_public_status(),
         allow_public_registration=public_registration_allowed(),
+        registration_require_admin_approval=registration_requires_admin_approval(),
+        registration_org_options=registration_org_options(),
+        registration_otp_email=registration_smtp_ready(),
     )
+
+
+@router.get("/registration-options")
+def get_registration_options():
+    from app.core.mail_delivery import registration_smtp_ready
+    from app.core.registration_policy import (
+        public_registration_allowed,
+        registration_org_options,
+        registration_requires_admin_approval,
+    )
+
+    return {
+        "allow_public_registration": public_registration_allowed(),
+        "require_admin_approval": registration_requires_admin_approval(),
+        "org_options": registration_org_options(),
+        "otp_delivery": "email" if registration_smtp_ready() else "screen",
+    }
 
 
 @router.get("/captcha", response_model=CaptchaResponse)
@@ -321,8 +354,117 @@ def _issue_session(username: str, role: str, extra: Optional[Dict[str, Any]] = N
     return {"status": "SUCCESS", "message": "Authentication successful.", "user": user}
 
 
+def _registration_success_message(*, pending_admin: bool) -> str:
+    if pending_admin:
+        return (
+            "Registration received. Your account is pending administrator approval. "
+            "You can sign in after an admin approves your request in Administration → Users & roles."
+        )
+    return (
+        "Account created. Sign in with your username and password. "
+        "Your organisation admin can change your role in Admin → Users & roles."
+    )
+
+
+@router.post("/register/send-otp")
+def register_send_otp(req: RegisterRequest, request: Request):
+    from app.core.mail_delivery import deliver_registration_otp, registration_smtp_ready
+    from app.core.registration_flow import validate_new_account_fields
+    from app.core.registration_otp import issue_registration_otp
+    from app.core.registration_policy import public_registration_allowed
+
+    if not public_registration_allowed():
+        raise HTTPException(
+            status_code=403,
+            detail="Public registration is disabled on this deployment. Contact your platform administrator.",
+        )
+    check_auth_rate_limit(request, "register_send_otp")
+    _consume_captcha(req.captcha_id, req.captcha_code)
+    username, email, role = validate_new_account_fields(
+        username=req.username,
+        email=req.email,
+        password=req.password,
+        role=req.role,
+    )
+    payload = {
+        "username": username,
+        "email": email,
+        "full_name": (req.full_name or username).strip(),
+        "org": (req.org or "C-DAC").strip(),
+        "role": role,
+        "password_hash": _hash_password(req.password),
+    }
+    session_id, otp_code, ttl = issue_registration_otp(email=email, payload=payload)
+    delivery = "email"
+    out: Dict[str, Any] = {
+        "status": "SUCCESS",
+        "otp_session_id": session_id,
+        "delivery": delivery,
+        "expires_in_seconds": ttl,
+        "message": "Enter the verification code sent to your email.",
+    }
+    if registration_smtp_ready():
+        ok, err = deliver_registration_otp(
+            to_email=email,
+            username=username,
+            code=otp_code,
+            ttl_minutes=max(1, ttl // 60),
+        )
+        if not ok:
+            raise HTTPException(status_code=503, detail=err or "Unable to send verification email.")
+    else:
+        delivery = "screen"
+        out["delivery"] = delivery
+        out["message"] = "Enter the verification code shown in the notification (SMTP not configured on this deployment)."
+        if not is_production_profile():
+            out["screen_otp"] = otp_code
+
+    out["delivery"] = delivery
+    return out
+
+
+@router.post("/register/confirm")
+def register_confirm(body: RegisterConfirmRequest, request: Request):
+    from app.core.registration_flow import registration_user_record
+    from app.core.registration_otp import consume_registration_otp
+    from app.core.registration_policy import public_registration_allowed, registration_requires_admin_approval
+
+    if not public_registration_allowed():
+        raise HTTPException(status_code=403, detail="Public registration is disabled on this deployment.")
+    check_auth_rate_limit(request, "register_confirm")
+    payload = consume_registration_otp(body.otp_session_id, body.otp_code)
+    if not payload:
+        raise HTTPException(status_code=400, detail="Verification code is invalid or expired.")
+    username = payload["username"]
+    pending = registration_requires_admin_approval()
+    status = "pending_admin" if pending else "active"
+    record = registration_user_record(
+        username=username,
+        email=payload["email"],
+        full_name=payload.get("full_name") or username,
+        org=payload.get("org") or "C-DAC",
+        role=payload.get("role") or "Operator",
+        password_hash=payload["password_hash"],
+        account_status=status,
+    )
+    with _LOCK:
+        users = user_store.load_all_users()
+        if username in users:
+            raise HTTPException(status_code=409, detail="Username already registered.")
+        user_store.upsert_user(username, record)
+
+    return {
+        "status": "SUCCESS",
+        "pending_admin_approval": pending,
+        "account_status": status,
+        "message": _registration_success_message(pending_admin=pending),
+        "user": {"username": username, "role": record["role"], "email": record["email"]},
+    }
+
+
 @router.post("/register")
 def register_user(req: RegisterRequest, request: Request):
+    """Legacy single-step register — disabled; use send-otp then confirm."""
     from app.core.registration_policy import public_registration_allowed
 
     if not public_registration_allowed():
@@ -331,47 +473,10 @@ def register_user(req: RegisterRequest, request: Request):
             detail="Public registration is disabled on this deployment. Contact your platform administrator.",
         )
     check_auth_rate_limit(request, "register")
-    _consume_captcha(req.captcha_id, req.captcha_code)
-    username = normalize_username(req.username)
-    email = normalize_email(req.email)
-    bound_password(req.password)
-    if username in (settings.ADMIN_USERNAME, settings.USER_USERNAME, settings.SUPERADMIN_USERNAME):
-        raise HTTPException(status_code=409, detail="That username is reserved.")
-
-    requested_role = (req.role or "").strip()
-    if requested_role in ("Admin", "SuperAdmin", "PlatformAdmin", "SecurityAdmin", "QuantumOpsAdmin"):
-        raise HTTPException(
-            status_code=403,
-            detail="Administrator accounts cannot be self-registered. Ask your organisation admin to invite you.",
-        )
-    from app.core.self_registration import resolve_self_registration_role
-
-    role = resolve_self_registration_role(req.role)
-
-    with _LOCK:
-        users = user_store.load_all_users()
-        if username in users:
-            raise HTTPException(status_code=409, detail="Username already registered.")
-        if any(u.get("email") == email for u in users.values()):
-            raise HTTPException(status_code=409, detail="Email already registered.")
-        user_store.upsert_user(
-            username,
-            {
-                "username": username,
-                "email": email,
-                "full_name": (req.full_name or username).strip(),
-                "org": (req.org or "C-DAC").strip(),
-                "role": role,
-                "password_hash": _hash_password(req.password),
-                "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            },
-        )
-
-    return {
-        "status": "SUCCESS",
-        "message": "Account created. Sign in with your username and password. Your organisation admin can change your role in Admin → Users & roles.",
-        "user": {"username": username, "role": role, "email": email},
-    }
+    raise HTTPException(
+        status_code=400,
+        detail="Complete email verification first. Submit the form to receive a code, then confirm with /auth/register/confirm.",
+    )
 
 
 @router.post("/login")
@@ -417,6 +522,11 @@ def authenticate_user(req: LoginRequest, request: Request):
     candidate = _hash_password(password)
     stored = str((record or {}).get("password_hash") or "")
     if record and stored and hmac.compare_digest(stored, candidate):
+        from app.core.registration_flow import account_status_login_message
+
+        login_block = account_status_login_message(record.get("account_status"))
+        if login_block:
+            raise HTTPException(status_code=403, detail=login_block)
         return _maybe_mfa_or_session(
             username,
             record.get("role") or "Operator",

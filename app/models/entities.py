@@ -215,6 +215,7 @@ class UserAccountModel(Base):
     org = Column(String, nullable=True)
     role = Column(String, nullable=False, default="Operator")
     password_hash = Column(String, nullable=False)
+    account_status = Column(String, nullable=False, default="active")
     created_at = Column(DateTime, default=utcnow)
 
 

@@ -17,6 +17,10 @@ def password_reset_smtp_ready() -> bool:
     return bool((settings.SMTP_HOST or "").strip() and (settings.SMTP_FROM or "").strip())
 
 
+def registration_smtp_ready() -> bool:
+    return password_reset_smtp_ready()
+
+
 def password_reset_public_url() -> str:
     return (settings.PUBLIC_APP_URL or "").strip().rstrip("/")
 
@@ -68,5 +72,49 @@ def deliver_password_reset(*, username: str, to_email: str, token: str) -> Tuple
                 smtp.send_message(msg)
     except Exception as exc:
         _log.warning("password reset SMTP failed for %s: %s", username, exc)
+        return False, str(exc)
+    return True, None
+
+
+def deliver_registration_otp(*, to_email: str, username: str, code: str, ttl_minutes: int) -> Tuple[bool, Optional[str]]:
+    """Send registration verification OTP. Returns (ok, error_message)."""
+    if not registration_smtp_ready():
+        return False, "SMTP not configured"
+    to_email = (to_email or "").strip()
+    if not to_email:
+        return False, "recipient email missing"
+
+    msg = EmailMessage()
+    msg["Subject"] = "Q-TeleScope registration verification code"
+    msg["From"] = settings.SMTP_FROM.strip()
+    msg["To"] = to_email
+    msg.set_content(
+        f"Verification code for Q-TeleScope registration ({username}):\n\n"
+        f"  {code}\n\n"
+        f"This code expires in {ttl_minutes} minutes.\n"
+        "If you did not request console access, ignore this message."
+    )
+
+    host = settings.SMTP_HOST.strip()
+    port = int(settings.SMTP_PORT or 587)
+    user = (settings.SMTP_USER or "").strip()
+    password = settings.SMTP_PASSWORD or ""
+    use_tls = bool(settings.SMTP_USE_TLS)
+
+    try:
+        if use_tls and port == 465:
+            with smtplib.SMTP_SSL(host, port, context=ssl.create_default_context(), timeout=30) as smtp:
+                if user:
+                    smtp.login(user, password)
+                smtp.send_message(msg)
+        else:
+            with smtplib.SMTP(host, port, timeout=30) as smtp:
+                if use_tls:
+                    smtp.starttls(context=ssl.create_default_context())
+                if user:
+                    smtp.login(user, password)
+                smtp.send_message(msg)
+    except Exception as exc:
+        _log.warning("registration OTP SMTP failed for %s: %s", username, exc)
         return False, str(exc)
     return True, None

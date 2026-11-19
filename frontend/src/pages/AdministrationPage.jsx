@@ -877,6 +877,13 @@ const USER_SORTS = [
   { key: 'org', label: 'Organization' },
 ];
 
+const ACCOUNT_STATUS_LABEL = {
+  active: 'Active',
+  pending_admin: 'Pending approval',
+  rejected: 'Rejected',
+  suspended: 'Suspended',
+};
+
 function UsersDirectory({ canEdit }) {
   const [rows, setRows] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -886,8 +893,10 @@ function UsersDirectory({ canEdit }) {
   const debouncedSearch = useDebouncedValue(search, 300);
   const [sortKey, setSortKey] = useState('username');
   const [showTestAccounts, setShowTestAccounts] = useState(false);
+  const [pendingOnly, setPendingOnly] = useState(false);
   const [page, setPage] = useState(1);
   const USER_PAGE = 20;
+  const pendingCount = rows.filter((u) => (u.account_status || 'active') === 'pending_admin').length;
 
   const load = useCallback(async () => {
     try {
@@ -919,6 +928,20 @@ function UsersDirectory({ canEdit }) {
     }
   };
 
+  const onAccountStatus = async (username, accountStatus) => {
+    setBusy(`status:${username}`);
+    const prev = rows;
+    setRows((list) => list.map((u) => (u.username === username ? { ...u, account_status: accountStatus } : u)));
+    try {
+      await api.setUserAccountStatus(username, accountStatus);
+    } catch (e) {
+      setRows(prev);
+      setErr(errText(e));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const roleOptions = useMemo(() => {
     const legacyAlias = new Set(['Admin', 'Operator', 'Researcher']);
     const seen = new Set();
@@ -934,6 +957,9 @@ function UsersDirectory({ canEdit }) {
   const visible = useMemo(() => {
     const q = debouncedSearch.trim().toLowerCase();
     let list = showTestAccounts ? rows : rows.filter((u) => !TEST_USER.test(u.username || ''));
+    if (pendingOnly) {
+      list = list.filter((u) => (u.account_status || 'active') === 'pending_admin');
+    }
     if (q) {
       list = list.filter((u) => (
         `${u.username} ${u.full_name || ''} ${u.email || ''} ${u.role || ''} ${u.org || ''}`.toLowerCase().includes(q)
@@ -953,7 +979,7 @@ function UsersDirectory({ canEdit }) {
       return String(a.username).localeCompare(String(b.username));
     });
     return sorted;
-  }, [rows, debouncedSearch, sortKey, showTestAccounts]);
+  }, [rows, debouncedSearch, sortKey, showTestAccounts, pendingOnly]);
   const hiddenTestUsers = rows.filter((u) => TEST_USER.test(u.username || '')).length;
   useEffect(() => { setPage(1); }, [debouncedSearch, sortKey]);
   const userPages = Math.max(1, Math.ceil(visible.length / USER_PAGE));
@@ -966,10 +992,13 @@ function UsersDirectory({ canEdit }) {
       <div className="card admin-users" data-tour="page-admin-users">
         <h3 className="admin-card-title">User directory</h3>
         <p className="page-hint">
-          Organisation master is the <strong>Organization</strong> column — users set it at registration.
-          Assign roles here after signup (operations engineer, research analyst, incident commander, platform administrator).
+          Organisation is chosen at registration. Approve pending requests before users can sign in.
+          Assign roles after approval (operations engineer, research analyst, incident commander, platform administrator).
           Public registration cannot create administrator accounts.
         </p>
+        {pendingCount > 0 ? (
+          <Notice note={{ type: 'warn', text: `${pendingCount} registration(s) awaiting approval.` }} />
+        ) : null}
         {err && <Notice note={{ type: 'error', text: err }} />}
         <div className="admin-users-toolbar">
           <label className="admin-users-search outline-field">
@@ -988,6 +1017,12 @@ function UsersDirectory({ canEdit }) {
               {USER_SORTS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
             </select>
           </label>
+          {pendingCount > 0 && (
+            <label className="admin-sub" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input type="checkbox" checked={pendingOnly} onChange={(e) => setPendingOnly(e.target.checked)} />
+              Pending only ({pendingCount})
+            </label>
+          )}
           {hiddenTestUsers > 0 && (
             <label className="admin-sub" style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <input type="checkbox" checked={showTestAccounts} onChange={(e) => setShowTestAccounts(e.target.checked)} />
@@ -1004,13 +1039,15 @@ function UsersDirectory({ canEdit }) {
                 <th>Role</th>
                 <th>MFA</th>
                 <th>Organization</th>
+                <th>Status</th>
+                {canEdit ? <th aria-label="Registration actions" /> : null}
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
-                <TableEmpty colSpan={4} title="No users" message="Registered accounts appear here." />
+                <TableEmpty colSpan={canEdit ? 6 : 5} title="No users" message="Registered accounts appear here." />
               ) : visible.length === 0 ? (
-                <TableEmpty colSpan={4} title="No matches" message="Try a different search term." />
+                <TableEmpty colSpan={canEdit ? 6 : 5} title="No matches" message="Try a different search term." />
               ) : pageUsers.map((u) => (
                 <tr key={u.username}>
                   <td>
@@ -1039,6 +1076,33 @@ function UsersDirectory({ canEdit }) {
                   </td>
                   <td>{u.mfa_enabled ? 'Enrolled' : 'Off'}</td>
                   <td>{u.org || '—'}</td>
+                  <td>{ACCOUNT_STATUS_LABEL[u.account_status] || ACCOUNT_STATUS_LABEL.active}</td>
+                  {canEdit ? (
+                    <td>
+                      {(u.account_status || 'active') === 'pending_admin' ? (
+                        <div className="admin-users-status-actions">
+                          <button
+                            type="button"
+                            className="btn btn--sm btn--primary"
+                            disabled={busy === `status:${u.username}`}
+                            onClick={() => onAccountStatus(u.username, 'active')}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            type="button"
+                            className="btn btn--sm btn--ghost"
+                            disabled={busy === `status:${u.username}`}
+                            onClick={() => onAccountStatus(u.username, 'rejected')}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
+                  ) : null}
                 </tr>
               ))}
             </tbody>

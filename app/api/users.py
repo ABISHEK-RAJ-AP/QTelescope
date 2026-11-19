@@ -47,6 +47,10 @@ class PreferencesPatch(BaseModel):
     landing_page: Optional[str] = None
 
 
+class AccountStatusPatch(BaseModel):
+    account_status: str = Field(min_length=4, max_length=32)
+
+
 class RolePatch(BaseModel):
     role: str = Field(..., min_length=2, max_length=40)
 
@@ -249,6 +253,7 @@ def list_users(_: str = Depends(require_admin)):
             "mfa_enabled": mfa_status(uname).get("enabled"),
             "designation": prefs.get("designation"),
             "created_at": rec.get("created_at"),
+            "account_status": rec.get("account_status") or "active",
         })
     return out
 
@@ -287,6 +292,37 @@ def assign_role(
         detail={"from": old, "to": new_role},
     )
     return {"username": target_username, "role": new_role}
+
+
+_VALID_ACCOUNT_STATUS = frozenset({"active", "pending_admin", "rejected", "suspended"})
+
+
+@router.patch("/{target_username}/account-status")
+def patch_account_status(
+    target_username: str,
+    body: AccountStatusPatch,
+    actor: str = Depends(get_current_username),
+    role: str = Depends(require_admin),
+):
+    status = (body.account_status or "").strip().lower()
+    if status not in _VALID_ACCOUNT_STATUS:
+        raise HTTPException(status_code=400, detail=f"Unknown account status: {body.account_status}")
+    users = load_all_users()
+    if target_username not in users:
+        raise HTTPException(status_code=404, detail="User not found.")
+    rec = dict(users[target_username])
+    old = rec.get("account_status") or "active"
+    rec["account_status"] = status
+    upsert_user(target_username, rec)
+    record_audit(
+        "user.account_status",
+        actor=actor,
+        role=role,
+        resource_type="user",
+        resource_id=target_username,
+        detail={"from": old, "to": status},
+    )
+    return {"username": target_username, "account_status": status}
 
 
 @router.post("/me/password")

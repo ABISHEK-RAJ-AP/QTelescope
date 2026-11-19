@@ -217,6 +217,14 @@ export const api = {
   changePassword: (payload) => fetchApi('/users/me/password', { method: 'POST', body: JSON.stringify(payload) }),
   getMe: () => fetchApi('/auth/me'),
   register: (payload) => fetchApi('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
+  registerSendOtp: (payload) => fetchApi('/auth/register/send-otp', { method: 'POST', body: JSON.stringify(payload) }),
+  registerConfirm: (payload) => fetchApi('/auth/register/confirm', { method: 'POST', body: JSON.stringify(payload) }),
+  getRegistrationOptions: () => fetchApi('/auth/registration-options'),
+  setUserAccountStatus: (username, accountStatus) =>
+    fetchApi(`/users/${encodeURIComponent(username)}/account-status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ account_status: accountStatus }),
+    }),
   getConfigStatus: () => fetchApi('/auth/config-status'),
   logout: () => fetchApi('/auth/logout', { method: 'POST', body: '{}' }),
   issueStreamTicket: () => fetchApi('/auth/stream-ticket', { method: 'POST' }),
