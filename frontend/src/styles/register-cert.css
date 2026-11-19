@@ -67,8 +67,77 @@
   flex-wrap: nowrap;
   flex-shrink: 0;
   width: 100%;
-  max-width: 100%;
+  max-width: min(40rem, 100%);
+  margin: 0 auto;
   padding: 0 0.15rem;
+}
+
+/* Cert Studio–style wizard pills (SubmitWizard / qre-wizard-steps) */
+.reg-wizard-steps {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: center;
+}
+
+.reg-wizard-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--reg-border);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--reg-muted);
+  background: color-mix(in srgb, var(--reg-surface) 94%, var(--reg-muted) 6%);
+}
+
+.reg-wizard-step__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--reg-border) 50%, var(--reg-surface));
+  color: var(--reg-text);
+}
+
+.reg-wizard-step__check {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex-shrink: 0;
+}
+
+.reg-wizard-step__label {
+  white-space: nowrap;
+}
+
+.reg-wizard-step--done {
+  border-color: color-mix(in srgb, var(--reg-accent) 45%, var(--reg-border));
+  color: var(--reg-accent);
+  background: color-mix(in srgb, var(--reg-accent) 14%, var(--reg-surface));
+}
+
+.reg-wizard-step--done .reg-wizard-step__num {
+  display: none;
+}
+
+.reg-wizard-step--current {
+  border-color: color-mix(in srgb, var(--reg-accent) 65%, var(--reg-border));
+  color: var(--reg-surface, #fff);
+  background: color-mix(in srgb, var(--reg-accent) 88%, #000 6%);
+}
+
+.reg-wizard-step--current .reg-wizard-step__num {
+  background: color-mix(in srgb, #fff 22%, transparent);
+  color: inherit;
 }
 
 .reg-step-trail {
@@ -199,6 +268,12 @@
   font-weight: 600;
   color: var(--reg-muted);
   cursor: pointer;
+}
+
+.reg-flow-nav__next:active:not(:disabled),
+.reg-type-tile:active,
+.auth-cta:active:not(:disabled) {
+  transform: scale(0.985);
 }
 
 .reg-flow-nav__next {

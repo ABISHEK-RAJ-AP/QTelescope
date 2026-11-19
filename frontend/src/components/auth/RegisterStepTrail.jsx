@@ -1,12 +1,12 @@
 import React from 'react'
-import { Info } from 'lucide-react'
+import { Check, Info } from 'lucide-react'
 import { COPY } from '@/copy/operator.js'
 
 const STEPS = [
-  { id: 'type', label: 'Type', short: 'Type' },
-  { id: 'org', label: 'Organisation', short: 'Org' },
-  { id: 'account', label: 'Account', short: 'Account' },
-  { id: 'otp', label: 'Verify', short: 'Verify' },
+  { id: 'type', label: 'Type' },
+  { id: 'org', label: 'Organisation' },
+  { id: 'account', label: 'Account' },
+  { id: 'otp', label: 'Verify' },
 ];
 
 export function RegisterStepTrail({ current, requiresAdminApproval }) {
@@ -14,30 +14,26 @@ export function RegisterStepTrail({ current, requiresAdminApproval }) {
 
   return (
     <div className="reg-step-trail-wrap">
-      <nav className="reg-step-trail" aria-label="Registration progress">
-        <ol className="reg-step-trail__list">
-          {STEPS.map((step, i) => {
-            const done = i < currentIdx;
-            const active = step.id === current;
-            return (
-              <li
-                key={step.id}
-                className={`reg-step-trail__step${active ? ' reg-step-trail__step--active' : ''}${done ? ' reg-step-trail__step--done' : ''}`}
-                aria-current={active ? 'step' : undefined}
-              >
-                <span className="reg-step-trail__num" aria-hidden>
-                  {i + 1}
-                </span>
-                <span className="reg-step-trail__text reg-step-trail__text--full">{step.label}</span>
-                <span className="reg-step-trail__text reg-step-trail__text--short">{step.short}</span>
-                {i < STEPS.length - 1 ? (
-                  <span className="reg-step-trail__connector" aria-hidden />
-                ) : null}
-              </li>
-            );
-          })}
-        </ol>
-      </nav>
+      <div className="reg-wizard-steps" role="list" aria-label="Registration progress">
+        {STEPS.map((step, i) => {
+          const done = i < currentIdx;
+          const active = i === currentIdx;
+          let cls = 'reg-wizard-step';
+          if (done) cls += ' reg-wizard-step--done';
+          else if (active) cls += ' reg-wizard-step--current';
+
+          return (
+            <span key={step.id} className={cls} role="listitem" aria-current={active ? 'step' : undefined}>
+              {done ? (
+                <Check className="reg-wizard-step__check" strokeWidth={2.5} aria-hidden />
+              ) : (
+                <span className="reg-wizard-step__num" aria-hidden>{i + 1}</span>
+              )}
+              <span className="reg-wizard-step__label">{step.label}</span>
+            </span>
+          );
+        })}
+      </div>
       {requiresAdminApproval && (current === 'account' || current === 'otp') ? (
         <button
           type="button"

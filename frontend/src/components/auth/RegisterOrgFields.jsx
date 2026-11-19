@@ -16,7 +16,7 @@ function SearchableMaster({ field, value, onChange, invalid, disabled }) {
         id={field.id}
         type="search"
         list={listId}
-        className={`${fieldClass} reg-master-search__input${invalid ? ' auth-field--invalid' : ''}`}
+        className={`${fieldClass} reg-master-search__input${invalid ? ' auth-field--invalid qt-shake' : ''}`}
         value={query}
         disabled={disabled}
         placeholder={field.placeholder || 'Search or type…'}
@@ -58,7 +58,7 @@ export function RegisterOrgFields({
             <Field key={field.id} label={field.label} forId={`reg-org-${field.id}`} hint={err}>
               <select
                 id={`reg-org-${field.id}`}
-                className={`${fieldClass} reg-org-select${err ? ' auth-field--invalid' : ''}`}
+                className={`${fieldClass} reg-org-select${err ? ' auth-field--invalid qt-shake' : ''}`}
                 value={value}
                 disabled={disabled}
                 required={field.required}
@@ -92,7 +92,7 @@ export function RegisterOrgFields({
             <input
               id={`reg-org-${field.id}`}
               type="text"
-              className={`${fieldClass}${err ? ' auth-field--invalid' : ''}`}
+              className={`${fieldClass}${err ? ' auth-field--invalid qt-shake' : ''}`}
               value={value}
               disabled={disabled}
               required={field.required}

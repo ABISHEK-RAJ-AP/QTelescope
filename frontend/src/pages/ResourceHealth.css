@@ -12,6 +12,9 @@
 .hv-kpi--RED .hv-kpi__value { color: var(--accent-rose); }
 .hv-kpi__sub { margin-top: auto; font-size: 12px; color: var(--text-muted); }
 
+.hv-coverage { margin-top: 14px; width: 100%; }
+.hv-coverage .bk-coverage-callout { margin-top: 0; width: 100%; }
+
 .hv-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--border-color); }
 .hv-bar > span { display: block; height: 100%; }
 .hv-seg--GREEN { background: var(--accent-emerald); }

@@ -430,7 +430,7 @@ export function RegisterPage() {
                   <Field label="Username" forId="reg-username" hint={fieldErrors.username}>
                     <input
                       id="reg-username"
-                      className={`${fieldClass} ${fieldErrors.username ? 'auth-field--invalid' : ''}`}
+                      className={`${fieldClass}${fieldErrors.username ? ' auth-field--invalid qt-shake' : ''}`}
                       value={username}
                       onChange={(e) => { setUsername(e.target.value); setFieldErrors((f) => ({ ...f, username: undefined })); }}
                       autoComplete="username"
@@ -452,7 +452,7 @@ export function RegisterPage() {
                   <input
                     id="reg-email"
                     type="email"
-                    className={`${fieldClass} ${fieldErrors.email ? 'auth-field--invalid' : ''}`}
+                    className={`${fieldClass}${fieldErrors.email ? ' auth-field--invalid qt-shake' : ''}`}
                     value={email}
                     onChange={(e) => { setEmail(e.target.value); setFieldErrors((f) => ({ ...f, email: undefined })); }}
                     autoComplete="email"
@@ -466,7 +466,7 @@ export function RegisterPage() {
                       <input
                         id="reg-password"
                         type={showPw ? 'text' : 'password'}
-                        className={`${fieldClass} ${fieldErrors.password ? 'auth-field--invalid' : ''}`}
+                        className={`${fieldClass}${fieldErrors.password ? ' auth-field--invalid qt-shake' : ''}`}
                         value={password}
                         onChange={(e) => { setPassword(e.target.value); setFieldErrors((f) => ({ ...f, password: undefined })); }}
                         autoComplete="new-password"
@@ -481,7 +481,7 @@ export function RegisterPage() {
                     <input
                       id="reg-confirm"
                       type={showPw ? 'text' : 'password'}
-                      className={`${fieldClass} ${fieldErrors.confirmPassword ? 'auth-field--invalid' : ''}`}
+                      className={`${fieldClass}${fieldErrors.confirmPassword ? ' auth-field--invalid qt-shake' : ''}`}
                       value={confirmPassword}
                       onChange={(e) => { setConfirmPassword(e.target.value); setFieldErrors((f) => ({ ...f, confirmPassword: undefined })); }}
                       autoComplete="new-password"

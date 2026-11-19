@@ -73,8 +73,6 @@ function CalFlipCard({ name, modality, status, ageLabel, calibrated, action, onO
       <button
         type="button"
         className="btn btn-primary btn-sm cs-flip__cta"
-        onMouseEnter={hide}
-        onFocus={hide}
         onClick={onOpen}
       >
         Open calibration

@@ -54,6 +54,8 @@ export const UNION_MINISTRIES = [
   'Ministry of Jal Shakti',
   'Ministry of Labour and Employment',
   'Ministry of Law and Justice',
+  'Ministry of Ayush',
+  'Ministry of Development of North Eastern Region (MDoNER)',
   'Ministry of Micro, Small and Medium Enterprises',
   'Ministry of Mines',
   'Ministry of Minority Affairs',

@@ -292,7 +292,15 @@ export const JobMonitoring = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [histogram, dark]);
 
-  const cats = failures?.by_category || [];
+  const cats = useMemo(() => {
+    const fromApi = failures?.by_category;
+    if (Array.isArray(fromApi) && fromApi.length) return fromApi;
+    return stats.reasons.slice(0, 12).map(([label, count], i) => ({
+      category_id: `inferred-${i}`,
+      label: label.length > 56 ? `${label.slice(0, 53)}…` : label,
+      count,
+    }));
+  }, [failures, stats.reasons]);
   const failOption = useMemo(() => {
     const sem = getChartSemanticColors();
     return {
@@ -363,9 +371,12 @@ export const JobMonitoring = () => {
           titleTo="/app/investigate/timeline"
           question="Failure categories in the selected window."
           sourceKind="derived" asOf={undefined}
-          provenanceDetail={failures ? `Classified over latest 500 jobs (${failures.total_failed} failed/cancelled).` : undefined}
-          state={failures == null ? 'error' : cats.length ? 'ready' : 'empty'}
-          errorMessage="Failure analytics unavailable." onRetry={load}
+          provenanceDetail={
+            failures
+              ? `Classified over latest 500 jobs (${failures.total_failed} failed/cancelled).`
+              : (cats.length ? 'Grouped from failure reasons on the loaded job list (taxonomy API unavailable).' : undefined)
+          }
+          state={cats.length ? 'ready' : 'empty'}
           emptyTitle="No failures" emptyMessage="No failed or cancelled jobs in range." minHeight={200}
           tableAlternative={(
             <table className="jm-alt">

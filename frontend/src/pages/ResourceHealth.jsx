@@ -18,6 +18,7 @@ import { useAppScope } from '../hooks/useAppScope.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { formatBackendTitle, formatModalityLabel } from '../lib/displayLabels.js';
 import { STATE_LABEL } from './backendUtils.js';
+import { mergeScopeSearch } from '../lib/appScopeQuery.js';
 import { BackendRegistryIdChip, TelemetryCoverageCallout } from './backendCommon.jsx';
 import './ResourceHealth.css';
 
@@ -136,8 +137,9 @@ function QubitDrawerBody({ backend, qubit, explain, history }) {
 
 export const ResourceHealth = () => {
   const nav = useNavigate();
-  const [params, setParams] = useSearchParams();
-  const { backend: backendId, setBackend } = useAppScope();
+  const [params, setSearchParams] = useSearchParams();
+  const { backend: backendId } = useAppScope();
+  const [focusedBackendId, setFocusedBackendId] = useState('');
   const { resolved } = useTheme();
   const [payload, setPayload] = useState(() => peekApiCache('/health/vector') ?? null);
   const [loadError, setLoadError] = useState(null);
@@ -165,11 +167,11 @@ export const ResourceHealth = () => {
   }, [params]);
 
   const selectBackend = (id) => {
-    setBackend(id);
+    setFocusedBackendId(id);
     setSelected(null);
     setStateFilter('ALL');
-    setParams((prev) => {
-      const next = new URLSearchParams(prev);
+    setSearchParams((prev) => {
+      const next = mergeScopeSearch(prev, { backend: id });
       next.delete('qubit');
       return next;
     }, { replace: true });
@@ -177,7 +179,7 @@ export const ResourceHealth = () => {
 
   const selectQubit = (idx) => {
     setSelected(idx);
-    setParams((prev) => {
+    setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
       if (idx == null) next.delete('qubit');
       else next.set('qubit', String(idx));
@@ -201,19 +203,28 @@ export const ResourceHealth = () => {
   const backends = payload?.backends;
   const active = useMemo(() => {
     const list = backends || [];
-    if (backendId) {
-      const scoped = list.find((b) => b.backend_id === backendId);
+    const prefer = focusedBackendId || backendId;
+    if (prefer) {
+      const scoped = list.find((b) => b.backend_id === prefer);
       if (scoped) return scoped;
     }
     return list.find((b) => (b.counts?.RED || 0) > 0)
       || list.find((b) => (b.qubits || []).length > 0)
       || list[0];
-  }, [backends, backendId]);
+  }, [backends, backendId, focusedBackendId]);
 
   useEffect(() => {
-    if (!backends?.length || backendId || !active?.backend_id) return;
-    setBackend(active.backend_id);
-  }, [backends, backendId, active, setBackend]);
+    if (!backends?.length) return;
+    const ids = new Set(backends.map((b) => b.backend_id));
+    const fromFocus = focusedBackendId && ids.has(focusedBackendId) ? focusedBackendId : '';
+    const fromUrl = backendId && ids.has(backendId) ? backendId : '';
+    const pick = fromFocus || fromUrl
+      || backends.find((b) => (b.counts?.RED || 0) > 0)?.backend_id
+      || backends.find((b) => (b.qubits || []).length > 0)?.backend_id
+      || backends[0]?.backend_id
+      || '';
+    if (pick && pick !== focusedBackendId) setFocusedBackendId(pick);
+  }, [backends, backendId, focusedBackendId]);
 
   const fleet = useMemo(() => {
     const c = { GREEN: 0, YELLOW: 0, RED: 0, UNKNOWN: 0 };
@@ -330,7 +341,9 @@ export const ResourceHealth = () => {
             ))}
           </div>
           <div style={{ marginTop: 14 }}><StateBar counts={fleet} total={fleet.total} /></div>
-          <TelemetryCoverageCallout unknownCount={fleet.UNKNOWN} totalCount={fleet.total} />
+          <div className="hv-coverage">
+            <TelemetryCoverageCallout unknownCount={fleet.UNKNOWN} totalCount={fleet.total} />
+          </div>
           <div style={{ marginTop: 14, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
             <button type="button" className="btn btn-secondary" onClick={applyRouter} disabled={busy || fleet.RED === 0}>
               {busy ? 'Applying…' : `Advisory-quarantine all RED (${fleet.RED})`}
