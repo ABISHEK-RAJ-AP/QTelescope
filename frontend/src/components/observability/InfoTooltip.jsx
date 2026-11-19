@@ -53,8 +53,8 @@ export function InfoTooltip({ label = 'More information', children, className = 
     }
     reposition();
     const onScroll = () => reposition();
-    window.addEventListener('resize', reposition);
-    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', reposition, { passive: true });
+    window.addEventListener('scroll', onScroll, { passive: true, capture: true });
     return () => {
       window.removeEventListener('resize', reposition);
       window.removeEventListener('scroll', onScroll, true);

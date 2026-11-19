@@ -95,8 +95,8 @@ export function QuantumBackground({ className = "" }: QuantumBackgroundProps) {
             pointer.y = -2000;
         };
 
-        window.addEventListener("resize", onResize);
-        window.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("resize", onResize, { passive: true });
+        window.addEventListener("mousemove", onMouseMove, { passive: true });
         window.addEventListener("mouseleave", onMouseLeave);
 
         const loop = () => {

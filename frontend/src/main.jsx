@@ -1,3 +1,4 @@
+import './lib/passiveListenersPatch.js';
 import './lib/devPerformanceGuard.js';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';

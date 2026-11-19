@@ -14,7 +14,6 @@ const WARM_DEFERRED = [
   ['/queues', 30_000],
   ['/calibration', 45_000],
   ['/operations/centre', 25_000],
-  ['/reports/batch', 45_000],
 ];
 
 let warmedForToken = '';
