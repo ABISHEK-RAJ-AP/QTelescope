@@ -23,10 +23,29 @@ port_listening() {
 docker_invoke() {
   if docker info >/dev/null 2>&1; then
     docker "$@"
-  elif sudo docker info >/dev/null 2>&1; then
-    sudo docker "$@"
+  elif sudo -E docker info >/dev/null 2>&1; then
+    sudo -E docker "$@"
   else
     return 1
+  fi
+}
+
+compose_timescale() {
+  local publish="$1"
+  shift
+  local override="${ROOT}/.timescale-publish.override.yml"
+  cat >"$override" <<EOF
+services:
+  db:
+    ports:
+      - "${publish}:5432"
+EOF
+  export TIMESCALE_PUBLISH_PORT="$publish"
+  if docker info >/dev/null 2>&1; then
+    docker compose -f docker-compose.timescale.yml -f "$override" --profile timescale "$@"
+  else
+    sudo env TIMESCALE_PUBLISH_PORT="$publish" \
+      docker compose -f docker-compose.timescale.yml -f "$override" --profile timescale "$@"
   fi
 }
 
@@ -177,14 +196,14 @@ start_docker_timescale() {
   fi
   echo "==> Removing stale quantum_timescaledb container (if any)"
   docker_invoke rm -f quantum_timescaledb 2>/dev/null || true
-  docker_invoke compose -f docker-compose.timescale.yml --profile timescale down 2>/dev/null || true
+  compose_timescale 5433 down 2>/dev/null || true
   local publish="${TIMESCALE_PUBLISH_PORT:-5433}"
   while port_listening "$publish"; do
     publish=$((publish + 1))
   done
   export TIMESCALE_PUBLISH_PORT="$publish"
   echo "==> TimescaleDB Docker on host port ${publish} (password: ${LAB_PASSWORD})"
-  docker_invoke compose -f docker-compose.timescale.yml --profile timescale up -d db
+  compose_timescale "$publish" up -d db
   for _ in $(seq 1 60); do
     if docker_invoke exec quantum_timescaledb pg_isready -U postgres -d "$PG_DB" >/dev/null 2>&1; then
       break
@@ -296,6 +315,7 @@ else
 fi
 grep -q '^USE_ALEMBIC=' "$ENVF" && sed -i 's|^USE_ALEMBIC=.*|USE_ALEMBIC=true|' "$ENVF" || echo 'USE_ALEMBIC=true' >>"$ENVF"
 grep -q '^STARTUP_HARDWARE_DISCOVERY=' "$ENVF" || echo 'STARTUP_HARDWARE_DISCOVERY=auto' >>"$ENVF"
+grep -q '^QTELESCOPE_KEEP_DATABASE_URL=' "$ENVF" || echo 'QTELESCOPE_KEEP_DATABASE_URL=true' >>"$ENVF"
 
 echo ""
 echo "==> Done"

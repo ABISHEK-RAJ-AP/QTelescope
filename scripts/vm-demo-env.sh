@@ -25,17 +25,37 @@ apply_vm_demo_env() {
     fi
   }
 
+  pg_port_from_database_url() {
+    local url="$1"
+  python3 - "$url" <<'PY' 2>/dev/null || echo 5432
+import sys
+from urllib.parse import urlparse
+u = urlparse(sys.argv[1].replace("+psycopg2", "", 1))
+print(u.port or 5432)
+PY
+  }
+
   ensure_sqlite_if_no_postgres() {
     local db=""
     db=$(grep -m1 '^DATABASE_URL=' "$envf" 2>/dev/null | cut -d= -f2- || true)
-    if [[ "$db" == postgresql* ]] && ! command -v pg_isready >/dev/null 2>&1; then
-      upsert_env DATABASE_URL "sqlite:///./data/qtelescope.db"
-      upsert_env USE_ALEMBIC "true"
-      echo "DATABASE_URL → sqlite (pg_isready not on PATH)"
-    elif [[ "$db" == postgresql* ]] && ! pg_isready -h localhost -p 5432 -U postgres >/dev/null 2>&1; then
-      upsert_env DATABASE_URL "sqlite:///./data/qtelescope.db"
-      echo "DATABASE_URL → sqlite (PostgreSQL not running)"
-    elif [[ -z "$db" ]]; then
+    if grep -qE '^QTELESCOPE_KEEP_DATABASE_URL=(1|true|yes)' "$envf" 2>/dev/null; then
+      return 0
+    fi
+    if [[ "$db" == postgresql* ]]; then
+      local pg_port
+      pg_port="$(pg_port_from_database_url "$db")"
+      if command -v pg_isready >/dev/null 2>&1 \
+        && pg_isready -h 127.0.0.1 -p "$pg_port" -U postgres >/dev/null 2>&1; then
+        return 0
+      fi
+      if command -v pg_isready >/dev/null 2>&1; then
+        echo "WARN: Postgres not ready on 127.0.0.1:${pg_port} — keeping DATABASE_URL (set QTELESCOPE_KEEP_DATABASE_URL=true to silence)" >&2
+        return 0
+      fi
+      echo "WARN: pg_isready missing — keeping postgresql DATABASE_URL" >&2
+      return 0
+    fi
+    if [[ -z "$db" ]]; then
       upsert_env DATABASE_URL "sqlite:///./data/qtelescope.db"
     fi
   }
