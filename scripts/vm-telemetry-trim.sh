@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Delete telemetry older than TELEMETRY_RETENTION_DAYS (default 60). Run after Postgres migrate on demo VMs.
+# Age-only delete. For demo VMs prefer ./scripts/vm-demo-trim.sh (age + per-backend cap).
+# Delete telemetry older than TELEMETRY_RETENTION_DAYS (default 60).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"

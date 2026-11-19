@@ -91,6 +91,21 @@ python scripts/init_timescale_hypertables.py
 
 Original SQLite file is **not** deleted. Roll back by setting `DATABASE_URL=sqlite:///./data/qtelescope.db` in `.env` and restarting API.
 
+## Demo VM data diet (~3M rows → fast console)
+
+Migration copies full SQLite history. For presentations, trim telemetry — not backends/alerts:
+
+```bash
+cd ~/QTelescope
+# default: 14 days + 2500 gate/qubit rows per backend (~20k–80k total)
+./scripts/vm-demo-trim.sh
+./scripts/vm-demo-restart.sh
+```
+
+Tighter (smaller DB, still shows flows): `DEMO_RETENTION_DAYS=7 DEMO_TELEMETRY_CAP_PER_BACKEND=1200 ./scripts/vm-demo-trim.sh`
+
+Keep trim from growing back: in `.env` set `TELEMETRY_RETENTION_DAYS=14` and `TELEMETRY_RETENTION_ON_STARTUP=true`.
+
 ## Timescale retention (next phase)
 
 Hypertables are created by `scripts/init_timescale_hypertables.py`. Retention/compression policies are **not** enabled by default — configure via admin retention or a future migration when governance approves drop windows.
