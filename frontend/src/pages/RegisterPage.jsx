@@ -10,7 +10,10 @@ import {
   Rocket,
   FlaskConical,
   Network,
-  Check,
+  Globe2,
+  HeartHandshake,
+  Layers,
+  ChevronLeft,
 } from 'lucide-react'
 import cdacLogo from '../assets/cdaclogo.png'
 import { AuthFridgeVisual } from '@/components/marketing/AuthFridgeVisual'
@@ -34,6 +37,9 @@ const ORG_TYPES = [
   { id: 'startup', label: 'Startup', hint: 'SME & venture teams', icon: Rocket },
   { id: 'research', label: 'Research lab', hint: 'Dedicated R&D facilities', icon: FlaskConical },
   { id: 'programme', label: 'National programme', hint: 'Consortium & funded programmes', icon: Network },
+  { id: 'international', label: 'International', hint: 'Global agencies & institutions', icon: Globe2 },
+  { id: 'ngo', label: 'NGO / non-profit', hint: 'Foundations & civil society', icon: HeartHandshake },
+  { id: 'other', label: 'Other', hint: 'Custom organisation — name it below', icon: Layers },
 ];
 
 function normOrg(s) {
@@ -85,6 +91,7 @@ export function RegisterPage() {
   const [captchaCode, setCaptchaCode] = useState('')
   const [captchaKey, setCaptchaKey] = useState(0)
   const [registrationOpen, setRegistrationOpen] = useState(true)
+  const [requiresAdminApproval, setRequiresAdminApproval] = useState(false)
   const [policyLoading, setPolicyLoading] = useState(true)
   const [fieldErrors, setFieldErrors] = useState({})
   const [registeredOrgs, setRegisteredOrgs] = useState([])
@@ -114,6 +121,7 @@ export function RegisterPage() {
       .then((reg) => {
         if (cancelled) return;
         setRegistrationOpen(reg?.allow_public_registration !== false);
+        setRequiresAdminApproval(Boolean(reg?.require_admin_approval));
         setRegisteredOrgs(reg?.registered_orgs || []);
       })
       .catch(() => { if (!cancelled) setRegistrationOpen(true) })
@@ -126,6 +134,14 @@ export function RegisterPage() {
     setSelectedTypeId(typeId);
     setFacilityName('');
     setFieldErrors((f) => ({ ...f, org: undefined }));
+  };
+
+  const clearType = () => {
+    setSelectedTypeId('');
+    setFacilityName('');
+    setStep('profile');
+    setError('');
+    setFieldErrors({});
   };
 
   const checkFacilityDuplicate = (name) => {
@@ -262,7 +278,7 @@ export function RegisterPage() {
       {success ? (
         <p className="auth-inline-alert auth-inline-alert--success" role="status">{success}</p>
       ) : (
-        <div className={`reg-stage${selectedTypeId ? ' reg-stage--open' : ''}`}>
+        <div className={`reg-stage${selectedTypeId ? ' reg-stage--detail' : ''}`}>
           <div className="reg-stage__brand">
             <img src={cdacLogo} alt="" className="reg-stage__logo" width={120} height={40} />
             <p className="reg-stage__wordmark">Q-TeleScope</p>
@@ -271,43 +287,48 @@ export function RegisterPage() {
             </div>
           </div>
 
-          <div className="reg-stage__types">
-            <p className="reg-stage__label">Organisation type</p>
-            <div className="reg-type-grid" role="listbox" aria-label="Organisation type">
-              {ORG_TYPES.map((type) => {
-                const Icon = type.icon;
-                const active = selectedTypeId === type.id;
-                return (
-                  <button
-                    key={type.id}
-                    type="button"
-                    role="option"
-                    aria-selected={active}
-                    className={`reg-type-tile${active ? ' reg-type-tile--active' : ''}`}
-                    onClick={() => pickType(type.id)}
-                  >
-                    <span className="reg-type-tile__row">
-                      <span className="reg-type-tile__icon-wrap" aria-hidden>
-                        <Icon className="size-5 shrink-0" strokeWidth={2} />
+          {!selectedTypeId ? (
+            <div className="reg-stage__types">
+              <p className="reg-stage__label">Organisation type</p>
+              <div className="reg-type-grid" role="listbox" aria-label="Organisation type">
+                {ORG_TYPES.map((type) => {
+                  const Icon = type.icon;
+                  return (
+                    <button
+                      key={type.id}
+                      type="button"
+                      role="option"
+                      aria-selected={false}
+                      className="reg-type-tile"
+                      onClick={() => pickType(type.id)}
+                    >
+                      <span className="reg-type-tile__row">
+                        <span className="reg-type-tile__icon-wrap" aria-hidden>
+                          <Icon className="size-5 shrink-0" strokeWidth={2} />
+                        </span>
+                        <span className="reg-type-tile__title">{type.label}</span>
                       </span>
-                      <span className="reg-type-tile__title">{type.label}</span>
-                      {active ? (
-                        <Check
-                          className="size-3.5 shrink-0"
-                          style={{ color: 'var(--reg-accent)', marginLeft: 'auto' }}
-                          aria-hidden
-                        />
-                      ) : null}
-                    </span>
-                    <span className="reg-type-tile__hint">{type.hint}</span>
-                  </button>
-                );
-              })}
+                      <span className="reg-type-tile__hint">{type.hint}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-
-          <div className="reg-stage__form" aria-hidden={!selectedTypeId}>
-            {!selectedTypeId ? null : step === 'otp' ? (
+          ) : (
+          <div className="reg-stage__form">
+            {selectedType ? (
+              <div className="reg-form-type-bar">
+                <span className="reg-form-type-bar__chip">
+                  {React.createElement(selectedType.icon, { className: 'size-4 shrink-0', 'aria-hidden': true })}
+                  {selectedType.label}
+                </span>
+                <button type="button" className="reg-form-type-bar__back" onClick={clearType} disabled={busy}>
+                  <ChevronLeft className="size-4" aria-hidden />
+                  Change type
+                </button>
+              </div>
+            ) : null}
+            {step === 'otp' ? (
               <form onSubmit={handleConfirmOtp} className="reg-form-stack" noValidate>
                 <p className="reg-org-form__lead">
                   {otpDelivery === 'screen'
@@ -334,13 +355,30 @@ export function RegisterPage() {
                 </div>
               </form>
             ) : (
-              <form onSubmit={handleSendOtp} className="reg-form-stack" noValidate>
-                <Field label="Facility or programme" forId="reg-facility" hint={fieldErrors.org}>
+              <form onSubmit={handleSendOtp} className="reg-form-stack reg-form-stack--profile" noValidate>
+                {requiresAdminApproval ? (
+                  <p className="auth-register-approval-note" role="note">
+                    After email verification, a platform administrator must approve your account before you can sign in. Roles are assigned in Administration → Users.
+                  </p>
+                ) : null}
+                <Field
+                  label={selectedTypeId === 'other' ? 'Organisation name' : 'Facility or programme'}
+                  forId="reg-facility"
+                  hint={fieldErrors.org}
+                >
                   <input
                     id="reg-facility"
                     type="text"
                     className={`${fieldClass} ${fieldErrors.org ? 'auth-field--invalid' : ''}`}
-                    placeholder={selectedType ? `e.g. ${selectedType.label === 'University' ? 'IIT Bombay' : 'Your unit name'}` : ''}
+                    placeholder={
+                      selectedType
+                        ? selectedTypeId === 'university'
+                          ? 'e.g. IIT Bombay'
+                          : selectedTypeId === 'other'
+                            ? 'e.g. Open quantum consortium'
+                            : 'e.g. Your unit name'
+                        : ''
+                    }
                     value={facilityName}
                     onChange={(e) => {
                       setFacilityName(e.target.value);
@@ -354,7 +392,7 @@ export function RegisterPage() {
                   />
                 </Field>
 
-                <div className="reg-form-row">
+                <div className="reg-form-row reg-form-row--split">
                   <Field label="Username" forId="reg-username" hint={fieldErrors.username}>
                     <input
                       id="reg-username"
@@ -388,7 +426,7 @@ export function RegisterPage() {
                   />
                 </Field>
 
-                <div className="reg-form-row">
+                <div className="reg-form-row reg-form-row--split">
                   <Field label="Password" forId="reg-password" hint={fieldErrors.password}>
                     <div className="reg-org-password">
                       <input
@@ -434,6 +472,7 @@ export function RegisterPage() {
               </form>
             )}
           </div>
+          )}
         </div>
       )}
     </AuthShell>

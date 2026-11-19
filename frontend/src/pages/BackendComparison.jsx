@@ -144,7 +144,6 @@ export const BackendComparison = () => {
   const navigate = useNavigate();
   const { resolved } = useTheme();
   const dark = resolved === 'dark';
-  const lineage = useProviderLineage();
   const [params, setParams] = useSearchParams();
   const [backends, setBackends] = useState(null);
   const [queues, setQueues] = useState({});

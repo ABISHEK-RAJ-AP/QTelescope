@@ -35,7 +35,8 @@
   box-shadow:
     0 18px 48px rgba(15, 23, 42, 0.12),
     0 1px 0 rgba(255, 255, 255, 0.8) inset;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .reg-cert-head {
@@ -68,15 +69,21 @@
   transition: grid-template-columns 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.reg-stage:not(.reg-stage--open) .reg-stage__form {
-  display: none;
+.reg-stage--detail {
+  grid-template-columns: minmax(168px, 13.5rem) minmax(0, 1fr);
+  min-height: 0;
+  align-items: start;
 }
 
-.reg-stage--open {
-  grid-template-columns:
-    minmax(190px, 13.5rem)
-    minmax(18rem, 24rem)
-    minmax(22rem, 1fr);
+.reg-stage--detail .reg-stage__brand {
+  position: sticky;
+  top: 0;
+}
+
+.reg-stage--detail .reg-stage__fridge .auth-fridge,
+.reg-stage--detail .reg-stage__fridge .auth-fridge__svg {
+  min-height: clamp(160px, 22vh, 260px);
+  max-height: min(280px, 32vh);
 }
 
 .reg-stage__brand {
@@ -130,19 +137,20 @@
   flex: 1;
 }
 
-.reg-stage:not(.reg-stage--open) .reg-stage__types {
+.reg-stage__types {
   min-height: 100%;
 }
 
-.reg-stage:not(.reg-stage--open) .reg-type-grid {
+.reg-stage:not(.reg-stage--detail) .reg-type-grid {
   flex: 1;
   min-height: 0;
-  grid-template-rows: repeat(3, minmax(5.5rem, 1fr));
+  grid-template-columns: repeat(3, minmax(10.5rem, 1fr));
+  grid-template-rows: repeat(3, minmax(5.25rem, 1fr));
   align-content: stretch;
 }
 
-.reg-stage:not(.reg-stage--open) .reg-type-tile {
-  min-height: 5.5rem;
+.reg-stage:not(.reg-stage--detail) .reg-type-tile {
+  min-height: 5.25rem;
   height: 100%;
 }
 
@@ -157,16 +165,10 @@
 
 .reg-type-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(11rem, 1fr));
   gap: clamp(0.6rem, 1.2vw, 0.85rem);
   overflow: hidden;
   align-content: center;
   width: 100%;
-}
-
-.reg-stage--open .reg-type-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(0.45rem, 0.9vw, 0.65rem);
 }
 
 .reg-type-tile {
@@ -184,11 +186,6 @@
   background: color-mix(in srgb, var(--reg-surface) 92%, var(--reg-accent) 4%);
   cursor: pointer;
   transition: border-color 0.18s, background 0.18s, transform 0.18s;
-}
-
-.reg-stage--open .reg-type-tile {
-  min-height: clamp(3.5rem, 7vh, 4.25rem);
-  padding: clamp(0.55rem, 1vw, 0.75rem) clamp(0.65rem, 1.2vw, 0.85rem);
 }
 
 .reg-type-tile:hover {
@@ -215,7 +212,7 @@
   color: var(--reg-accent);
 }
 
-.reg-stage:not(.reg-stage--open) .reg-type-tile__icon-wrap {
+.reg-stage:not(.reg-stage--detail) .reg-type-tile__icon-wrap {
   width: 2.5rem;
   height: 2.5rem;
 }
@@ -241,28 +238,65 @@
 }
 
 .reg-stage__form {
-  opacity: 0;
-  max-width: 0;
-  overflow: hidden;
-  pointer-events: none;
-  transform: translateX(12px);
-  transition:
-    opacity 0.35s ease,
-    max-width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.35s ease;
-  border-left: 0 solid var(--reg-border);
-  padding-left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
   min-width: 0;
+  max-width: min(52rem, 100%);
+  animation: reg-form-in 0.35s ease;
 }
 
-.reg-stage--open .reg-stage__form {
-  opacity: 1;
-  max-width: 720px;
-  pointer-events: auto;
-  transform: translateX(0);
-  border-left-width: 1px;
-  padding-left: clamp(0.85rem, 1.5vw, 1.25rem);
-  overflow-y: auto;
+@keyframes reg-form-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.reg-form-type-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--reg-border);
+}
+
+.reg-form-type-bar__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--reg-text);
+}
+
+.reg-form-type-bar__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--reg-accent);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+}
+
+.reg-form-type-bar__back:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--reg-accent) 10%, transparent);
+}
+
+.reg-form-type-bar__back:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .reg-form-stack {
@@ -310,8 +344,22 @@
 
 .reg-form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
   gap: clamp(0.65rem, 1.2vw, 1rem);
+}
+
+.reg-form-row--split {
+  grid-template-columns: 1fr 1fr;
+}
+
+@media (max-width: 720px) {
+  .reg-form-row--split {
+    grid-template-columns: 1fr;
+  }
+
+  .reg-stage:not(.reg-stage--detail) .reg-type-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: auto;
+  }
 }
 
 .reg-form-actions {
@@ -334,14 +382,25 @@
   width: 100%;
 }
 
+.reg-org-password .auth-outline-field__control {
+  padding-right: 2.5rem;
+}
+
 .reg-org-password__toggle {
   position: absolute;
-  right: 0;
-  padding: 0.35rem;
+  right: 0.15rem;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0.4rem;
   border: 0;
   background: transparent;
   color: var(--reg-muted);
   cursor: pointer;
+  z-index: 1;
+}
+
+.reg-stage--detail .auth-register-approval-note {
+  margin: 0 0 0.25rem;
 }
 
 .reg-form-submit {
@@ -373,7 +432,7 @@
 
 @media (max-width: 900px) {
   .reg-stage,
-  .reg-stage--open {
+  .reg-stage--detail {
     grid-template-columns: 1fr;
     max-height: none;
   }
@@ -400,9 +459,6 @@
     transform: none;
   }
 
-  .reg-stage:not(.reg-stage--open) .reg-stage__form {
-    display: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
