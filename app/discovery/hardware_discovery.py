@@ -1,6 +1,7 @@
 import os
 import logging
-from typing import List, Dict, Any, Tuple
+import time
+from typing import List, Dict, Any, Tuple, Set
 from sqlalchemy.orm import Session
 
 from app.providers.base import BaseProviderAdapter
@@ -22,6 +23,19 @@ from app.core.database import SessionLocal
 from app.models.entities import BackendModel
 
 logger = logging.getLogger("HardwareDiscoveryEngine")
+
+_LAST_ENSURE_DISCOVERY = 0.0
+_ENSURE_DISCOVERY_MIN_SEC = 120.0
+
+
+def _mock_catalog_satisfied(ids: Set[str]) -> bool:
+    if MOCK_BACKEND_IDS <= ids:
+        return True
+    missing = MOCK_BACKEND_IDS - ids
+    # Hybrid demo: live Rigetti ISA id can replace template rigetti_aspen_m3.
+    if missing == {"rigetti_aspen_m3"} and any(bid.startswith("rigetti_") for bid in ids):
+        return True
+    return False
 
 class HardwareDiscoveryEngine:
     """
@@ -172,20 +186,32 @@ def ensure_discovered(db: Session):
     Runs auto-discovery automatically if:
     1. Database is completely empty.
     2. Mock data is DISABLED and database currently contains mock backends that should be pruned.
+
+    Read-path calls are throttled so a stale mock id (e.g. rigetti_aspen_m3 vs live Rigetti)
+    cannot trigger full provider collection on every /backends cache miss.
     """
+    global _LAST_ENSURE_DISCOVERY
     try:
         has_any_backends = db.query(BackendModel.backend_id).first() is not None
+        should_run = False
         if not has_any_backends:
-            HardwareDiscoveryEngine.run_auto_discovery(db)
+            should_run = True
         elif settings.ENABLE_MOCK_DATA:
             ids = {r[0] for r in db.query(BackendModel.backend_id).all()}
-            if not MOCK_BACKEND_IDS <= ids:
-                HardwareDiscoveryEngine.run_auto_discovery(db)
+            if not _mock_catalog_satisfied(ids):
+                should_run = True
         elif not settings.ENABLE_MOCK_DATA:
             has_mock = db.query(BackendModel.backend_id).filter(
                 BackendModel.backend_id.in_(MOCK_BACKEND_IDS)
             ).first() is not None
             if has_mock:
-                HardwareDiscoveryEngine.run_auto_discovery(db)
+                should_run = True
+        if not should_run:
+            return
+        now = time.monotonic()
+        if has_any_backends and now - _LAST_ENSURE_DISCOVERY < _ENSURE_DISCOVERY_MIN_SEC:
+            return
+        HardwareDiscoveryEngine.run_auto_discovery(db)
+        _LAST_ENSURE_DISCOVERY = now
     except Exception as err:
         logger.error(f"Error during ensure_discovered check: {err}", exc_info=True)
