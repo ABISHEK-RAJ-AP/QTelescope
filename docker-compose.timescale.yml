@@ -1,11 +1,6 @@
 # TimescaleDB (Postgres + extension) for lab / VM migration.
-# Usage:
-#   docker compose -f docker-compose.yml -f docker-compose.timescale.yml --profile timescale up -d
-#   export DATABASE_URL=postgresql+psycopg2://postgres:postgrespassword@localhost:5432/quantum_telemetry
-#   export USE_ALEMBIC=true
-#   PYTHONPATH=. alembic upgrade head
-#   PYTHONPATH=. python scripts/migrate_sqlite_to_postgres.py --sqlite sqlite:///./data/qtelescope.db
-#   PYTHONPATH=. python scripts/init_timescale_hypertables.py
+# Default host port 5433 avoids clash with system Postgres on 5432.
+#   TIMESCALE_PUBLISH_PORT=5434 docker compose -f docker-compose.timescale.yml --profile timescale up -d
 services:
   db:
     profiles: [timescale]
@@ -16,7 +11,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgrespassword
     ports:
-      - "5432:5432"
+      - "${TIMESCALE_PUBLISH_PORT:-5433}:5432"
     volumes:
       - timescaledb_data:/var/lib/postgresql/data
       - ./scripts/db/init-timescaledb.sql:/docker-entrypoint-initdb.d/01-init-timescale.sql:ro

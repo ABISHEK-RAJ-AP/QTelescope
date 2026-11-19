@@ -37,9 +37,21 @@ git pull --ff-only origin main
 
 ## VM — migrate to PostgreSQL + TimescaleDB
 
-Prerequisites: Docker, `psycopg2-binary` in Python env.
+Prerequisites: **either** Postgres already listening on `:5432` **or** Docker (user in `docker` group, or script uses `sudo docker`).
+
+The migrate script:
+
+1. Uses **existing Postgres on :5432** when `pg_isready` succeeds (creates `quantum_telemetry` DB if missing).
+2. Otherwise starts Timescale in Docker on **:5433** (or next free port) — avoids `bind: address already in use` on 5432.
+
+If system Postgres uses a different password, set before running:
 
 ```bash
+export PG_USER=postgres PG_PASS=yourpassword
+```
+
+```bash
+git pull --ff-only origin main   # includes qtFilmWarm.js + this script
 chmod +x scripts/vm-postgres-migrate.sh scripts/performance-smoke.sh
 ./scripts/vm-postgres-migrate.sh
 ./scripts/vm-demo-restart.sh
