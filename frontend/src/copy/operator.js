@@ -45,9 +45,14 @@ export const COPY = {
     serviceUnavailable: 'Sign-in is temporarily unavailable. Try again in a moment.',
     captchaUnavailable: 'Could not load the security image. Try again.',
     signInDirectory: 'This deployment accepts organization directory credentials.',
-    registerSubtitle: 'Choose organisation type, enter your facility name, verify email.',
+    registerSubtitle: 'Select your organisation type and complete your profile.',
     registerClosed: 'Registration is managed by your organisation administrator.',
-    registerOtpHint: 'Enter the 6-digit code shown in the notification when email delivery is not configured.',
+    registerApprovalNote:
+      'Some deployments require approver confirmation before the first sign-in. Access level is set by your organisation administrator.',
+    registerOtpSubtitle: 'Enter the verification code to finish creating your account.',
+    registerOtpHintScreen:
+      'A one-time code is shown in an on-screen notification because outbound email is not configured for this environment.',
+    registerOtpHintEmail: 'Enter the 6-digit code we sent to your email address.',
     forgotSubtitle: 'Enter your username. For security, the response does not indicate whether an account exists.',
     resetSubtitle: 'Enter your reset token and set a new password.',
     mfaHint: 'Requires a TOTP authenticator app (6-digit code at sign-in). SMS is not used.',

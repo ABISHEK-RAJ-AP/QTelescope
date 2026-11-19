@@ -13,7 +13,6 @@ import {
   Globe2,
   HeartHandshake,
   Layers,
-  ChevronLeft,
 } from 'lucide-react'
 import cdacLogo from '../assets/cdaclogo.png'
 import { AuthFridgeVisual } from '@/components/marketing/AuthFridgeVisual'
@@ -246,8 +245,8 @@ export function RegisterPage() {
 
   const panelHead = (
     <header className="reg-cert-head">
-      <h1>Create account</h1>
-      <p>{COPY.auth.registerSubtitle}</p>
+      <h1>{step === 'otp' ? 'Verify email' : 'Create account'}</h1>
+      <p>{step === 'otp' ? COPY.auth.registerOtpSubtitle : COPY.auth.registerSubtitle}</p>
     </header>
   );
 
@@ -303,9 +302,7 @@ export function RegisterPage() {
                       onClick={() => pickType(type.id)}
                     >
                       <span className="reg-type-tile__row">
-                        <span className="reg-type-tile__icon-wrap" aria-hidden>
-                          <Icon className="size-5 shrink-0" strokeWidth={2} />
-                        </span>
+                        <Icon className="reg-type-tile__icon" strokeWidth={2} aria-hidden />
                         <span className="reg-type-tile__title">{type.label}</span>
                       </span>
                       <span className="reg-type-tile__hint">{type.hint}</span>
@@ -318,47 +315,57 @@ export function RegisterPage() {
           <div className="reg-stage__form">
             {selectedType ? (
               <div className="reg-form-type-bar">
-                <span className="reg-form-type-bar__chip">
-                  {React.createElement(selectedType.icon, { className: 'size-4 shrink-0', 'aria-hidden': true })}
-                  {selectedType.label}
-                </span>
+                <div className="reg-form-type-bar__meta">
+                  <span className="reg-form-type-bar__label">Organisation</span>
+                  <span className="reg-form-type-bar__value">{selectedType.label}</span>
+                </div>
                 <button type="button" className="reg-form-type-bar__back" onClick={clearType} disabled={busy}>
-                  <ChevronLeft className="size-4" aria-hidden />
-                  Change type
+                  Change
                 </button>
               </div>
             ) : null}
             {step === 'otp' ? (
-              <form onSubmit={handleConfirmOtp} className="reg-form-stack" noValidate>
-                <p className="reg-org-form__lead">
-                  {otpDelivery === 'screen'
-                    ? COPY.auth.registerOtpHint
-                    : `Code sent to ${email.trim()}.`}
-                </p>
-                <Field label="Verification code" forId="reg-otp" hint={fieldErrors.otp}>
-                  <OtpInput
-                    value={otpCode}
-                    onChange={(v) => { setOtpCode(v); setFieldErrors((f) => ({ ...f, otp: undefined })); }}
-                    disabled={busy}
-                    invalid={Boolean(fieldErrors.otp)}
-                  />
-                </Field>
-                {error ? <p className="auth-field-error" role="alert">{error}</p> : null}
-                <div className="reg-form-actions">
-                  <Button type="button" variant="outline" disabled={busy} onClick={() => { setStep('profile'); setError(''); }}>
-                    Back
-                  </Button>
-                  <Button type="submit" className="auth-cta reg-form-submit flex-1" disabled={busy}>
-                    {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
-                    Verify
-                  </Button>
+              <form onSubmit={handleConfirmOtp} className="reg-form-stack reg-otp-step" noValidate>
+                <div className="auth-otp-panel reg-otp-panel">
+                  <p className="auth-otp-panel__lead">
+                    {otpDelivery === 'screen'
+                      ? COPY.auth.registerOtpHintScreen
+                      : (
+                        <>
+                          {COPY.auth.registerOtpHintEmail}
+                          {' '}
+                          <span className="reg-otp-panel__email">{email.trim()}</span>
+                        </>
+                      )}
+                  </p>
+                  <Field label="Verification code" forId="reg-otp" hint={fieldErrors.otp}>
+                    <OtpInput
+                      value={otpCode}
+                      onChange={(v) => { setOtpCode(v); setFieldErrors((f) => ({ ...f, otp: undefined })); }}
+                      disabled={busy}
+                      invalid={Boolean(fieldErrors.otp)}
+                    />
+                  </Field>
                 </div>
+                {error ? <p className="auth-field-error" role="alert">{error}</p> : null}
+                <Button type="submit" className="auth-cta reg-form-submit" disabled={busy}>
+                  {busy ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
+                  Confirm code
+                </Button>
+                <button
+                  type="button"
+                  className="reg-otp-back"
+                  disabled={busy}
+                  onClick={() => { setStep('profile'); setError(''); }}
+                >
+                  Back to profile
+                </button>
               </form>
             ) : (
               <form onSubmit={handleSendOtp} className="reg-form-stack reg-form-stack--profile" noValidate>
                 {requiresAdminApproval ? (
-                  <p className="auth-register-approval-note" role="note">
-                    After email verification, a platform administrator must approve your account before you can sign in. Roles are assigned in Administration → Users.
+                  <p className="auth-register-approval-note reg-approval-note" role="note">
+                    {COPY.auth.registerApprovalNote}
                   </p>
                 ) : null}
                 <Field

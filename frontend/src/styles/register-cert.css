@@ -199,22 +199,17 @@
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--reg-accent) 25%, transparent);
 }
 
-.reg-type-tile__icon-wrap {
+.reg-type-tile__icon {
+  width: 1.125rem;
+  height: 1.125rem;
   flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--reg-border) 85%, transparent);
-  background: color-mix(in srgb, var(--reg-surface) 96%, var(--reg-accent) 6%);
   color: var(--reg-accent);
+  opacity: 0.9;
 }
 
-.reg-stage:not(.reg-stage--detail) .reg-type-tile__icon-wrap {
-  width: 2.5rem;
-  height: 2.5rem;
+.reg-stage:not(.reg-stage--detail) .reg-type-tile__icon {
+  width: 1.25rem;
+  height: 1.25rem;
 }
 
 .reg-type-tile__row {
@@ -267,31 +262,129 @@
   border-bottom: 1px solid var(--reg-border);
 }
 
-.reg-form-type-bar__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  font-size: 0.9375rem;
+.reg-form-type-bar__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.reg-form-type-bar__label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--reg-muted);
+}
+
+.reg-form-type-bar__value {
+  font-size: 1rem;
   font-weight: 600;
   color: var(--reg-text);
+  letter-spacing: -0.02em;
 }
 
 .reg-form-type-bar__back {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
-  border: 0;
-  background: transparent;
+  flex-shrink: 0;
+  border: 1px solid var(--reg-border);
+  background: var(--reg-surface);
   color: var(--reg-accent);
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
-  padding: 0.35rem 0.5rem;
+  padding: 0.4rem 0.75rem;
   border-radius: 8px;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    transform 0.18s ease;
 }
 
 .reg-form-type-bar__back:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--reg-accent) 10%, transparent);
+  border-color: color-mix(in srgb, var(--reg-accent) 45%, var(--reg-border));
+  background: color-mix(in srgb, var(--reg-accent) 8%, var(--reg-surface));
+  transform: translateY(-1px);
+}
+
+.reg-approval-note {
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--reg-border);
+  background: color-mix(in srgb, var(--reg-accent) 6%, var(--reg-surface));
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+.reg-otp-step {
+  gap: 0.75rem;
+}
+
+.reg-otp-panel {
+  width: 100%;
+  padding: clamp(1rem, 2vw, 1.25rem);
+  border-radius: 12px;
+}
+
+.reg-otp-panel .auth-otp-panel__lead {
+  margin-bottom: 1.15rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.reg-otp-panel__email {
+  font-weight: 600;
+  color: var(--reg-text);
+  word-break: break-all;
+}
+
+.reg-otp-panel .auth-otp-row {
+  max-width: 22rem;
+  margin: 0 auto;
+  gap: 0.5rem;
+}
+
+.reg-otp-panel .auth-otp-cell {
+  border-radius: 10px;
+  font-size: 1.25rem;
+  min-height: 2.75rem;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--reg-border) 80%, transparent);
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.reg-otp-panel .auth-otp-cell--filled {
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--reg-accent) 18%, transparent);
+}
+
+.reg-otp-panel .auth-outline-field {
+  text-align: center;
+}
+
+.reg-otp-panel .auth-outline-field__name {
+  text-align: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.reg-otp-back {
+  align-self: center;
+  border: 0;
+  background: transparent;
+  color: var(--reg-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.35rem 0.5rem;
+  transition: color 0.15s ease;
+}
+
+.reg-otp-back:hover:not(:disabled) {
+  color: var(--reg-accent);
 }
 
 .reg-form-type-bar__back:disabled {
