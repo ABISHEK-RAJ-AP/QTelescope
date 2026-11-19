@@ -1,24 +1,10 @@
 import React, { useCallback, useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, Loader2, X } from 'lucide-react';
-import { fetchApi, BASE_URL } from '../../services/api';
+import { fetchApi, fetchReportExport } from '../../services/api';
 import { rowsToCsv } from '../../lib/csvExport.js';
 import { notifyError } from '../../lib/toast.js';
 import './ReportExportPreviewModal.css';
-
-const sessionHeaders = () => {
-  try {
-    const raw = localStorage.getItem('quantum_user');
-    if (!raw) return {};
-    const user = JSON.parse(raw);
-    const headers = {};
-    if (user?.role) headers['X-User-Role'] = user.role;
-    if (user?.token) headers.Authorization = `Bearer ${user.token}`;
-    return headers;
-  } catch {
-    return {};
-  }
-};
 
 /**
  * @param {{
@@ -108,8 +94,7 @@ export function ReportExportPreviewModal({
           include_glossary: opts.includeGlossary ? 'true' : 'false',
         });
         if (scope) q.set('backend_id', scope);
-        const res = await fetch(`${BASE_URL}/reports/export?${q.toString()}`, { headers: sessionHeaders() });
-        if (!res.ok) throw new Error(`Server returned ${res.status}`);
+        const res = await fetchReportExport(q.toString());
         const text = await res.text();
         saveBlob(`${reportType}_${scopeLabel}_${stamp}.html`, text, 'text/html');
         onExported?.({ rows: preview?.row_count ?? rowCount, size: text.length, format: 'HTML' });

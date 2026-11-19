@@ -7,6 +7,7 @@
 @import "./styles/glass-surface.css";
 @import "./styles/app-shell-density.css";
 @import "./styles/typography-ops-floor.css";
+@import "./styles/typography-craft.css";
 @import "./styles/ops-antislop.css";
 @import "./styles/motion-feedback.css";
 @import "./styles/surface-rhythm.css";
@@ -141,7 +142,7 @@ body {
 }
 
 .app-shell {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
 }

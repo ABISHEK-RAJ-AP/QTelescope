@@ -23,6 +23,7 @@ def test_html_report_has_header_footer_and_table():
     assert "<table" in html
     assert "chart-bar" in html
     assert "online" in html
+    assert "motion-div" not in html
 
 
 def test_preview_row_limit():

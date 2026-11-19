@@ -40,13 +40,29 @@ class ReportGenerator:
         elif report_type == "calibration":
             by_fresh = Counter(str(r.get("freshness") or "unknown") for r in rows)
             agg["freshness_breakdown"] = dict(by_fresh)
-            ages = [float(r.get("age_hours") or 0) for r in rows]
+            ages: List[float] = []
+            for r in rows:
+                try:
+                    ages.append(float(r.get("age_hours") or 0))
+                except (TypeError, ValueError):
+                    ages.append(0.0)
             agg["max_age_hours"] = round(max(ages), 2) if ages else 0
             agg["mean_age_hours"] = round(sum(ages) / len(ages), 2) if ages else 0
         return agg
 
     @staticmethod
+    def _coerce_int_counts(counts: Dict[str, Any]) -> Dict[str, int]:
+        out: Dict[str, int] = {}
+        for key, val in counts.items():
+            try:
+                out[str(key)] = int(val)
+            except (TypeError, ValueError):
+                out[str(key)] = 0
+        return out
+
+    @staticmethod
     def _svg_bar_chart(title: str, counts: Dict[str, int], max_width: int = 520) -> str:
+        counts = ReportGenerator._coerce_int_counts(counts)
         if not counts:
             return ""
         items = sorted(counts.items(), key=lambda x: (-x[1], x[0]))[:8]
@@ -75,14 +91,34 @@ class ReportGenerator:
     def generate_charts_html(report_type: str, aggregates: Dict[str, Any]) -> str:
         parts: List[str] = []
         if report_type == "backend_monitoring" and aggregates.get("status_breakdown"):
-            parts.append(ReportGenerator._svg_bar_chart("Backends by operational status", aggregates["status_breakdown"]))
+            parts.append(
+                ReportGenerator._svg_bar_chart(
+                    "Backends by operational status",
+                    ReportGenerator._coerce_int_counts(aggregates["status_breakdown"]),
+                )
+            )
         if report_type == "alerts":
             if aggregates.get("severity_breakdown"):
-                parts.append(ReportGenerator._svg_bar_chart("Alerts by severity", aggregates["severity_breakdown"]))
+                parts.append(
+                    ReportGenerator._svg_bar_chart(
+                        "Alerts by severity",
+                        ReportGenerator._coerce_int_counts(aggregates["severity_breakdown"]),
+                    )
+                )
             if aggregates.get("status_breakdown"):
-                parts.append(ReportGenerator._svg_bar_chart("Alerts by status", aggregates["status_breakdown"]))
+                parts.append(
+                    ReportGenerator._svg_bar_chart(
+                        "Alerts by status",
+                        ReportGenerator._coerce_int_counts(aggregates["status_breakdown"]),
+                    )
+                )
         if report_type == "calibration" and aggregates.get("freshness_breakdown"):
-            parts.append(ReportGenerator._svg_bar_chart("Calibrations by freshness", aggregates["freshness_breakdown"]))
+            parts.append(
+                ReportGenerator._svg_bar_chart(
+                    "Calibrations by freshness",
+                    ReportGenerator._coerce_int_counts(aggregates["freshness_breakdown"]),
+                )
+            )
         return f'<section class="charts-grid">{"".join(parts)}</section>' if parts else ""
 
     @staticmethod
@@ -239,7 +275,7 @@ class ReportGenerator:
         <div class="org">{html.escape(ReportGenerator.ORG_NAME)}</div>
         <h1 class="title">{html.escape(title)}</h1>
         <p class="subtitle">{html.escape(subtitle)}</p>
-      </motion-div>
+      </div>
       <div class="meta">
         <strong>Generated</strong>
         {html.escape(now_str)}<br>

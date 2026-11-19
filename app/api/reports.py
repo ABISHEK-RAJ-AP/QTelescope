@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session, load_only
@@ -11,6 +13,8 @@ from app.providers.catalog import CATALOG, stored_configured
 from app.facility.env_store import load_rows as load_env_rows
 from app.api.environment import import_environment, EnvImport
 from app.core.rbac import require_operator
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/reports", tags=["Reports"])
 
@@ -162,46 +166,52 @@ def preview_report(
     limit: int = Query(25, ge=1, le=200),
     db: Session = Depends(get_db),
 ):
-    title, subtitle, fieldnames, data = _build_report(report_type, db)
-    scoped, scope_label = _scope_rows(report_type, backend_id, data)
-    aggregates = ReportGenerator.compute_aggregates(report_type, scoped)
+    try:
+        title, subtitle, fieldnames, data = _build_report(report_type, db)
+        scoped, scope_label = _scope_rows(report_type, backend_id, data)
+        aggregates = ReportGenerator.compute_aggregates(report_type, scoped)
 
-    if format in ("html", "pdf"):
-        html_content = ReportGenerator.generate_html_report(
-            title,
-            subtitle,
-            report_type,
-            fieldnames,
-            scoped if include_table else [],
-            scope_label=scope_label,
-            include_summary=include_summary,
-            include_charts=include_charts,
-            include_glossary=include_glossary,
-            row_limit=limit if include_table else 0,
-            preview_watermark=True,
-        )
+        if format in ("html", "pdf"):
+            html_content = ReportGenerator.generate_html_report(
+                title,
+                subtitle,
+                report_type,
+                fieldnames,
+                scoped if include_table else [],
+                scope_label=scope_label,
+                include_summary=include_summary,
+                include_charts=include_charts,
+                include_glossary=include_glossary,
+                row_limit=limit if include_table else 0,
+                preview_watermark=True,
+            )
+            return {
+                "kind": report_type,
+                "format": "html",
+                "scope": scope_label,
+                "row_count": len(scoped),
+                "preview_limit": limit,
+                "aggregates": aggregates,
+                "fieldnames": fieldnames,
+                "html": html_content,
+            }
+
+        preview_rows = scoped[:limit] if include_table else []
         return {
             "kind": report_type,
-            "format": "html",
+            "format": format,
             "scope": scope_label,
             "row_count": len(scoped),
             "preview_limit": limit,
             "aggregates": aggregates,
             "fieldnames": fieldnames,
-            "html": html_content,
+            "records": preview_rows,
         }
-
-    preview_rows = scoped[:limit] if include_table else []
-    return {
-        "kind": report_type,
-        "format": format,
-        "scope": scope_label,
-        "row_count": len(scoped),
-        "preview_limit": limit,
-        "aggregates": aggregates,
-        "fieldnames": fieldnames,
-        "records": preview_rows,
-    }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("preview_report failed report_type=%s", report_type)
+        raise HTTPException(status_code=500, detail="Report preview failed. Refresh data and try again.") from exc
 
 
 @router.get("/export")
@@ -214,39 +224,45 @@ def export_report(
     include_glossary: bool = True,
     db: Session = Depends(get_db),
 ):
-    title, subtitle, fieldnames, data = _build_report(report_type, db)
-    scoped, scope_label = _scope_rows(report_type, backend_id, data)
+    try:
+        title, subtitle, fieldnames, data = _build_report(report_type, db)
+        scoped, scope_label = _scope_rows(report_type, backend_id, data)
 
-    if format == "json":
-        return {
-            "kind": report_type,
-            "title": title,
-            "scope": scope_label,
-            "aggregates": ReportGenerator.compute_aggregates(report_type, scoped),
-            "records": scoped,
-        }
-    if format in ("html", "pdf"):
-        html_content = ReportGenerator.generate_html_report(
-            title,
-            subtitle,
-            report_type,
-            fieldnames,
-            scoped,
-            scope_label=scope_label,
-            include_summary=include_summary,
-            include_charts=include_charts,
-            include_glossary=include_glossary,
-            preview_watermark=False,
+        if format == "json":
+            return {
+                "kind": report_type,
+                "title": title,
+                "scope": scope_label,
+                "aggregates": ReportGenerator.compute_aggregates(report_type, scoped),
+                "records": scoped,
+            }
+        if format in ("html", "pdf"):
+            html_content = ReportGenerator.generate_html_report(
+                title,
+                subtitle,
+                report_type,
+                fieldnames,
+                scoped,
+                scope_label=scope_label,
+                include_summary=include_summary,
+                include_charts=include_charts,
+                include_glossary=include_glossary,
+                preview_watermark=False,
+            )
+            return HTMLResponse(content=html_content, status_code=200)
+
+        csv_data = ReportGenerator.generate_csv_report(scoped, fieldnames)
+        fname = f"{report_type}_{backend_id or 'fleet'}_report.csv"
+        return Response(
+            content=csv_data,
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={fname}"},
         )
-        return HTMLResponse(content=html_content, status_code=200)
-
-    csv_data = ReportGenerator.generate_csv_report(scoped, fieldnames)
-    fname = f"{report_type}_{backend_id or 'fleet'}_report.csv"
-    return Response(
-        content=csv_data,
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={fname}"},
-    )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.exception("export_report failed report_type=%s format=%s", report_type, format)
+        raise HTTPException(status_code=500, detail="Export failed. Try fleet scope or a smaller report type.") from exc
 
 
 @router.get("/bundle")

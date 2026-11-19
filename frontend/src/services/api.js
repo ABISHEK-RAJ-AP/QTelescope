@@ -101,7 +101,7 @@ export async function fetchApiCached(endpoint, { ttlMs, force = false, staleMs }
   return p;
 }
 
-function sessionAuthHeaders() {
+export function sessionAuthHeaders() {
   try {
     const raw = localStorage.getItem('quantum_user');
     if (!raw) return {};
@@ -185,6 +185,25 @@ export async function fetchApi(endpoint, options = {}) {
     }
   }
   return data;
+}
+
+/** HTML/CSV report downloads — bearer auth, same-origin cookies. */
+export async function fetchReportExport(queryString) {
+  const res = await fetch(`${BASE_URL}/reports/export?${queryString}`, {
+    credentials: 'same-origin',
+    headers: sessionAuthHeaders(),
+  });
+  if (!res.ok) {
+    let detail = `Server returned ${res.status}`;
+    try {
+      const body = await res.json();
+      detail = body?.error?.message || body?.detail || detail;
+    } catch {
+      /* HTML or empty body */
+    }
+    throw new Error(detail);
+  }
+  return res;
 }
 
 export const api = {
