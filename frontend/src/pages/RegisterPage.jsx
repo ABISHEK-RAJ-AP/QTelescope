@@ -13,8 +13,10 @@ import {
   Globe2,
   HeartHandshake,
   Layers,
+  Search,
 } from 'lucide-react'
 import cdacLogo from '../assets/cdaclogo.png'
+import { filterOrgTypes, orgTypesForRegister } from '@/data/registerOrgTypes'
 import { AuthFridgeVisual } from '@/components/marketing/AuthFridgeVisual'
 import { Field, fieldClass } from '@/components/AuthShell'
 import { CaptchaField } from '@/components/CaptchaField'
@@ -29,17 +31,24 @@ import '@/styles/register-cert.css'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const ORG_TYPES = [
-  { id: 'government', label: 'Government', hint: 'Public sector & national labs', icon: Landmark },
-  { id: 'university', label: 'University', hint: 'Academic institutions', icon: GraduationCap },
-  { id: 'private', label: 'Private enterprise', hint: 'Industry & corporates', icon: Building2 },
-  { id: 'startup', label: 'Startup', hint: 'SME & venture teams', icon: Rocket },
-  { id: 'research', label: 'Research lab', hint: 'Dedicated R&D facilities', icon: FlaskConical },
-  { id: 'programme', label: 'National programme', hint: 'Consortium & funded programmes', icon: Network },
-  { id: 'international', label: 'International', hint: 'Global agencies & institutions', icon: Globe2 },
-  { id: 'ngo', label: 'NGO / non-profit', hint: 'Foundations & civil society', icon: HeartHandshake },
-  { id: 'other', label: 'Other', hint: 'Custom organisation — name it below', icon: Layers },
-];
+const ORG_TYPES = orgTypesForRegister();
+
+const ORG_ICON_MAP = {
+  Landmark,
+  GraduationCap,
+  Building2,
+  Rocket,
+  FlaskConical,
+  Network,
+  Globe2,
+  HeartHandshake,
+  Layers,
+};
+
+function RegOrgIcon({ name }) {
+  const Icon = ORG_ICON_MAP[name] || Building2;
+  return <Icon className="reg-type-tile__icon" strokeWidth={2} aria-hidden />;
+}
 
 function normOrg(s) {
   return (s || '').trim().toLowerCase();
@@ -98,11 +107,27 @@ export function RegisterPage() {
   const [otpCode, setOtpCode] = useState('')
   const [otpDelivery, setOtpDelivery] = useState('email')
   const [orgDialog, setOrgDialog] = useState(null)
+  const [typeQuery, setTypeQuery] = useState('')
+  const [customOtherLabel, setCustomOtherLabel] = useState('')
 
   const selectedType = useMemo(
     () => ORG_TYPES.find((t) => t.id === selectedTypeId) || null,
     [selectedTypeId],
   );
+
+  const filteredOrgTypes = useMemo(
+    () => filterOrgTypes(ORG_TYPES, typeQuery),
+    [typeQuery],
+  );
+
+  const orgTypeLabel = useMemo(() => {
+    if (!selectedType) return '';
+    if (selectedType.isOther) {
+      const custom = customOtherLabel.trim();
+      return custom || selectedType.label;
+    }
+    return selectedType.label;
+  }, [selectedType, customOtherLabel]);
 
   const registeredSet = useMemo(
     () => new Set(registeredOrgs.map(normOrg)),
@@ -111,8 +136,10 @@ export function RegisterPage() {
 
   const orgValue = useMemo(() => {
     if (!selectedType || !facilityName.trim()) return '';
-    return `${selectedType.label} · ${facilityName.trim()}`;
-  }, [selectedType, facilityName]);
+    const typePart = selectedType.isOther ? customOtherLabel.trim() : selectedType.label;
+    if (!typePart) return '';
+    return `${typePart} · ${facilityName.trim()}`;
+  }, [selectedType, facilityName, customOtherLabel]);
 
   useEffect(() => {
     let cancelled = false
@@ -132,19 +159,22 @@ export function RegisterPage() {
     setError('');
     setSelectedTypeId(typeId);
     setFacilityName('');
-    setFieldErrors((f) => ({ ...f, org: undefined }));
+    setCustomOtherLabel('');
+    setFieldErrors((f) => ({ ...f, org: undefined, otherType: undefined }));
   };
 
   const clearType = () => {
     setSelectedTypeId('');
     setFacilityName('');
+    setCustomOtherLabel('');
+    setTypeQuery('');
     setStep('profile');
     setError('');
     setFieldErrors({});
   };
 
-  const checkFacilityDuplicate = (name) => {
-    const full = selectedType ? `${selectedType.label} · ${name.trim()}` : name.trim();
+  const checkFacilityDuplicate = (name, typeLabel = orgTypeLabel) => {
+    const full = typeLabel && name.trim() ? `${typeLabel} · ${name.trim()}` : name.trim();
     if (full && registeredSet.has(normOrg(full))) {
       setOrgDialog({
         title: 'Organisation already registered',
@@ -159,7 +189,12 @@ export function RegisterPage() {
   const validateDetails = () => {
     const next = {}
     if (!selectedTypeId) next.org = 'Choose an organisation type.'
-    if (!facilityName.trim()) next.org = next.org || 'Enter your facility or programme name.'
+    if (selectedType?.isOther && !customOtherLabel.trim()) {
+      next.otherType = 'Describe your organisation type.'
+    }
+    if (!facilityName.trim()) {
+      next.org = next.org || (selectedType?.isOther ? 'Enter your organisation or unit name.' : 'Enter your facility or programme name.')
+    }
     if (orgValue && registeredSet.has(normOrg(orgValue))) {
       next.org = 'This organisation is already registered.'
     }
@@ -284,31 +319,67 @@ export function RegisterPage() {
             <div className="reg-stage__fridge">
               <AuthFridgeVisual />
             </div>
+            <aside className="reg-stage__aside" aria-label="Registration guidance">
+              {step === 'otp' ? (
+                <p className="reg-stage__aside-text">{COPY.auth.registerOtpAside}</p>
+              ) : selectedTypeId ? (
+                <>
+                  <p className="reg-stage__aside-text">{COPY.auth.registerProfileAside}</p>
+                  {requiresAdminApproval ? (
+                    <p className="reg-stage__aside-note" role="note">
+                      {COPY.auth.registerApprovalNote}
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <p className="reg-stage__aside-text">{COPY.auth.registerTypeAside}</p>
+              )}
+            </aside>
           </div>
 
           {!selectedTypeId ? (
             <div className="reg-stage__types">
-              <p className="reg-stage__label">Organisation type</p>
+              <div className="reg-type-picker__head">
+                <p className="reg-stage__label">Organisation type</p>
+                <p className="reg-type-picker__count" aria-live="polite">
+                  {typeQuery.trim()
+                    ? `${filteredOrgTypes.filter((t) => !t.isOther).length} matches`
+                    : `${ORG_TYPES.length} types`}
+                </p>
+              </div>
+              <div className="reg-type-search">
+                <Search className="reg-type-search__icon" aria-hidden />
+                <input
+                  type="search"
+                  className="reg-type-search__input"
+                  value={typeQuery}
+                  onChange={(e) => setTypeQuery(e.target.value)}
+                  placeholder="Search types (A–Z)"
+                  autoComplete="off"
+                  aria-label="Search organisation types"
+                />
+              </div>
               <div className="reg-type-grid" role="listbox" aria-label="Organisation type">
-                {ORG_TYPES.map((type) => {
-                  const Icon = type.icon;
-                  return (
+                {filteredOrgTypes.length === 0 ? (
+                  <p className="reg-type-empty">No types match. Try another term or choose Other.</p>
+                ) : (
+                  filteredOrgTypes.map((type) => (
                     <button
                       key={type.id}
                       type="button"
                       role="option"
                       aria-selected={false}
-                      className="reg-type-tile"
+                      className={`reg-type-tile${type.isOther ? ' reg-type-tile--other' : ''}`}
                       onClick={() => pickType(type.id)}
                     >
                       <span className="reg-type-tile__row">
-                        <Icon className="reg-type-tile__icon" strokeWidth={2} aria-hidden />
+                        <RegOrgIcon name={type.icon} />
                         <span className="reg-type-tile__title">{type.label}</span>
                       </span>
                       <span className="reg-type-tile__hint">{type.hint}</span>
                     </button>
-                  );
-                })}
+                  ))
+                )}
               </div>
             </div>
           ) : (
@@ -317,7 +388,7 @@ export function RegisterPage() {
               <div className="reg-form-type-bar">
                 <div className="reg-form-type-bar__meta">
                   <span className="reg-form-type-bar__label">Organisation</span>
-                  <span className="reg-form-type-bar__value">{selectedType.label}</span>
+                  <span className="reg-form-type-bar__value">{orgTypeLabel}</span>
                 </div>
                 <button type="button" className="reg-form-type-bar__back" onClick={clearType} disabled={busy}>
                   Change
@@ -363,13 +434,25 @@ export function RegisterPage() {
               </form>
             ) : (
               <form onSubmit={handleSendOtp} className="reg-form-stack reg-form-stack--profile" noValidate>
-                {requiresAdminApproval ? (
-                  <p className="auth-register-approval-note reg-approval-note" role="note">
-                    {COPY.auth.registerApprovalNote}
-                  </p>
+                {selectedType?.isOther ? (
+                  <Field label="Organisation type" forId="reg-other-type" hint={fieldErrors.otherType}>
+                    <input
+                      id="reg-other-type"
+                      type="text"
+                      className={`${fieldClass} ${fieldErrors.otherType ? 'auth-field--invalid' : ''}`}
+                      placeholder="e.g. Cooperative, Society, Trust"
+                      value={customOtherLabel}
+                      onChange={(e) => {
+                        setCustomOtherLabel(e.target.value);
+                        setFieldErrors((f) => ({ ...f, otherType: undefined, org: undefined }));
+                      }}
+                      autoComplete="off"
+                      required
+                    />
+                  </Field>
                 ) : null}
                 <Field
-                  label={selectedTypeId === 'other' ? 'Organisation name' : 'Facility or programme'}
+                  label={selectedType?.isOther ? 'Organisation or unit name' : 'Facility or programme'}
                   forId="reg-facility"
                   hint={fieldErrors.org}
                 >
@@ -381,8 +464,8 @@ export function RegisterPage() {
                       selectedType
                         ? selectedTypeId === 'university'
                           ? 'e.g. IIT Bombay'
-                          : selectedTypeId === 'other'
-                            ? 'e.g. Open quantum consortium'
+                          : selectedType?.isOther
+                            ? 'e.g. Bangalore Quantum Initiative'
                             : 'e.g. Your unit name'
                         : ''
                     }
@@ -390,7 +473,8 @@ export function RegisterPage() {
                     onChange={(e) => {
                       setFacilityName(e.target.value);
                       setFieldErrors((f) => ({ ...f, org: undefined }));
-                      if (selectedType && checkFacilityDuplicate(e.target.value)) {
+                      const label = selectedType?.isOther ? customOtherLabel.trim() : selectedType?.label;
+                      if (label && checkFacilityDuplicate(e.target.value, label)) {
                         /* dialog shown */
                       }
                     }}

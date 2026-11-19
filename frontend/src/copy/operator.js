@@ -45,10 +45,16 @@ export const COPY = {
     serviceUnavailable: 'Sign-in is temporarily unavailable. Try again in a moment.',
     captchaUnavailable: 'Could not load the security image. Try again.',
     signInDirectory: 'This deployment accepts organization directory credentials.',
-    registerSubtitle: 'Select your organisation type and complete your profile.',
+    registerSubtitle: 'Select organisation type, enter your details, then verify email.',
+    registerTypeAside:
+      'Choose the category that best describes your organisation. You can search the list or pick Other to name your own type.',
+    registerProfileAside:
+      'Enter your facility or programme details and credentials. We will send a one-time code to your email address.',
+    registerOtpAside:
+      'Enter the six-digit code from your email to finish creating your account.',
     registerClosed: 'Registration is managed by your organisation administrator.',
     registerApprovalNote:
-      'Some deployments require approver confirmation before the first sign-in. Access level is set by your organisation administrator.',
+      'After email verification, a platform administrator must approve your account before the first sign-in. Your organisation assigns access during that review.',
     registerOtpSubtitle: 'Enter the verification code to finish creating your account.',
     registerOtpHintScreen:
       'A one-time code is shown in an on-screen notification because outbound email is not configured for this environment.',
