@@ -13,10 +13,15 @@ import {
   Globe2,
   HeartHandshake,
   Layers,
-  Search,
 } from 'lucide-react'
 import cdacLogo from '../assets/cdaclogo.png'
-import { filterOrgTypes, orgTypesForRegister } from '@/data/registerOrgTypes'
+import {
+  buildOrgString,
+  orgTilesForRegister,
+  validateOrgDetail,
+  getFieldsForOrgType,
+} from '@/data/registerOrgHierarchy'
+import { RegisterOrgFields } from '@/components/auth/RegisterOrgFields'
 import { AuthFridgeVisual } from '@/components/marketing/AuthFridgeVisual'
 import { Field, fieldClass } from '@/components/AuthShell'
 import { CaptchaField } from '@/components/CaptchaField'
@@ -31,7 +36,7 @@ import '@/styles/register-cert.css'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-const ORG_TYPES = orgTypesForRegister();
+const ORG_TYPES = orgTilesForRegister();
 
 const ORG_ICON_MAP = {
   Landmark,
@@ -85,7 +90,7 @@ export function RegisterPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState('profile')
   const [selectedTypeId, setSelectedTypeId] = useState('')
-  const [facilityName, setFacilityName] = useState('')
+  const [orgDetail, setOrgDetail] = useState({})
   const [username, setUsername] = useState('')
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
@@ -107,39 +112,23 @@ export function RegisterPage() {
   const [otpCode, setOtpCode] = useState('')
   const [otpDelivery, setOtpDelivery] = useState('email')
   const [orgDialog, setOrgDialog] = useState(null)
-  const [typeQuery, setTypeQuery] = useState('')
-  const [customOtherLabel, setCustomOtherLabel] = useState('')
 
   const selectedType = useMemo(
     () => ORG_TYPES.find((t) => t.id === selectedTypeId) || null,
     [selectedTypeId],
   );
 
-  const filteredOrgTypes = useMemo(
-    () => filterOrgTypes(ORG_TYPES, typeQuery),
-    [typeQuery],
-  );
-
-  const orgTypeLabel = useMemo(() => {
-    if (!selectedType) return '';
-    if (selectedType.isOther) {
-      const custom = customOtherLabel.trim();
-      return custom || selectedType.label;
-    }
-    return selectedType.label;
-  }, [selectedType, customOtherLabel]);
+  const orgTypeLabel = selectedType?.label || '';
 
   const registeredSet = useMemo(
     () => new Set(registeredOrgs.map(normOrg)),
     [registeredOrgs],
   );
 
-  const orgValue = useMemo(() => {
-    if (!selectedType || !facilityName.trim()) return '';
-    const typePart = selectedType.isOther ? customOtherLabel.trim() : selectedType.label;
-    if (!typePart) return '';
-    return `${typePart} · ${facilityName.trim()}`;
-  }, [selectedType, facilityName, customOtherLabel]);
+  const orgValue = useMemo(
+    () => (selectedTypeId ? buildOrgString(selectedTypeId, orgDetail) : ''),
+    [selectedTypeId, orgDetail],
+  );
 
   useEffect(() => {
     let cancelled = false
@@ -158,23 +147,33 @@ export function RegisterPage() {
   const pickType = (typeId) => {
     setError('');
     setSelectedTypeId(typeId);
-    setFacilityName('');
-    setCustomOtherLabel('');
-    setFieldErrors((f) => ({ ...f, org: undefined, otherType: undefined }));
+    setOrgDetail({});
+    setFieldErrors((f) => ({ ...f, org: undefined }));
   };
 
   const clearType = () => {
     setSelectedTypeId('');
-    setFacilityName('');
-    setCustomOtherLabel('');
-    setTypeQuery('');
+    setOrgDetail({});
     setStep('profile');
     setError('');
     setFieldErrors({});
   };
 
-  const checkFacilityDuplicate = (name, typeLabel = orgTypeLabel) => {
-    const full = typeLabel && name.trim() ? `${typeLabel} · ${name.trim()}` : name.trim();
+  const setOrgField = (fieldId, value) => {
+    setOrgDetail((prev) => {
+      const next = { ...prev, [fieldId]: value };
+      if (fieldId === 'gov_scope' || fieldId === 'uni_tier') {
+        getFieldsForOrgType(selectedTypeId).forEach((f) => {
+          if (f.id !== fieldId) next[f.id] = '';
+        });
+      }
+      return next;
+    });
+    setFieldErrors((f) => ({ ...f, [fieldId]: undefined, org: undefined, _org: undefined }));
+  };
+
+  const checkFacilityDuplicate = (fullOrg) => {
+    const full = (fullOrg || '').trim();
     if (full && registeredSet.has(normOrg(full))) {
       setOrgDialog({
         title: 'Organisation already registered',
@@ -189,12 +188,10 @@ export function RegisterPage() {
   const validateDetails = () => {
     const next = {}
     if (!selectedTypeId) next.org = 'Choose an organisation type.'
-    if (selectedType?.isOther && !customOtherLabel.trim()) {
-      next.otherType = 'Describe your organisation type.'
-    }
-    if (!facilityName.trim()) {
-      next.org = next.org || (selectedType?.isOther ? 'Enter your organisation or unit name.' : 'Enter your facility or programme name.')
-    }
+    const orgFieldErrors = selectedTypeId ? validateOrgDetail(selectedTypeId, orgDetail) : {};
+    Object.assign(next, orgFieldErrors);
+    if (orgFieldErrors._org) next.org = orgFieldErrors._org;
+    delete next._org;
     if (orgValue && registeredSet.has(normOrg(orgValue))) {
       next.org = 'This organisation is already registered.'
     }
@@ -339,47 +336,24 @@ export function RegisterPage() {
 
           {!selectedTypeId ? (
             <div className="reg-stage__types">
-              <div className="reg-type-picker__head">
-                <p className="reg-stage__label">Organisation type</p>
-                <p className="reg-type-picker__count" aria-live="polite">
-                  {typeQuery.trim()
-                    ? `${filteredOrgTypes.filter((t) => !t.isOther).length} matches`
-                    : `${ORG_TYPES.length} types`}
-                </p>
-              </div>
-              <div className="reg-type-search">
-                <Search className="reg-type-search__icon" aria-hidden />
-                <input
-                  type="search"
-                  className="reg-type-search__input"
-                  value={typeQuery}
-                  onChange={(e) => setTypeQuery(e.target.value)}
-                  placeholder="Search types (A–Z)"
-                  autoComplete="off"
-                  aria-label="Search organisation types"
-                />
-              </div>
-              <div className="reg-type-grid" role="listbox" aria-label="Organisation type">
-                {filteredOrgTypes.length === 0 ? (
-                  <p className="reg-type-empty">No types match. Try another term or choose Other.</p>
-                ) : (
-                  filteredOrgTypes.map((type) => (
-                    <button
-                      key={type.id}
-                      type="button"
-                      role="option"
-                      aria-selected={false}
-                      className={`reg-type-tile${type.isOther ? ' reg-type-tile--other' : ''}`}
-                      onClick={() => pickType(type.id)}
-                    >
-                      <span className="reg-type-tile__row">
-                        <RegOrgIcon name={type.icon} />
-                        <span className="reg-type-tile__title">{type.label}</span>
-                      </span>
-                      <span className="reg-type-tile__hint">{type.hint}</span>
-                    </button>
-                  ))
-                )}
+              <p className="reg-stage__label">Organisation type</p>
+              <div className="reg-type-grid reg-type-grid--tiles" role="listbox" aria-label="Organisation type">
+                {ORG_TYPES.map((type) => (
+                  <button
+                    key={type.id}
+                    type="button"
+                    role="option"
+                    aria-selected={false}
+                    className={`reg-type-tile${type.isOther ? ' reg-type-tile--other' : ''}`}
+                    onClick={() => pickType(type.id)}
+                  >
+                    <span className="reg-type-tile__row">
+                      <RegOrgIcon name={type.icon} />
+                      <span className="reg-type-tile__title">{type.label}</span>
+                    </span>
+                    <span className="reg-type-tile__hint">{type.hint}</span>
+                  </button>
+                ))}
               </div>
             </div>
           ) : (
@@ -389,6 +363,9 @@ export function RegisterPage() {
                 <div className="reg-form-type-bar__meta">
                   <span className="reg-form-type-bar__label">Organisation</span>
                   <span className="reg-form-type-bar__value">{orgTypeLabel}</span>
+                  {orgValue ? (
+                    <span className="reg-form-type-bar__org-preview" title={orgValue}>{orgValue}</span>
+                  ) : null}
                 </div>
                 <button type="button" className="reg-form-type-bar__back" onClick={clearType} disabled={busy}>
                   Change
@@ -434,54 +411,14 @@ export function RegisterPage() {
               </form>
             ) : (
               <form onSubmit={handleSendOtp} className="reg-form-stack reg-form-stack--profile" noValidate>
-                {selectedType?.isOther ? (
-                  <Field label="Organisation type" forId="reg-other-type" hint={fieldErrors.otherType}>
-                    <input
-                      id="reg-other-type"
-                      type="text"
-                      className={`${fieldClass} ${fieldErrors.otherType ? 'auth-field--invalid' : ''}`}
-                      placeholder="e.g. Cooperative, Society, Trust"
-                      value={customOtherLabel}
-                      onChange={(e) => {
-                        setCustomOtherLabel(e.target.value);
-                        setFieldErrors((f) => ({ ...f, otherType: undefined, org: undefined }));
-                      }}
-                      autoComplete="off"
-                      required
-                    />
-                  </Field>
-                ) : null}
-                <Field
-                  label={selectedType?.isOther ? 'Organisation or unit name' : 'Facility or programme'}
-                  forId="reg-facility"
-                  hint={fieldErrors.org}
-                >
-                  <input
-                    id="reg-facility"
-                    type="text"
-                    className={`${fieldClass} ${fieldErrors.org ? 'auth-field--invalid' : ''}`}
-                    placeholder={
-                      selectedType
-                        ? selectedTypeId === 'university'
-                          ? 'e.g. IIT Bombay'
-                          : selectedType?.isOther
-                            ? 'e.g. Bangalore Quantum Initiative'
-                            : 'e.g. Your unit name'
-                        : ''
-                    }
-                    value={facilityName}
-                    onChange={(e) => {
-                      setFacilityName(e.target.value);
-                      setFieldErrors((f) => ({ ...f, org: undefined }));
-                      const label = selectedType?.isOther ? customOtherLabel.trim() : selectedType?.label;
-                      if (label && checkFacilityDuplicate(e.target.value, label)) {
-                        /* dialog shown */
-                      }
-                    }}
-                    autoComplete="organization"
-                    required
-                  />
-                </Field>
+                <RegisterOrgFields
+                  typeId={selectedTypeId}
+                  values={orgDetail}
+                  fieldErrors={fieldErrors}
+                  disabled={busy}
+                  onChange={setOrgField}
+                />
+                {fieldErrors.org ? <p className="auth-field-error">{fieldErrors.org}</p> : null}
 
                 <div className="reg-form-row reg-form-row--split">
                   <Field label="Username" forId="reg-username" hint={fieldErrors.username}>

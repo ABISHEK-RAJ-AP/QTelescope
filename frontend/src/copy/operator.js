@@ -47,9 +47,9 @@ export const COPY = {
     signInDirectory: 'This deployment accepts organization directory credentials.',
     registerSubtitle: 'Select organisation type, enter your details, then verify email.',
     registerTypeAside:
-      'Choose the category that best describes your organisation. You can search the list or pick Other to name your own type.',
+      'Choose the category that matches your organisation. Government and university paths include ministry, department, branch, and facility masters.',
     registerProfileAside:
-      'Enter your facility or programme details and credentials. We will send a one-time code to your email address.',
+      'Complete the organisation fields for your category, then your account credentials. We will email a one-time verification code.',
     registerOtpAside:
       'Enter the six-digit code from your email to finish creating your account.',
     registerClosed: 'Registration is managed by your organisation administrator.',

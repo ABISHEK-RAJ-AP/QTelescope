@@ -236,16 +236,16 @@
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--reg-accent) 18%, transparent);
 }
 
-.reg-stage:not(.reg-stage--detail) .reg-type-grid {
+.reg-type-grid--tiles {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+}
+
+.reg-stage:not(.reg-stage--detail) .reg-type-grid--tiles {
   flex: 1;
   min-height: 0;
-  max-height: min(420px, 52vh);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding-right: 0.2rem;
-  align-content: start;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-auto-rows: minmax(4.5rem, auto);
+  max-height: none;
+  overflow: visible;
 }
 
 .reg-stage:not(.reg-stage--detail) .reg-type-tile {
@@ -382,6 +382,50 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--reg-muted);
+}
+
+.reg-form-type-bar__org-preview {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--reg-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.reg-org-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.reg-org-select {
+  width: 100%;
+  min-height: 2.5rem;
+}
+
+.reg-master-search {
+  position: relative;
+  width: 100%;
+}
+
+.reg-master-search__icon {
+  position: absolute;
+  left: 0.65rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--reg-muted);
+  pointer-events: none;
+}
+
+.reg-master-search__input {
+  padding-left: 2.1rem !important;
 }
 
 .reg-form-type-bar__value {
