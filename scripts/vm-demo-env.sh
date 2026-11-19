@@ -49,6 +49,7 @@ apply_vm_demo_env() {
   upsert_env DEMO_LIVE_PROVIDERS rigetti_quantum
   upsert_env COLLECTION_SCHEDULER_ENABLED true
   upsert_env RIGETTI_ISA_CACHE_SECONDS 45
+  upsert_env ALLOW_PUBLIC_REGISTRATION true
   if [[ -f "${ROOT}/scripts/vm-ensure-redis-cache.sh" ]]; then
     # shellcheck source=scripts/vm-ensure-redis-cache.sh
     source "${ROOT}/scripts/vm-ensure-redis-cache.sh"

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Loader2, ArrowRight, User, Lock, Mail, Building } from 'lucide-react'
 import { AuthShell, Field, fieldClass } from '@/components/AuthShell'
@@ -23,6 +23,17 @@ export function RegisterPage() {
   const [captchaId, setCaptchaId] = useState('')
   const [captchaCode, setCaptchaCode] = useState('')
   const [captchaKey, setCaptchaKey] = useState(0)
+  const [registrationOpen, setRegistrationOpen] = useState(true)
+  const [policyLoading, setPolicyLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    api.getConfigStatus()
+      .then((s) => { if (!cancelled) setRegistrationOpen(s?.allow_public_registration !== false) })
+      .catch(() => { if (!cancelled) setRegistrationOpen(true) })
+      .finally(() => { if (!cancelled) setPolicyLoading(false) })
+    return () => { cancelled = true }
+  }, [])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -84,6 +95,13 @@ export function RegisterPage() {
         </p>
       }
     >
+      {!policyLoading && !registrationOpen ? (
+        <p className="text-sm text-[var(--text-muted)]" role="status">
+          Public registration is disabled on this deployment.{' '}
+          <Link to="/login" className="font-semibold text-[var(--accent)]">Sign in</Link> with an existing account
+          or contact your administrator.
+        </p>
+      ) : (
       <form onSubmit={handleSubmit} className="space-y-3" noValidate>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Username" forId="reg-username">
@@ -204,6 +222,7 @@ export function RegisterPage() {
           Create account <ArrowRight className="size-4" aria-hidden />
         </Button>
       </form>
+      )}
     </AuthShell>
   )
 }

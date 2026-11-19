@@ -235,11 +235,14 @@ class AuthStatusResponse(BaseModel):
     version: str
     bootstrap: dict
     ldap: dict = {}
+    allow_public_registration: bool = True
 
 
 @router.get("/config-status", response_model=AuthStatusResponse)
 def get_config_status():
     from app.core.ldap_auth import ldap_public_status
+    from app.core.registration_policy import public_registration_allowed
+
     return AuthStatusResponse(
         enable_mock_data=settings.ENABLE_MOCK_DATA,
         project_name=settings.PROJECT_NAME,
@@ -250,6 +253,7 @@ def get_config_status():
             settings.SUPERADMIN_USERNAME,
         ),
         ldap=ldap_public_status(),
+        allow_public_registration=public_registration_allowed(),
     )
 
 
@@ -319,6 +323,13 @@ def _issue_session(username: str, role: str, extra: Optional[Dict[str, Any]] = N
 
 @router.post("/register")
 def register_user(req: RegisterRequest, request: Request):
+    from app.core.registration_policy import public_registration_allowed
+
+    if not public_registration_allowed():
+        raise HTTPException(
+            status_code=403,
+            detail="Public registration is disabled on this deployment. Contact your platform administrator.",
+        )
     check_auth_rate_limit(request, "register")
     _consume_captcha(req.captcha_id, req.captcha_code)
     username = normalize_username(req.username)

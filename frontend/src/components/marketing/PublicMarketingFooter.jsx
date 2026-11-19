@@ -26,7 +26,7 @@ const FOOTER_SECTIONS = [
     title: 'Resources',
     links: [
       { name: 'Operations Guide', href: '/#faq' },
-      { name: 'API Swagger Documentation', href: 'http://localhost:8000/docs', external: true },
+      { name: 'API documentation', href: '/docs', external: true },
       { name: 'Sign up', href: '/register' },
       { name: 'Sign in', href: '/login' },
     ],
@@ -34,9 +34,9 @@ const FOOTER_SECTIONS = [
 ]
 
 const LEGAL_LINKS = [
-  { name: 'Privacy Policy', href: '/#faq' },
-  { name: 'Terms of Operation', href: '/#faq' },
-  { name: 'Security Notice', href: '/#faq' },
+  { name: 'Privacy Policy', href: '/privacy' },
+  { name: 'Terms of Operation', href: '/terms' },
+  { name: 'Security Notice', href: '/security' },
 ]
 
 export function PublicMarketingFooter({ className = '', compact = false }) {
@@ -61,6 +61,7 @@ export function PublicMarketingFooter({ className = '', compact = false }) {
 
   return (
     <footer
+      id="footer"
       className={`relative z-20 w-full border-t border-neutral-200/80 bg-white/95 dark:border-neutral-800/80 dark:bg-[#070a0f]/95 backdrop-blur-md text-neutral-800 dark:text-neutral-200 transition-colors duration-200 ${className}`}
     >
       <div className="w-full px-6 py-12 sm:px-8 lg:px-12 lg:py-16">

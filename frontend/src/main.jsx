@@ -9,6 +9,7 @@ import { LoginPage } from './pages/LoginPage.jsx';
 import { RegisterPage } from './pages/RegisterPage.jsx';
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage.jsx';
 import { ResetPasswordPage } from './pages/ResetPasswordPage.jsx';
+import { PrivacyPolicyPage, TermsPage, SecurityNoticePage } from './pages/LegalPages.jsx';
 import App from './App.jsx';
 import { initA11yFromStorage } from './lib/accessibilityPrefs.js';
 import { A11yRuntimeEffects } from './components/shell/A11yRuntimeEffects.jsx';
@@ -27,6 +28,9 @@ const appTree = (
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/security" element={<SecurityNoticePage />} />
           <Route path="/app/*" element={<App />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

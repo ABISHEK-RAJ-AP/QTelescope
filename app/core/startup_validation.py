@@ -6,6 +6,7 @@ import os
 
 from app.core.config import settings
 from app.core.env_profile import is_production_profile
+from app.core.registration_policy import public_registration_allowed
 from app.core.sessions import require_api_auth
 from app.core.rbac import rbac_enforced
 
@@ -16,6 +17,8 @@ def validate_startup_configuration() -> None:
     if not is_production_profile():
         return
     bad = []
+    if public_registration_allowed():
+        bad.append("ALLOW_PUBLIC_REGISTRATION (must be false or unset in production)")
     if os.getenv("DEBUG", "").lower() in ("1", "true", "yes"):
         bad.append("DEBUG must be off in production")
     if not require_api_auth():
