@@ -437,7 +437,8 @@ export const api = {
 
   getOperationsCentre: () => fetchApi('/operations/centre'),
   getPlatformHealth: () => fetchApi('/operations/platform-health'),
-  getOpsTimeline: (limit = 40) => fetchApi(`/operations/timeline?limit=${limit}`),
+  getOpsTimeline: (limit = 40, { force = false } = {}) =>
+    fetchApiCached(`/operations/timeline?limit=${Math.min(200, Math.max(1, limit))}`, { ttlMs: 20_000, force }),
   getIncident: (id) => fetchApi(`/incidents/${encodeURIComponent(id)}`),
   getIncidents: (status, { limit = 200, offset = 0 } = {}) => {
     const params = new URLSearchParams({

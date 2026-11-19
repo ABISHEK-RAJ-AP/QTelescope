@@ -51,4 +51,4 @@ PY
 
 echo "==> Optional: Timescale in Docker (hypertables only — not required for speed)"
 echo "    TIMESCALE_PREFER_DOCKER=1 ./scripts/vm-postgres-migrate.sh  # new DB on :5434+"
-echo "==> Optional: trim old rows: POST /api/v1/admin/retention/run (Admin) or TELEMETRY_RETENTION_DAYS"
+echo "==> Optional: trim old telemetry: TELEMETRY_RETENTION_DAYS=60 ./scripts/vm-telemetry-trim.sh"

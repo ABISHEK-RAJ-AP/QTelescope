@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from typing import Any, Dict, List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -288,17 +288,9 @@ def _dependency_snapshot(db: Session) -> List[Dict[str, Any]]:
         return []
 
 
-@router.get("/timeline")
-def get_operations_timeline(
-    limit: int = 40,
-    db: Session = Depends(get_db),
-):
-    """Merged alerts, incidents, and collector failures for ops correlation."""
-    try:
-        sync_incidents_from_alerts_if_stale(db)
-    except Exception:
-        db.rollback()
-    events = []
+def _build_operations_timeline(db: Session, limit: int) -> Dict[str, Any]:
+    """Read-only merge — incident sync runs on /operations/centre and /incidents, not here."""
+    events: List[Dict[str, Any]] = []
 
     for a in (
         db.query(AlertModel)
@@ -357,3 +349,16 @@ def get_operations_timeline(
 
     events.sort(key=lambda e: e.get("at") or "", reverse=True)
     return {"events": events[:limit], "count": min(len(events), limit)}
+
+
+@router.get("/timeline")
+def get_operations_timeline(
+    limit: int = Query(40, ge=1, le=200),
+    db: Session = Depends(get_db),
+):
+    """Merged alerts, incidents, and collector failures for ops correlation."""
+    from app.core.cache import cache_key, default_ttl, get_or_set_json
+
+    ttl = default_ttl("operations_timeline", 15)
+    key = cache_key("operations", "timeline", str(limit))
+    return get_or_set_json(key, ttl, lambda: _build_operations_timeline(db, limit))

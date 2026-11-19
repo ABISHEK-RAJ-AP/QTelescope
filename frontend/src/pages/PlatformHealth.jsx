@@ -51,6 +51,7 @@ export const PlatformHealth = () => {
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(null);
   const [layout, setLayout] = useState('table');
+  const [vitals, setVitals] = useState(null);
   const { setActions, clearActions } = usePageActions();
 
   const load = useCallback(() => {
@@ -74,6 +75,18 @@ export const PlatformHealth = () => {
     const t = setInterval(load, 20000);
     return () => clearInterval(t);
   }, [load]);
+  useEffect(() => {
+    if (loading) return undefined;
+    import('../lib/clientVitals.js').then(({ readClientVitals }) => {
+      const run = () => setVitals(readClientVitals());
+      if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
+        requestAnimationFrame(run);
+      } else {
+        run();
+      }
+    });
+    return undefined;
+  }, [loading, data]);
   useEffect(() => {
     setActions(<RefreshButton onClick={load} lastRefreshAt={lastRefresh} label="Refresh platform health" />);
     return () => clearActions();
@@ -141,10 +154,15 @@ export const PlatformHealth = () => {
   const telAge = ageMin(data?.latest_backend_telemetry_at);
   const sse = data?.sse_stream || {};
 
+  const providersWithDuration = useMemo(
+    () => providers.filter((p) => Number.isFinite(p.duration_ms) && p.duration_ms > 0),
+    [providers],
+  );
+
   const durationOption = useMemo(() => {
     const t = getChartTheme(isDark);
     const sem = getChartSemanticColors();
-    const rows = [...providers].sort((a, b) => (a.duration_ms || 0) - (b.duration_ms || 0));
+    const rows = [...providersWithDuration].sort((a, b) => (a.duration_ms || 0) - (b.duration_ms || 0));
     return {
       grid: { left: 110, right: 24, top: 8, bottom: 28 },
       tooltip: { ...baseTooltip(isDark), trigger: 'item', formatter: (p) => `${p.name}<br/>${p.value} ms (last run)` },
@@ -152,7 +170,7 @@ export const PlatformHealth = () => {
       yAxis: { type: 'category', data: rows.map((p) => p.provider_id), axisLabel: chartLabelStyle(isDark, 11) },
       series: [{ type: 'bar', barMaxWidth: 22, data: rows.map((p) => ({ value: p.duration_ms, itemStyle: { color: p.status === 'OK' ? sem.series : sem.critical } })) }],
     };
-  }, [providers, isDark]);
+  }, [providersWithDuration, isDark]);
 
   const statusPieOption = useMemo(() => {
     const sem = getChartSemanticColors();
@@ -192,6 +210,18 @@ export const PlatformHealth = () => {
           value={sse.staleness_seconds != null ? `${Math.round(sse.staleness_seconds)}s stale` : 'Active'}
           detail="Updates about every 5s from stored measurements"
         />
+        {vitals && (
+          <Tile
+            title="Browser load"
+            tone="ok"
+            value={vitals.fcpMs != null ? `${vitals.fcpMs} ms FCP` : vitals.ttfbMs != null ? `${vitals.ttfbMs} ms TTFB` : 'Measured'}
+            detail={[
+              vitals.ttfbMs != null ? `TTFB ${vitals.ttfbMs} ms` : null,
+              vitals.domContentLoadedMs != null ? `DOM ${vitals.domContentLoadedMs} ms` : null,
+              vitals.loadMs != null ? `Load ${vitals.loadMs} ms` : null,
+            ].filter(Boolean).join(' · ') || 'Navigation timing from this tab'}
+          />
+        )}
       </section>
 
       <section className="card page-panel ph-deps" data-tour="page-platform-dependencies">
@@ -248,7 +278,7 @@ export const PlatformHealth = () => {
 
         <div className="ph-charts-col">
           <ChartPanel title="Last collection duration" titleTo="/app/admin/collectors" question="Slowest adapter on the most recent run." sourceKind="derived"
-            state={providers.length ? 'ready' : 'empty'} emptyMessage="No collector runs yet." minHeight={220}
+            state={providersWithDuration.length ? 'ready' : 'empty'} emptyMessage={providers.length ? 'Collectors ran but duration was not recorded.' : 'No collector runs yet.'} minHeight={220}
             tableAlternative={(
               <table className="custom-table custom-table--dense">
                 <thead><tr><th>Provider</th><th>Duration (ms)</th><th>Status</th></tr></thead>

@@ -3,7 +3,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { X } from 'lucide-react';
 import { FilterBar } from '../components/ds/FilterBar.jsx';
-import { api } from '../services/api';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { DetailDrawer } from '../components/observability/DetailDrawer.jsx';
 import { DetailModalBody, DetailModalSection } from '../components/observability/DetailModalLayout.jsx';
@@ -12,7 +11,7 @@ import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { getChartTheme, baseTooltip, getSeverityChartColors, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { useAppScope } from '../hooks/useAppScope.js';
-import { fetchApi } from '../services/api';
+import { api, fetchApiCached } from '../services/api';
 import { formatIST } from '../utils/time';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
@@ -25,7 +24,8 @@ import { SortableTh, ViewModeToggle } from '../components/observability/DataView
 import { ListPager } from '../components/observability/ListPager.jsx';
 import './OpsTimeline.css';
 
-const LIMIT = 500; // alerts/incidents/collector failures are each capped server-side by this
+const LIMIT = 120; // server cap 200; smaller = faster swim-lane chart
+const CHART_MAX_HEIGHT = 480;
 const KINDS = ['alert', 'incident', 'collector_failure'];
 const KIND_SYMBOL = { alert: 'circle', incident: 'diamond', collector_failure: 'triangle' };
 const ROWS = 25;
@@ -53,9 +53,11 @@ export const OpsTimeline = () => {
   const [layout, setLayout] = useState('table');
   const [sort, setSort] = useState({ key: 'at', dir: 'desc' });
   const [backends, setBackends] = useState([]);
+  const [chartMount, setChartMount] = useState(false);
 
-  const load = useCallback(() => {
-    fetchApi(`/operations/timeline?limit=${LIMIT}`)
+  const load = useCallback(({ force = false } = {}) => {
+    const path = `/operations/timeline?limit=${LIMIT}`;
+    return fetchApiCached(path, { ttlMs: 20_000, force })
       .then((r) => { setEvents(r?.events || []); setError(null); setLastRefresh(new Date()); })
       .catch((e) => setError(e?.message || 'Request failed'))
       .finally(() => setLoading(false));
@@ -64,11 +66,23 @@ export const OpsTimeline = () => {
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
     let cancelled = false;
-    api.getBackends().then((list) => { if (!cancelled) setBackends(list || []); }).catch(() => { if (!cancelled) setBackends([]); });
+    api.getBackendsCached(60_000).then((list) => { if (!cancelled) setBackends(list || []); }).catch(() => { if (!cancelled) setBackends([]); });
     return () => { cancelled = true; };
   }, []);
   useEffect(() => {
-    setActions(<RefreshButton onClick={load} lastRefreshAt={lastRefresh} label="Refresh timeline" />);
+    if (loading) {
+      setChartMount(false);
+      return undefined;
+    }
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(() => { if (!loading) setChartMount(true); }, { timeout: 600 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const t = window.setTimeout(() => setChartMount(true), 80);
+    return () => window.clearTimeout(t);
+  }, [loading, events.length]);
+  useEffect(() => {
+    setActions(<RefreshButton onClick={() => load({ force: true })} lastRefreshAt={lastRefresh} label="Refresh timeline" />);
     return () => clearActions();
   }, [load, lastRefresh, setActions, clearActions]);
   useEffect(() => setPage(1), [kinds, sev, debouncedQuery, scopeBackend, alertId]);
@@ -241,13 +255,18 @@ export const OpsTimeline = () => {
         state={state}
         emptyTitle={events.length === 0 ? 'Timeline empty' : 'No matching events'}
         emptyMessage={events.length === 0 ? 'No alerts, incidents, or collector events on record.' : 'Filters exclude all events. Reset filters to view all.'}
-        minHeight={Math.max(220, lanes.length * 52 + 90)}
+        minHeight={Math.min(CHART_MAX_HEIGHT, Math.max(220, lanes.length * 52 + 90))}
       >
-        <QtECharts
-          option={option}
-          style={{ height: Math.max(220, lanes.length * 52 + 90) }}
-          onEvents={{ click: (p) => p?.data?.bucket && setSelected(p.data.bucket.key) }}
-        />
+        {chartMount ? (
+          <QtECharts
+            option={option}
+            style={{ height: Math.min(CHART_MAX_HEIGHT, Math.max(220, lanes.length * 52 + 90)) }}
+            lazyUpdate
+            onEvents={{ click: (p) => p?.data?.bucket && setSelected(p.data.bucket.key) }}
+          />
+        ) : (
+          <div className="ot-chart-placeholder" role="status" aria-live="polite">Loading chart…</div>
+        )}
       </ChartPanel>
       <section className="card ot-table dvt-panel" aria-label="Events">
         {layout === 'grid' ? (
