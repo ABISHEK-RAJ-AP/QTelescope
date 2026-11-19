@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { RefreshCw, UserPlus } from 'lucide-react';
 import { api } from '@/services/api';
@@ -7,11 +7,11 @@ import {
   roleLabel,
   rolesSelectableForInvite,
 } from '@/lib/permissions.js';
+import { AccessLifecycleTrail } from '@/components/auth/AccessLifecycleTrail.jsx';
 import {
-  AccessLifecycleTrail,
   INVITE_LIFECYCLE_STEPS,
   REGISTRATION_REVIEW_STEPS,
-} from '@/components/auth/AccessLifecycleTrail.jsx';
+} from '@/lib/accessLifecycleSteps.js';
 import { Button } from '@/components/ui/Button';
 import { Field, fieldClass } from '@/components/AuthShell';
 import { TableEmpty } from '@/components/observability/EmptyState.jsx';
@@ -49,7 +49,7 @@ function PendingCard({ user, roleOptions, canEdit, busy, onRole, onApprove, onRe
         <span className="badge badge-warning">Pending</span>
       </header>
       {user.created_at ? (
-        <p className="page-hint" style={{ margin: 0 }}>Submitted {formatISTTime(user.created_at)}</p>
+        <p className="page-hint admin-access-card__submitted">Submitted {formatISTTime(user.created_at)}</p>
       ) : null}
       {canEdit ? (
         <div className="admin-access-card__actions">
@@ -121,9 +121,15 @@ function RejectedCard({ user, canEdit, busy, onReopen }) {
   );
 }
 
+function resolveOrgForInvite(me, inviteOrg) {
+  if (me?.role === 'OrgAdmin') return (me.org || inviteOrg || '').trim();
+  return (inviteOrg || '').trim();
+}
+
 export function AccessApprovalsPanel({ canEdit, onNotice }) {
-  const me = useMemo(() => sessionUser(), []);
+  const me = sessionUser();
   const fleetAdmin = isFleetUserAdmin(me);
+  const inviteStepTimer = useRef(null);
   const [rows, setRows] = useState([]);
   const [roles, setRoles] = useState([]);
   const [policy, setPolicy] = useState(null);
@@ -163,6 +169,10 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
   }, [onNotice]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => () => {
+    if (inviteStepTimer.current) clearTimeout(inviteStepTimer.current);
+  }, []);
 
   const scopedRows = useMemo(() => {
     if (!fleetAdmin || !orgFilter.trim()) return rows;
@@ -286,8 +296,8 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
     if (!invite.username.trim() || invite.username.trim().length < 3) next.username = true;
     if (!invite.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(invite.email.trim())) next.email = true;
     if ((invite.password || '').length < 6) next.password = true;
-    const orgForInvite = me?.role === 'OrgAdmin' ? (me.org || invite.org).trim() : invite.org.trim();
-    if (!orgForInvite && me?.role !== 'OrgAdmin') next.org = true;
+    const orgForInvite = resolveOrgForInvite(me, invite.org);
+    if (!orgForInvite) next.org = true;
     setInviteFieldErr(next);
     return Object.keys(next).length === 0;
   };
@@ -303,7 +313,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
     }
     setInviteStep('credentials');
     setBusy('invite');
-    const orgForInvite = me?.role === 'OrgAdmin' ? (me.org || invite.org).trim() : invite.org.trim();
+    const orgForInvite = resolveOrgForInvite(me, invite.org);
     try {
       const res = await api.inviteUser({
         username: invite.username.trim(),
@@ -326,7 +336,11 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
       });
       setInviteFieldErr({});
       await load();
-      setTimeout(() => setInviteStep('details'), 4000);
+      if (inviteStepTimer.current) clearTimeout(inviteStepTimer.current);
+      inviteStepTimer.current = setTimeout(() => {
+        setInviteStep('details');
+        inviteStepTimer.current = null;
+      }, 4000);
     } catch (err) {
       setInviteStep('details');
       setInviteErr(err?.message || 'Invite failed.');
@@ -346,10 +360,10 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
   return (
     <div className="admin-access" data-tour="page-admin-access">
       <div className="card admin-access-intro reg-cert-panel admin-access-intro--cert">
-        <div className="admin-access-queue__head">
-          <header className="reg-cert-head" style={{ textAlign: 'left', flex: 1 }}>
-            <h3 className="admin-card-title" style={{ margin: 0 }}>Access &amp; approvals</h3>
-            <p className="page-hint" style={{ marginTop: '0.35rem' }}>
+        <div className="admin-access-queue__head admin-access-intro__toolbar">
+          <header className="reg-cert-head admin-access-intro__head">
+            <h3 className="admin-card-title admin-access-intro__title">Access &amp; approvals</h3>
+            <p className="page-hint admin-access-intro__lede">
               {fleetAdmin ? COPY.auth.accessIntroFleet : COPY.auth.accessIntroOrg}
               {' '}
               {policy?.require_admin_approval
@@ -364,7 +378,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
             onClick={load}
             aria-label="Refresh access queue"
           >
-            <RefreshCw size={14} aria-hidden className={loading ? 'admin-access-spin' : ''} />
+            <RefreshCw size={14} aria-hidden className={loading ? 'admin-access-spin' : undefined} />
             Refresh
           </button>
         </div>
@@ -547,9 +561,9 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
         <section className="card admin-access-invite reg-cert-panel admin-access-invite--cert" aria-labelledby="admin-access-invite-h">
           <div className="admin-access-invite__head">
             <UserPlus size={20} aria-hidden />
-            <header className="reg-cert-head" style={{ textAlign: 'left' }}>
-              <h3 id="admin-access-invite-h" className="admin-card-title" style={{ margin: 0 }}>Invite operator</h3>
-              <p className="page-hint" style={{ margin: '0.35rem 0 0' }}>{COPY.auth.accessInviteSubtitle}</p>
+            <header className="reg-cert-head admin-access-intro__head">
+              <h3 id="admin-access-invite-h" className="admin-card-title admin-access-intro__title">Invite operator</h3>
+              <p className="page-hint admin-access-intro__lede">{COPY.auth.accessInviteSubtitle}</p>
             </header>
           </div>
           <AccessLifecycleTrail

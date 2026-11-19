@@ -2,10 +2,7 @@ import React from 'react';
 import { Check } from 'lucide-react';
 import '@/styles/register-cert.css';
 
-/**
- * Cert Studio wizard pills — shared with public registration (`RegisterStepTrail`).
- * @param {{ steps: { id: string, label: string }[], currentId: string, ariaLabel?: string }} props
- */
+/** Cert Studio wizard pills — shared with public registration (`RegisterStepTrail`). */
 export function AccessLifecycleTrail({ steps, currentId, ariaLabel = 'Progress' }) {
   const currentIdx = steps.findIndex((s) => s.id === currentId);
 
@@ -39,15 +36,3 @@ export function AccessLifecycleTrail({ steps, currentId, ariaLabel = 'Progress' 
     </div>
   );
 }
-
-export const REGISTRATION_REVIEW_STEPS = [
-  { id: 'register', label: 'Register' },
-  { id: 'verify', label: 'Verify email' },
-  { id: 'approve', label: 'Approve' },
-];
-
-export const INVITE_LIFECYCLE_STEPS = [
-  { id: 'details', label: 'Details' },
-  { id: 'credentials', label: 'Credentials' },
-  { id: 'active', label: 'Active account' },
-];

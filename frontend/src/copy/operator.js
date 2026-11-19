@@ -62,7 +62,7 @@ export const COPY = {
     accessIntroOrg:
       'Organisation view: pending sign-ups and members for your organisation only.',
     accessInviteSubtitle:
-      'Pre-provision an active account (Cert Studio–style invite path). Share the temporary password securely; the member changes it under Settings.',
+      'Pre-provision an active account. Share the temporary password securely; the member changes it under Settings.',
     accessPendingSubtitle:
       'Self-service accounts appear here after email verification — match the public registration flow (Type → Organisation → Account → Verify).',
     accessRejectedSubtitle:

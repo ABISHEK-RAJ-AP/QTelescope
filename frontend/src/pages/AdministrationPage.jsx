@@ -1012,7 +1012,7 @@ function UsersDirectory({ canEdit }) {
         {pendingCount > 0 && canEdit ? (
           <p className="page-hint">
             <Link className="fs-link" to="/app/admin/access">Open Access &amp; approvals</Link>
-            {' '}for Cert Studio–style review cards (register → verify → approve).
+            {' '}to approve or reject (register → verify → approve).
           </p>
         ) : null}
         {err && <Notice note={{ type: 'error', text: err }} />}

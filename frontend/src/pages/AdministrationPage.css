@@ -87,6 +87,28 @@
   border-radius: 16px;
 }
 
+.admin-access-intro__toolbar {
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.admin-access-intro__head {
+  text-align: left;
+  flex: 1;
+}
+
+.admin-access-intro__title {
+  margin: 0;
+}
+
+.admin-access-intro__lede {
+  margin: 0.35rem 0 0;
+}
+
+.admin-access-card__submitted {
+  margin: 0;
+}
+
 .admin-access-trail {
   margin: 0.65rem 0;
 }
@@ -115,6 +137,12 @@
 @keyframes admin-access-rotate {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-access-spin {
+    animation: none;
   }
 }
 
