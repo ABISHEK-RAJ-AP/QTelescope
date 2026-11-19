@@ -39,6 +39,24 @@ def registration_requires_admin_approval() -> bool:
     return is_production_profile()
 
 
+def registered_organisation_names() -> List[str]:
+    """Distinct org strings already present in the user directory (case-insensitive dedupe)."""
+    from app.core import user_store
+
+    seen: set[str] = set()
+    out: List[str] = []
+    for rec in user_store.load_all_users().values():
+        name = (rec.get("org") or "").strip()
+        if not name:
+            continue
+        key = name.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(name)
+    return sorted(out, key=lambda s: s.casefold())
+
+
 def registration_org_options() -> List[str]:
     raw = (os.getenv("REGISTRATION_ORG_OPTIONS") or "").strip()
     if not raw:

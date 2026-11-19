@@ -45,14 +45,9 @@ export const COPY = {
     serviceUnavailable: 'Sign-in is temporarily unavailable. Try again in a moment.',
     captchaUnavailable: 'Could not load the security image. Try again.',
     signInDirectory: 'This deployment accepts organization directory credentials.',
-    registerSubtitle: 'Create your sign-in. Organisation admins assign elevated roles in Admin → Users & roles.',
-    registerHowItWorks:
-      'Verify your email, then submit your request. Platform administrators assign elevated roles after review. Already invited? Sign in with credentials from your administrator.',
-    registerInviteHint:
-      'If your organisation uses invite-only access, contact your platform administrator for credentials instead of self-service registration.',
-    registerOtpHint: 'Enter the 6-digit verification code. On lab deployments without SMTP, the code appears as an on-screen notice.',
-    registerOrgHint: 'Facility or programme name (not a job title). Admins use this in the user directory.',
-    registerAccessHint: 'Starting access only. Admins can promote to operations engineer, incident commander, or platform administrator.',
+    registerSubtitle: 'Select your organisation, then complete your profile. Email verification is required.',
+    registerClosed: 'Registration is managed by your organisation administrator.',
+    registerOtpHint: 'Enter the 6-digit code shown in the notification when email delivery is not configured.',
     forgotSubtitle: 'Enter your username. For security, the response does not indicate whether an account exists.',
     resetSubtitle: 'Enter your reset token and set a new password.',
     mfaHint: 'Requires a TOTP authenticator app (6-digit code at sign-in). SMS is not used.',

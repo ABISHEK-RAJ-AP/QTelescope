@@ -114,6 +114,215 @@
   margin: 0 0.15rem;
   opacity: 0.55;
 }
+/* Cert Studio–style auth card (register) */
+.auth-shell--cert main {
+  align-items: flex-start;
+  padding-top: clamp(1rem, 4vh, 2rem);
+  padding-bottom: clamp(1rem, 3vh, 1.5rem);
+}
+.auth-cert-card {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border-radius: var(--ds-radius-card);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  box-shadow: 0 12px 40px color-mix(in oklch, var(--bg-dark) 35%, transparent);
+  max-height: min(calc(100vh - 7rem), 720px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.auth-cert-card__logo {
+  display: block;
+  height: 44px;
+  width: auto;
+  margin: 0 auto;
+  object-fit: contain;
+}
+.auth-cert-card__wordmark {
+  margin: 0;
+  text-align: center;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+.auth-cert-card__head {
+  text-align: center;
+  margin: 0;
+}
+.auth-cert-card__head h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.auth-cert-card__subtitle {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+.auth-cert-card__footer {
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+}
+.auth-cert-card__footer-text {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+.auth-cert-card__link {
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+}
+.auth-cert-card__link:hover {
+  opacity: 0.9;
+}
+.reg-org-layout {
+  display: grid;
+  grid-template-columns: minmax(9.5rem, 11rem) 1fr;
+  gap: 1rem;
+  flex: 1;
+  min-height: 0;
+  max-height: min(52vh, 520px);
+}
+.reg-org-layout--detail .reg-org-layout__picker {
+  border-right: 1px solid var(--border-color);
+  padding-right: 0.75rem;
+}
+.reg-org-layout__aside-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.reg-org-tiles {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: min(46vh, 460px);
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+.reg-org-tile {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  font-size: 0.75rem;
+  line-height: 1.25;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.reg-org-tile:hover {
+  border-color: color-mix(in oklch, var(--accent) 35%, var(--border-color));
+}
+.reg-org-tile--active {
+  border-color: color-mix(in oklch, var(--accent) 55%, var(--border-color));
+  background: color-mix(in oklch, var(--accent) 8%, var(--bg-card));
+}
+.reg-org-tile--taken {
+  opacity: 0.55;
+}
+.reg-org-tile__label {
+  flex: 1;
+  min-width: 0;
+}
+.reg-org-tile__check {
+  color: var(--accent);
+}
+.reg-org-layout__panel {
+  min-width: 0;
+  overflow-y: auto;
+  padding-left: 0.25rem;
+}
+.reg-org-layout__placeholder {
+  margin: 2rem 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+.reg-org-form__org-name {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.reg-org-form__lead {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+.reg-org-form__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem 0.75rem;
+}
+.reg-org-form__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.reg-org-password {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.reg-org-password__toggle {
+  position: absolute;
+  right: 0;
+  padding: 0.35rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+@media (max-width: 640px) {
+  .reg-org-layout {
+    grid-template-columns: 1fr;
+    max-height: none;
+  }
+  .reg-org-layout--detail .reg-org-layout__picker {
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    padding-right: 0;
+    padding-bottom: 0.75rem;
+  }
+  .reg-org-tiles {
+    flex-direction: row;
+    flex-wrap: wrap;
+    max-height: 8rem;
+  }
+  .reg-org-tile {
+    flex: 1 1 calc(50% - 0.35rem);
+  }
+  .reg-org-form__grid {
+    grid-template-columns: 1fr;
+  }
+  .auth-cert-card {
+    max-height: none;
+    overflow: visible;
+  }
+}
+
 .auth-register-callout {
   margin: 0 0 1rem;
   padding: 0.65rem 0.75rem;

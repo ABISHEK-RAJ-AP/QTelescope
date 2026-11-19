@@ -11,6 +11,21 @@ from app.core.self_registration import resolve_self_registration_role
 from app.core import user_store
 
 
+def assert_org_open_for_self_registration(org: str) -> None:
+    """Block when an organisation name already exists in the user directory."""
+    from app.core.registration_policy import registered_organisation_names
+
+    name = (org or "").strip()
+    if not name:
+        return
+    key = name.casefold()
+    if any(existing.casefold() == key for existing in registered_organisation_names()):
+        raise HTTPException(
+            status_code=409,
+            detail="This organisation already has console accounts. Ask your organisation administrator for an invitation.",
+        )
+
+
 def validate_new_account_fields(
     *,
     username: str,

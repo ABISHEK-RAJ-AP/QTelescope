@@ -278,6 +278,7 @@ def get_registration_options():
     from app.core.mail_delivery import registration_smtp_ready
     from app.core.registration_policy import (
         public_registration_allowed,
+        registered_organisation_names,
         registration_org_options,
         registration_requires_admin_approval,
     )
@@ -286,6 +287,7 @@ def get_registration_options():
         "allow_public_registration": public_registration_allowed(),
         "require_admin_approval": registration_requires_admin_approval(),
         "org_options": registration_org_options(),
+        "registered_orgs": registered_organisation_names(),
         "otp_delivery": "email" if registration_smtp_ready() else "screen",
     }
 
@@ -380,6 +382,9 @@ def register_send_otp(req: RegisterRequest, request: Request):
         )
     check_auth_rate_limit(request, "register_send_otp")
     _consume_captcha(req.captcha_id, req.captcha_code)
+    from app.core.registration_flow import assert_org_open_for_self_registration
+
+    assert_org_open_for_self_registration((req.org or "").strip())
     username, email, role = validate_new_account_fields(
         username=req.username,
         email=req.email,
