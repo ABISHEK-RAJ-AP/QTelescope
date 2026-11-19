@@ -56,10 +56,21 @@ export const COPY = {
       'Enter the six-digit code from your email to finish creating your account.',
     registerClosed: 'Registration is managed by your organisation administrator.',
     registerApprovalNote:
-      'After email verification, a platform administrator must approve your account before the first sign-in. Your organisation assigns access during that review.',
+      'After email verification, an organisation or platform administrator must approve your account before the first sign-in. Access and role are set during that review in Administration → Access & approvals.',
+    accessIntroFleet:
+      'Platform view: every organisation’s pending sign-ups, invitations, and member status across the fleet.',
+    accessIntroOrg:
+      'Organisation view: pending sign-ups and members for your organisation only.',
+    accessInviteSubtitle:
+      'Pre-provision an active account (Cert Studio–style invite path). Share the temporary password securely; the member changes it under Settings.',
+    accessPendingSubtitle:
+      'Self-service accounts appear here after email verification — match the public registration flow (Type → Organisation → Account → Verify).',
+    accessRejectedSubtitle:
+      'Declined requests stay listed for audit. Re-open to the queue if the decision should change.',
     registerOtpSubtitle: 'Enter the verification code to finish creating your account.',
     registerOtpHintScreen:
-      'A one-time code is shown in an on-screen notification because outbound email is not configured for this environment.',
+      'Email is not configured here — use the verification code from the toast notification and the box below.',
+    registerOtpScreenCodeLabel: 'Your verification code',
     registerOtpHintEmail: 'Enter the 6-digit code we sent to your email address.',
     forgotSubtitle: 'Enter your username. For security, the response does not indicate whether an account exists.',
     resetSubtitle: 'Enter your reset token and set a new password.',

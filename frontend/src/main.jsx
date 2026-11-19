@@ -14,6 +14,7 @@ import { PrivacyPolicyPage, TermsPage, SecurityNoticePage } from './pages/LegalP
 import App from './App.jsx';
 import { initA11yFromStorage } from './lib/accessibilityPrefs.js';
 import { A11yRuntimeEffects } from './components/shell/A11yRuntimeEffects.jsx';
+import { ToastHost } from './components/ui/ToastHost.jsx';
 import './index.css';
 
 initA11yFromStorage();
@@ -22,6 +23,7 @@ const appTree = (
   <ThemeProvider defaultTheme="light">
     <A11yRuntimeEffects />
     <BrowserRouter>
+      <ToastHost />
       <ConsoleErrorBoundary page resetKey="public">
         <Routes>
           <Route path="/" element={<LandingPage />} />

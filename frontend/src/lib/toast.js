@@ -103,6 +103,32 @@ export function notifyInfo(message, opts = {}) {
   showSimple('info', message, opts)
 }
 
+const REGISTER_OTP_TOAST_ID = 'register-otp-screen';
+
+/** Screen / demo OTP delivery during public registration (SMTP off). */
+export function notifyRegistrationOtp(code, opts = {}) {
+  const digits = String(code || '').trim();
+  if (!digits) return;
+  toast(
+    createElement(SimpleToastBody, {
+      variant: 'info',
+      app: 'Registration',
+      title: 'Verification code',
+      body: digits,
+      showMeta: false,
+    }),
+    {
+      ...simpleToastOpts('info', { toastId: REGISTER_OTP_TOAST_ID, ...opts }),
+      autoClose: opts.autoClose ?? 60_000,
+      closeOnClick: false,
+    },
+  );
+}
+
+export function dismissRegistrationOtpToast() {
+  toast.dismiss(REGISTER_OTP_TOAST_ID);
+}
+
 export function notifyWarn(message, opts = {}) {
   showSimple('warn', message, { toastId: opts.toastId || `warn:${message.slice(0, 40)}`, ...opts })
 }

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Save, RefreshCw, CheckCircle2, Cpu, AlertTriangle, Key, Eye, EyeOff, Plus, Trash2, X,
   Compass, Pencil, ShieldCheck,
@@ -15,7 +15,11 @@ import { ConfirmDialog } from '../components/observability/ConfirmDialog.jsx';
 import { Toggle } from '../components/ui/Toggle.jsx';
 import { AccessApprovalsPanel } from '../components/admin/AccessApprovalsPanel.jsx';
 import { RoleMatrix } from '../components/admin/RoleMatrix.jsx';
-import { roleLabel } from '../lib/permissions.js';
+import {
+  canEditPlatformAdminSections,
+  canManageUserAccess,
+  roleLabel,
+} from '../lib/permissions.js';
 import { ListPager } from '../components/observability/ListPager.jsx';
 import { CollapsibleSection } from '../components/observability/CollapsibleSection.jsx';
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
@@ -43,12 +47,13 @@ const SEVERITIES = ['CRITICAL', 'WARNING', 'INFO'];
 const EMPTY_RULE = { rule_id: '', metric_name: 'T1', operator: '<', threshold_value: '', severity: 'WARNING', enabled: true, description: '' };
 const FRESH_MS = 6 * 3600 * 1000; // telemetry "flowing" = last success within 6h
 
-const isAdminRole = () => {
+function sessionUser() {
   try {
-    const u = JSON.parse(localStorage.getItem('quantum_user') || 'null');
-    return ['SuperAdmin', 'Admin', 'PlatformAdmin', 'QuantumOpsAdmin', 'SecurityAdmin'].includes(u?.role);
-  } catch { return false; }
-};
+    return JSON.parse(localStorage.getItem('quantum_user') || 'null');
+  } catch {
+    return null;
+  }
+}
 const fmtTime = (t) => (t ? new Date(t).toLocaleString() : '—');
 const errText = (e) => String(e?.message || e).replace(/^Error:\s*/, '');
 
@@ -999,7 +1004,16 @@ function UsersDirectory({ canEdit }) {
           Public registration cannot create administrator accounts.
         </p>
         {pendingCount > 0 ? (
-          <Notice note={{ type: 'warn', text: `${pendingCount} registration(s) awaiting approval. Open Access & approvals to review.` }} />
+          <Notice note={{
+            type: 'warn',
+            text: `${pendingCount} registration(s) awaiting approval.`,
+          }} />
+        ) : null}
+        {pendingCount > 0 && canEdit ? (
+          <p className="page-hint">
+            <Link className="fs-link" to="/app/admin/access">Open Access &amp; approvals</Link>
+            {' '}for Cert Studio–style review cards (register → verify → approve).
+          </p>
         ) : null}
         {err && <Notice note={{ type: 'error', text: err }} />}
         <div className="admin-users-toolbar">
@@ -1100,6 +1114,24 @@ function UsersDirectory({ canEdit }) {
                             Reject
                           </button>
                         </div>
+                      ) : (u.account_status || 'active') === 'active' ? (
+                        <button
+                          type="button"
+                          className="btn btn--sm btn--ghost"
+                          disabled={busy === `status:${u.username}`}
+                          onClick={() => onAccountStatus(u.username, 'suspended')}
+                        >
+                          Suspend
+                        </button>
+                      ) : (u.account_status || '') === 'suspended' ? (
+                        <button
+                          type="button"
+                          className="btn btn--sm btn--primary"
+                          disabled={busy === `status:${u.username}`}
+                          onClick={() => onAccountStatus(u.username, 'active')}
+                        >
+                          Reactivate
+                        </button>
                       ) : (
                         '—'
                       )}
@@ -1271,7 +1303,10 @@ export const AdministrationPage = ({ section = 'integrations', onNavigateSection
   const knownSection = new Set([...ADMIN_SECTIONS.map((s) => s.id), 'logs']);
   const active = section === 'hub' ? 'integrations' : (knownSection.has(section) ? section : 'integrations');
   const go = useCallback((id) => (onNavigateSection ? onNavigateSection(id) : navigate(`/app/admin/${id === 'hub' ? 'integrations' : id}`)), [onNavigateSection, navigate]);
-  const canEdit = isAdminRole();
+  const me = sessionUser();
+  const canEditPlatform = canEditPlatformAdminSections(me);
+  const canEditUsers = canManageUserAccess(me);
+  const canEdit = active === 'access' || active === 'users' ? canEditUsers : canEditPlatform;
 
   const [data, setData] = useState(null);
   const [loadError, setLoadError] = useState(null);
@@ -1308,7 +1343,14 @@ export const AdministrationPage = ({ section = 'integrations', onNavigateSection
 
   return (
     <div className="admin-container page-stack">
-      {!canEdit && <Notice note={{ type: 'info', text: 'Read-only: Admin role required to change configuration.' }} />}
+      {!canEdit && (
+        <Notice note={{
+          type: 'info',
+          text: active === 'access' || active === 'users'
+            ? 'Read-only: you can view the directory but cannot approve, invite, or suspend accounts.'
+            : 'Read-only: platform administrator role required to change configuration.',
+        }} />
+      )}
       {data.miss.length > 0 && <Notice note={{ type: 'error', text: `Could not load ${data.miss.join(', ')}. Refresh the page or open Platform health.` }} />}
       {accessNote ? <Notice note={accessNote} /> : null}
       {active === 'access' && (

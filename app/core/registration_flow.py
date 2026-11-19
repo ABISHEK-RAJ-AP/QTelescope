@@ -39,7 +39,7 @@ def validate_new_account_fields(
     if u in (settings.ADMIN_USERNAME, settings.USER_USERNAME, settings.SUPERADMIN_USERNAME):
         raise HTTPException(status_code=409, detail="That username is reserved.")
     requested_role = (role or "").strip()
-    if requested_role in ("Admin", "SuperAdmin", "PlatformAdmin", "SecurityAdmin", "QuantumOpsAdmin"):
+    if requested_role in ("Admin", "SuperAdmin", "PlatformAdmin", "SecurityAdmin", "QuantumOpsAdmin", "OrgAdmin"):
         raise HTTPException(
             status_code=403,
             detail="Administrator accounts cannot be self-registered. Ask your organisation admin to invite you.",

@@ -72,8 +72,13 @@ OPS_ADMIN = OPS | DEV_STUDIO | GOVERNANCE | frozenset({
     "metering:ingest",
 })
 
+ORG_ADMIN = frozenset({
+    "users:read", "users:create", "users:update", "users:suspend", "roles:assign",
+    "backends:read", "telemetry:read", "alerts:read", "incidents:read", "reports:read", "platform:read",
+})
+
 SECURITY_ADMIN = frozenset({
-    "users:read", "users:update", "users:suspend", "roles:assign",
+    "users:read", "users:create", "users:update", "users:suspend", "roles:assign",
     "security:read", "security:manage", "sessions:read", "sessions:revoke",
     "audit:read", "audit:export", "platform:read",
     "alerts:read", "incidents:read",
@@ -99,6 +104,7 @@ ROLE_PERMISSIONS: Dict[str, FrozenSet[str]] = {
     "SuperAdmin": PLATFORM_ADMIN,
     "PlatformAdmin": PLATFORM_ADMIN,
     "SecurityAdmin": SECURITY_ADMIN,
+    "OrgAdmin": ORG_ADMIN,
     "QuantumOpsAdmin": OPS_ADMIN,
     "IncidentCommander": INCIDENT_CMD,
     "OpsEngineer": OPS,
@@ -115,6 +121,7 @@ ROLE_LABELS: Dict[str, str] = {
     "SuperAdmin": "Super administrator",
     "PlatformAdmin": "Platform administrator",
     "SecurityAdmin": "Security administrator",
+    "OrgAdmin": "Organisation administrator",
     "QuantumOpsAdmin": "Quantum operations administrator",
     "IncidentCommander": "Incident commander",
     "OpsEngineer": "Operations engineer",
@@ -158,6 +165,7 @@ def list_assignable_roles() -> List[dict]:
         "OpsEngineer",
         "IncidentCommander",
         "Auditor",
+        "OrgAdmin",
         "QuantumOpsAdmin",
         "SecurityAdmin",
         "PlatformAdmin",

@@ -31,7 +31,7 @@ import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/observability/ConfirmDialog'
 import { api } from '@/services/api'
 import { markOnboardingPending } from '@/lib/onboardingState'
-import { notifyInfo } from '@/lib/toast'
+import { dismissRegistrationOtpToast, notifyRegistrationOtp, notifyWarn } from '@/lib/toast'
 import { COPY } from '@/copy/operator.js'
 import '@/styles/register-cert.css'
 
@@ -112,6 +112,7 @@ export function RegisterPage() {
   const [otpSessionId, setOtpSessionId] = useState('')
   const [otpCode, setOtpCode] = useState('')
   const [otpDelivery, setOtpDelivery] = useState('email')
+  const [screenOtp, setScreenOtp] = useState('')
   const [orgDialog, setOrgDialog] = useState(null)
 
   const selectedType = useMemo(
@@ -257,8 +258,17 @@ export function RegisterPage() {
       setOtpDelivery(res.delivery || 'email')
       setFlowStep('otp')
       setOtpCode('')
-      if (res.delivery === 'screen' && res.screen_otp) {
-        notifyInfo(`Verification code: ${res.screen_otp}`, { toastId: 'register-otp-demo', autoClose: 45000 })
+      if (res.delivery === 'screen') {
+        if (res.screen_otp) {
+          setScreenOtp(String(res.screen_otp))
+          notifyRegistrationOtp(res.screen_otp)
+        } else {
+          setScreenOtp('')
+          notifyWarn(res?.message || 'Check your email for the code, or contact your administrator.')
+        }
+      } else {
+        setScreenOtp('')
+        dismissRegistrationOtpToast()
       }
     } catch (err) {
       setError(err?.message || 'Registration failed.')
@@ -283,6 +293,7 @@ export function RegisterPage() {
         otp_code: otpCode.trim(),
       })
       if (res?.status === 'SUCCESS') {
+        dismissRegistrationOtpToast()
         markOnboardingPending(username.trim())
         setSuccess(res?.message || 'Account created.')
         setTimeout(() => navigate('/login'), res?.pending_admin_approval ? 2400 : 1400)
@@ -524,6 +535,30 @@ export function RegisterPage() {
                         </>
                       )}
                   </p>
+                  {otpDelivery === 'screen' && screenOtp ? (
+                    <div className="reg-otp-screen-code" role="status" aria-live="polite">
+                      <span className="reg-otp-screen-code__label">{COPY.auth.registerOtpScreenCodeLabel}</span>
+                      <code className="reg-otp-screen-code__value">{screenOtp}</code>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn--sm reg-otp-screen-code__copy"
+                        onClick={() => {
+                          const code = screenOtp.replace(/\s/g, '');
+                          navigator.clipboard?.writeText(code).catch(() => {});
+                          notifyRegistrationOtp(code, { autoClose: 8000 });
+                        }}
+                      >
+                        Copy code
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn--sm"
+                        onClick={() => notifyRegistrationOtp(screenOtp)}
+                      >
+                        Show in toast again
+                      </button>
+                    </div>
+                  ) : null}
                   <Field label="Verification code" forId="reg-otp" hint={fieldErrors.otp}>
                     <OtpInput
                       value={otpCode}

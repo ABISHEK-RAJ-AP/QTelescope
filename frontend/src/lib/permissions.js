@@ -45,8 +45,13 @@ const OPS_ADMIN = new Set([
   'backends:manage', 'alert_rules:read', 'alert_rules:manage', 'providers:manage', 'platform:manage', 'executions:submit',
 ]);
 
+const ORG_ADMIN = new Set([
+  'users:read', 'users:create', 'users:update', 'users:suspend', 'roles:assign',
+  'backends:read', 'telemetry:read', 'alerts:read', 'incidents:read', 'reports:read', 'platform:read',
+]);
+
 const SECURITY_ADMIN = new Set([
-  'users:read', 'users:update', 'users:suspend', 'roles:assign',
+  'users:read', 'users:create', 'users:update', 'users:suspend', 'roles:assign',
   'security:read', 'security:manage', 'sessions:read', 'sessions:revoke',
   'audit:read', 'audit:export', 'platform:read',
   'alerts:read', 'incidents:read',
@@ -71,6 +76,7 @@ const ROLE_PERMS = {
   IncidentCommander: INCIDENT_CMD,
   QuantumOpsAdmin: OPS_ADMIN,
   SecurityAdmin: SECURITY_ADMIN,
+  OrgAdmin: ORG_ADMIN,
   Researcher: RESEARCH,
   ResearchAnalyst: RESEARCH,
   Auditor: AUDITOR,
@@ -86,6 +92,7 @@ export const ROLE_DEFINITIONS = [
   { id: 'IncidentCommander', label: 'Incident commander', summary: 'Full ops response including incident assignment and closure.' },
   { id: 'QuantumOpsAdmin', label: 'Quantum operations administrator', summary: 'Fleet configuration, alert rules, providers, and platform settings.' },
   { id: 'SecurityAdmin', label: 'Security administrator', summary: 'Users, roles, MFA policy, sessions, and audit exports.' },
+  { id: 'OrgAdmin', label: 'Organisation administrator', summary: 'Approve registrations, invite operators, and suspend accounts within your organisation.' },
   { id: 'SuperAdmin', label: 'Super administrator', summary: 'Unrestricted platform capabilities; can assign SuperAdmin.' },
   { id: 'PlatformAdmin', label: 'Platform administrator', summary: 'Unrestricted platform capabilities.' },
   { id: 'Admin', label: 'Platform administrator', summary: 'Alias for Platform administrator.' },
@@ -138,6 +145,33 @@ export function isPlatformAdmin(user) {
   return FULL_ACCESS_ROLES.has(user?.role);
 }
 
+/** Fleet-wide user directory (all organisations). */
+export function isFleetUserAdmin(user) {
+  const role = user?.role;
+  return FULL_ACCESS_ROLES.has(role) || role === 'SecurityAdmin';
+}
+
+export function canManageUserAccess(user) {
+  if (!user) return false;
+  if (FULL_ACCESS_ROLES.has(user.role) || user.role === 'SecurityAdmin' || user.role === 'OrgAdmin') return true;
+  return can(user, 'users:suspend') || can(user, 'roles:assign');
+}
+
+export function canEditPlatformAdminSections(user) {
+  if (!user) return false;
+  return FULL_ACCESS_ROLES.has(user.role) || user.role === 'QuantumOpsAdmin';
+}
+
+const ORG_INVITABLE_ROLES = new Set([
+  'Viewer', 'ResearchAnalyst', 'Researcher', 'OpsEngineer', 'Operator', 'IncidentCommander',
+]);
+
+export function rolesSelectableForInvite(actor) {
+  const base = ROLE_DEFINITIONS.map((r) => r.id).filter((id) => ORG_INVITABLE_ROLES.has(id));
+  if (actor?.role === 'OrgAdmin') return base;
+  return null;
+}
+
 export function canManageFleet(user) {
   return can(user, 'platform:manage') || can(user, 'providers:manage') || can(user, 'backends:manage');
 }
@@ -173,7 +207,7 @@ export function visibleAdminNav(user) {
 
 export function landingPathForRole(role) {
   if (FULL_ACCESS_ROLES.has(role) || role === 'QuantumOpsAdmin') return '/app/overview';
-  if (role === 'SecurityAdmin') return '/app/admin/access';
+  if (role === 'SecurityAdmin' || role === 'OrgAdmin') return '/app/admin/access';
   if (role === 'Auditor') return '/app/reports';
   if (role === 'Operator' || role === 'OpsEngineer' || role === 'IncidentCommander') return '/app/operate';
   return '/app/overview';

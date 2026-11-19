@@ -248,10 +248,17 @@ def delete_custom_role(
 
 
 @router.get("", response_model=List[dict])
-def list_users(_: str = Depends(require_admin)):
+def list_users(
+    actor: str = Depends(get_current_username),
+    role: str = Depends(require_permission("users:read")),
+):
+    from app.core.org_user_admin import can_list_users, filter_users_for_actor
+
     users = load_all_users()
+    if not can_list_users(role):
+        raise HTTPException(status_code=403, detail="User directory not available for this role.")
     out = []
-    for uname, rec in sorted(users.items()):
+    for uname, rec in filter_users_for_actor(users, actor_username=actor, actor_role=role):
         prefs = get_preferences(uname)
         out.append({
             "username": uname,
@@ -272,9 +279,14 @@ def assign_role(
     target_username: str,
     body: RolePatch,
     actor: str = Depends(get_current_username),
-    role: str = Depends(require_admin),
+    role: str = Depends(require_permission("roles:assign")),
 ):
     from app.core.custom_roles import as_permission_map
+    from app.core.org_user_admin import (
+        assert_can_change_account_status,
+        assert_can_view_user,
+        assert_role_assignable_by_actor,
+    )
     from app.core.permissions import builtin_role_ids
 
     new_role = body.role.strip()
@@ -283,12 +295,15 @@ def assign_role(
         raise HTTPException(status_code=400, detail=f"Unknown role: {new_role}")
     if new_role == "SuperAdmin" and role not in ("SuperAdmin", "PlatformAdmin"):
         raise HTTPException(status_code=403, detail="Only SuperAdmin or PlatformAdmin can assign SuperAdmin.")
-    if target_username == actor and new_role not in ("Admin", "PlatformAdmin", "SuperAdmin"):
+    if target_username == actor and new_role not in ("Admin", "PlatformAdmin", "SuperAdmin", "OrgAdmin"):
         raise HTTPException(status_code=400, detail="Cannot demote your own admin access here.")
     users = load_all_users()
     if target_username not in users:
         raise HTTPException(status_code=404, detail="User not found.")
+    assert_can_view_user(actor_username=actor, actor_role=role, target_username=target_username, users=users)
     rec = dict(users[target_username])
+    assert_can_change_account_status(role, rec)
+    assert_role_assignable_by_actor(role, new_role)
     old = rec.get("role")
     rec["role"] = new_role
     upsert_user(target_username, rec)
@@ -310,12 +325,13 @@ _VALID_ACCOUNT_STATUS = frozenset({"active", "pending_admin", "rejected", "suspe
 def invite_user(
     body: UserInviteBody,
     actor: str = Depends(get_current_username),
-    role: str = Depends(require_admin),
+    role: str = Depends(require_permission("users:create")),
 ):
     """Pre-provision an active account (skips self-registration approval queue)."""
     from app.api.auth import _hash_password
     from app.core.config import settings
     from app.core.identity import bound_password, normalize_email, normalize_username
+    from app.core.org_user_admin import assert_role_assignable_by_actor, resolve_invite_org
     from app.core.registration_flow import registration_user_record
 
     username = normalize_username(body.username)
@@ -337,12 +353,19 @@ def invite_user(
         raise HTTPException(status_code=400, detail=f"Unknown role: {new_role}")
     if new_role == "SuperAdmin" and role not in ("SuperAdmin", "PlatformAdmin"):
         raise HTTPException(status_code=403, detail="Only SuperAdmin or PlatformAdmin can assign SuperAdmin.")
+    assert_role_assignable_by_actor(role, new_role)
+    org_name = resolve_invite_org(
+        actor_username=actor,
+        actor_role=role,
+        requested_org=(body.org or "").strip(),
+        users=users,
+    )
 
     record = registration_user_record(
         username=username,
         email=email,
         full_name=(body.full_name or "").strip() or username,
-        org=(body.org or "").strip(),
+        org=org_name,
         role=new_role,
         password_hash=_hash_password(body.password),
         account_status="active",
@@ -369,15 +392,19 @@ def patch_account_status(
     target_username: str,
     body: AccountStatusPatch,
     actor: str = Depends(get_current_username),
-    role: str = Depends(require_admin),
+    role: str = Depends(require_permission("users:suspend")),
 ):
+    from app.core.org_user_admin import assert_can_change_account_status, assert_can_view_user
+
     status = (body.account_status or "").strip().lower()
     if status not in _VALID_ACCOUNT_STATUS:
         raise HTTPException(status_code=400, detail=f"Unknown account status: {body.account_status}")
     users = load_all_users()
     if target_username not in users:
         raise HTTPException(status_code=404, detail="User not found.")
+    assert_can_view_user(actor_username=actor, actor_role=role, target_username=target_username, users=users)
     rec = dict(users[target_username])
+    assert_can_change_account_status(role, rec)
     old = rec.get("account_status") or "active"
     rec["account_status"] = status
     upsert_user(target_username, rec)

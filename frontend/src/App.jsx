@@ -54,7 +54,6 @@ import { QtQuickActionDock } from './components/quick-actions/QtQuickActionDock.
 import { OperatorNoticeBell } from './components/shell/OperatorNoticeBell.jsx';
 import { readDensity } from './utils/uiPreferences.js';
 import { OnScreenKeyboard } from './components/shell/OnScreenKeyboard.jsx';
-import { ToastHost } from './components/ui/ToastHost.jsx';
 import { filterConsoleTourSteps } from './lib/consoleTour.js';
 import { consumeConsoleTourPending, shouldRunOnboarding } from './lib/onboardingState.js';
 import { canManageFleet, canSeeNavItem, visibleAdminNav } from './lib/permissions.js';
@@ -848,7 +847,6 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
       </main>
     </div>
     </div>
-    <ToastHost />
     <OnScreenKeyboard />
     <ProductTour
       open={productTourOpen}
@@ -940,30 +938,21 @@ export const App = () => {
 
   if (!currentUser) {
     return (
-      <>
-        <ToastHost />
-        <LoginPage onLoginSuccess={handleLoginSuccess} />
-      </>
+      <LoginPage onLoginSuccess={handleLoginSuccess} />
     );
   }
 
   if (!sessionChecked) {
     return (
-      <>
-        <ToastHost />
-        <div className="flex min-h-screen items-center justify-center text-sm text-[var(--text-muted)]" role="status">
-          Checking session…
-        </div>
-      </>
+      <div className="flex min-h-screen items-center justify-center text-sm text-[var(--text-muted)]" role="status">
+        Checking session…
+      </div>
     );
   }
 
   if (location.pathname.startsWith('/app/onboarding')) {
     return (
-      <>
-        <ToastHost />
-        <OnboardingFlow currentUser={currentUser} />
-      </>
+      <OnboardingFlow currentUser={currentUser} />
     );
   }
 

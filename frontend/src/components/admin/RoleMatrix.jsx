@@ -26,7 +26,7 @@ export function RoleMatrix({ canEditAccess = false }) {
     () => ROLE_DEFINITIONS.filter((r) => !HIDDEN_MATRIX_ROLES.has(r.id)),
     [],
   );
-  const showEdit = canEditAccess && ['SuperAdmin', 'Admin', 'PlatformAdmin', 'SecurityAdmin', 'QuantumOpsAdmin'].includes(currentViewerRole());
+  const showEdit = canEditAccess && ['SuperAdmin', 'Admin', 'PlatformAdmin', 'SecurityAdmin', 'QuantumOpsAdmin', 'OrgAdmin'].includes(currentViewerRole());
   const showAccessCol = showEdit && customRoleIds.size > 0;
 
   useEffect(() => {

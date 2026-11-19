@@ -782,6 +782,38 @@
   word-break: break-all;
 }
 
+.reg-otp-screen-code {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1.1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  border: 1px dashed color-mix(in srgb, var(--reg-accent) 55%, var(--reg-border));
+  background: color-mix(in srgb, var(--reg-accent) 8%, var(--reg-surface));
+}
+
+.reg-otp-screen-code__label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--reg-muted);
+}
+
+.reg-otp-screen-code__value {
+  font-size: clamp(1.35rem, 3vw, 1.65rem);
+  font-weight: 700;
+  letter-spacing: 0.35em;
+  font-variant-numeric: tabular-nums;
+  color: var(--reg-text);
+}
+
+.reg-otp-screen-code__copy {
+  margin-top: 0.15rem;
+}
+
 .reg-otp-panel .auth-otp-row {
   max-width: 22rem;
   margin: 0 auto;
