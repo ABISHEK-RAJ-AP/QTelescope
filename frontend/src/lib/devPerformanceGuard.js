@@ -5,8 +5,11 @@
 if (typeof window !== 'undefined') {
   const isPerfNoise = (msg, stack) => {
     const blob = `${String(msg || '')}\n${String(stack || '')}`;
-    return blob.includes('reportAllChanges')
-      && (blob.includes('startTime') || blob.includes("reading 'startTime'"));
+    if (blob.includes('reportAllChanges')) return true;
+    if (/reading 'startTime'|Cannot read properties of undefined.*startTime/i.test(blob)) {
+      return blob.includes('reportAllChanges') || /\bVM\d+:/.test(blob) || blob.includes('PerformanceObserver');
+    }
+    return false;
   };
 
   const swallow = (msg, stack) => {

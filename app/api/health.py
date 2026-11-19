@@ -7,7 +7,7 @@ from app.models.entities import BackendModel, QubitModel
 from app.schemas.schemas import BackendHealthResponse
 from app.analytics.health_vector import T1_CRIT_US
 from app.analytics.health_explain import explain_backend, explain_qubit
-from app.analytics.coherence_aggregate import backend_coherence_row, build_coherence_snapshot
+from app.analytics.coherence_aggregate import build_coherence_snapshot
 from app.api.environment import env_severity_for
 from app.core.audit_log import record_audit
 from app.core.rbac import get_current_role, get_current_username, require_operator
@@ -61,28 +61,46 @@ def get_health_vector(db: Session = Depends(get_db)):
 def compare_backends(body: CompareBackendsBody, db: Session = Depends(get_db)):
     """Side-by-side health vector + coherence for 2–4 backends (modality-aware)."""
     from app.analytics.backend_comparison import build_comparison
+    from app.analytics.coherence_aggregate import coherence_rows_for_backends
+    from app.core.cache import cache_key, default_ttl, get_or_set_json
+    from app.services.health_vector_builder import cached_health_vector
 
     ids = list(dict.fromkeys(body.backend_ids))
     if len(ids) < 2 or len(ids) > 4:
         raise HTTPException(status_code=400, detail="Select 2 to 4 distinct backend_ids")
-    for bid in ids:
-        if not db.query(BackendModel).filter(BackendModel.backend_id == bid).first():
-            raise HTTPException(status_code=404, detail=f"Backend not found: {bid}")
-    vec = get_health_vector(db)
-    backends = db.query(BackendModel).all()
-    coherence_rows = [backend_coherence_row(db, b) for b in backends]
-    try:
-        payload = build_comparison(vec["backends"], coherence_rows, ids)
-    except KeyError as e:
-        raise HTTPException(status_code=404, detail=f"Backend not in health vector: {e.args[0]}")
-    payload["health_model_version"] = vec.get("health_model_version")
-    return payload
+    id_key = ",".join(sorted(ids))
+    ttl = default_ttl("health_compare", 25)
+    cache_k = cache_key("health", "compare", id_key)
+
+    def build():
+        for bid in ids:
+            if not db.query(BackendModel).filter(BackendModel.backend_id == bid).first():
+                raise HTTPException(status_code=404, detail=f"Backend not found: {bid}")
+        vec = cached_health_vector(db)
+        selected = (
+            db.query(BackendModel)
+            .filter(BackendModel.backend_id.in_(ids))
+            .all()
+        )
+        coherence_rows = coherence_rows_for_backends(db, selected)
+        try:
+            payload = build_comparison(vec["backends"], coherence_rows, ids)
+        except KeyError as e:
+            raise HTTPException(status_code=404, detail=f"Backend not in health vector: {e.args[0]}")
+        payload["health_model_version"] = vec.get("health_model_version")
+        return payload
+
+    return get_or_set_json(cache_k, ttl, build)
 
 
 @router.get("/coherence")
 def get_coherence(db: Session = Depends(get_db)):
     """Per-backend T1/T2 from latest qubit telemetry, plus modality-grouped aggregates."""
-    return build_coherence_snapshot(db)
+    from app.core.cache import cache_key, default_ttl, get_or_set_json
+
+    ttl = default_ttl("health_coherence", 30)
+    key = cache_key("health", "coherence")
+    return get_or_set_json(key, ttl, lambda: build_coherence_snapshot(db))
 
 
 @router.get("/modules")

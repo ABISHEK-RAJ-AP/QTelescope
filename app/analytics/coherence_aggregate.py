@@ -1,6 +1,8 @@
 """Per-backend and per-modality T1/T2 aggregates (no cross-modality fleet mean)."""
 from __future__ import annotations
 
+from typing import Iterable, List
+
 from sqlalchemy.orm import Session
 
 from app.analytics.health_vector import mean_or_none
@@ -10,17 +12,29 @@ COMPARISON_NOTE = (
     "Compare T1/T2 only within the same qpu_modality; units are microseconds."
 )
 
+# ponytail: same bounded-latest pattern as health_vector_builder._history_by_qubit — not full qubit_telemetry scan.
+_LATEST_ROW_CAP = 5000
 
-def backend_coherence_row(db: Session, b: BackendModel) -> dict:
+
+def _latest_qubit_samples(db: Session, backend_id: str, n_qubits: int) -> dict:
+    """Most recent row per qubit_index without scanning entire telemetry history."""
+    cap = max(500, min(max(n_qubits, 1) * 3, _LATEST_ROW_CAP))
     rows = (
         db.query(QubitTelemetryModel)
-        .filter(QubitTelemetryModel.backend_id == b.backend_id)
+        .filter(QubitTelemetryModel.backend_id == backend_id)
         .order_by(QubitTelemetryModel.timestamp.desc())
+        .limit(cap)
         .all()
     )
     latest: dict = {}
     for row in rows:
         latest.setdefault(row.qubit_index, row)
+    return latest
+
+
+def backend_coherence_row(db: Session, b: BackendModel) -> dict:
+    n_qubits = int(b.qubit_count or 0) or 128
+    latest = _latest_qubit_samples(db, b.backend_id, n_qubits)
     t1s = [r.t1 for r in latest.values() if r.t1 is not None]
     t2s = [r.t2 for r in latest.values() if r.t2 is not None]
     return {
@@ -37,9 +51,13 @@ def backend_coherence_row(db: Session, b: BackendModel) -> dict:
     }
 
 
+def coherence_rows_for_backends(db: Session, backends: Iterable[BackendModel]) -> List[dict]:
+    return [backend_coherence_row(db, b) for b in backends]
+
+
 def build_coherence_snapshot(db: Session) -> dict:
     backends = db.query(BackendModel).all()
-    out = [backend_coherence_row(db, b) for b in backends]
+    out = coherence_rows_for_backends(db, backends)
     modality_buckets: dict = {}
     for row in out:
         mod = row["qpu_modality"] or "unknown"
