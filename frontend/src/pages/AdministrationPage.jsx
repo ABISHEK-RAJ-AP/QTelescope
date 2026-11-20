@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Save, RefreshCw, CheckCircle2, Cpu, AlertTriangle, Key, Eye, EyeOff, Plus, Trash2, X,
-  Compass, Pencil, ShieldCheck,
+  Compass, Pencil, ShieldCheck, Copy, RotateCcw, Gauge,
 } from 'lucide-react';
 import { markOnboardingPending } from '../lib/onboardingState';
 import { api } from '../services/api';
@@ -866,98 +866,108 @@ function Rules({ canEdit }) {
         </div>
         <div className="admin-pad" style={{ paddingTop: 0 }}>
           <Notice note={note} />
-          <div className="admin-modal-grid-2" style={{ alignItems: 'end', marginTop: 8, marginBottom: rulesLoading ? 8 : 12 }}>
-            <label className="admin-field">
-              <span className="admin-input-label">Backend</span>
-              <select
-                className="input-control"
-                value={selectedBackend}
-                onChange={(e) => setSelectedBackend(e.target.value)}
-                aria-label="Backend for alert rules"
-              >
-                {!backends.length && <option value="">No backends</option>}
-                {backends.map((b) => (
-                  <option key={b.backend_id} value={b.backend_id}>
-                    {b.backend_name || b.backend_id}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <div className="admin-field" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <label className="admin-field" style={{ flex: '1 1 160px', margin: 0 }}>
-                <span className="admin-input-label">Copy from</span>
+          <div className="admin-rules-toolbar">
+            <div className="admin-rules-toolbar__row">
+              <label className="admin-field admin-rules-toolbar__backend">
+                <span className="admin-input-label">Backend</span>
                 <select
                   className="input-control"
-                  value={copyFrom}
-                  disabled={!canEdit}
-                  onChange={(e) => setCopyFrom(e.target.value)}
-                  aria-label="Source backend to copy rules from"
+                  value={selectedBackend}
+                  onChange={(e) => setSelectedBackend(e.target.value)}
+                  aria-label="Backend for alert rules"
                 >
-                  <option value="">Choose…</option>
-                  {backends.filter((b) => b.backend_id !== selectedBackend).map((b) => (
-                    <option key={b.backend_id} value={b.backend_id}>{b.backend_name || b.backend_id}</option>
+                  {!backends.length && <option value="">No backends</option>}
+                  {backends.map((b) => (
+                    <option key={b.backend_id} value={b.backend_id}>
+                      {b.backend_name || b.backend_id}
+                    </option>
                   ))}
                 </select>
               </label>
-              <button
-                type="button"
-                className="btn btn-secondary btn--xs"
-                disabled={!canEdit || !copyFrom || !selectedBackend}
-                onClick={() => setCopyAsk(true)}
-              >
-                Copy rules
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary btn--xs"
-                disabled={!canEdit || !selectedBackend}
-                title={reason}
-                onClick={() => setResetAsk(true)}
-              >
-                Reset defaults
-              </button>
+              <div className="admin-rules-toolbar__actions" role="toolbar" aria-label="Rule maintenance">
+                <div className="admin-rules-copy" aria-label="Copy rules from another backend">
+                  <label className="admin-field admin-rules-copy__select">
+                    <span className="admin-input-label">Copy rules from</span>
+                    <select
+                      className="input-control"
+                      value={copyFrom}
+                      disabled={!canEdit}
+                      onChange={(e) => setCopyFrom(e.target.value)}
+                      aria-label="Source backend to copy rules from"
+                    >
+                      <option value="">Choose backend…</option>
+                      {backends.filter((b) => b.backend_id !== selectedBackend).map((b) => (
+                        <option key={b.backend_id} value={b.backend_id}>{b.backend_name || b.backend_id}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    disabled={!canEdit || !copyFrom || !selectedBackend}
+                    onClick={() => setCopyAsk(true)}
+                  >
+                    <Copy size={14} aria-hidden /> Apply copy
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={!canEdit || !selectedBackend}
+                  title={reason}
+                  onClick={() => setResetAsk(true)}
+                >
+                  <RotateCcw size={14} aria-hidden /> Reset defaults
+                </button>
+              </div>
             </div>
           </div>
-          {rulesLoading && <p className="admin-sub">Loading rules…</p>}
+          {rulesLoading && <p className="admin-sub admin-pad" style={{ paddingTop: 0 }}>Loading rules…</p>}
           {previewRow?.effective && !rulesLoading && (
-            <table className="custom-table admin-table admin-threshold-preview">
-              <thead>
-                <tr><th>Metric</th><th>Effective limit</th></tr>
-              </thead>
-              <tbody>
-                <tr><td>T1 (µs)</td><td className="admin-mono">{fmtUs(previewRow.effective.t1_crit_us)}</td></tr>
-                <tr><td>T2 (µs)</td><td className="admin-mono">{fmtUs(previewRow.effective.t2_crit_us)}</td></tr>
-                <tr><td>QUEUE_JOBS</td><td className="admin-mono">&gt; {previewRow.effective.queue_jobs}</td></tr>
-                <tr><td>CALIBRATION_AGE (h)</td><td className="admin-mono">&gt; {previewRow.effective.calibration_age_hours}</td></tr>
-                <tr><td>READOUT_ERROR</td><td className="admin-mono">&gt; {previewRow.effective.readout_error}</td></tr>
-              </tbody>
-            </table>
+            <details className="admin-rules-limits admin-pad" style={{ paddingTop: 0 }} open>
+              <summary><Gauge size={15} aria-hidden /> Effective modality limits</summary>
+              <p className="admin-sub" style={{ margin: '0 0 10px' }}>
+                Defaults for this backend&apos;s modality — individual rules may use different thresholds.
+              </p>
+              <dl className="admin-kv admin-rules-limits__kv">
+                <div><dt>T1 minimum</dt><dd className="admin-mono">{fmtUs(previewRow.effective.t1_crit_us)}</dd></div>
+                <div><dt>T2 minimum</dt><dd className="admin-mono">{fmtUs(previewRow.effective.t2_crit_us)}</dd></div>
+                <div><dt>Queue backlog</dt><dd className="admin-mono">&gt; {previewRow.effective.queue_jobs} jobs</dd></div>
+                <div><dt>Calibration age</dt><dd className="admin-mono">&gt; {previewRow.effective.calibration_age_hours} h</dd></div>
+                <div><dt>Readout error</dt><dd className="admin-mono">&gt; {previewRow.effective.readout_error}</dd></div>
+              </dl>
+            </details>
           )}
         </div>
-        <div className="table-container" style={{ border: 'none' }}>
-          <table className="custom-table admin-table">
-            <thead><tr><th>Rule</th><th>Condition</th><th>Severity</th><th>Status</th><th style={{ textAlign: 'right' }}>Actions</th></tr></thead>
-            <tbody>
-              {visibleRules.map((r) => (
-                <tr key={r.rule_id}>
-                  <td><strong className="admin-mono">{r.rule_id}</strong><div className="admin-sub">{r.description}</div></td>
-                  <td className="admin-mono">{r.metric_name} {r.operator} {r.threshold_value}</td>
-                  <td><span className={`badge ${r.severity === 'CRITICAL' ? 'badge-critical' : r.severity === 'WARNING' ? 'badge-warning' : 'badge-info'}`}>{r.severity}</span></td>
-                  <td>
-                    <Toggle checked={!!r.enabled} disabled={!canEdit} label={r.enabled ? 'Enabled' : 'Disabled'} onChange={() => toggle(r)} />
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <button type="button" className="btn btn-secondary btn--xs" disabled={!canEdit} title={reason} onClick={() => open(r)}><Pencil size={12} /> Edit</button>{' '}
-                    <button type="button" className="admin-table-action-btn" disabled={!canEdit} title={reason || `Delete ${r.rule_id}`} aria-label={`Delete ${r.rule_id}`} onClick={() => setDeleting(r.rule_id)}><Trash2 size={15} /></button>
-                  </td>
-                </tr>
-              ))}
-              {!rulesLoading && rules.length === 0 && (
-                <TableEmpty colSpan={5} title="No alert rules" message={selectedBackend ? 'Add a rule or reset defaults for this backend.' : 'Select a backend.'} />
-              )}
-            </tbody>
-          </table>
-        </div>
+        <section className="admin-rules-section admin-pad" aria-label="Rules for selected backend">
+          <h4 className="admin-rules-section__title">Configured rules</h4>
+          {!rulesLoading && rules.length === 0 && (
+            <TableEmpty as="block" title="No alert rules" message={selectedBackend ? 'Add a rule or reset defaults for this backend.' : 'Select a backend.'} />
+          )}
+          <ul className="admin-rules-list" role="list">
+            {visibleRules.map((r) => (
+              <li key={r.rule_id} className="admin-rule-card">
+                <div className="admin-rule-card__identity">
+                  <strong className="admin-mono admin-rule-card__id">{r.rule_id}</strong>
+                  {r.description ? <p className="admin-sub admin-rule-card__desc">{r.description}</p> : null}
+                </div>
+                <code className="admin-mono admin-rule-card__cond">{r.metric_name} {r.operator} {r.threshold_value}</code>
+                <span className={`badge ${r.severity === 'CRITICAL' ? 'badge-critical' : r.severity === 'WARNING' ? 'badge-warning' : 'badge-info'}`}>{r.severity}</span>
+                <div className="admin-rule-card__toggle">
+                  <Toggle checked={!!r.enabled} disabled={!canEdit} label={r.enabled ? 'On' : 'Off'} onChange={() => toggle(r)} />
+                </div>
+                <div className="admin-rule-card__actions">
+                  <button type="button" className="btn btn-secondary btn-icon-only" disabled={!canEdit} title={reason || 'Edit rule'} aria-label={`Edit ${r.rule_id}`} onClick={() => open(r)}>
+                    <Pencil size={15} aria-hidden />
+                  </button>
+                  <button type="button" className="admin-table-action-btn" disabled={!canEdit} title={reason || `Delete ${r.rule_id}`} aria-label={`Delete ${r.rule_id}`} onClick={() => setDeleting(r.rule_id)}>
+                    <Trash2 size={15} aria-hidden />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
       </div>
 
       {editing && (
