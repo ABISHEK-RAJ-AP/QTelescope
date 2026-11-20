@@ -146,6 +146,7 @@ button.btn-secondary:active:not(:disabled) {
 /* Rubber-band scroll surfaces (carousels, bento grids) */
 .qt-scroll-rubber,
 .hero-cycle__viewport,
+.fo-fleet-cards__viewport,
 .dash-bento,
 .hv-backends {
   overscroll-behavior: contain;

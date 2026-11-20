@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatBackendTitle, formatModalityLabel, formatProviderLabel } from '@/lib/displayLabels.js';
 import { buildBackendDetailsPath } from '@/lib/investigationLinks.js';
 import { StateBar, StatusText } from '@/pages/backendCommon.jsx';
@@ -113,36 +113,146 @@ function FleetFlipCard({ r }) {
   );
 }
 
+const FLEET_CARDS_PER_PAGE = 3;
+
+function gridClassForCount(n) {
+  if (n >= 5) return 'fo-fleet-cards__grid--5';
+  if (n === 4) return 'fo-fleet-cards__grid--4';
+  if (n === 3) return 'fo-fleet-cards__grid--3';
+  return 'fo-fleet-cards__grid--2';
+}
+
 export function FleetBackendCards({ rows = [], className = '' }) {
+  const [slide, setSlide] = useState(0);
+  const [hold, setHold] = useState(false);
+
+  const pages = useMemo(() => {
+    if (!rows.length) return [];
+    if (rows.length <= FLEET_CARDS_PER_PAGE) return [rows];
+    const out = [];
+    for (let i = 0; i < rows.length; i += FLEET_CARDS_PER_PAGE) {
+      out.push(rows.slice(i, i + FLEET_CARDS_PER_PAGE));
+    }
+    return out;
+  }, [rows]);
+
+  const slideCount = pages.length;
+  const active = slideCount > 0 ? ((slide % slideCount) + slideCount) % slideCount : 0;
+  const rowKey = useMemo(() => rows.map((r) => r.backend_id).join('|'), [rows]);
+
+  useEffect(() => {
+    setSlide(0);
+  }, [rowKey]);
+
+  useEffect(() => {
+    if (hold || slideCount < 2) return undefined;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return undefined;
+    const id = window.setInterval(() => {
+      if (document.hidden) return;
+      setSlide((p) => p + 1);
+    }, 10_000);
+    return () => window.clearInterval(id);
+  }, [hold, slideCount]);
+
   if (!rows.length) return null;
 
-  const n = rows.length;
-  const gridClass = n >= 5 ? 'fo-fleet-cards__grid--5' : n === 4 ? 'fo-fleet-cards__grid--4' : n === 3 ? 'fo-fleet-cards__grid--3' : 'fo-fleet-cards__grid--2';
+  const carousel = slideCount > 1;
 
   return (
     <section
       className={`fo-fleet-cards card fo-fleet-cards--glass ds-glass-panel ${className}`.trim()}
       aria-labelledby="fo-fleet-cards-h"
       data-tour="page-fleet-cards"
+      onMouseEnter={() => setHold(true)}
+      onMouseLeave={() => setHold(false)}
     >
       <div className="fo-fleet-cards__head">
         <div className="fo-fleet-cards__heading">
           <h2 id="fo-fleet-cards-h" className="fo-fleet-cards__title">Backends</h2>
           <InfoTooltip label="How these cards work" align="start">
             Hover the summary for ops detail. Open workspace stays on the card.
+            {carousel ? ' Carousel advances every 10s; use arrows to step.' : null}
           </InfoTooltip>
         </div>
-        <Link className="btn btn-secondary fo-fleet-cards__inventory" to="/app/backends/inventory">
-          View inventory <ChevronRight size={14} aria-hidden />
-        </Link>
+        <div className="fo-fleet-cards__head-actions">
+          {carousel ? (
+            <div className="fo-fleet-cards__pager" role="group" aria-label="Backend card pages">
+              <button
+                type="button"
+                className="btn btn-secondary btn-icon-only"
+                aria-label="Previous backends"
+                onClick={() => setSlide((p) => p - 1)}
+              >
+                <ChevronLeft size={18} aria-hidden />
+              </button>
+              <span className="fo-fleet-cards__pager-label" aria-live="polite">
+                {active + 1} / {slideCount}
+              </span>
+              <button
+                type="button"
+                className="btn btn-secondary btn-icon-only"
+                aria-label="Next backends"
+                onClick={() => setSlide((p) => p + 1)}
+              >
+                <ChevronRight size={18} aria-hidden />
+              </button>
+            </div>
+          ) : null}
+          <Link className="btn btn-secondary fo-fleet-cards__inventory" to="/app/backends/inventory">
+            View inventory <ChevronRight size={14} aria-hidden />
+          </Link>
+        </div>
       </div>
-      <ul className={`fo-fleet-cards__grid ${gridClass}`} aria-label="Backend cards">
-        {rows.map((r) => (
-          <li key={r.backend_id} className="fo-fleet-cards__cell">
-            <FleetFlipCard r={r} />
-          </li>
-        ))}
-      </ul>
+      <div
+        className={`fo-fleet-cards__carousel hero-cycle${carousel ? '' : ' fo-fleet-cards__carousel--single'}`}
+        aria-live="polite"
+        aria-roledescription={carousel ? 'carousel' : undefined}
+        aria-label={carousel ? 'Fleet backend cards' : undefined}
+      >
+        <div className="hero-cycle__viewport fo-fleet-cards__viewport">
+          <div
+            className="hero-cycle__track fo-fleet-cards__track"
+            data-page={active}
+            style={{
+              '--hero-slides': slideCount,
+              width: carousel ? `${slideCount * 100}%` : undefined,
+              transform: carousel
+                ? `translate3d(-${(active / slideCount) * 100}%, 0, 0)`
+                : undefined,
+            }}
+          >
+            {pages.map((pageRows, idx) => (
+              <div key={idx} className="hero-cycle__pane fo-fleet-cards__pane">
+                <ul
+                  className={`fo-fleet-cards__grid ${gridClassForCount(pageRows.length)}`}
+                  aria-label={carousel ? `Backend cards, page ${idx + 1} of ${slideCount}` : 'Backend cards'}
+                >
+                  {pageRows.map((r) => (
+                    <li key={r.backend_id} className="fo-fleet-cards__cell">
+                      <FleetFlipCard r={r} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+        {carousel ? (
+          <div className="fo-fleet-cards__dots" role="tablist" aria-label="Choose backend page">
+            {pages.map((_, idx) => (
+              <button
+                key={idx}
+                type="button"
+                role="tab"
+                className={`fo-fleet-cards__dot${idx === active ? ' is-active' : ''}`}
+                aria-selected={idx === active}
+                aria-label={`Page ${idx + 1}`}
+                onClick={() => setSlide(idx)}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 }
