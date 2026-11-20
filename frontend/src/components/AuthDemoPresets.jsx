@@ -1,7 +1,7 @@
 import React from 'react';
 
 const PRESETS = [
-  { id: 'superadmin', label: 'SuperAdmin', username: 'superadmin' },
+  { id: 'superadmin', label: 'Platform admin', username: 'superadmin' },
   { id: 'admin', label: 'Admin', username: 'admin' },
   { id: 'operator', label: 'Operator', username: 'user_researcher' },
 ];

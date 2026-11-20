@@ -69,13 +69,34 @@ def test_org_admin_lists_only_own_org(client):
     assert names == {"orgadmin_a", "op_a"}
 
 
-def test_super_admin_lists_all_orgs(client):
+def test_platform_admin_lists_all_orgs(client):
     _seed_users()
-    tok = create_session("super", "SuperAdmin")
+    tok = create_session("platform", "PlatformAdmin")
     r = client.get("/api/v1/users", headers={"Authorization": f"Bearer {tok}"})
     assert r.status_code == 200
     names = {u["username"] for u in r.json()}
     assert "op_b" in names and "op_a" in names
+
+
+def test_org_super_admin_lists_own_org_only(client):
+    _seed_users()
+    user_store.upsert_user(
+        "super_a",
+        {
+            "username": "super_a",
+            "email": "sa@orga.example",
+            "full_name": "Super Org A",
+            "org": "Org Alpha",
+            "role": "SuperAdmin",
+            "password_hash": "x",
+            "account_status": "active",
+        },
+    )
+    tok = create_session("super_a", "SuperAdmin", {"org": "Org Alpha"})
+    r = client.get("/api/v1/users", headers={"Authorization": f"Bearer {tok}"})
+    assert r.status_code == 200
+    names = {u["username"] for u in r.json()}
+    assert names == {"orgadmin_a", "op_a", "super_a"}
 
 
 def test_org_admin_invite_forces_org(client):

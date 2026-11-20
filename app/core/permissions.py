@@ -87,12 +87,15 @@ SECURITY_ADMIN = frozenset({
 PLATFORM_ADMIN = PERMS
 
 # Route gates. Same ids as ROLE_PERMISSIONS. rbac.py checks these; it does not keep a second list.
-ADMIN_ROLES = frozenset({"Admin", "SuperAdmin", "PlatformAdmin"})
+# Fleet-wide platform operators (not organisation-scoped).
+PLATFORM_ROLES = frozenset({"Admin", "PlatformAdmin"})
+ADMIN_ROLES = PLATFORM_ROLES
+ORG_SUPER_ROLES = frozenset({"SuperAdmin", "OrgAdmin"})
 OPERATOR_ROLES = frozenset({
-    "Admin", "SuperAdmin", "PlatformAdmin", "Operator", "QuantumOpsAdmin", "OpsEngineer",
+    "Admin", "PlatformAdmin", "SuperAdmin", "OrgAdmin", "Operator", "QuantumOpsAdmin", "OpsEngineer",
 })
 EVIDENCE_READER_ROLES = frozenset({
-    "Admin", "SuperAdmin", "PlatformAdmin", "Operator", "Researcher", "Auditor",
+    "Admin", "PlatformAdmin", "SuperAdmin", "OrgAdmin", "Operator", "Researcher", "Auditor",
 })
 
 ROLE_PERMISSIONS: Dict[str, FrozenSet[str]] = {
@@ -101,7 +104,7 @@ ROLE_PERMISSIONS: Dict[str, FrozenSet[str]] = {
     "Operator": OPS | DEV_STUDIO,
     "Researcher": READ_ONLY | DEV_STUDIO | frozenset({"reports:export", "alerts:comment", "incidents:comment"}),
     # Extended enterprise roles
-    "SuperAdmin": PLATFORM_ADMIN,
+    "SuperAdmin": ORG_ADMIN | frozenset({"users:create", "roles:assign"}),
     "PlatformAdmin": PLATFORM_ADMIN,
     "SecurityAdmin": SECURITY_ADMIN,
     "OrgAdmin": ORG_ADMIN,
@@ -118,7 +121,7 @@ ROLE_LABELS: Dict[str, str] = {
     "Admin": "Administrator",
     "Operator": "Operations engineer",
     "Researcher": "Research analyst",
-    "SuperAdmin": "Super administrator",
+    "SuperAdmin": "Organisation administrator",
     "PlatformAdmin": "Platform administrator",
     "SecurityAdmin": "Security administrator",
     "OrgAdmin": "Organisation administrator",

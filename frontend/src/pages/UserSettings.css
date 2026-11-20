@@ -72,13 +72,16 @@
 
 .us-role {
   display: inline-block;
+  max-width: 100%;
   margin-top: 14px;
   padding: 6px 14px;
   border-radius: 999px;
   font-size: var(--font-size-badge, 0.75rem);
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  text-transform: none;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  letter-spacing: 0.02em;
   background: color-mix(in srgb, var(--accent-cyan) 12%, var(--bg-card));
   color: var(--accent-cyan);
   border: 1px solid color-mix(in srgb, var(--accent-cyan) 35%, var(--border-color));
@@ -553,4 +556,22 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   overflow: hidden;
+}
+
+.us-session-current {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border-radius: var(--ds-radius-control, 10px);
+  border: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--accent-cyan) 8%, var(--bg-card));
+}
+
+.us-session-others {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
 }

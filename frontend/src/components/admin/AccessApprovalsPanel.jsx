@@ -4,6 +4,7 @@ import { RefreshCw, UserPlus } from 'lucide-react';
 import { api } from '@/services/api';
 import {
   isFleetUserAdmin,
+  isOrgPeopleAdmin,
   roleLabel,
   rolesSelectableForInvite,
 } from '@/lib/permissions.js';
@@ -48,7 +49,7 @@ function sessionUser() {
 }
 
 function resolveOrgForInvite(me, orgFilter, inviteOrgPick) {
-  if (me?.role === 'OrgAdmin') return (me.org || '').trim();
+  if (isOrgPeopleAdmin(me)) return (me.org || '').trim();
   const scoped = (orgFilter || '').trim();
   if (scoped) return scoped;
   return (inviteOrgPick || '').trim();
@@ -158,7 +159,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
   const [rows, setRows] = useState([]);
   const [roles, setRoles] = useState([]);
   const [policy, setPolicy] = useState(null);
-  const [orgFilter, setOrgFilter] = useState(me?.role === 'OrgAdmin' ? (me.org || '') : '');
+  const [orgFilter, setOrgFilter] = useState(isOrgPeopleAdmin(me) ? (me.org || '') : '');
   const [busy, setBusy] = useState('');
   const [loading, setLoading] = useState(true);
   const [confirm, setConfirm] = useState(null);
@@ -202,7 +203,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
   useEffect(() => { load(); }, [load]);
 
   const scopedRows = useMemo(() => {
-    if (me?.role === 'OrgAdmin' && me.org) {
+    if (isOrgPeopleAdmin(me) && me.org) {
       const key = me.org.trim().toLowerCase();
       return rows.filter((u) => (u.org || '').toLowerCase() === key);
     }
@@ -384,9 +385,10 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
     setInvite((s) => ({ ...s, password: out }));
   };
 
-  const scopeOrgLabel = me?.role === 'OrgAdmin'
+  const scopeOrgLabel = isOrgPeopleAdmin(me)
     ? (me.org || 'Your organisation')
     : (orgFilter.trim() || 'All organisations');
+  const canInviteMembers = canEdit && (isOrgPeopleAdmin(me) || (fleetAdmin && orgFilter.trim()));
 
   return (
     <div className="admin-access admin-people" data-tour="page-admin-access">
@@ -429,7 +431,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
             >
               <RefreshCw size={14} aria-hidden className={loading ? 'admin-access-spin' : undefined} />
             </button>
-            {canEdit ? (
+            {canInviteMembers ? (
               <button
                 type="button"
                 className="btn btn-primary btn--sm"
@@ -615,7 +617,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
         </section>
       )}
 
-      {inviteOpen && canEdit ? createPortal(
+      {inviteOpen && canInviteMembers ? createPortal(
         <div
           className="confirm-dialog-backdrop"
           role="presentation"
@@ -632,7 +634,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
               <h3 id="admin-invite-modal-h" className="admin-card-title">Invite member</h3>
               <InfoTooltip label="Invite operator">{INVITE_HELP}</InfoTooltip>
             </PeopleTitleRow>
-            {me?.role !== 'OrgAdmin' && fleetAdmin && !orgFilter.trim() ? (
+            {!isOrgPeopleAdmin(me) && fleetAdmin && !orgFilter.trim() ? (
               <p className="admin-people-muted admin-people-invite-scope-hint">Set organisation scope in the toolbar or pick below.</p>
             ) : (
               <p className="admin-people-muted admin-people-invite-scope-hint">
@@ -686,7 +688,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
                   </select>
                 </Field>
               </div>
-              {fleetAdmin && me?.role !== 'OrgAdmin' && !orgFilter.trim() ? (
+              {fleetAdmin && !isOrgPeopleAdmin(me) && !orgFilter.trim() ? (
                 <Field label="Organisation" forId="inv-org-pick">
                   <select
                     id="inv-org-pick"

@@ -66,11 +66,11 @@ const AUDITOR = new Set([
   'audit:read', 'audit:export', 'users:read', 'alerts:read', 'incidents:read', 'reports:read',
 ]);
 
-/** null = full platform (SuperAdmin / Admin / PlatformAdmin). */
+/** null = full platform (Admin / PlatformAdmin). */
 const ROLE_PERMS = {
-  SuperAdmin: null,
   Admin: null,
   PlatformAdmin: null,
+  SuperAdmin: ORG_ADMIN,
   Operator: new Set([...OPS, ...DEV_STUDIO]),
   OpsEngineer: OPS,
   IncidentCommander: INCIDENT_CMD,
@@ -92,9 +92,9 @@ export const ROLE_DEFINITIONS = [
   { id: 'IncidentCommander', label: 'Incident commander', summary: 'Full ops response including incident assignment and closure.' },
   { id: 'QuantumOpsAdmin', label: 'Quantum operations administrator', summary: 'Fleet configuration, alert rules, providers, and platform settings.' },
   { id: 'SecurityAdmin', label: 'Security administrator', summary: 'Users, roles, MFA policy, sessions, and audit exports.' },
-  { id: 'OrgAdmin', label: 'Organisation administrator', summary: 'Approve registrations, invite operators, and suspend accounts within your organisation.' },
-  { id: 'SuperAdmin', label: 'Super administrator', summary: 'Unrestricted platform capabilities; can assign SuperAdmin.' },
-  { id: 'PlatformAdmin', label: 'Platform administrator', summary: 'Unrestricted platform capabilities.' },
+  { id: 'OrgAdmin', label: 'Organisation administrator', summary: 'Invite members, assign operator roles, and suspend accounts within your organisation.' },
+  { id: 'SuperAdmin', label: 'Organisation administrator', summary: 'Same scope as organisation administrator (legacy role id).' },
+  { id: 'PlatformAdmin', label: 'Platform administrator', summary: 'All organisations: registrations, suspension, integrations, and security policy.' },
   { id: 'Admin', label: 'Platform administrator', summary: 'Alias for Platform administrator.' },
 ];
 
@@ -109,7 +109,8 @@ export const RBAC_CAPABILITY_COLUMNS = [
   { id: 'studio', label: 'Developer studio', permission: 'studio:read' },
 ];
 
-const FULL_ACCESS_ROLES = new Set(['SuperAdmin', 'Admin', 'PlatformAdmin']);
+const FULL_ACCESS_ROLES = new Set(['Admin', 'PlatformAdmin']);
+const ORG_ADMIN_ROLES = new Set(['OrgAdmin', 'SuperAdmin']);
 
 export function permissionsForRole(role) {
   const set = ROLE_PERMS[role];
@@ -151,9 +152,13 @@ export function isFleetUserAdmin(user) {
   return FULL_ACCESS_ROLES.has(role) || role === 'SecurityAdmin';
 }
 
+export function isOrgPeopleAdmin(user) {
+  return ORG_ADMIN_ROLES.has(user?.role);
+}
+
 export function canManageUserAccess(user) {
   if (!user) return false;
-  if (FULL_ACCESS_ROLES.has(user.role) || user.role === 'SecurityAdmin' || user.role === 'OrgAdmin') return true;
+  if (FULL_ACCESS_ROLES.has(user.role) || user.role === 'SecurityAdmin' || ORG_ADMIN_ROLES.has(user.role)) return true;
   return can(user, 'users:suspend') || can(user, 'roles:assign');
 }
 
@@ -168,7 +173,7 @@ const ORG_INVITABLE_ROLES = new Set([
 
 export function rolesSelectableForInvite(actor) {
   const base = ROLE_DEFINITIONS.map((r) => r.id).filter((id) => ORG_INVITABLE_ROLES.has(id));
-  if (actor?.role === 'OrgAdmin') return base;
+  if (actor?.role === 'OrgAdmin' || actor?.role === 'SuperAdmin') return base;
   return null;
 }
 
@@ -206,7 +211,7 @@ export function visibleAdminNav(user) {
 
 export function landingPathForRole(role) {
   if (FULL_ACCESS_ROLES.has(role) || role === 'QuantumOpsAdmin') return '/app/overview';
-  if (role === 'SecurityAdmin' || role === 'OrgAdmin') return '/app/admin/access';
+  if (role === 'SecurityAdmin' || ORG_ADMIN_ROLES.has(role)) return '/app/admin/access';
   if (role === 'Auditor') return '/app/reports';
   if (role === 'Operator' || role === 'OpsEngineer' || role === 'IncidentCommander') return '/app/operate';
   return '/app/overview';

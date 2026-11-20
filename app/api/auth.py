@@ -513,8 +513,8 @@ def authenticate_user(req: LoginRequest, request: Request):
     if _pw_eq(username, settings.SUPERADMIN_USERNAME) and _pw_eq(password, settings.SUPERADMIN_PASSWORD):
         return _maybe_mfa_or_session(
             username,
-            "SuperAdmin",
-            {"email": "", "full_name": "Super Administrator", "org": "C-DAC"},
+            "PlatformAdmin",
+            {"email": "", "full_name": "Platform Administrator", "org": "C-DAC"},
         )
     if _pw_eq(username, settings.ADMIN_USERNAME) and _pw_eq(password, settings.ADMIN_PASSWORD):
         return _maybe_mfa_or_session(username, "Admin", {"email": "", "full_name": "Platform Admin", "org": "C-DAC"})

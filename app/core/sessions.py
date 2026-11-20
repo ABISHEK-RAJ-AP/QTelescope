@@ -12,6 +12,7 @@ from typing import Any, Dict, Optional
 _LOCK = threading.Lock()
 _SESSIONS: Dict[str, Dict[str, Any]] = {}
 SESSION_TTL_SECONDS = int(os.getenv("SESSION_TTL_SECONDS", str(24 * 3600)))
+MAX_SESSIONS_PER_USER = max(1, int(os.getenv("MAX_SESSIONS_PER_USER", "2")))
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data")
 _SESSIONS_PATH = os.path.join(_DATA_DIR, "api_sessions.json")
 
@@ -53,6 +54,28 @@ def _purge_expired() -> None:
         _SESSIONS.pop(t, None)
 
 
+def _enforce_session_cap(username: str, keep_token: Optional[str] = None) -> None:
+    """Drop oldest sessions when a user exceeds MAX_SESSIONS_PER_USER (always keeps keep_token)."""
+    while True:
+        active = sorted(
+            [
+                (tok, rec)
+                for tok, rec in _SESSIONS.items()
+                if rec.get("username") == username
+            ],
+            key=lambda pair: float(pair[1].get("created_at") or 0),
+        )
+        if len(active) <= MAX_SESSIONS_PER_USER:
+            return
+        for tok, _rec in active:
+            if tok == keep_token:
+                continue
+            _SESSIONS.pop(tok, None)
+            break
+        else:
+            return
+
+
 def create_session(username: str, role: str, extra: Optional[Dict[str, Any]] = None) -> str:
     token = f"qtok_{secrets.token_urlsafe(32)}"
     record = {
@@ -68,6 +91,7 @@ def create_session(username: str, role: str, extra: Optional[Dict[str, Any]] = N
         _load_file()
         _purge_expired()
         _SESSIONS[token] = record
+        _enforce_session_cap(username, keep_token=token)
         _save_file()
     return token
 

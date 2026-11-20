@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, Field
 
-from app.core.permissions import list_assignable_roles, permissions_for_role
+from app.core.permissions import ROLE_LABELS, list_assignable_roles, permissions_for_role
 from app.core.rbac import get_current_role, get_current_username, require_admin, require_permission
 from app.core.user_prefs import get_preferences, set_preferences
 from app.core.user_store import load_all_users, upsert_user
@@ -85,11 +85,12 @@ class PasswordChangeBody(BaseModel):
     confirm_password: str = Field(min_length=6)
 
 
-def _profile(username: str) -> Dict[str, Any]:
+def _profile(username: str, session_role: Optional[str] = None) -> Dict[str, Any]:
     users = load_all_users()
     rec = users.get(username) or {}
     prefs = get_preferences(username)
-    role = rec.get("role") or "Operator"
+    stored = (rec.get("role") or "").strip()
+    role = (session_role or stored or "Operator").strip()
     return {
         "username": username,
         "email": rec.get("email") or "",
@@ -97,7 +98,7 @@ def _profile(username: str) -> Dict[str, Any]:
         "org": rec.get("org") or "",
         "designation": prefs.get("designation") or "",
         "role": role,
-        "role_label": role,
+        "role_label": ROLE_LABELS.get(role, role),
         "permissions": sorted(permissions_for_role(role)),
         "created_at": rec.get("created_at"),
         "mfa": mfa_status(username),
@@ -105,10 +106,13 @@ def _profile(username: str) -> Dict[str, Any]:
 
 
 @router.get("/me")
-def get_me_profile(username: str = Depends(get_current_username)):
+def get_me_profile(
+    username: str = Depends(get_current_username),
+    session_role: str = Depends(get_current_role),
+):
     if username == "anonymous":
         raise HTTPException(status_code=401, detail="Authentication required.")
-    return _profile(username)
+    return _profile(username, session_role=session_role)
 
 
 @router.patch("/me")
@@ -131,7 +135,7 @@ def patch_me_profile(
     if body.designation is not None:
         set_preferences(username, {"designation": body.designation.strip()})
     record_audit("profile.update", actor=username, role=role, resource_type="user", resource_id=username)
-    return _profile(username)
+    return _profile(username, session_role=role)
 
 
 @router.get("/me/preferences")
@@ -293,8 +297,8 @@ def assign_role(
     known = set(builtin_role_ids()) | set(as_permission_map())
     if new_role not in known:
         raise HTTPException(status_code=400, detail=f"Unknown role: {new_role}")
-    if new_role == "SuperAdmin" and role not in ("SuperAdmin", "PlatformAdmin"):
-        raise HTTPException(status_code=403, detail="Only SuperAdmin or PlatformAdmin can assign SuperAdmin.")
+    if new_role in ("SuperAdmin", "OrgAdmin") and role not in ("PlatformAdmin", "Admin", "SecurityAdmin"):
+        raise HTTPException(status_code=403, detail="Only platform or security administrators can assign organisation admin roles.")
     if target_username == actor and new_role not in ("Admin", "PlatformAdmin", "SuperAdmin", "OrgAdmin"):
         raise HTTPException(status_code=400, detail="Cannot demote your own admin access here.")
     users = load_all_users()
@@ -351,8 +355,8 @@ def invite_user(
     known = set(builtin_role_ids()) | set(as_permission_map())
     if new_role not in known:
         raise HTTPException(status_code=400, detail=f"Unknown role: {new_role}")
-    if new_role == "SuperAdmin" and role not in ("SuperAdmin", "PlatformAdmin"):
-        raise HTTPException(status_code=403, detail="Only SuperAdmin or PlatformAdmin can assign SuperAdmin.")
+    if new_role in ("SuperAdmin", "OrgAdmin") and role not in ("PlatformAdmin", "Admin", "SecurityAdmin"):
+        raise HTTPException(status_code=403, detail="Only platform or security administrators can assign organisation admin roles.")
     assert_role_assignable_by_actor(role, new_role)
     org_name = resolve_invite_org(
         actor_username=actor,
@@ -494,7 +498,13 @@ def list_my_sessions(
     from app.core.sessions import list_user_sessions
 
     rows = list_user_sessions(username, current_token=token)
-    return {"sessions": rows}
+    current = next((s for s in rows if s.get("current")), None)
+    others = [s for s in rows if not s.get("current")]
+    return {
+        "sessions": rows,
+        "current": current,
+        "other_count": len(others),
+    }
 
 
 @router.post("/me/sessions/revoke-others")

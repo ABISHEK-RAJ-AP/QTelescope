@@ -5,10 +5,11 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import HTTPException
 
-from app.core.permissions import ADMIN_ROLES, role_has
+from app.core.permissions import ADMIN_ROLES, ORG_SUPER_ROLES, role_has
 
-# Fleet-wide user administration (all organisations).
+# Fleet-wide user administration (all organisations). Org SuperAdmin is org-scoped only.
 PLATFORM_USER_ADMIN_ROLES = frozenset(ADMIN_ROLES | {"SecurityAdmin"})
+ORG_USER_ADMIN_ROLES = frozenset(ORG_SUPER_ROLES)
 
 ORG_ADMIN_ROLE = "OrgAdmin"
 
@@ -49,7 +50,7 @@ def is_platform_user_admin(role: str) -> bool:
 
 
 def is_org_admin(role: str) -> bool:
-    return (role or "") == ORG_ADMIN_ROLE
+    return (role or "") in ORG_USER_ADMIN_ROLES
 
 
 def can_list_users(role: str) -> bool:
@@ -97,13 +98,17 @@ def assert_can_view_user(
 
 
 def assert_role_assignable_by_actor(actor_role: str, new_role: str) -> None:
-    if is_org_admin(actor_role) and new_role not in ORG_ASSIGNABLE_ROLES:
-        raise HTTPException(
-            status_code=403,
-            detail=f"Organisation admins cannot assign the {new_role} role.",
-        )
-    if is_org_admin(actor_role) and new_role == ORG_ADMIN_ROLE:
-        raise HTTPException(status_code=403, detail="Promote organisation administrators via a platform admin.")
+    if is_org_admin(actor_role) and not is_platform_user_admin(actor_role):
+        if new_role not in ORG_ASSIGNABLE_ROLES:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Organisation admins cannot assign the {new_role} role.",
+            )
+        if new_role in ORG_SUPER_ROLES:
+            raise HTTPException(
+                status_code=403,
+                detail="Promote organisation administrators via a platform administrator.",
+            )
 
 
 def assert_can_change_account_status(actor_role: str, target_rec: Dict[str, Any]) -> None:

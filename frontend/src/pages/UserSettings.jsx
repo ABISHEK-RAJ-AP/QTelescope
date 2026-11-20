@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, Shield, SlidersHorizontal, User, Bell, Sun, Moon, Monitor } from 'lucide-react';
+import { Shield, SlidersHorizontal, User, Bell, Sun, Moon, Monitor } from 'lucide-react';
 import { api } from '../services/api';
 import { notifyError, notifySuccess } from '../lib/toast.js';
 import { unableToLoad } from '../constants/messages.js';
@@ -8,13 +8,7 @@ import { formatIST } from '../utils/time';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { writeDensity } from '../utils/uiPreferences.js';
-import {
-  capabilityHighlightsForRole,
-  groupPermissionsByDomain,
-  listPermissionsForRole,
-  roleLabel,
-  roleSummaryText,
-} from '../lib/permissions.js';
+import { roleLabel } from '../lib/permissions.js';
 import { Toggle } from '../components/ui/Toggle.jsx';
 import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
 import { ConfirmDialog } from '../components/observability/ConfirmDialog.jsx';
@@ -173,24 +167,14 @@ export function UserSettings({ currentUser, onUserUpdate }) {
     }
   };
 
-  const effectivePerms = useMemo(() => {
-    if (!profile) return [];
-    if (profile.permissions?.length) return profile.permissions;
-    if (currentUser?.permissions?.length) return currentUser.permissions;
-    return listPermissionsForRole(profile.role || currentUser?.role);
-  }, [profile, currentUser]);
-
-  const roleId = profile?.role || currentUser?.role;
-  const accessHighlights = useMemo(
-    () => capabilityHighlightsForRole(roleId, effectivePerms),
-    [roleId, effectivePerms],
+  const displayRole = profile?.role_label
+    || roleLabel(profile?.role || currentUser?.role)
+    || profile?.role
+    || currentUser?.role;
+  const otherSessionCount = useMemo(
+    () => sessions.filter((s) => !s.current).length,
+    [sessions],
   );
-  const permGroups = useMemo(
-    () => groupPermissionsByDomain(effectivePerms),
-    [effectivePerms],
-  );
-  const showTechnicalScopes = effectivePerms.length > 0
-    && !effectivePerms.some((p) => String(p).includes('*'));
 
   if (loading || !profile) return <BoneyardSkeleton layout="settings" />;
 
@@ -203,7 +187,7 @@ export function UserSettings({ currentUser, onUserUpdate }) {
             <h2 className="us-identity__name">{profile.full_name || profile.username}</h2>
             <p className="us-identity__meta">@{profile.username}</p>
             <p className="us-identity__meta">{profile.email || 'Add email in profile'}</p>
-            <span className="us-role">{profile.role_label || roleLabel(profile.role) || profile.role}</span>
+            <span className="us-role" title={displayRole}>{displayRole}</span>
           </div>
           <nav className="us-nav" aria-label="Settings sections">
             {TABS.map(({ id, label, icon: Icon }) => (
@@ -260,52 +244,6 @@ export function UserSettings({ currentUser, onUserUpdate }) {
 
       {tab === 'security' && (
         <>
-        <section className="us-card us-access" aria-labelledby="us-access-h">
-          <header className="us-card__head">
-            <h3 id="us-access-h" className="us-card__title">Role & access</h3>
-            <p className="us-card__desc">
-              {profile.role_label || roleLabel(roleId) || roleId}
-              {' · '}
-              {roleSummaryText(roleId)}
-            </p>
-          </header>
-          <ul className="us-access__caps" aria-label="Capability areas">
-            {accessHighlights.map((cap) => (
-              <li key={cap.id} className={`us-access__cap${cap.granted ? ' is-on' : ' is-off'}`}>
-                <span className="us-access__cap-status" aria-hidden>{cap.granted ? <Check size={14} /> : '—'}</span>
-                <div className="us-access__cap-body">
-                  <strong>{cap.label}</strong>
-                  <span>{cap.granted ? 'Included for your role' : 'Not included'}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-          {showTechnicalScopes ? (
-            <details className="us-access__details">
-              <summary>
-                Technical scopes
-                <span className="us-access__count">{effectivePerms.length}</span>
-              </summary>
-              <div className="us-access__scopes">
-                {permGroups.map((g) => (
-                  <div key={g.domain} className="us-access__scope-group">
-                    <h4>{g.title}</h4>
-                    <ul>
-                      {g.actions.map((a) => (
-                        <li key={a.id}>{a.label}</li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            </details>
-          ) : (
-            <p className="us-access__full page-hint">Full platform access — all capability areas enabled.</p>
-          )}
-          <p className="us-access__foot page-hint">
-            Role changes are managed by a platform or security administrator.
-          </p>
-        </section>
         <section className="us-card">
           <header className="us-card__head">
             <h3 className="us-card__title">Change password</h3>
@@ -401,49 +339,43 @@ export function UserSettings({ currentUser, onUserUpdate }) {
           )}
 
         </section>
-        <section className="us-card" data-tour="page-settings-sessions">
+        <section className="us-card us-sessions-card" data-tour="page-settings-sessions">
           <header className="us-card__head">
-            <h3 className="us-card__title">Active sessions</h3>
-            <p className="us-card__desc">Signed-in browsers and clients. Revoke sessions you do not recognize.</p>
+            <h3 className="us-card__title">Sign-in</h3>
+            <p className="us-card__desc">This browser stays signed in. Older clients are dropped automatically when the per-user session limit is reached.</p>
           </header>
           {sessions.length === 0 ? (
-            <p className="page-hint">No session list (sign in with bearer token to track sessions).</p>
+            <p className="page-hint">Session details appear after a normal sign-in.</p>
           ) : (
             <>
-              <ul className="us-sessions">
-                {sessions.map((s) => (
-                  <li key={s.session_id} className={s.current ? 'is-current' : ''}>
-                    <div>
-                      <strong>{s.current ? 'This device' : 'Other session'}</strong>
-                      <span className="page-hint"> · {s.role || profile?.role}</span>
-                    </div>
-                    <div className="page-hint">
-                      Started {formatIST(new Date((s.created_at || 0) * 1000).toISOString())}
-                      {' · '}
-                      Expires {formatIST(new Date((s.expires_at || 0) * 1000).toISOString())}
-                    </div>
-                    {!s.current && (
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn--xs"
-                        disabled={sessionsBusy}
-                        onClick={() => setSessionConfirm({ type: 'one', sessionId: s.session_id })}
-                      >
-                        Revoke
-                      </button>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              {sessions.some((s) => !s.current) && (
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  disabled={sessionsBusy}
-                  onClick={() => setSessionConfirm({ type: 'all' })}
-                >
-                  Sign out all other sessions
-                </button>
+              {sessions.filter((s) => s.current).map((s) => (
+                <div key={s.session_id} className="us-session-current">
+                  <strong>This device</strong>
+                  <span className="page-hint">
+                    Signed in {formatIST(new Date((s.created_at || 0) * 1000).toISOString())}
+                    {' · '}
+                    Expires {formatIST(new Date((s.expires_at || 0) * 1000).toISOString())}
+                  </span>
+                </div>
+              ))}
+              {otherSessionCount > 0 ? (
+                <div className="us-session-others">
+                  <p className="page-hint">
+                    {otherSessionCount === 1
+                      ? '1 other client is still signed in.'
+                      : `${otherSessionCount} other clients are still signed in.`}
+                  </p>
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn--sm"
+                    disabled={sessionsBusy}
+                    onClick={() => setSessionConfirm({ type: 'all' })}
+                  >
+                    Sign out other devices
+                  </button>
+                </div>
+              ) : (
+                <p className="page-hint">No other active clients.</p>
               )}
             </>
           )}
@@ -557,31 +489,6 @@ export function UserSettings({ currentUser, onUserUpdate }) {
       )}
         </div>
       </div>
-      {sessionConfirm?.type === 'one' && (
-        <ConfirmDialog
-          danger
-          busy={sessionsBusy}
-          dlg={{
-            title: 'Revoke this session?',
-            body: 'That device will be signed out immediately and must sign in again.',
-            confirm: 'Yes, revoke',
-            onConfirm: async () => {
-              setSessionsBusy(true);
-              try {
-                await api.revokeSession(sessionConfirm.sessionId);
-                notifySuccess('Session revoked.');
-                setSessionConfirm(null);
-                await load();
-              } catch (e) {
-                notifyError(e?.message || 'Revoke failed.');
-              } finally {
-                setSessionsBusy(false);
-              }
-            },
-          }}
-          onCancel={() => !sessionsBusy && setSessionConfirm(null)}
-        />
-      )}
       {sessionConfirm?.type === 'all' && (
         <ConfirmDialog
           danger

@@ -59,7 +59,7 @@ def test_superadmin_bootstrap_login(monkeypatch):
     assert resp.status_code == 200
     body = resp.json()
     assert body.get("status") == "SUCCESS"
-    assert body.get("user", {}).get("role") == "SuperAdmin"
+    assert body.get("user", {}).get("role") == "PlatformAdmin"
 
 
 def test_config_status_reserved_includes_superadmin(monkeypatch):
