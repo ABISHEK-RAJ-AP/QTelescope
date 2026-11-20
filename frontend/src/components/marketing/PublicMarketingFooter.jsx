@@ -106,12 +106,14 @@ export function PublicMarketingFooter({ className = '', compact = false }) {
       <footer
         className={`relative z-20 w-full border-t border-neutral-200/80 bg-white/95 px-6 py-4 dark:border-neutral-800/80 dark:bg-[#070a0f]/95 backdrop-blur-md text-neutral-600 dark:text-neutral-400 ${className}`}
       >
-        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row text-xs">
-          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 sm:flex-1">
+        <div className="mx-auto grid w-full max-w-6xl gap-4 text-xs sm:grid-cols-[auto_1fr] sm:items-center sm:gap-x-6">
+          <div className="flex justify-center sm:justify-start">
             <CdacFooterLogo />
-            <p className="text-center sm:text-left m-0">{cdacCopyrightLine(currentYear)}</p>
           </div>
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 items-center">
+          <p className="m-0 text-center text-neutral-600 dark:text-neutral-400 sm:text-left leading-snug">
+            {cdacCopyrightLine(currentYear)}
+          </p>
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 items-center sm:col-span-2 sm:justify-end">
             <a href="/#capabilities" className="font-semibold hover:text-cyan-600 dark:hover:text-cyan-400">
               Capabilities
             </a>
