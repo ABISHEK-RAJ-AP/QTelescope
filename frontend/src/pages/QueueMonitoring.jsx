@@ -25,6 +25,7 @@ import { COPY } from '../copy/operator.js';
 import { formatIST } from '../utils/time';
 import { DataPanelToolbar, SortableTh } from '../components/observability/DataViewToolbar.jsx';
 import { ListPager } from '../components/observability/ListPager.jsx';
+import { formatWaitFromResolved, resolveWaitSeconds } from '../lib/queueWaitDisplay.js';
 import './QueueMonitoring.css';
 
 const POLL_MS = 15000;
@@ -32,19 +33,22 @@ const HISTORY_PAGE_SIZE = 25;
 const COND_MARK = { OPTIMAL: '●', MODERATE: '▲', HEAVY: '■', CONGESTED: '■' };
 
 const toDate = (v) => new Date(v.endsWith('Z') ? v : `${v}Z`);
-const fmtWait = (s, pending) => {
-  const p = pending != null ? Number(pending) : null;
-  if (s == null || (p > 0 && s <= 0)) return '—';
-  if (s <= 0) return '0s';
-  return s < 60 ? `${Math.round(s)}s` : `${Math.floor(s / 60)}m ${Math.round(s % 60)}s`;
+const fmtSecs = (s) => {
+  if (s == null || !Number.isFinite(Number(s))) return '—';
+  const n = Number(s);
+  if (n <= 0) return '0s';
+  return n < 60 ? `${Math.round(n)}s` : `${Math.floor(n / 60)}m ${Math.round(n % 60)}s`;
 };
 
-const waitBarValue = (q) => {
-  const p = q.pending_jobs || 0;
-  const w = q.estimated_wait_time;
-  if (p > 0 && (w == null || w <= 0)) return null;
-  return w != null && w > 0 ? w : 0;
-};
+const waitDisplay = (q, an) => formatWaitFromResolved(
+  resolveWaitSeconds(q?.pending_jobs, q?.estimated_wait_time, an),
+  q?.pending_jobs,
+);
+
+function WaitValue({ q, an, className = 'qm-num' }) {
+  const d = waitDisplay(q, an);
+  return <span className={className} title={d.title}>{d.text}</span>;
+}
 // "simulated:ibm_quantum" -> { kind: 'simulated', who: 'ibm_quantum' }
 const parseSource = (s) => {
   if (!s) return null;
@@ -62,7 +66,7 @@ function QueueDrawerBody({ q, an, hist, jobs, nav }) {
   const dark = resolved === 'dark';
   const t = getChartTheme(dark);
   const option = useMemo(() => ({
-    grid: { left: 8, right: 12, top: 28, bottom: 8, containLabel: true },
+    grid: { left: 8, right: 12, top: 36, bottom: 8, containLabel: true },
     tooltip: baseTooltip(dark),
     legend: { top: 0, textStyle: { color: t.textColor } },
     xAxis: { type: 'time', axisLabel: { color: t.textColor }, axisLine: { lineStyle: { color: t.axisLine } } },
@@ -83,9 +87,9 @@ function QueueDrawerBody({ q, an, hist, jobs, nav }) {
       <DetailModalSection title="Queue snapshot">
         <DetailModalDl>
           <DetailModalRow label="Pending now">{q.pending_jobs}</DetailModalRow>
-          <DetailModalRow label="Est. wait now">{fmtWait(q.estimated_wait_time, q.pending_jobs)}</DetailModalRow>
-          <DetailModalRow label="Peak pending / wait">{an?.pending_max ?? '—'} / {fmtWait(an?.wait_max_s)}</DetailModalRow>
-          <DetailModalRow label="Mean pending / wait">{an?.pending_mean ?? '—'} / {fmtWait(an?.wait_mean_s)}</DetailModalRow>
+          <DetailModalRow label="Est. wait now"><WaitValue q={q} an={an} className="" /></DetailModalRow>
+          <DetailModalRow label="Peak pending / wait">{an?.pending_max ?? '—'} / {fmtSecs(an?.wait_max_s)}</DetailModalRow>
+          <DetailModalRow label="Mean pending / wait">{an?.pending_mean ?? '—'} / {fmtSecs(an?.wait_mean_s)}</DetailModalRow>
           <DetailModalRow label="Samples">{an?.samples ?? 0}</DetailModalRow>
           <DetailModalRow label="Telemetry source"><SourceTag source={an?.telemetry_source_latest} /></DetailModalRow>
           <DetailModalRow label="Trend">{q.trend}</DetailModalRow>
@@ -182,7 +186,8 @@ export const QueueMonitoring = () => {
 
   const anBy = useMemo(() => Object.fromEntries((analytics?.backends || []).map((b) => [b.backend_id, b])), [analytics]);
   const ranked = useMemo(() => [...(queues || [])].sort((a, b) => (b.pending_jobs || 0) - (a.pending_jobs || 0)
-    || (b.estimated_wait_time || 0) - (a.estimated_wait_time || 0)), [queues]);
+    || (resolveWaitSeconds(b.pending_jobs, b.estimated_wait_time, null).seconds || 0)
+    - (resolveWaitSeconds(a.pending_jobs, a.estimated_wait_time, null).seconds || 0)), [queues]);
 
   const displayQueues = useMemo(() => {
     let list = ranked.slice();
@@ -193,26 +198,28 @@ export const QueueMonitoring = () => {
     list.sort((a, b) => {
       let c = 0;
       if (sort.key === 'name') c = String(a.backend_name).localeCompare(String(b.backend_name));
-      else if (sort.key === 'wait') c = (a.estimated_wait_time || 0) - (b.estimated_wait_time || 0);
+      else if (sort.key === 'wait') {
+        const wa = resolveWaitSeconds(a.pending_jobs, a.estimated_wait_time, anBy[a.backend_id]).seconds ?? -1;
+        const wb = resolveWaitSeconds(b.pending_jobs, b.estimated_wait_time, anBy[b.backend_id]).seconds ?? -1;
+        c = wa - wb;
+      }
       else c = (a.pending_jobs || 0) - (b.pending_jobs || 0);
       return c * mul;
     });
     return list;
-  }, [ranked, sort, backendFilter]);
+  }, [ranked, sort, backendFilter, anBy]);
 
   const barChartHeight = useMemo(
-    () => Math.max(168, ranked.length * 40 + 52),
+    () => Math.max(200, ranked.length * 36 + 72),
     [ranked.length],
   );
 
   const barOption = useMemo(() => {
     const sem = getChartSemanticColors();
     const names = ranked.map((q) => q.backend_name);
+  const waitResolved = ranked.map((q) => resolveWaitSeconds(q.pending_jobs, q.estimated_wait_time, anBy[q.backend_id]));
     return {
-      grid: [
-        { left: 4, right: '54%', top: 44, bottom: 12, containLabel: true },
-        { left: '52%', right: 4, top: 44, bottom: 12, containLabel: true },
-      ],
+      grid: { left: 8, right: 20, top: 52, bottom: 8, containLabel: true },
       tooltip: {
         ...baseTooltip(dark),
         trigger: 'axis',
@@ -222,88 +229,77 @@ export const QueueMonitoring = () => {
           const idx = rows[0]?.dataIndex ?? 0;
           const q = ranked[idx];
           if (!q) return '';
+          const wd = waitDisplay(q, anBy[q.backend_id]);
           return [
             q.backend_name,
             `Pending: ${q.pending_jobs ?? '—'}`,
-            `Est. wait: ${fmtWait(q.estimated_wait_time, q.pending_jobs)}`,
+            `Est. wait: ${wd.text}`,
+            wd.title,
             q.queue_condition ? `Condition: ${q.queue_condition}` : '',
           ].filter(Boolean).join('<br/>');
         },
       },
-      legend: { top: 4, left: 'center', itemGap: 16, textStyle: { color: t.textColor, fontSize: 11 } },
+      legend: {
+        top: 6,
+        left: 'center',
+        itemGap: 20,
+        textStyle: { color: t.textColor, fontSize: 11 },
+      },
       xAxis: [
         {
           type: 'value',
-          gridIndex: 0,
+          position: 'bottom',
           minInterval: 1,
-          name: 'Jobs',
+          name: 'Pending jobs',
+          nameLocation: 'middle',
+          nameGap: 22,
           nameTextStyle: { color: t.textColor, fontSize: 10 },
           axisLabel: { color: t.textColor, fontSize: 10 },
           splitLine: { lineStyle: { color: t.splitColor } },
         },
         {
           type: 'value',
-          gridIndex: 1,
+          position: 'top',
           minInterval: 1,
-          name: 'Wait (s)',
+          name: 'Est. wait (s)',
+          nameLocation: 'middle',
+          nameGap: 22,
           nameTextStyle: { color: t.textColor, fontSize: 10 },
           axisLabel: { color: t.textColor, fontSize: 10 },
-          splitLine: { lineStyle: { color: t.splitColor } },
+          splitLine: { show: false },
         },
       ],
-      yAxis: [
-        {
-          type: 'category',
-          gridIndex: 0,
-          inverse: true,
-          data: names,
-          axisLabel: { color: t.textColor, width: 110, overflow: 'truncate', fontSize: 11 },
-          axisLine: { lineStyle: { color: t.axisLine } },
-          axisTick: { show: false },
-        },
-        {
-          type: 'category',
-          gridIndex: 1,
-          inverse: true,
-          data: names,
-          axisLabel: { show: false },
-          axisLine: { show: false },
-          axisTick: { show: false },
-        },
-      ],
+      yAxis: {
+        type: 'category',
+        inverse: true,
+        data: names,
+        axisLabel: { color: t.textColor, width: 128, overflow: 'truncate', fontSize: 11 },
+        axisLine: { lineStyle: { color: t.axisLine } },
+        axisTick: { show: false },
+      },
       series: [
         {
           name: 'Pending jobs',
           type: 'bar',
           xAxisIndex: 0,
-          yAxisIndex: 0,
-          barMaxWidth: 16,
+          barMaxWidth: 14,
           itemStyle: { color: sem.accent },
-          label: { show: true, position: 'right', fontSize: 10, color: t.textColor },
           data: ranked.map((q) => q.pending_jobs || 0),
         },
         {
           name: 'Est. wait',
           type: 'bar',
           xAxisIndex: 1,
-          yAxisIndex: 1,
-          barMaxWidth: 16,
-          itemStyle: { color: sem.warn },
-          label: {
-            show: true,
-            position: 'right',
-            fontSize: 10,
-            color: t.textColor,
-            formatter: (p) => {
-              const q = ranked[p.dataIndex];
-              return waitBarValue(q) == null ? '—' : fmtWait(waitBarValue(q));
-            },
+          barMaxWidth: 14,
+          itemStyle: {
+            color: sem.warn,
+            opacity: 0.92,
           },
-          data: ranked.map((q) => waitBarValue(q) ?? 0),
+          data: waitResolved.map((r) => r.seconds ?? null),
         },
       ],
     };
-  }, [ranked, dark, t]);
+  }, [ranked, dark, t, anBy]);
 
   const withHist = (queues || []).filter((q) => (history[q.backend_id] || []).length > 0);
 
@@ -328,24 +324,51 @@ export const QueueMonitoring = () => {
   }, [historyRows.length, metric]);
 
   const lineOption = useMemo(() => ({
-    grid: { left: 8, right: 16, top: 32, bottom: 8, containLabel: true },
+    grid: { left: 8, right: 16, top: 16, bottom: 52, containLabel: true },
     tooltip: baseTooltip(dark),
-    legend: { top: 0, textStyle: { color: t.textColor } },
+    legend: {
+      bottom: 4,
+      type: 'scroll',
+      left: 'center',
+      itemGap: 12,
+      textStyle: { color: t.textColor, fontSize: 10 },
+    },
     xAxis: { type: 'time', axisLabel: { color: t.textColor }, axisLine: { lineStyle: { color: t.axisLine } } },
-    yAxis: { type: 'value', name: metric === 'pending_jobs' ? 'pending jobs' : 'wait (s)', minInterval: metric === 'pending_jobs' ? 1 : undefined, axisLabel: { color: t.textColor }, splitLine: { lineStyle: { color: t.splitColor } } },
+    yAxis: {
+      type: 'value',
+      name: metric === 'pending_jobs' ? 'Pending jobs' : 'Est. wait (s)',
+      nameTextStyle: { color: t.textColor, fontSize: 10 },
+      minInterval: metric === 'pending_jobs' ? 1 : undefined,
+      axisLabel: { color: t.textColor },
+      splitLine: { lineStyle: { color: t.splitColor } },
+    },
     series: withHist.map((q, i) => ({
-      name: q.backend_name, type: 'line', symbol: ['circle', 'rect', 'triangle', 'diamond', 'pin'][i % 5], symbolSize: 7,
-      data: history[q.backend_id].map((h) => [toDate(h.timestamp), h[metric === 'pending_jobs' ? 'pending_jobs' : 'estimated_wait_time']]),
+      name: q.backend_name,
+      type: 'line',
+      connectNulls: false,
+      symbol: ['circle', 'rect', 'triangle', 'diamond', 'pin'][i % 5],
+      symbolSize: 7,
+      data: history[q.backend_id].map((h) => {
+        const y = metric === 'pending_jobs'
+          ? h.pending_jobs
+          : resolveWaitSeconds(h.pending_jobs, h.estimated_wait_time, anBy[q.backend_id]).seconds;
+        if (y == null || !Number.isFinite(Number(y))) return [toDate(h.timestamp), null];
+        return [toDate(h.timestamp), Number(y)];
+      }),
     })),
-  }), [withHist, history, metric, dark, t]);
+  }), [withHist, history, metric, dark, t, anBy]);
 
   if (!queues && !error) return <BoneyardSkeleton layout="grid" />;
   if (!queues) return <div className="page-stack"><ErrorState variant="panel" message={error} onRetry={load} /></div>;
 
   const stale = lastRefresh && now - lastRefresh.getTime() > POLL_MS * 2.5;
   const totalPending = queues.reduce((a, q) => a + (q.pending_jobs || 0), 0);
-  const waits = queues.filter((q) => q.estimated_wait_time != null);
-  const worstWait = waits.length ? [...waits].sort((a, b) => b.estimated_wait_time - a.estimated_wait_time)[0] : null;
+  const waitRanked = queues
+    .map((q) => ({ q, r: resolveWaitSeconds(q.pending_jobs, q.estimated_wait_time, anBy[q.backend_id]) }))
+    .filter((x) => x.r.seconds != null);
+  const worstWait = waitRanked.length
+    ? [...waitRanked].sort((a, b) => b.r.seconds - a.r.seconds)[0].q
+    : null;
   const idle = queues.filter((q) => !q.pending_jobs).length;
   const sel = queues.find((q) => q.backend_id === selectedId);
   const asOf = lastRefresh ? formatIST(lastRefresh) : undefined;
@@ -360,11 +383,20 @@ export const QueueMonitoring = () => {
 
       <section className="qm-kpis" aria-label="Queue summary">
         <div className="qm-kpi"><div className="qm-kpi__label">Total pending</div><div className="qm-kpi__value">{totalPending}</div><div className="qm-kpi__sub">across {queues.length} backends</div></div>
-        <div className="qm-kpi"><div className="qm-kpi__label">Longest wait</div><div className="qm-kpi__value">{fmtWait(worstWait?.estimated_wait_time, worstWait?.pending_jobs)}</div><div className="qm-kpi__sub">{worstWait ? worstWait.backend_name : '—'}</div></div>
+        <div className="qm-kpi">
+          <div className="qm-kpi__label">Longest wait</div>
+          <div className="qm-kpi__value" title={worstWait ? waitDisplay(worstWait, anBy[worstWait.backend_id]).title : ''}>
+            {worstWait ? waitDisplay(worstWait, anBy[worstWait.backend_id]).text : '—'}
+          </div>
+          <div className="qm-kpi__sub">{worstWait ? worstWait.backend_name : '—'}</div>
+        </div>
         <div className="qm-kpi"><div className="qm-kpi__label">Idle queues</div><div className="qm-kpi__value">{idle}</div><div className="qm-kpi__sub">of {queues.length} with zero pending</div></div>
         <div className="qm-kpi"><div className="qm-kpi__label">History samples</div><div className="qm-kpi__value">{(analytics?.backends || []).reduce((a, b) => a + b.samples, 0)}</div><div className="qm-kpi__sub">{analytics ? COPY.queue.historySub : 'History unavailable'}</div></div>
       </section>
       <section className="qm-charts">
+        <p className="qm-hint page-hint" role="note">
+          Est. wait uses the latest status poll when the vendor supplies it; otherwise ~values come from stored history mean (hover cells for detail).
+        </p>
         <ChartPanel
           title="Queue depth and wait by backend"
           titleTo="/app/execution/jobs"
@@ -375,24 +407,25 @@ export const QueueMonitoring = () => {
           tableAlternative={(
             <table className="qm-alt">
               <thead><tr><th scope="col">Backend</th><th scope="col">Pending</th><th scope="col">Est. wait</th><th scope="col">Condition</th></tr></thead>
-              <tbody>{ranked.map((q) => <tr key={q.backend_id}><th scope="row">{q.backend_name}</th><td>{q.pending_jobs}</td><td>{fmtWait(q.estimated_wait_time, q.pending_jobs)}</td><td>{q.queue_condition}</td></tr>)}</tbody>
+              <tbody>{ranked.map((q) => <tr key={q.backend_id}><th scope="row">{q.backend_name}</th><td>{q.pending_jobs}</td><td><WaitValue q={q} an={anBy[q.backend_id]} /></td><td>{q.queue_condition}</td></tr>)}</tbody>
             </table>
           )}
         >
           <QtECharts option={barOption} className="qm-bar-chart" style={{ height: barChartHeight, width: '100%' }} />
         </ChartPanel>
 
+        <div className="qm-chart-panel qm-chart-panel--history">
         <ChartPanel
           title="Queue history"
           titleTo="/app/telemetry/trends"
-          question="Trend over the selected time window."
+          question="Trend over stored telemetry samples."
           sourceKind="derived" asOf={asOf}
           provenanceDetail={COPY.queue.historyProvenance}
-          state={withHist.length ? 'ready' : 'empty'} emptyTitle="No history" emptyMessage="No stored queue samples yet." minHeight={260}
+          state={withHist.length ? 'ready' : 'empty'} emptyTitle="No history" emptyMessage="No stored queue samples yet." minHeight={280}
           actions={(
             <span className="qm-seg" role="group" aria-label="History metric">
-              <button type="button" aria-pressed={metric === 'pending_jobs'} onClick={() => setMetric('pending_jobs')}>Pending</button>
-              <button type="button" aria-pressed={metric === 'wait'} onClick={() => setMetric('wait')}>Wait</button>
+              <button type="button" aria-pressed={metric === 'pending_jobs'} onClick={() => setMetric('pending_jobs')}>Pending jobs</button>
+              <button type="button" aria-pressed={metric === 'wait'} onClick={() => setMetric('wait')}>Est. wait</button>
             </span>
           )}
           tableAlternative={(
@@ -405,7 +438,7 @@ export const QueueMonitoring = () => {
                       <th scope="row">{h.backend_name}</th>
                       <td>{formatIST(toDate(h.timestamp))}</td>
                       <td>{h.pending_jobs}</td>
-                      <td>{fmtWait(h.estimated_wait_time, h.pending_jobs)}</td>
+                      <td><WaitValue q={h} an={anBy[h.backend_id]} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -421,8 +454,9 @@ export const QueueMonitoring = () => {
             </div>
           )}
         >
-          <QtECharts option={lineOption} style={{ height: 260 }} />
+          <QtECharts option={lineOption} className="qm-line-chart" style={{ height: 280, width: '100%' }} />
         </ChartPanel>
+        </div>
       </section>
 
       <section className="card qm-table-card dvt-panel" data-tour="page-queues">
@@ -459,8 +493,8 @@ export const QueueMonitoring = () => {
                   </header>
                   <dl className="dvt-card__stats">
                     <div><dt>Pending</dt><dd>{q.pending_jobs}</dd></div>
-                    <div><dt>Wait now</dt><dd>{fmtWait(q.estimated_wait_time, q.pending_jobs)}</dd></div>
-                    <div><dt>Mean / max</dt><dd>{a?.samples ? `${fmtWait(a.wait_mean_s)} / ${fmtWait(a.wait_max_s)}` : '—'}</dd></div>
+                    <div><dt>Wait now</dt><dd><WaitValue q={q} an={a} className="" /></dd></div>
+                    <div><dt>Mean / max</dt><dd>{a?.samples ? `${fmtSecs(a.wait_mean_s)} / ${fmtSecs(a.wait_max_s)}` : '—'}</dd></div>
                     <div><dt>Trend</dt><dd>{q.trend || '—'}</dd></div>
                   </dl>
                   <footer className="dvt-card__foot">
@@ -497,8 +531,8 @@ export const QueueMonitoring = () => {
                       </td>
                       <td><span className="qm-cond" data-c={q.queue_condition}>{COND_MARK[q.queue_condition] || '○'} {q.queue_condition}</span></td>
                       <td className="qm-num">{q.pending_jobs}</td>
-                      <td className="qm-num">{fmtWait(q.estimated_wait_time, q.pending_jobs)}</td>
-                      <td className="qm-num">{a?.samples ? `${fmtWait(a.wait_mean_s)} / ${fmtWait(a.wait_max_s)}` : '—'}</td>
+                      <td><WaitValue q={q} an={a} /></td>
+                      <td className="qm-num">{a?.samples ? `${fmtSecs(a.wait_mean_s)} / ${fmtSecs(a.wait_max_s)}` : '—'}</td>
                       <td>{q.trend}</td>
                       <td><SourceTag source={a?.telemetry_source_latest} /></td>
                     </tr>

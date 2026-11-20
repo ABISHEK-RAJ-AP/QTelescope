@@ -244,8 +244,15 @@ class IBMProviderAdapter(BaseProviderAdapter):
                 headers = self._get_auth_headers()
                 _, st = self._http_request(f"{self.base_url}/backends/{backend_id}/status", headers=headers, timeout=8)
                 is_op = bool(st.get("state") is True or st.get("status") in ["active", "online"])
-                pending = st.get("length_queue", 0)
-                eta = st.get("estimated_time") or st.get("estimated_wait")
+                pending = st.get("length_queue")
+                if pending is None:
+                    pending = st.get("pending_jobs", 0)
+                eta = (
+                    st.get("estimated_time")
+                    or st.get("estimated_wait")
+                    or st.get("estimated_wait_time")
+                    or st.get("queue_time")
+                )
                 wait_s = None
                 if eta is not None:
                     try:
