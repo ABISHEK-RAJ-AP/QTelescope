@@ -69,19 +69,40 @@
   top: 0.25em;
 }
 
-.main-content :is(h1, h2, h3, .page-title, .card-title, .section-title, .rp-h, .fo-panel__title) {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  text-box-trim: trim-both;
-  text-box-edge: cap alphabetic;
+/* In-card headings only — never clamp app chrome titles (PageHeader h1). */
+.main-content :is(h2, h3, .card-title, .section-title, .admin-card-title, .page-section-title, .rp-h, .fo-panel__title) {
+  overflow-wrap: anywhere;
+  word-break: normal;
+  hyphens: manual;
 }
 
 .main-content h1,
 .main-content .page-title {
   font-weight: var(--font-weight-bold);
   font-synthesis: none;
+}
+
+.main-content .page-header,
+.main-content .page-header h1,
+.main-content .page-header__title,
+.main-content .page-header__title-text,
+.main-content .page-header__kicker,
+.main-content .page-header__desc {
+  overflow: visible;
+  display: revert;
+  -webkit-line-clamp: unset;
+  -webkit-box-orient: unset;
+  text-box-trim: unset;
+  text-box-edge: unset;
+  hyphens: manual;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.main-content .page-header__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .main-content .truncate-middle {

@@ -96,8 +96,15 @@
 }
 
 .page-header__title-text {
+  flex: 1 1 auto;
   min-width: 0;
+  max-width: 100%;
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
   overflow-wrap: anywhere;
+  word-break: normal;
+  line-height: var(--line-height-heading, 1.25);
 }
 
 .page-header__id-chip {
