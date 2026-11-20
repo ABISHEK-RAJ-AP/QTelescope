@@ -75,20 +75,15 @@ export function PublicMarketingFooter({ className = '', compact = false }) {
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-5 lg:gap-12">
           {/* Brand Info Column */}
           <div className="lg:col-span-2 space-y-4">
-            <Link to="/" className="flex items-center gap-3 group">
+            <Link to="/" className="group inline-flex flex-col gap-1" aria-label="Q-TeleScope home">
               <QtTeleScopeMark
                 size={40}
-                className="transition-transform group-hover:scale-105"
+                className="qt-brand-lockup--header transition-transform group-hover:scale-[1.02]"
                 decorative
               />
-              <div className="flex flex-col">
-                <span className="font-extrabold text-xl tracking-tight text-neutral-950 dark:text-white">
-                  Q-TeleScope
-                </span>
-                <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                  C-DAC Quantum Platform
-                </span>
-              </div>
+              <span className="text-xs font-semibold text-neutral-500 dark:text-neutral-400 pl-0.5">
+                C-DAC Quantum Platform
+              </span>
             </Link>
 
             <p className="max-w-sm text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">

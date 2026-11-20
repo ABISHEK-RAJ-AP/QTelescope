@@ -725,14 +725,11 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
           if (!e.currentTarget.contains(e.relatedTarget)) setHoverExpand(false);
         }}
       >
-        <Link to="/" className="sidebar-header" title="Q-TeleScope home">
-          <QtTeleScopeMark size={28} className="sidebar-logo-mark" decorative />
-          {!effectiveCollapsed && (
-            <div>
-              <div className="sidebar-title">Q-TeleScope</div>
-              <div className="sidebar-subtitle">Quantum Platform</div>
-            </div>
-          )}
+        <Link to="/" className="sidebar-header" title="Q-TeleScope home" aria-label="Q-TeleScope home">
+          <QtTeleScopeMark size={30} className="sidebar-logo-mark" decorative />
+          {!effectiveCollapsed ? (
+            <div className="sidebar-subtitle sidebar-subtitle--only">Quantum Platform</div>
+          ) : null}
         </Link>
 
         <nav className="sidebar-nav" data-tour="sidebar-nav">

@@ -49,8 +49,7 @@ export function AuthShell({
       <main className={`relative z-10 flex-1 flex items-center justify-center px-4 sm:px-6${isCert ? ' py-6' : ' py-10'}`}>
         {isCert ? (
           <div className={`auth-cert-card w-full ${maxWidth}`}>
-            <QtTeleScopeMark size={56} className="auth-cert-card__logo-mark" />
-            <p className="auth-cert-card__wordmark">Q-TeleScope</p>
+            <QtTeleScopeMark size={44} className="auth-cert-card__logo-mark" decorative />
             <header className="auth-cert-card__head">
               <h1>{title}</h1>
               {subtitle ? <p className="auth-cert-card__subtitle">{subtitle}</p> : null}
@@ -63,10 +62,12 @@ export function AuthShell({
             className={`auth-shell__panel w-full ${maxWidth} grid grid-cols-1 lg:grid-cols-12 gap-0`}
           >
             <div className="auth-shell__brand lg:col-span-5 relative z-10 flex flex-col gap-3 p-6 sm:p-8 text-white min-h-[520px] lg:min-h-0 overflow-hidden">
-              <div className="flex items-center gap-2.5 shrink-0">
-                <QtTeleScopeMark size={32} className="qt-brand-mark--on-dark" decorative />
-                <span className="text-lg font-semibold tracking-tight">Q-TeleScope</span>
-              </div>
+              <QtTeleScopeMark
+                size={36}
+                theme="dark"
+                className="qt-brand-lockup--on-dark shrink-0"
+                decorative
+              />
 
               <div className="auth-shell__fridge flex-1 min-h-[280px] max-h-[340px] w-full flex items-stretch">
                 <AuthFridgeVisual />

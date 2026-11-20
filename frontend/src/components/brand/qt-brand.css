@@ -1,48 +1,73 @@
-.qt-brand-mark {
-  display: block;
+.qt-brand-lockup {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  background: none;
+  border: none;
+  padding: 0;
+  box-shadow: none;
   flex-shrink: 0;
-  --qt-mark-plate: color-mix(in srgb, var(--accent-cyan, #0284c7) 12%, var(--bg-card, #fff));
-  --qt-mark-stroke: var(--accent-cyan, #0284c7);
-  --qt-mark-plate-border: color-mix(in srgb, var(--accent-cyan, #0284c7) 28%, var(--border-color, #e2e8f0));
 }
 
-.qt-brand-mark__plate {
-  fill: var(--qt-mark-plate);
-  stroke: var(--qt-mark-plate-border);
-  stroke-width: 1;
+.qt-brand-lockup__img {
+  height: var(--qt-logo-h, 32px);
+  width: auto;
+  max-width: min(320px, 78vw);
+  object-fit: contain;
+  display: block;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
 }
 
-.qt-brand-mark__ring,
-.qt-brand-mark__tail {
-  stroke: var(--qt-mark-stroke);
+.qt-brand-lockup__img--dark {
+  display: none;
 }
 
-/* Public marketing surfaces (Tailwind .dark on html) */
-.dark .qt-brand-mark,
-html.dark .qt-brand-mark {
-  --qt-mark-plate: color-mix(in srgb, #22d3ee 14%, #0f172a);
-  --qt-mark-stroke: #22d3ee;
-  --qt-mark-plate-border: color-mix(in srgb, #22d3ee 35%, #1e293b);
+.dark .qt-brand-lockup__img--light,
+html.dark .qt-brand-lockup__img--light {
+  display: none;
 }
 
-.qt-brand-mark--on-dark {
-  --qt-mark-plate: color-mix(in srgb, #22d3ee 12%, #0b1220);
-  --qt-mark-stroke: #22d3ee;
-  --qt-mark-plate-border: color-mix(in srgb, #22d3ee 30%, #1e293b);
+.dark .qt-brand-lockup__img--dark,
+html.dark .qt-brand-lockup__img--dark {
+  display: block;
 }
 
 .reg-stage__logo-mark {
-  width: 120px;
-  height: auto;
+  --qt-logo-h: 44px;
+  max-width: 240px;
 }
 
 .auth-cert-card__logo-mark {
-  margin: 0 auto;
-  width: 56px;
-  height: 56px;
+  --qt-logo-h: 40px;
+  margin: 0 auto 4px;
+  max-width: 220px;
 }
 
 .sidebar-logo-mark {
-  width: 28px;
-  height: 28px;
+  --qt-logo-h: 30px;
+  max-width: 168px;
+}
+
+.sidebar-collapsed:not(.sidebar-hover-expanded) .sidebar-logo-mark {
+  --qt-logo-h: 28px;
+  max-width: 30px;
+  overflow: hidden;
+}
+
+.sidebar-collapsed:not(.sidebar-hover-expanded) .sidebar-logo-mark .qt-brand-lockup__img,
+.sidebar-collapsed:not(.sidebar-hover-expanded) .sidebar-logo-mark.qt-brand-lockup__img {
+  object-fit: cover;
+  object-position: left center;
+}
+
+.qt-brand-lockup--header {
+  --qt-logo-h: 40px;
+}
+
+.qt-brand-lockup--on-dark {
+  --qt-logo-h: 36px;
+  max-width: 240px;
 }

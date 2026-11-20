@@ -31,20 +31,15 @@ export function PublicMarketingHeader({ className = '' }) {
       <div className="w-full flex min-h-[72px] items-center justify-between px-6 sm:px-8 lg:px-12">
         {/* Left End: C-DAC Brand & Title (Clean, NO container box around logo) */}
         <div className="flex items-center gap-3 flex-shrink-0">
-          <Link to="/" className="flex items-center gap-3 group">
+          <Link to="/" className="group inline-flex flex-col gap-0.5" aria-label="Q-TeleScope home">
             <QtTeleScopeMark
-              size={40}
-              className="transition-transform group-hover:scale-105"
+              size={42}
+              className="qt-brand-lockup--header transition-transform group-hover:scale-[1.02]"
               decorative
             />
-            <div className="flex flex-col">
-              <span className="font-extrabold text-xl tracking-tight text-neutral-950 dark:text-white whitespace-nowrap">
-                Q-TeleScope
-              </span>
-              <span className="hidden sm:block text-[10.5px] font-semibold tracking-wider uppercase text-neutral-500 dark:text-neutral-400 -mt-1 whitespace-nowrap">
-                Quantum Observability
-              </span>
-            </div>
+            <span className="hidden sm:block text-[10.5px] font-semibold tracking-wider uppercase text-neutral-500 dark:text-neutral-400 whitespace-nowrap pl-0.5">
+              Quantum Observability
+            </span>
           </Link>
         </div>
 

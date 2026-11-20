@@ -362,8 +362,7 @@ export function RegisterPage() {
       ) : (
         <div className={`reg-stage reg-stage--flow reg-stage--step-${flowStep}${flowStep !== 'type' ? ' reg-stage--detail' : ''}`}>
           <div className="reg-stage__brand">
-            <QtTeleScopeMark size={56} className="reg-stage__logo-mark" decorative />
-            <p className="reg-stage__wordmark">Q-TeleScope</p>
+            <QtTeleScopeMark size={48} className="reg-stage__logo-mark" decorative />
             <div className="reg-stage__fridge">
               <AuthFridgeVisual />
             </div>

@@ -16,20 +16,15 @@ export function OnboardingMarketingHeader({ currentUser, onExit, stepIndex, onSt
   return (
     <header className="relative z-30 w-full shrink-0 border-b border-neutral-200/60 bg-white/85 backdrop-blur-xl dark:border-neutral-800/60 dark:bg-[#070a0f]/80">
       <div className="flex min-h-[56px] w-full items-center gap-4 px-4 sm:px-6 lg:px-10">
-        <Link to="/app/overview" className="flex shrink-0 items-center gap-3 group">
+        <Link to="/app/overview" className="group inline-flex shrink-0 flex-col gap-0.5" aria-label="Q-TeleScope">
           <QtTeleScopeMark
-            size={36}
-            className="transition-transform group-hover:scale-105"
+            size={38}
+            className="qt-brand-lockup--header transition-transform group-hover:scale-[1.02]"
             decorative
           />
-          <div className="flex flex-col">
-            <span className="text-lg font-extrabold tracking-tight text-neutral-950 dark:text-white">
-              Q-TeleScope
-            </span>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-cyan-700 dark:text-cyan-400">
-              Platform setup
-            </span>
-          </div>
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-cyan-700 dark:text-cyan-400 pl-0.5">
+            Platform setup
+          </span>
         </Link>
 
         <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-3">

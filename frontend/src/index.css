@@ -262,6 +262,11 @@ pre,
   line-height: 1.2;
 }
 
+.sidebar-subtitle--only {
+  margin-left: 2px;
+  white-space: nowrap;
+}
+
 .sidebar-subtitle {
   font-size: var(--font-size-micro-label);
   font-weight: 700;

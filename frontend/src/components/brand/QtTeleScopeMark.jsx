@@ -1,36 +1,75 @@
 import React from 'react';
 import './qt-brand.css';
 
-/** Vector Q-TeleScope mark — no raster logo; uses theme tokens / .dark. */
+const LOCKUP_LIGHT = '/brand/q-telescope-lockup-light.jpg';
+const LOCKUP_DARK = '/brand/q-telescope-lockup-dark.png';
+
+/**
+ * Official Q-TeleScope lockup (user-supplied assets). No badge/plate wrapper.
+ * `size` sets logo height in px. `theme`: auto (CSS), light, or dark.
+ */
 export function QtTeleScopeMark({
   className = '',
   size = 32,
+  height,
   title = 'Q-TeleScope',
   decorative = false,
+  theme = 'auto',
 }) {
-  const s = Number(size) || 32;
-  return (
-    <svg
-      className={`qt-brand-mark ${className}`.trim()}
-      width={s}
-      height={s}
-      viewBox="0 0 32 32"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      role={decorative ? 'presentation' : 'img'}
-      aria-hidden={decorative || undefined}
-      aria-label={decorative ? undefined : title}
-    >
-      <title>{decorative ? undefined : title}</title>
-      <rect className="qt-brand-mark__plate" width="32" height="32" rx="8" />
-      <circle className="qt-brand-mark__ring" cx="14" cy="14" r="6" strokeWidth="2" />
-      <path
-        className="qt-brand-mark__tail"
-        d="M18.6 18.6 24 24"
-        strokeWidth="2"
-        strokeLinecap="round"
+  const h = Number(height ?? size) || 32;
+  const alt = decorative ? '' : title;
+
+  if (theme === 'light') {
+    return (
+      <img
+        className={`qt-brand-lockup__img ${className}`.trim()}
+        src={LOCKUP_LIGHT}
+        alt={alt}
+        aria-hidden={decorative || undefined}
+        height={h}
+        style={{ height: h }}
+        decoding="async"
       />
-    </svg>
+    );
+  }
+
+  if (theme === 'dark') {
+    return (
+      <img
+        className={`qt-brand-lockup__img ${className}`.trim()}
+        src={LOCKUP_DARK}
+        alt={alt}
+        aria-hidden={decorative || undefined}
+        height={h}
+        style={{ height: h }}
+        decoding="async"
+      />
+    );
+  }
+
+  return (
+    <span
+      className={`qt-brand-lockup ${className}`.trim()}
+      style={{ '--qt-logo-h': `${h}px` }}
+      role={decorative ? 'presentation' : undefined}
+    >
+      <img
+        className="qt-brand-lockup__img qt-brand-lockup__img--light"
+        src={LOCKUP_LIGHT}
+        alt={alt}
+        aria-hidden={decorative || undefined}
+        height={h}
+        decoding="async"
+      />
+      <img
+        className="qt-brand-lockup__img qt-brand-lockup__img--dark"
+        src={LOCKUP_DARK}
+        alt={decorative ? undefined : alt}
+        aria-hidden={decorative ? true : undefined}
+        height={h}
+        decoding="async"
+      />
+    </span>
   );
 }
 
