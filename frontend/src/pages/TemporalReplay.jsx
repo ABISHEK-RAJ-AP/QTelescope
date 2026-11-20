@@ -15,7 +15,8 @@ import { useAppScope } from '../hooks/useAppScope.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { formatISTTime } from '../utils/time';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
-import { fmtNum, isStale, modalityOf, timelineLink } from './telemetryPageUtils.js';
+import { ageHours, fmtNum, isStale, modalityOf, timelineLink } from './telemetryPageUtils.js';
+import { formatPendingJobs } from '../lib/queueWaitDisplay.js';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { ListPager } from '../components/observability/ListPager.jsx';
 import { COPY } from '../copy/operator.js';
@@ -149,12 +150,15 @@ export const TemporalReplay = () => {
     const sem = getChartSemanticColors();
     return {
       backgroundColor: 'transparent',
-      tooltip: { ...baseTooltip(isDark), trigger: 'item', formatter: (p) => `${ROWS[p.data[1]]} · ${labels[p.data[0]]}<br/>${['missing', 'present, not fresh/valid', 'present'][p.data[2]]}` },
+      tooltip: { ...baseTooltip(isDark), trigger: 'item', formatter: (p) => `${ROWS[p.data[1]]} · ${labels[p.data[0]]}<br/>${['no sample (grey)', 'stale / uncertain (amber)', 'valid sample (green)'][p.data[2]]}` },
       grid: { left: 8, right: 8, top: 8, bottom: 52, containLabel: true },
       xAxis: { type: 'category', data: labels, axisLabel: { color: th.textColor, hideOverlap: true }, axisLine: { lineStyle: { color: th.axisLine } } },
       yAxis: { type: 'category', data: ROWS, axisLabel: { color: th.textColor } },
       visualMap: { type: 'piecewise', orient: 'horizontal', left: 'center', bottom: 0, textStyle: { color: th.textColor }, pieces: [
-        { value: 0, label: '— missing', color: sem.unknown }, { value: 1, label: '! not fresh', color: sem.warn }, { value: 2, label: '✓ present', color: sem.healthy }] },
+        { value: 0, label: '— no sample', color: sem.unknown },
+        { value: 1, label: '! stale / uncertain', color: sem.warn },
+        { value: 2, label: '✓ valid sample', color: sem.healthy },
+      ] },
       series: [{
         type: 'heatmap',
         data: frames.flatMap((f, x) => coverage(f).map((v, y) => [x, y, v])),
@@ -169,6 +173,19 @@ export const TemporalReplay = () => {
   const p = frame?.panels || {};
   const lastAt = frames[frames.length - 1]?.at;
   const modality = modalityOf(backends, backendId);
+  const selectedBackend = backends.find((b) => b.backend_id === backendId);
+  const providerId = selectedBackend?.provider_id || '';
+  const frameAgeH = ageHours(lastAt);
+  const queueKnown = p.queue?.pending_jobs != null;
+  const coh = p.coherence || {};
+  const coherenceSub = coh.coherence_as_of
+    ? `Properties batch at ${formatISTTime(coh.coherence_as_of, false)} · ${coh.qubit_samples ?? 0} qubits averaged`
+    : (coh.qubit_samples
+      ? `${coh.qubit_samples} qubits in latest batch before frame`
+      : 'No qubit properties saved at or before this frame');
+  const queueSub = queueKnown
+    ? `wait ${p.queue?.estimated_wait_time != null ? `${p.queue.estimated_wait_time}s` : '—'} · ${p.queue?.data_quality || 'quality n/a'}`
+    : (providerId.includes('rigetti') ? COPY.replay.queueUnknownProvider : 'Queue depth not reported for this provider — dash is not “zero jobs”.');
 
   return (
     <div className="page-stack">
@@ -187,7 +204,22 @@ export const TemporalReplay = () => {
 
       {frames.length > 0 && (
         <>
-          {isStale(lastAt) && <p className="tm-callout">Stale: newest frame is {formatISTTime(lastAt)}. The collector may be paused for this backend.</p>}
+          <p className="tm-callout tm-callout--info" role="note">
+            {COPY.replay.notLive}{' '}
+            Newest saved frame: <strong>{lastAt ? formatISTTime(lastAt) : '—'}</strong>
+            {frameAgeH != null && (
+              frameAgeH < 1
+                ? ` (${Math.round(frameAgeH * 60)} min ago)`
+                : ` (${fmtNum(frameAgeH, 1)} h ago)`
+            )}.
+            {!isStale(lastAt) && frameAgeH != null && frameAgeH <= 1 ? ' Data is recent but still replay-only — not live streaming.' : ''}
+          </p>
+          {isStale(lastAt) && (
+            <p className="tm-callout tm-callout--bad" role="status">
+              {COPY.replay.staleCollector} Last save: {formatISTTime(lastAt)}.
+            </p>
+          )}
+          <p className="page-hint" style={{ margin: 0 }} role="note">{COPY.replay.coverageLegend}</p>
           <div className="card tm-player" role="group" aria-label="Replay controls">
             <button type="button" className="btn btn-secondary" onClick={() => { setPlaying(false); setIndex((i) => Math.max(0, i - 1)); }} aria-label="Previous frame" disabled={index <= 0}><SkipBack size={16} /></button>
             <button
@@ -202,8 +234,8 @@ export const TemporalReplay = () => {
           </div>
 
           <div className="tm-kpis">
-            <div className="tm-kpi"><div className="tm-kpi__label">Pending jobs</div><div className="tm-kpi__value">{p.queue?.pending_jobs ?? '—'}</div><div className="tm-kpi__sub">wait {p.queue?.estimated_wait_time != null ? `${p.queue.estimated_wait_time}s` : '—'} · {p.queue?.data_quality || 'quality n/a'}</div></div>
-            <div className="tm-kpi"><div className="tm-kpi__label">Mean T1 {modality ? `(${modality})` : ''}</div><div className="tm-kpi__value">{p.coherence?.t1_mean_us != null ? `${fmtNum(p.coherence.t1_mean_us, 1)} µs` : 'Not available'}</div><div className="tm-kpi__sub">{p.coherence?.qubit_samples ?? 0} qubit samples in ±3 min window</div></div>
+            <div className="tm-kpi"><div className="tm-kpi__label">Pending jobs</div><div className="tm-kpi__value">{formatPendingJobs(p.queue?.pending_jobs)}</div><div className="tm-kpi__sub">{queueSub}</div></div>
+            <div className="tm-kpi"><div className="tm-kpi__label">Mean T1 {modality ? `(${modality})` : ''}</div><div className="tm-kpi__value">{coh.t1_mean_us != null ? `${fmtNum(coh.t1_mean_us, 1)} µs` : 'Not available'}</div><div className="tm-kpi__sub">{coherenceSub}</div></div>
             <div className="tm-kpi"><div className="tm-kpi__label">Calibration</div><div className="tm-kpi__value">{p.calibration?.freshness_status ?? 'no data'}</div><div className="tm-kpi__sub">{p.calibration?.calibration_identifier || '—'}{p.calibration?.calibration_age_hours != null ? ` · ${p.calibration.calibration_age_hours}h old` : ''}</div></div>
           </div>
 
@@ -232,7 +264,7 @@ export const TemporalReplay = () => {
               title="Data coverage per frame"
               titleTo={backendId ? `/app/resources/health?backend=${encodeURIComponent(backendId)}` : '/app/resources/health'}
               question="Panels with data at each frame (missing counts are explicit)." sourceKind="cached" minHeight={320}
-              help="Per-qubit health is not stored per replay frame, so this map shows panel coverage. For qubit health open Resource health."
+              help={COPY.replay.coverageLegend}
               tableAlternative={(
                 <PaginatedFrameTable
                   frames={frames}
@@ -241,7 +273,7 @@ export const TemporalReplay = () => {
                     <tr key={f.index ?? i}>
                       <td>{i + 1}</td>
                       <td>{formatISTTime(f.at)}</td>
-                      {coverage(f).map((v, k) => <td key={k}>{['missing', 'not fresh', 'present'][v]}</td>)}
+                      {coverage(f).map((v, k) => <td key={k}>{['no sample', 'stale / uncertain', 'valid'][v]}</td>)}
                     </tr>
                   )}
                 />

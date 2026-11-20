@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatWaitFromResolved, resolveWaitSeconds } from './queueWaitDisplay.js';
+import { formatPendingJobs, formatWaitFromResolved, resolveWaitSeconds } from './queueWaitDisplay.js';
 
 describe('queueWaitDisplay', () => {
   it('uses history mean when vendor omits wait but jobs pending', () => {
@@ -13,5 +13,12 @@ describe('queueWaitDisplay', () => {
     const r = resolveWaitSeconds(3, null, {});
     expect(r.seconds).toBeNull();
     expect(formatWaitFromResolved(r, 3).text).toBe('—');
+  });
+
+  it('treats null pending as unknown depth', () => {
+    const r = resolveWaitSeconds(null, null, {});
+    expect(r.reason).toBe('unknown_depth');
+    expect(formatPendingJobs(null)).toBe('—');
+    expect(formatWaitFromResolved(r, null).text).toBe('—');
   });
 });

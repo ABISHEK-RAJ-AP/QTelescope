@@ -25,7 +25,7 @@ import { COPY } from '../copy/operator.js';
 import { formatIST } from '../utils/time';
 import { DataPanelToolbar, SortableTh } from '../components/observability/DataViewToolbar.jsx';
 import { ListPager } from '../components/observability/ListPager.jsx';
-import { formatWaitFromResolved, resolveWaitSeconds } from '../lib/queueWaitDisplay.js';
+import { formatPendingJobs, formatWaitFromResolved, resolveWaitSeconds } from '../lib/queueWaitDisplay.js';
 import './QueueMonitoring.css';
 
 const POLL_MS = 15000;
@@ -86,7 +86,7 @@ function QueueDrawerBody({ q, an, hist, jobs, nav }) {
     <DetailModalBody>
       <DetailModalSection title="Queue snapshot">
         <DetailModalDl>
-          <DetailModalRow label="Pending now">{q.pending_jobs}</DetailModalRow>
+          <DetailModalRow label="Pending now">{formatPendingJobs(q.pending_jobs)}</DetailModalRow>
           <DetailModalRow label="Est. wait now"><WaitValue q={q} an={an} className="" /></DetailModalRow>
           <DetailModalRow label="Peak pending / wait">{an?.pending_max ?? '—'} / {fmtSecs(an?.wait_max_s)}</DetailModalRow>
           <DetailModalRow label="Mean pending / wait">{an?.pending_mean ?? '—'} / {fmtSecs(an?.wait_mean_s)}</DetailModalRow>
@@ -185,7 +185,8 @@ export const QueueMonitoring = () => {
   };
 
   const anBy = useMemo(() => Object.fromEntries((analytics?.backends || []).map((b) => [b.backend_id, b])), [analytics]);
-  const ranked = useMemo(() => [...(queues || [])].sort((a, b) => (b.pending_jobs || 0) - (a.pending_jobs || 0)
+  const pendingSort = (v) => (v == null ? -1 : Number(v));
+  const ranked = useMemo(() => [...(queues || [])].sort((a, b) => pendingSort(b.pending_jobs) - pendingSort(a.pending_jobs)
     || (resolveWaitSeconds(b.pending_jobs, b.estimated_wait_time, null).seconds || 0)
     - (resolveWaitSeconds(a.pending_jobs, a.estimated_wait_time, null).seconds || 0)), [queues]);
 
@@ -203,7 +204,7 @@ export const QueueMonitoring = () => {
         const wb = resolveWaitSeconds(b.pending_jobs, b.estimated_wait_time, anBy[b.backend_id]).seconds ?? -1;
         c = wa - wb;
       }
-      else c = (a.pending_jobs || 0) - (b.pending_jobs || 0);
+      else c = pendingSort(a.pending_jobs) - pendingSort(b.pending_jobs);
       return c * mul;
     });
     return list;
@@ -284,7 +285,7 @@ export const QueueMonitoring = () => {
           xAxisIndex: 0,
           barMaxWidth: 14,
           itemStyle: { color: sem.accent },
-          data: ranked.map((q) => q.pending_jobs || 0),
+          data: ranked.map((q) => (q.pending_jobs == null ? null : q.pending_jobs)),
         },
         {
           name: 'Est. wait',
@@ -362,14 +363,16 @@ export const QueueMonitoring = () => {
   if (!queues) return <div className="page-stack"><ErrorState variant="panel" message={error} onRetry={load} /></div>;
 
   const stale = lastRefresh && now - lastRefresh.getTime() > POLL_MS * 2.5;
-  const totalPending = queues.reduce((a, q) => a + (q.pending_jobs || 0), 0);
+  const knownPending = queues.filter((q) => q.pending_jobs != null);
+  const totalPending = knownPending.reduce((a, q) => a + Number(q.pending_jobs), 0);
+  const unknownDepth = queues.length - knownPending.length;
   const waitRanked = queues
     .map((q) => ({ q, r: resolveWaitSeconds(q.pending_jobs, q.estimated_wait_time, anBy[q.backend_id]) }))
     .filter((x) => x.r.seconds != null);
   const worstWait = waitRanked.length
     ? [...waitRanked].sort((a, b) => b.r.seconds - a.r.seconds)[0].q
     : null;
-  const idle = queues.filter((q) => !q.pending_jobs).length;
+  const idle = queues.filter((q) => q.pending_jobs === 0).length;
   const sel = queues.find((q) => q.backend_id === selectedId);
   const asOf = lastRefresh ? formatIST(lastRefresh) : undefined;
 
@@ -382,7 +385,7 @@ export const QueueMonitoring = () => {
       )}
 
       <section className="qm-kpis" aria-label="Queue summary">
-        <div className="qm-kpi"><div className="qm-kpi__label">Total pending</div><div className="qm-kpi__value">{totalPending}</div><div className="qm-kpi__sub">across {queues.length} backends</div></div>
+        <div className="qm-kpi"><div className="qm-kpi__label">Total pending</div><div className="qm-kpi__value">{knownPending.length ? totalPending : '—'}</div><div className="qm-kpi__sub">{knownPending.length ? `across ${knownPending.length} reporting backends` : 'No backends report queue depth'}{unknownDepth ? ` · ${unknownDepth} unknown` : ''}</div></div>
         <div className="qm-kpi">
           <div className="qm-kpi__label">Longest wait</div>
           <div className="qm-kpi__value" title={worstWait ? waitDisplay(worstWait, anBy[worstWait.backend_id]).title : ''}>
@@ -390,7 +393,7 @@ export const QueueMonitoring = () => {
           </div>
           <div className="qm-kpi__sub">{worstWait ? worstWait.backend_name : '—'}</div>
         </div>
-        <div className="qm-kpi"><div className="qm-kpi__label">Idle queues</div><div className="qm-kpi__value">{idle}</div><div className="qm-kpi__sub">of {queues.length} with zero pending</div></div>
+        <div className="qm-kpi"><div className="qm-kpi__label">Idle queues</div><div className="qm-kpi__value">{idle}</div><div className="qm-kpi__sub">reported depth 0{unknownDepth ? ` · ${unknownDepth} depth not reported` : ''}</div></div>
         <div className="qm-kpi"><div className="qm-kpi__label">History samples</div><div className="qm-kpi__value">{(analytics?.backends || []).reduce((a, b) => a + b.samples, 0)}</div><div className="qm-kpi__sub">{analytics ? COPY.queue.historySub : 'History unavailable'}</div></div>
       </section>
       <section className="qm-charts">
@@ -407,7 +410,7 @@ export const QueueMonitoring = () => {
           tableAlternative={(
             <table className="qm-alt">
               <thead><tr><th scope="col">Backend</th><th scope="col">Pending</th><th scope="col">Est. wait</th><th scope="col">Condition</th></tr></thead>
-              <tbody>{ranked.map((q) => <tr key={q.backend_id}><th scope="row">{q.backend_name}</th><td>{q.pending_jobs}</td><td><WaitValue q={q} an={anBy[q.backend_id]} /></td><td>{q.queue_condition}</td></tr>)}</tbody>
+              <tbody>{ranked.map((q) => <tr key={q.backend_id}><th scope="row">{q.backend_name}</th><td>{formatPendingJobs(q.pending_jobs)}</td><td><WaitValue q={q} an={anBy[q.backend_id]} /></td><td>{q.queue_condition}</td></tr>)}</tbody>
             </table>
           )}
         >
@@ -437,7 +440,7 @@ export const QueueMonitoring = () => {
                     <tr key={`${h.backend_id}${h.timestamp}`}>
                       <th scope="row">{h.backend_name}</th>
                       <td>{formatIST(toDate(h.timestamp))}</td>
-                      <td>{h.pending_jobs}</td>
+                      <td>{formatPendingJobs(h.pending_jobs)}</td>
                       <td><WaitValue q={h} an={anBy[h.backend_id]} /></td>
                     </tr>
                   ))}
@@ -492,7 +495,7 @@ export const QueueMonitoring = () => {
                     <span className="qm-cond" data-c={q.queue_condition}>{q.queue_condition}</span>
                   </header>
                   <dl className="dvt-card__stats">
-                    <div><dt>Pending</dt><dd>{q.pending_jobs}</dd></div>
+                    <div><dt>Pending</dt><dd>{formatPendingJobs(q.pending_jobs)}</dd></div>
                     <div><dt>Wait now</dt><dd><WaitValue q={q} an={a} className="" /></dd></div>
                     <div><dt>Mean / max</dt><dd>{a?.samples ? `${fmtSecs(a.wait_mean_s)} / ${fmtSecs(a.wait_max_s)}` : '—'}</dd></div>
                     <div><dt>Trend</dt><dd>{q.trend || '—'}</dd></div>
@@ -530,7 +533,7 @@ export const QueueMonitoring = () => {
                         <div className="qm-sub">{q.backend_id} · {q.operational_status}</div>
                       </td>
                       <td><span className="qm-cond" data-c={q.queue_condition}>{COND_MARK[q.queue_condition] || '○'} {q.queue_condition}</span></td>
-                      <td className="qm-num">{q.pending_jobs}</td>
+                      <td className="qm-num">{formatPendingJobs(q.pending_jobs)}</td>
                       <td><WaitValue q={q} an={a} /></td>
                       <td className="qm-num">{a?.samples ? `${fmtSecs(a.wait_mean_s)} / ${fmtSecs(a.wait_max_s)}` : '—'}</td>
                       <td>{q.trend}</td>

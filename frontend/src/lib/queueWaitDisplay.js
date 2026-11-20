@@ -1,6 +1,14 @@
 /** Display wait time when vendor omits ETA but queue depth is non-zero. */
 
+export function formatPendingJobs(pending) {
+  if (pending == null) return '—';
+  return String(pending);
+}
+
 export function resolveWaitSeconds(pending, waitSeconds, analytics) {
+  if (pending == null) {
+    return { seconds: null, inferred: false, reason: 'unknown_depth' };
+  }
   const p = Number(pending) || 0;
   const w = waitSeconds != null ? Number(waitSeconds) : null;
   if (w != null && Number.isFinite(w)) {
@@ -21,12 +29,18 @@ export function resolveWaitSeconds(pending, waitSeconds, analytics) {
 }
 
 export function formatWaitFromResolved(resolved, pending) {
-  const p = pending != null ? Number(pending) : 0;
+  if (pending == null) {
+    return {
+      text: '—',
+      title: 'This provider does not report queue depth in the status feed (not the same as an empty queue).',
+    };
+  }
+  const p = Number(pending) || 0;
   if (!resolved || resolved.seconds == null) {
     if (resolved?.reason === 'vendor_zero' || (p > 0 && resolved?.reason === 'missing')) {
       return { text: '—', title: 'Queue depth reported; wait time not supplied in the latest status poll.' };
     }
-    if (p <= 0) return { text: '—', title: 'No jobs in queue.' };
+    if (p <= 0) return { text: '—', title: 'No jobs in queue (depth reported as 0).' };
     return { text: '—', title: 'Wait time unavailable.' };
   }
   const s = resolved.seconds;

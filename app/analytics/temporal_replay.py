@@ -14,6 +14,42 @@ from app.models.entities import (
     QubitTelemetryModel,
 )
 
+# Qubit rows are written after backend status in the same cycle; align to latest batch ≤ frame.
+_BATCH_SLACK = timedelta(seconds=90)
+
+
+def coherence_panel_at(at, qubit_rows) -> Dict[str, Any]:
+    best_ts = None
+    for qr in qubit_rows:
+        if qr.timestamp <= at:
+            best_ts = qr.timestamp
+        else:
+            break
+    if best_ts is None:
+        return {
+            "t1_mean_us": None,
+            "t2_mean_us": None,
+            "qubit_samples": 0,
+            "coherence_as_of": None,
+        }
+    batch_floor = best_ts - _BATCH_SLACK
+    t1s, t2s = [], []
+    for qr in qubit_rows:
+        if qr.timestamp > at:
+            break
+        if qr.timestamp < batch_floor:
+            continue
+        if qr.t1 is not None:
+            t1s.append(qr.t1)
+        if qr.t2 is not None:
+            t2s.append(qr.t2)
+    return {
+        "t1_mean_us": mean_or_none(t1s),
+        "t2_mean_us": mean_or_none(t2s),
+        "qubit_samples": len(t1s),
+        "coherence_as_of": best_ts.isoformat() if best_ts else None,
+    }
+
 
 def build_replay_timeline(db: Session, backend_id: str, limit: int = 80) -> Dict[str, Any]:
     backend = db.query(BackendModel).filter(BackendModel.backend_id == backend_id).first()
@@ -59,16 +95,7 @@ def build_replay_timeline(db: Session, backend_id: str, limit: int = 80) -> Dict
             else:
                 break
 
-        window_start = at - timedelta(minutes=3)
-        t1s, t2s = [], []
-        for qr in qubit_rows:
-            if qr.timestamp > at:
-                break
-            if qr.timestamp >= window_start:
-                if qr.t1 is not None:
-                    t1s.append(qr.t1)
-                if qr.t2 is not None:
-                    t2s.append(qr.t2)
+        coherence = coherence_panel_at(at, qubit_rows)
 
         frames.append(
             {
@@ -81,11 +108,7 @@ def build_replay_timeline(db: Session, backend_id: str, limit: int = 80) -> Dict
                         "telemetry_source": bt.telemetry_source,
                         "data_quality": bt.data_quality,
                     },
-                    "coherence": {
-                        "t1_mean_us": mean_or_none(t1s),
-                        "t2_mean_us": mean_or_none(t2s),
-                        "qubit_samples": len(t1s),
-                    },
+                    "coherence": coherence,
                     "calibration": {
                         "freshness_status": cal.freshness_status if cal else None,
                         "calibration_identifier": cal.calibration_identifier if cal else None,
@@ -106,7 +129,10 @@ def build_replay_timeline(db: Session, backend_id: str, limit: int = 80) -> Dict
         "frame_count": len(frames),
         "frames": frames,
         "telemetry_source": "replay",
-        "methodology": "Synced panels at each backend telemetry sample; qubit means from ±3 min window.",
+        "methodology": (
+            "Synced panels at each stored backend telemetry sample; "
+            "qubit means from the latest properties batch at or before each frame."
+        ),
     }
 
 

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, func
 from sqlalchemy.orm import Session
-from typing import Dict, List
+from typing import Dict, List, Optional
 from statistics import fmean
 from app.core.database import get_db
 from app.models.entities import BackendTelemetryModel, BackendModel
@@ -11,7 +11,9 @@ from app.api.queue_util import resolve_estimated_wait
 router = APIRouter(prefix="/queues", tags=["Queue Monitoring"])
 
 
-def _queue_condition(pending: int) -> str:
+def _queue_condition(pending: Optional[int]) -> str:
+    if pending is None:
+        return "UNKNOWN"
     if pending > 40:
         return "CONGESTED"
     if pending > 20:
@@ -62,7 +64,9 @@ def _build_all_queues(db: Session) -> List[QueueStatusResponse]:
         latest = tel_map.get(b.backend_id)
         # No telemetry → unknown wait (not zero). Wait values come from stored
         # BackendTelemetry samples (often mock/simulated ingest) — not a live provider SLA.
-        pending = int(latest.pending_jobs) if latest and latest.pending_jobs is not None else 0
+        pending: Optional[int] = (
+            int(latest.pending_jobs) if latest and latest.pending_jobs is not None else None
+        )
         raw_wait = latest.estimated_wait_time if latest else None
         wait = resolve_estimated_wait(pending, raw_wait)
         results.append(
@@ -102,7 +106,7 @@ def get_all_queue_history_bulk(
                 "timestamp": r.timestamp,
                 "pending_jobs": r.pending_jobs,
                 "estimated_wait_time": resolve_estimated_wait(
-                    int(r.pending_jobs or 0),
+                    int(r.pending_jobs) if r.pending_jobs is not None else None,
                     r.estimated_wait_time,
                 ),
             }
@@ -122,7 +126,9 @@ def get_backend_queue_status(backend_id: str, db: Session = Depends(get_db)):
         .order_by(BackendTelemetryModel.timestamp.desc())
         .first()
     )
-    pending = int(latest.pending_jobs) if latest and latest.pending_jobs is not None else 0
+    pending: Optional[int] = (
+        int(latest.pending_jobs) if latest and latest.pending_jobs is not None else None
+    )
     raw_wait = latest.estimated_wait_time if latest else None
     wait = resolve_estimated_wait(pending, raw_wait)
     return QueueStatusResponse(
@@ -151,7 +157,7 @@ def get_queue_history(backend_id: str, limit: int = Query(50, ge=1, le=500), db:
             timestamp=r.timestamp,
             pending_jobs=r.pending_jobs,
             estimated_wait_time=resolve_estimated_wait(
-                int(r.pending_jobs or 0),
+                int(r.pending_jobs) if r.pending_jobs is not None else None,
                 r.estimated_wait_time,
             ),
         )
@@ -180,10 +186,12 @@ def get_queue_analytics_summary(db: Session = Depends(get_db)):
                 "backend_id": b.backend_id,
                 "backend_name": b.backend_name,
                 "samples": len(history),
-                "pending_current": latest.pending_jobs if latest else 0,
+                "pending_current": (
+                    int(latest.pending_jobs) if latest and latest.pending_jobs is not None else None
+                ),
                 "wait_current_s": (
                     resolve_estimated_wait(
-                        int(latest.pending_jobs or 0),
+                        int(latest.pending_jobs) if latest.pending_jobs is not None else None,
                         latest.estimated_wait_time,
                     )
                     if latest

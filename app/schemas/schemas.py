@@ -123,7 +123,7 @@ class MetricDriftSummary(BaseModel):
 class QueueStatusResponse(BaseModel):
     backend_id: str
     backend_name: str
-    pending_jobs: int
+    pending_jobs: Optional[int] = None
     estimated_wait_time: Optional[float]
     queue_condition: str # OPTIMAL, MODERATE, BUSY, CONGESTED
     trend: str # RISING, FALLING, STABLE
@@ -133,7 +133,7 @@ class QueueStatusResponse(BaseModel):
 
 class QueueHistoryPoint(BaseModel):
     timestamp: datetime.datetime
-    pending_jobs: int
+    pending_jobs: Optional[int] = None
     estimated_wait_time: Optional[float]
 
 # Job Execution Schemas

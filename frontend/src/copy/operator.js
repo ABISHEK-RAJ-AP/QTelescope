@@ -13,6 +13,14 @@ export const COPY = {
   },
   replay: {
     noFrames: 'No historical frames for this window. Collect telemetry first.',
+    notLive:
+      'Replay uses stored collector samples — not a live vendor feed. Scrub frames to inspect what was saved at each poll.',
+    staleCollector:
+      'Nothing new has been saved since the newest frame below. The collector may be paused; check admin collection or provider credentials.',
+    coverageLegend:
+      'Coverage colours: grey — = no sample for that panel; amber ! = sample present but stale or low quality; green ✓ = valid sample. These are not qubit health red/yellow/green states.',
+    queueUnknownProvider:
+      'Some providers (e.g. Rigetti QCS) do not publish queue depth — a dash means unknown, not zero jobs waiting.',
   },
   queue: {
     historySub: 'measurement history',
