@@ -109,7 +109,11 @@ def build_health_vector_payload(db: Session) -> dict:
             qt = series[0] if series else None
             t1 = qt.t1 if qt else None
             t2 = qt.t2 if qt else None
-            ro = qt.readout_error if qt else None
+            if qt and qt.readout_error is not None:
+                from app.core.metric_bounds import clamp_probability
+                ro = clamp_probability(qt.readout_error)
+            else:
+                ro = None
             t1s = [h.t1 for h in series[:24] if h.t1 is not None]
             t1_base = sigma = None
             history_n = len(t1s)

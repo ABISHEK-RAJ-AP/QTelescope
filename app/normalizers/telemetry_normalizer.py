@@ -36,12 +36,18 @@ class TelemetryNormalizer:
         t1 = qubit_raw.get("t1")
         t2 = qubit_raw.get("t2")
         readout = qubit_raw.get("readout_error")
+        if readout is not None:
+            from app.core.metric_bounds import clamp_probability
+            ro_raw = float(readout)
+            readout = clamp_probability(ro_raw)
         
         quality = "VALID"
         if t1 is None or t2 is None or readout is None:
             quality = "PARTIAL_MISSING"
         elif t1 <= 0 or t2 <= 0:
             quality = "INVALID_RANGE"
+        elif readout is not None and float(qubit_raw.get("readout_error", readout)) != readout:
+            quality = "CLAMPED_RANGE"
 
         modality_metrics = qubit_raw.get("modality_extras") or qubit_raw.get("modality_metrics") or {}
         if not modality_metrics:

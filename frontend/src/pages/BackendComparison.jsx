@@ -60,15 +60,21 @@ const stateColors = () => getFleetStateChartColors();
 const DIST_METRICS = [
   { id: 't1', label: 'T1', unit: 'µs', key: 't1', sensitive: true, log: true, positive: true },
   { id: 't2', label: 'T2', unit: 'µs', key: 't2', sensitive: true, log: true, positive: true },
-  { id: 'ro', label: 'Readout error', unit: '', key: 'readout_error' },
+  { id: 'ro', label: 'Readout error', unit: '', key: 'readout_error', positive: true, rate: true },
   { id: 'fl', label: 'F_limit', unit: '', key: 'F_limit', sensitive: true },
   { id: 'eta', label: 'η_cal', unit: '', key: 'eta_cal', sensitive: true, log: true, positive: true },
   { id: 'cx', label: 'C_exec', unit: '', key: 'C_exec' },
 ];
 
 const num = (v) => (v != null && Number.isFinite(Number(v)) ? Number(v) : null);
-const fmt = (v) => {
+const fmt = (v, metric) => {
   if (v == null) return null;
+  if (metric?.rate) {
+    const pct = v * 100;
+    if (pct >= 10) return `${pct.toFixed(2)}%`;
+    if (pct >= 1) return `${pct.toFixed(3)}%`;
+    return `${pct.toFixed(4)}%`;
+  }
   const a = Math.abs(v);
   if (a >= 1e5) return v.toExponential(2);
   if (a >= 100) return v.toFixed(0);
@@ -103,7 +109,7 @@ function BoxChart({ rows, metric, dark }) {
       trigger: 'item',
       formatter: (p) => {
         const r = rows[p.dataIndex];
-        return `${r.name}<br/>min ${fmt(r.s.min)} · median ${fmt(r.s.med)} · max ${fmt(r.s.max)}<br/>${r.s.n} qubits`;
+        return `${r.name}<br/>min ${fmt(r.s.min, metric)} · median ${fmt(r.s.med, metric)} · max ${fmt(r.s.max, metric)}<br/>${r.s.n} qubits`;
       },
     },
     xAxis: { type: 'category', data: rows.map((r) => r.short), ...axisBase(t), axisLabel: { color: t.textColor, interval: 0 } },
@@ -372,12 +378,14 @@ export const BackendComparison = () => {
               const missing = g.list.filter((r) => !plotted.includes(r) && !plotted.some((p) => p.backend_id === r.backend_id));
               return (
                 <ChartPanel key={`${m.id}-${g.title}`} title={`${m.label}${m.unit ? ` (${m.unit})` : ''}${g.title ? ` · ${g.title}` : ''}`}
-                  question="Per-qubit distribution: box = Q1–Q3, line = median, whiskers = min/max."
+                  question={m.rate
+                    ? 'Per-qubit measurement assignment error (probability 0–100%). Box = Q1–Q3, line = median, whiskers = min/max.'
+                    : 'Per-qubit distribution: box = Q1–Q3, line = median, whiskers = min/max.'}
                   sourceKind="derived" minHeight={320} state={plotted.length ? 'ready' : 'empty'}
                   emptyTitle="No measurements" emptyMessage="No per-qubit values for these backends."
                   tableAlternative={(
                     <table className="custom-table custom-table--dense"><thead><tr><th>Backend</th><th>Min</th><th>Median</th><th>Max</th><th>n</th></tr></thead>
-                      <tbody>{g.list.map((r) => { const s = distStats(r, m); return <tr key={r.backend_id}><td>{r.name}</td><td>{fmt(s?.min) ?? 'missing'}</td><td>{fmt(s?.med) ?? 'missing'}</td><td>{fmt(s?.max) ?? 'missing'}</td><td>{s?.n ?? 0}</td></tr>; })}</tbody></table>
+                      <tbody>{g.list.map((r) => { const s = distStats(r, m); return <tr key={r.backend_id}><td>{r.name}</td><td>{fmt(s?.min, m) ?? 'missing'}</td><td>{fmt(s?.med, m) ?? 'missing'}</td><td>{fmt(s?.max, m) ?? 'missing'}</td><td>{s?.n ?? 0}</td></tr>; })}</tbody></table>
                   )}>
                   <BoxChart rows={plotted} metric={m} dark={dark} />
                   {missing.length > 0 && <p className="page-hint bc-note">No series (gap, not zero): {missing.map((r) => r.short).join(', ')}</p>}

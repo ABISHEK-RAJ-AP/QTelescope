@@ -2,8 +2,17 @@ import random
 import datetime
 from typing import List, Dict, Any, Optional
 
+from app.core.metric_bounds import clamp_probability
+
 def utcnow():
     return datetime.datetime.now(datetime.timezone.utc)
+
+
+def _jitter_rate(base: float, spread: float = 0.12) -> float:
+    """Multiplicative spread for error probabilities — never negative."""
+    if base <= 0:
+        return clamp_probability(random.uniform(1e-5, 5e-4)) or 0.0
+    return clamp_probability(base * random.uniform(1.0 - spread, 1.0 + spread)) or 0.0
 
 # ==============================================================================
 # CENTRALIZED MOCK QUANTUM HARDWARE DATA STORE
@@ -216,7 +225,7 @@ def get_mock_backend_properties(backend_id: str) -> Dict[str, Any]:
             "t1": t1_val,
             "t2": t2_val,
             "frequency": metrics["qubit_freq_base"] + (i * metrics["qubit_freq_step"]),
-            "readout_error": metrics["readout_error"] + random.uniform(-0.002, 0.004),
+            "readout_error": _jitter_rate(metrics["readout_error"]),
             "prob_meas0_prep1": 0.01,
             "prob_meas1_prep0": 0.01,
             "anharmonicity": metrics["anharmonicity"],
