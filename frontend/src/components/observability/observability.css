@@ -578,6 +578,11 @@
   cursor: pointer;
   color: var(--accent-cyan);
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 6px 0;
+  line-height: 1.45;
 }
 
 /* Empty / error */
