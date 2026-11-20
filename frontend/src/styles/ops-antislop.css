@@ -78,6 +78,19 @@
   border-bottom: 1px solid color-mix(in oklch, white 8%, transparent);
 }
 
+.auth-shell__brand-copy {
+  text-align: left;
+}
+
+.auth-shell__product-name {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, #22d3ee 85%, white);
+}
+
 @media (min-width: 1024px) {
   .auth-shell__brand {
     border-bottom: none;

@@ -89,16 +89,29 @@ html.dark .qt-brand-lockup__img--dark,
   max-width: 168px;
 }
 
-.sidebar-collapsed:not(.sidebar-hover-expanded) .sidebar-logo-mark {
-  --qt-logo-h: 28px;
-  max-width: 30px;
+.sidebar-logo-mark--icon-only {
+  --qt-logo-h: 26px;
+  width: 28px;
+  max-width: 28px;
+  margin: 0 auto;
   overflow: hidden;
+  display: flex;
+  justify-content: flex-start;
 }
 
-.sidebar-collapsed:not(.sidebar-hover-expanded) .sidebar-logo-mark .qt-brand-lockup__img,
-.sidebar-collapsed:not(.sidebar-hover-expanded) .sidebar-logo-mark.qt-brand-lockup__img {
+.sidebar-logo-mark--icon-only .qt-brand-lockup__img,
+.sidebar-logo-mark--icon-only.qt-brand-lockup__img {
+  height: 26px;
+  width: auto;
+  min-width: 52px;
+  max-width: none;
   object-fit: cover;
   object-position: left center;
+}
+
+.sidebar-collapsed:not(.sidebar-hover-expanded) .sidebar-header {
+  justify-content: center;
+  padding: 0 6px;
 }
 
 .qt-brand-lockup--header {

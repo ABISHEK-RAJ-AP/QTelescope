@@ -2,23 +2,31 @@ import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState
 import { createPortal } from 'react-dom';
 import { HelpCircle } from 'lucide-react';
 
-function placePanel(triggerEl, panelEl) {
+function placePanel(triggerEl, panelEl, align = 'end') {
   if (!triggerEl) return { top: 0, left: 0, maxWidth: 320 };
   const tr = triggerEl.getBoundingClientRect();
-  const pw = panelEl?.offsetWidth || Math.min(320, window.innerWidth - 16);
-  const ph = panelEl?.offsetHeight || 120;
   const margin = 8;
   const gap = 6;
+  const maxW = Math.min(320, window.innerWidth - margin * 2);
+  const pw = Math.min(panelEl?.offsetWidth || maxW, maxW) || maxW;
+  const ph = panelEl?.offsetHeight || 120;
+
   let top = tr.bottom + gap;
   if (top + ph > window.innerHeight - margin && tr.top - gap - ph > margin) {
     top = tr.top - gap - ph;
   }
-  let left = tr.right - pw;
-  if (left < margin) left = tr.left;
-  if (left + pw > window.innerWidth - margin) {
-    left = Math.max(margin, window.innerWidth - pw - margin);
+
+  let left;
+  if (align === 'start') {
+    left = tr.left;
+  } else if (align === 'center') {
+    left = tr.left + (tr.width - pw) / 2;
+  } else {
+    left = tr.right - pw;
   }
-  return { top, left, maxWidth: Math.min(320, window.innerWidth - margin * 2) };
+  left = Math.max(margin, Math.min(left, window.innerWidth - pw - margin));
+
+  return { top, left, maxWidth: maxW, width: pw };
 }
 
 /**
@@ -38,12 +46,7 @@ export function InfoTooltip({ label = 'More information', children, className = 
 
   const reposition = useCallback(() => {
     if (!show) return;
-    const next = placePanel(triggerRef.current, panelRef.current);
-    if (align === 'start' && triggerRef.current) {
-      const tr = triggerRef.current.getBoundingClientRect();
-      next.left = Math.max(8, tr.left);
-    }
-    setCoords(next);
+    setCoords(placePanel(triggerRef.current, panelRef.current, align));
   }, [show, align]);
 
   useLayoutEffect(() => {
@@ -52,12 +55,21 @@ export function InfoTooltip({ label = 'More information', children, className = 
       return undefined;
     }
     reposition();
+    const raf = requestAnimationFrame(() => reposition());
     const onScroll = () => reposition();
     window.addEventListener('resize', reposition, { passive: true });
     window.addEventListener('scroll', onScroll, { passive: true, capture: true });
+    let ro;
+    const panel = panelRef.current;
+    if (panel && typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => reposition());
+      ro.observe(panel);
+    }
     return () => {
+      cancelAnimationFrame(raf);
       window.removeEventListener('resize', reposition);
       window.removeEventListener('scroll', onScroll, true);
+      ro?.disconnect();
     };
   }, [show, reposition, children]);
 
@@ -100,6 +112,9 @@ export function InfoTooltip({ label = 'More information', children, className = 
     }
   };
 
+  const triggerTop = triggerRef.current?.getBoundingClientRect().top ?? 0;
+  const opensAbove = coords && coords.top < triggerTop;
+
   const panel = show && coords ? (
     <div
       id={tipId}
@@ -110,9 +125,10 @@ export function InfoTooltip({ label = 'More information', children, className = 
         position: 'fixed',
         top: coords.top,
         left: coords.left,
+        width: coords.width,
         maxWidth: coords.maxWidth,
         zIndex: 10950,
-        '--qt-tooltip-origin': coords.top < (triggerRef.current?.getBoundingClientRect().top ?? 0) ? 'bottom center' : 'top center',
+        '--qt-tooltip-origin': opensAbove ? 'bottom center' : 'top center',
       }}
     >
       {children}

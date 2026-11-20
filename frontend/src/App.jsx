@@ -727,7 +727,11 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
         }}
       >
         <Link to="/" className="sidebar-header" title="Q-TeleScope home" aria-label="Q-TeleScope home">
-          <QtTeleScopeMark size={30} className="sidebar-logo-mark" decorative />
+          <QtTeleScopeMark
+            size={effectiveCollapsed ? 26 : 30}
+            className={`sidebar-logo-mark${effectiveCollapsed ? ' sidebar-logo-mark--icon-only' : ''}`}
+            decorative
+          />
           {!effectiveCollapsed ? (
             <div className="sidebar-subtitle sidebar-subtitle--only">Quantum Platform</div>
           ) : null}

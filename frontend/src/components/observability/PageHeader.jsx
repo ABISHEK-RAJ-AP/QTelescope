@@ -49,15 +49,17 @@ export function PageHeader({
       <div className="page-header__row">
         <div className="page-header__main">
           {kicker && <p className="page-header__kicker">{kicker}</p>}
-          <h1 className="page-header__title">
-            <span className="page-header__title-text">{title}</span>
-            {backendId ? <BackendRegistryIdChip backendId={backendId} className="page-header__id-chip" /> : null}
+          <div className="page-header__title-line">
+            <h1 className="page-header__title">
+              <span className="page-header__title-text">{title}</span>
+              {backendId ? <BackendRegistryIdChip backendId={backendId} className="page-header__id-chip" /> : null}
+            </h1>
             {description ? (
-              <InfoTooltip label={`About ${title}`}>
+              <InfoTooltip label={`About ${title}`} align="start">
                 {description}
               </InfoTooltip>
             ) : null}
-          </h1>
+          </div>
           {description && !embedded ? <p className="page-header__desc">{description}</p> : null}
           {lastUpdated ? (
             <div className="page-header__context">

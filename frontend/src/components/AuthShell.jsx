@@ -61,23 +61,17 @@ export function AuthShell({
           <div
             className={`auth-shell__panel w-full ${maxWidth} grid grid-cols-1 lg:grid-cols-12 gap-0`}
           >
-            <div className="auth-shell__brand lg:col-span-5 relative z-10 flex flex-col gap-3 p-6 sm:p-8 text-white min-h-[520px] lg:min-h-0 overflow-hidden">
-              <QtTeleScopeMark
-                size={36}
-                theme="dark"
-                className="qt-brand-lockup--on-dark shrink-0"
-                decorative
-              />
-
+            <div className="auth-shell__brand lg:col-span-5 relative z-10 flex flex-col gap-4 p-6 sm:p-8 text-white min-h-[520px] lg:min-h-0 overflow-hidden">
               <div className="auth-shell__fridge flex-1 min-h-[280px] max-h-[340px] w-full flex items-stretch">
                 <AuthFridgeVisual />
               </div>
 
-              <div className="mt-auto shrink-0 space-y-2 pt-1">
-                <h2 className="text-lg sm:text-xl font-semibold leading-[1.25] tracking-tight text-white text-balance">
+              <div className="auth-shell__brand-copy mt-auto shrink-0 space-y-2 pt-1">
+                <p className="auth-shell__product-name">Q-TeleScope</p>
+                <h2 className="text-lg sm:text-xl font-semibold leading-[1.25] tracking-tight text-white">
                   Observability for superconducting QPU fleets
                 </h2>
-                <p className="text-sm leading-relaxed text-slate-400 max-w-[36ch]">
+                <p className="text-sm leading-relaxed text-slate-400 max-w-[38ch]">
                   Coherence, calibration drift, and incidents — one console.
                 </p>
                 <Link

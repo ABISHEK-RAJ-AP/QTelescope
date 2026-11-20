@@ -95,6 +95,25 @@
   row-gap: 6px;
 }
 
+.page-header__title-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px 10px;
+  width: 100%;
+  min-width: 0;
+}
+
+.page-header__title-line .page-header__title {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.page-header__title-line .info-tooltip {
+  flex-shrink: 0;
+  margin-top: 0.35rem;
+}
+
 .page-header__title-text {
   flex: 1 1 auto;
   min-width: 0;
@@ -269,6 +288,13 @@
 .info-tooltip__trigger:hover,
 .info-tooltip__trigger:focus-visible {
   color: var(--accent-cyan);
+}
+
+.info-tooltip__panel--portaled {
+  position: fixed;
+  right: auto;
+  top: auto;
+  min-width: 200px;
 }
 
 .info-tooltip__panel {
