@@ -2,37 +2,42 @@ import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState
 import { createPortal } from 'react-dom';
 import { HelpCircle } from 'lucide-react';
 
-function placePanel(triggerEl, panelEl, align = 'end') {
+/** Places panel below trigger; `align` controls horizontal anchor (default: start). */
+function placePanel(triggerEl, panelEl, align = 'start') {
   if (!triggerEl) return { top: 0, left: 0, maxWidth: 320 };
   const tr = triggerEl.getBoundingClientRect();
   const margin = 8;
-  const gap = 6;
+  const gap = 8;
   const maxW = Math.min(320, window.innerWidth - margin * 2);
-  const pw = Math.min(panelEl?.offsetWidth || maxW, maxW) || maxW;
-  const ph = panelEl?.offsetHeight || 120;
+  const measuredW = panelEl?.offsetWidth;
+  const measuredH = panelEl?.offsetHeight;
+  const pw = measuredW && measuredW > 0 ? Math.min(measuredW, maxW) : maxW;
+  const ph = measuredH && measuredH > 0 ? measuredH : 96;
 
+  const spaceBelow = window.innerHeight - tr.bottom - margin;
+  const spaceAbove = tr.top - margin;
   let top = tr.bottom + gap;
-  if (top + ph > window.innerHeight - margin && tr.top - gap - ph > margin) {
+  if (ph + gap > spaceBelow && spaceAbove > spaceBelow && spaceAbove >= ph + gap) {
     top = tr.top - gap - ph;
   }
 
   let left;
-  if (align === 'start') {
-    left = tr.left;
+  if (align === 'end') {
+    left = tr.right - pw;
   } else if (align === 'center') {
     left = tr.left + (tr.width - pw) / 2;
   } else {
-    left = tr.right - pw;
+    left = tr.left;
   }
   left = Math.max(margin, Math.min(left, window.innerWidth - pw - margin));
 
-  return { top, left, maxWidth: maxW, width: pw };
+  return { top, left, maxWidth: maxW, opensAbove: top < tr.top };
 }
 
 /**
  * Accessible help popover (hover, focus, click-to-pin). Panel portals to body so sidebar/card overflow cannot clip it.
  */
-export function InfoTooltip({ label = 'More information', children, className = '', align = 'end' }) {
+export function InfoTooltip({ label = 'More information', children, className = '', align = 'start' }) {
   const id = useId();
   const tipId = `tip-${id.replace(/:/g, '')}`;
   const [open, setOpen] = useState(false);
@@ -41,21 +46,29 @@ export function InfoTooltip({ label = 'More information', children, className = 
   const triggerRef = useRef(null);
   const panelRef = useRef(null);
   const [coords, setCoords] = useState(null);
+  const [positioned, setPositioned] = useState(false);
 
   const show = open || pinned;
 
   const reposition = useCallback(() => {
     if (!show) return;
-    setCoords(placePanel(triggerRef.current, panelRef.current, align));
+    const next = placePanel(triggerRef.current, panelRef.current, align);
+    setCoords(next);
+    setPositioned(true);
   }, [show, align]);
 
   useLayoutEffect(() => {
     if (!show) {
       setCoords(null);
+      setPositioned(false);
       return undefined;
     }
+    setPositioned(false);
     reposition();
-    const raf = requestAnimationFrame(() => reposition());
+    const raf1 = requestAnimationFrame(() => {
+      reposition();
+      requestAnimationFrame(reposition);
+    });
     const onScroll = () => reposition();
     window.addEventListener('resize', reposition, { passive: true });
     window.addEventListener('scroll', onScroll, { passive: true, capture: true });
@@ -66,7 +79,7 @@ export function InfoTooltip({ label = 'More information', children, className = 
       ro.observe(panel);
     }
     return () => {
-      cancelAnimationFrame(raf);
+      cancelAnimationFrame(raf1);
       window.removeEventListener('resize', reposition);
       window.removeEventListener('scroll', onScroll, true);
       ro?.disconnect();
@@ -112,23 +125,19 @@ export function InfoTooltip({ label = 'More information', children, className = 
     }
   };
 
-  const triggerTop = triggerRef.current?.getBoundingClientRect().top ?? 0;
-  const opensAbove = coords && coords.top < triggerTop;
-
   const panel = show && coords ? (
     <div
       id={tipId}
       ref={panelRef}
       role="tooltip"
-      className={`info-tooltip__panel info-tooltip__panel--portaled${pinned ? ' info-tooltip__panel--pinned' : ''}`}
+      className={`info-tooltip__panel info-tooltip__panel--portaled${pinned ? ' info-tooltip__panel--pinned' : ''}${positioned ? ' info-tooltip__panel--ready' : ''}`}
       style={{
         position: 'fixed',
         top: coords.top,
         left: coords.left,
-        width: coords.width,
         maxWidth: coords.maxWidth,
         zIndex: 10950,
-        '--qt-tooltip-origin': opensAbove ? 'bottom center' : 'top center',
+        '--qt-tooltip-origin': coords.opensAbove ? 'bottom left' : 'top left',
       }}
     >
       {children}

@@ -26,7 +26,7 @@ export function CollapsibleSection({
           {open ? <ChevronDown size={16} aria-hidden /> : <ChevronRight size={16} aria-hidden />}
           <h3 id={id} className="al-h collapsible-section__title">{title}</h3>
         </button>
-        {help ? <InfoTooltip label={title}>{help}</InfoTooltip> : null}
+        {help ? <InfoTooltip label={title} align="start">{help}</InfoTooltip> : null}
         {actions ? <div className="collapsible-section__actions">{actions}</div> : null}
       </header>
       {open ? (

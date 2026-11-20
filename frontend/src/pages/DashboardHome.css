@@ -80,11 +80,6 @@
   font-weight: 700;
 }
 
-.fo-fleet-cards__heading .info-tooltip__panel {
-  left: 0;
-  right: auto;
-}
-
 .fo-fleet-cards__grid {
   list-style: none;
   margin: 0;

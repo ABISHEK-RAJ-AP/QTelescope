@@ -84,9 +84,14 @@ html.dark .qt-brand-lockup__img--dark,
   max-width: 220px;
 }
 
-.sidebar-logo-mark {
-  --qt-logo-h: 30px;
-  max-width: 168px;
+.sidebar-logo-mark:not(.sidebar-logo-mark--icon-only) {
+  --qt-logo-h: 28px;
+  max-width: 100%;
+  width: auto;
+}
+
+.sidebar-collapsed:not(.sidebar-hover-expanded) .sidebar-header__stack {
+  align-items: center;
 }
 
 .sidebar-logo-mark--icon-only {

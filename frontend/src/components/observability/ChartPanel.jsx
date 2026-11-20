@@ -72,7 +72,7 @@ export function ChartPanel({
           <div className="chart-panel__title-row">
             {titleNode}
             {showTooltip && (
-              <InfoTooltip label={`About ${title || 'this chart'}`}>
+              <InfoTooltip label={`About ${title || 'this chart'}`} align="start">
                 <div className="chart-panel__tooltip-body">{tooltipBody}</div>
               </InfoTooltip>
             )}
