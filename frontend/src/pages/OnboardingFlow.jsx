@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowRight, ChevronDown, ChevronLeft, ChevronUp, Eye, EyeOff, Key, Loader2,
+  ArrowRight, ChevronDown, ChevronLeft, ChevronUp, Key, Loader2,
 } from 'lucide-react';
 import { api } from '@/services/api';
 import {
@@ -18,17 +18,22 @@ import {
 } from '@/lib/onboardingState';
 import { isPlatformAdmin } from '@/lib/permissions.js';
 import { OnboardingShell, STEP_IDS } from '@/components/onboarding/OnboardingChrome';
-import { Field, fieldClass } from '@/components/AuthShell';
+import { OnboardingProviderConnect } from '@/components/onboarding/OnboardingProviderConnect';
 import '@/components/onboarding/onboarding.css';
 
 const STEPS = STEP_IDS;
-const KEY_PROVIDERS = new Set(['ibm_quantum', 'ionq_quantum', 'cdac_quantum']);
 
 function hasVendorKeys(list) {
-  return (list || []).some((p) => KEY_PROVIDERS.has(p.id) && p.is_configured);
+  return (list || []).some(
+    (p) => (p.adapter === 'live' || p.adapter_status === 'LIVE') && p.is_configured,
+  );
 }
 
-const PRIMARY_PROVIDERS = ['ibm_quantum', 'rigetti_quantum', 'ionq_quantum', 'cdac_quantum'];
+function countConfiguredLive(list) {
+  return (list || []).filter(
+    (p) => (p.adapter === 'live' || p.adapter_status === 'LIVE') && p.is_configured,
+  ).length;
+}
 
 function discoveryStatusMessage(poll, discoverRes, backendCount) {
   if (discoverRes?.error) {
@@ -66,34 +71,6 @@ function FaqBlock({ items, defaultOpen = 0 }) {
   );
 }
 
-function OnboardingSecretField({
-  forId, label, name, value, onChange, visible, onToggle,
-}) {
-  return (
-    <Field label={label} forId={forId}>
-      <div className="onboarding-secret-field">
-        <input
-          id={forId}
-          type={visible ? 'text' : 'password'}
-          className={`${fieldClass} onboarding-secret-field__input`}
-          value={value}
-          onChange={onChange}
-          autoComplete="new-password"
-          name={name || 'provider-credential'}
-        />
-        <button
-          type="button"
-          className="onboarding-secret-field__toggle"
-          onClick={onToggle}
-          aria-label={visible ? 'Hide credential' : 'Show credential'}
-        >
-          {visible ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
-        </button>
-      </div>
-    </Field>
-  );
-}
-
 function WizardFooter({ hint, left, right }) {
   return (
     <footer className="onboarding-footer">
@@ -115,8 +92,6 @@ export function OnboardingFlow({ currentUser }) {
   const [maxReachable, setMaxReachable] = useState(0);
   const [slideIndex, setSlideIndex] = useState(0);
   const [providers, setProviders] = useState([]);
-  const [drafts, setDrafts] = useState({});
-  const [showSecret, setShowSecret] = useState({});
   const [saveNote, setSaveNote] = useState('');
   const [analysisDone, setAnalysisDone] = useState(false);
   const [pollVendors, setPollVendors] = useState(false);
@@ -138,11 +113,15 @@ export function OnboardingFlow({ currentUser }) {
     if (STEPS.includes(next)) setStep(next);
   };
 
-  useEffect(() => {
+  const refreshProviders = useCallback(() => {
     api.getCredentials()
-      .then((res) => setProviders((res?.providers || []).filter((p) => PRIMARY_PROVIDERS.includes(p.id))))
+      .then((res) => setProviders(res?.providers || []))
       .catch(() => setProviders([]));
   }, []);
+
+  useEffect(() => {
+    refreshProviders();
+  }, [refreshProviders]);
 
   const runAnalysis = useCallback(async () => {
     setAnalysisDone(false);
@@ -155,7 +134,7 @@ export function OnboardingFlow({ currentUser }) {
       api.getSummary().catch(() => null),
       api.getCredentials().catch(() => ({})),
     ]);
-    const configured = (creds?.providers || []).filter((p) => KEY_PROVIDERS.has(p.id) && p.is_configured).length;
+    const configured = countConfiguredLive(creds?.providers || []);
     setDiscovery({
       backends: backends || [],
       capabilities: capRes?.providers || [],
@@ -173,28 +152,6 @@ export function OnboardingFlow({ currentUser }) {
     runAnalysis();
     return undefined;
   }, [step, runAnalysis]);
-
-  const saveProvider = async (providerId) => {
-    if (!isAdmin) {
-      setSaveNote('Only an administrator can save provider credentials. Continue without keys to use the demo catalog.');
-      return;
-    }
-    const draft = drafts[providerId] || { extra: {} };
-    const p = providers.find((x) => x.id === providerId);
-    try {
-      setSaveNote('');
-      await api.saveCredentials(providerId, {
-        token: draft.token,
-        endpoint_url: draft.endpoint_url,
-        extra: draft.extra,
-      });
-      setSaveNote(`${p?.name || providerId} saved. Discovery runs in the next step.`);
-      const creds = await api.getCredentials();
-      setProviders((creds?.providers || []).filter((x) => PRIMARY_PROVIDERS.includes(x.id)));
-    } catch (err) {
-      setSaveNote(err?.message || 'Could not save credentials.');
-    }
-  };
 
   const finish = () => {
     completeOnboarding(username);
@@ -334,108 +291,16 @@ export function OnboardingFlow({ currentUser }) {
             <div className="onboarding-connect-layout">
               <div className="onboarding-card onboarding-connect-main">
                 <h2 className="onboarding-slide-title onboarding-slide-title--compact">Provider credentials</h2>
-                <p className="onboarding-slide-body onboarding-slide-body--wide">
-                  Add cloud or on-prem credentials. Keys stay on the server and are not shown again.
-                  {!isAdmin && ' Your role can view the catalog; an Admin saves live tokens.'}
-                </p>
-                {saveNote && (
+                {saveNote ? (
                   <p className="onboarding-inline-notice" role="status">{saveNote}</p>
-                )}
-                <div className="onboarding-provider-grid onboarding-provider-grid--connect">
-                  {providers.length === 0 && (
-                    <p className="onboarding-empty-note" role="status">
-                      Provider list still loading, or the server is unreachable. Skip to use the demo catalog.
-                    </p>
-                  )}
-                  {providers.map((p) => {
-                    const draft = drafts[p.id] || { extra: {} };
-                    const vis = showSecret[p.id] || {};
-                    const setField = (field, value) => {
-                      setDrafts((prev) => {
-                        const cur = prev[p.id] || { extra: {} };
-                        if (field.in === 'extra') {
-                          return { ...prev, [p.id]: { ...cur, extra: { ...(cur.extra || {}), [field.key]: value } } };
-                        }
-                        return { ...prev, [p.id]: { ...cur, [field.in]: value } };
-                      });
-                    };
-                    const fieldValue = (field) => {
-                      const cur = drafts[p.id] || {};
-                      if (field.in === 'extra') return (cur.extra || {})[field.key] || p.public_fields?.[field.key] || '';
-                      if (field.in === 'endpoint_url') return cur.endpoint_url ?? p.endpoint_url ?? p.public_fields?.endpoint_url ?? '';
-                      return cur[field.in] || '';
-                    };
-                    const statusLabel = [p.truth_label || p.adapter_status, p.is_configured ? 'Configured' : null]
-                      .filter(Boolean)
-                      .join(' · ');
-                    return (
-                      <form
-                        key={p.id}
-                        className="onboarding-provider-card onboarding-provider-card--connect"
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          if (isAdmin) saveProvider(p.id);
-                        }}
-                      >
-                        <header className="onboarding-provider-card__head">
-                          <div>
-                            <h4>{p.name}</h4>
-                            <p className="onboarding-provider-card__meta">
-                              {p.vendor} · {p.modality.replace(/_/g, ' ')}
-                            </p>
-                          </div>
-                          <span className="onboarding-provider-card__status">{statusLabel}</span>
-                        </header>
-                        <div className="onboarding-provider-card__fields">
-                          {p.fields?.map((field) => {
-                            const inputId = `${p.id}-${field.key}`;
-                            if (field.secret) {
-                              return (
-                                <OnboardingSecretField
-                                  key={field.key}
-                                  forId={inputId}
-                                  name={field.key}
-                                  label={field.label}
-                                  value={fieldValue(field)}
-                                  onChange={(e) => setField(field, e.target.value)}
-                                  visible={!!vis[field.key]}
-                                  onToggle={() => setShowSecret((s) => ({
-                                    ...s,
-                                    [p.id]: { ...(s[p.id] || {}), [field.key]: !vis[field.key] },
-                                  }))}
-                                />
-                              );
-                            }
-                            const auto = field.in === 'endpoint_url' ? 'url' : 'off';
-                            return (
-                              <Field key={field.key} label={field.label} forId={inputId}>
-                                <input
-                                  id={inputId}
-                                  name={field.key}
-                                  type={field.in === 'endpoint_url' ? 'url' : 'text'}
-                                  className={fieldClass}
-                                  placeholder={field.placeholder || ''}
-                                  value={fieldValue(field)}
-                                  onChange={(e) => setField(field, e.target.value)}
-                                  autoComplete={auto}
-                                />
-                              </Field>
-                            );
-                          })}
-                        </div>
-                        <footer className="onboarding-provider-card__foot">
-                          <button
-                            type="submit"
-                            className="btn btn-primary btn-sm"
-                            disabled={!isAdmin}
-                          >
-                            Save {p.name}
-                          </button>
-                        </footer>
-                      </form>
-                    );
-                  })}
-                </div>
+                ) : null}
+                <OnboardingProviderConnect
+                  isAdmin={isAdmin}
+                  onNotice={(msg) => {
+                    setSaveNote(msg);
+                    refreshProviders();
+                  }}
+                />
               </div>
               <aside className="onboarding-side-panel onboarding-connect-rail" aria-label="Integration guide">
                 <p className="onboarding-section-title">Integration steps</p>
