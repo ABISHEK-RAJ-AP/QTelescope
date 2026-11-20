@@ -18,13 +18,7 @@ export function QtTeleScopeMark({
 }) {
   const h = Number(height ?? size) || 32;
   const alt = decorative ? '' : title;
-  const imgClass = [
-    'qt-brand-lockup__img',
-    theme === 'dark' ? 'qt-brand-lockup__img--glow' : '',
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const imgClass = ['qt-brand-lockup__img', className].filter(Boolean).join(' ');
 
   const src = theme === 'light' ? LOCKUP_LIGHT : theme === 'dark' ? LOCKUP_DARK : null;
 
@@ -57,7 +51,7 @@ export function QtTeleScopeMark({
         decoding="async"
       />
       <img
-        className="qt-brand-lockup__img qt-brand-lockup__img--dark qt-brand-lockup__img--glow"
+        className="qt-brand-lockup__img qt-brand-lockup__img--dark"
         src={LOCKUP_DARK}
         alt={decorative ? undefined : alt}
         aria-hidden={decorative ? true : undefined}
