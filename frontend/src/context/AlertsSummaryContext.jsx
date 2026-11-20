@@ -7,7 +7,7 @@ const AlertsSummaryContext = createContext(null);
 const TTL_MS = 25_000;
 const POLL_MS = 30_000;
 
-export function AlertsSummaryProvider({ children }) {
+export function AlertsSummaryProvider({ children, enabled = true }) {
   const [summary, setSummary] = useState(() => peekApiCache('/alerts/summary') ?? null);
   const summaryRef = useRef(summary);
   summaryRef.current = summary;
@@ -37,6 +37,7 @@ export function AlertsSummaryProvider({ children }) {
       })
       .catch((err) => {
         inflight.current = null;
+        if (err?.sessionExpired) return null;
         throw err;
       });
     return inflight.current;
@@ -57,6 +58,7 @@ export function AlertsSummaryProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return undefined;
     refreshSummary({ force: true }).catch(() => {});
     const interval = setInterval(() => {
       if (typeof document !== 'undefined' && document.hidden) return;
@@ -67,7 +69,7 @@ export function AlertsSummaryProvider({ children }) {
       clearInterval(interval);
       clearTimeout(kick);
     };
-  }, [refreshSummary]);
+  }, [refreshSummary, enabled]);
 
   const value = useMemo(() => ({
     summary,

@@ -24,7 +24,10 @@ function scheduleDeferredWarm() {
   const run = () => {
     deferredHandle = null;
     Promise.allSettled(
-      WARM_DEFERRED.map(([path, ttl]) => fetchApiCached(path, { ttlMs: ttl })),
+      WARM_DEFERRED.map(([path, ttl]) => fetchApiCached(path, { ttlMs: ttl }).catch((err) => {
+        if (err?.sessionExpired) return null;
+        throw err;
+      })),
     );
   };
   if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
@@ -48,8 +51,12 @@ export function warmConsoleCache({ force = false, includeDeferred = true } = {})
     return Promise.resolve();
   }
   warmedForToken = token;
+  const warmOne = ([path, ttl]) => fetchApiCached(path, { ttlMs: ttl }).catch((err) => {
+    if (err?.sessionExpired) return null;
+    throw err;
+  });
   return Promise.allSettled(
-    WARM_CRITICAL.map(([path, ttl]) => fetchApiCached(path, { ttlMs: ttl })),
+    WARM_CRITICAL.map(warmOne),
   ).then(() => {
     if (includeDeferred) scheduleDeferredWarm();
   });

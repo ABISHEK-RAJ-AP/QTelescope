@@ -128,7 +128,6 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
   const [expandedBranches, setExpandedBranches] = useState(
     () => new Set(['alerts', 'admin']),
   );
-  const [labsOpen, setLabsOpen] = useState(false);
   const canConfigure = canManageFleet(currentUser);
   const tourSteps = useMemo(
     () => filterConsoleTourSteps(currentUser, canSeeNavItem),
@@ -570,41 +569,38 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
   };
 
   const navGroups = useMemo(() => {
-    const primary = {
-      label: 'Console',
-      items: [
-        { id: 'home', label: 'Overview', icon: LayoutDashboard },
-        { id: 'backends', label: 'Backends', icon: Cpu },
-        {
-          id: 'alerts',
-          label: 'Alerts & incidents',
-          icon: AlertTriangle,
-          children: ALERTS_HUB_NAV,
-          badge: criticalAlertsCount > 0 ? criticalAlertsCount : (activeAlertsCount > 0 ? activeAlertsCount : 0),
-          badgeVariant: criticalAlertsCount > 0 ? 'critical' : 'total',
-          badgeTitle: criticalAlertsCount > 0
-            ? `${criticalAlertsCount} critical · ${activeAlertsCount} active`
-            : `${activeAlertsCount} active alerts`,
-        },
-        { id: 'compare', label: 'Compare & routing', icon: Activity },
-        { id: 'reports', label: 'Reports', icon: FileText },
-      ].filter((item) => canSeeNavItem(currentUser, item.id)),
-    };
+    const consoleItems = [
+      { id: 'home', label: 'Overview', icon: LayoutDashboard },
+      { id: 'backends', label: 'Backends', icon: Cpu },
+      {
+        id: 'alerts',
+        label: 'Alerts & incidents',
+        icon: AlertTriangle,
+        children: ALERTS_HUB_NAV,
+        badge: criticalAlertsCount > 0 ? criticalAlertsCount : (activeAlertsCount > 0 ? activeAlertsCount : 0),
+        badgeVariant: criticalAlertsCount > 0 ? 'critical' : 'total',
+        badgeTitle: criticalAlertsCount > 0
+          ? `${criticalAlertsCount} critical · ${activeAlertsCount} active`
+          : `${activeAlertsCount} active alerts`,
+      },
+      { id: 'compare', label: 'Compare & routing', icon: Activity },
+      { id: 'reports', label: 'Reports', icon: FileText },
+    ].filter((item) => canSeeNavItem(currentUser, item.id));
     const labsItems = [
       { id: 'telemetry', label: 'Telemetry', icon: Activity, children: LABS_TELEMETRY_NAV },
       { id: 'execution', label: 'Execution', icon: PlaySquare, children: EXECUTION_NAV },
       { id: 'resources', label: 'Resources', icon: CheckCircle2, children: RESOURCES_NAV },
       { id: 'platform', label: 'Platform health', icon: Server },
     ].filter((item) => canSeeNavItem(currentUser, item.id));
-    const labs = labsItems.length
-      ? { label: 'Labs', items: labsItems, labsGroup: true }
-      : null;
-    return [primary, labs].filter(Boolean).filter((g) => g.items.length > 0);
+    const groups = [];
+    if (consoleItems.length) groups.push({ items: consoleItems });
+    if (labsItems.length) groups.push({ label: 'Labs', items: labsItems });
+    return groups;
   }, [activeAlertsCount, criticalAlertsCount, currentUser]);
 
   const adminNav = visibleAdminNav(currentUser);
   const adminItem = adminNav.length
-    ? { id: 'admin', label: 'Settings', icon: Settings, children: adminNav }
+    ? { id: 'admin', label: 'Administration', icon: Settings, children: adminNav }
     : null;
 
   const toggleBranch = (id) => {
@@ -745,28 +741,19 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
         </Link>
 
         <nav className="sidebar-nav" data-tour="sidebar-nav">
-          {navGroups.map((group) => (
-            <div key={group.label}>
-              {group.labsGroup && !effectiveCollapsed ? (
-                <button
-                  type="button"
-                  className="nav-group-label nav-group-label--button"
-                  aria-expanded={labsOpen}
-                  onClick={() => setLabsOpen((v) => !v)}
-                >
-                  {group.label}
-                  <ChevronDown size={14} style={{ transform: labsOpen ? 'rotate(0)' : 'rotate(-90deg)' }} aria-hidden />
-                </button>
-              ) : (!effectiveCollapsed && <div className="nav-group-label">{group.label}</div>)}
-              {(group.labsGroup ? labsOpen : true) && group.items.map((item) => renderNavItem(item))}
+          {navGroups.map((group, idx) => (
+            <div key={group.label || `nav-console-${idx}`}>
+              {group.label && !effectiveCollapsed ? (
+                <div className="nav-group-label">{group.label}</div>
+              ) : null}
+              {group.items.map((item) => renderNavItem(item))}
             </div>
           ))}
-          {adminItem && (
+          {adminItem ? (
             <div key="admin">
-              {!effectiveCollapsed && <div className="nav-group-label">Settings</div>}
               {renderNavItem(adminItem)}
             </div>
-          )}
+          ) : null}
         </nav>
 
         <div className="sidebar-footer">
@@ -909,7 +896,6 @@ export const App = () => {
 
   const handleLoginSuccess = (userObj) => {
     setCurrentUser(userObj);
-    warmConsoleCache({ force: true });
   };
 
   const endSession = useCallback(() => {
@@ -961,7 +947,7 @@ export const App = () => {
   }
 
   return (
-    <AlertsSummaryProvider>
+    <AlertsSummaryProvider enabled={sessionChecked}>
       <PageActionsProvider>
         <AppShell
           currentUser={currentUser}

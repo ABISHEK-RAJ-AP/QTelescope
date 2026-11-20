@@ -36,8 +36,14 @@
   overflow: visible;
 }
 
-.collapsible-section__toggle .qt-title-with-help {
+.collapsible-section__toggle .qt-title-with-help,
+.collapsible-section__title-cluster {
   align-items: center;
+}
+
+.collapsible-section__title-cluster .badge {
+  flex-shrink: 0;
+  margin-left: 2px;
 }
 
 .collapsible-section__actions {

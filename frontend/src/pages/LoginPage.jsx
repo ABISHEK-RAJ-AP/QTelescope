@@ -133,6 +133,10 @@ export function LoginPage({ onLoginSuccess }) {
       setError('Enter the characters shown in the image.')
       return
     }
+    if (!captchaId) {
+      setError('Wait for the security image, or tap New image.')
+      return
+    }
 
     setLoading(true)
     try {
@@ -290,7 +294,7 @@ export function LoginPage({ onLoginSuccess }) {
           </div>
         ) : null}
 
-        <Button type="submit" data-testid="login-submit" className="auth-cta h-11 w-full gap-2 text-sm font-semibold" disabled={loading}>
+        <Button type="submit" data-testid="login-submit" className="auth-cta h-11 w-full gap-2 text-sm font-semibold" disabled={loading || !captchaId}>
           {loading ? <Loader2 className="size-4 animate-spin" aria-hidden /> : null}
           Sign in <ArrowRight className="size-4" aria-hidden />
         </Button>

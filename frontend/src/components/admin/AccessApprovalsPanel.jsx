@@ -54,26 +54,39 @@ function resolveOrgForInvite(me, orgFilter, inviteOrgPick) {
   return (inviteOrgPick || '').trim();
 }
 
+const QUEUE_TAB_HELP =
+  'Pending and rejected self-registrations. Approve, reject, or assign roles before members can sign in.';
+const DIRECTORY_TAB_HELP =
+  'Searchable roster for your organisation scope. Change roles, MFA, suspend, or export members.';
+
 function PeopleTabBar({ tab, onTab, pendingCount }) {
   const items = [
     { id: 'queue', label: 'Queue', badge: pendingCount || null },
     { id: 'directory', label: 'Directory' },
   ];
   return (
-    <div className="admin-people-tabs" role="tablist" aria-label="People views">
-      {items.map((t) => (
-        <button
-          key={t.id}
-          type="button"
-          role="tab"
-          aria-selected={tab === t.id}
-          className={`admin-people-tabs__btn${tab === t.id ? ' admin-people-tabs__btn--on' : ''}`}
-          onClick={() => onTab(t.id)}
-        >
-          {t.label}
-          {t.badge ? <span className="admin-people-tabs__badge">{t.badge}</span> : null}
-        </button>
-      ))}
+    <div className="admin-people-tabs-wrap">
+      <div className="admin-people-tabs" role="tablist" aria-label="People views">
+        {items.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            className={`admin-people-tabs__btn${tab === t.id ? ' admin-people-tabs__btn--on' : ''}`}
+            onClick={() => onTab(t.id)}
+          >
+            {t.label}
+            {t.badge ? <span className="admin-people-tabs__badge">{t.badge}</span> : null}
+          </button>
+        ))}
+      </div>
+      <InfoTooltip
+        label={tab === 'queue' ? 'Queue' : 'Directory'}
+        align="start"
+      >
+        {tab === 'queue' ? QUEUE_TAB_HELP : DIRECTORY_TAB_HELP}
+      </InfoTooltip>
     </div>
   );
 }
@@ -398,24 +411,32 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
         <div className="admin-people-toolbar__row">
           <PeopleTabBar tab={tab} onTab={setTab} pendingCount={pending.length} />
           <div className="admin-people-toolbar__actions">
-            {fleetAdmin ? (
-              <label className="admin-people-scope outline-field">
-                <span className="visually-hidden">Organisation scope</span>
-                <select
-                  className="input-control"
-                  value={orgFilter}
-                  onChange={(e) => setOrgFilter(e.target.value)}
-                  aria-label="Organisation scope"
-                >
-                  <option value="">All organisations</option>
-                  {orgChoices.map((org) => (
-                    <option key={org} value={org}>{org}</option>
-                  ))}
-                </select>
-              </label>
-            ) : (
-              <span className="admin-people-scope-readout badge badge-info">{scopeOrgLabel}</span>
-            )}
+            <div className="admin-people-scope-block">
+              <span className="admin-people-scope-block__label qt-title-with-help">
+                <span className="admin-people-scope-block__text">Organisation scope</span>
+                <InfoTooltip label="Organisation scope" align="start">
+                  Limits the queue, directory, and invites to one organisation. Fleet admins can pick any org or all.
+                </InfoTooltip>
+              </span>
+              {fleetAdmin ? (
+                <label className="admin-people-scope outline-field">
+                  <span className="visually-hidden">Organisation scope</span>
+                  <select
+                    className="input-control"
+                    value={orgFilter}
+                    onChange={(e) => setOrgFilter(e.target.value)}
+                    aria-label="Organisation scope"
+                  >
+                    <option value="">All organisations</option>
+                    {orgChoices.map((org) => (
+                      <option key={org} value={org}>{org}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <span className="admin-people-scope-readout badge badge-info">{scopeOrgLabel}</span>
+              )}
+            </div>
             <button
               type="button"
               className="btn btn-secondary btn--sm"
@@ -455,7 +476,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
             defaultOpen={pending.length > 0}
             className="card admin-people-panel"
             help={COPY.auth.accessPendingSubtitle}
-            actions={<span className="badge badge-warning">{pending.length}</span>}
+            titleAside={<span className="badge badge-warning">{pending.length}</span>}
           >
             {loading && pending.length === 0 ? (
               <p className="admin-people-muted">Loading…</p>
@@ -493,7 +514,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
               defaultOpen={false}
               className="card admin-people-panel"
               help={COPY.auth.accessRejectedSubtitle}
-              actions={<span className="badge badge-offline">{rejected.length}</span>}
+              titleAside={<span className="badge badge-offline">{rejected.length}</span>}
             >
               <div className="admin-access-grid">
                 {rejected.map((u) => (

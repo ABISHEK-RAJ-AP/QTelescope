@@ -74,7 +74,7 @@ export function useSessionGuard(currentUser, { onEnd, onRefresh, onReady }) {
       try {
         const me = await api.getMe();
         if (!me?.authenticated) {
-          if (readSessionUser()?.token) {
+          if (userRef.current?.token) {
             terminate('Session ended. Sign in again.');
           } else {
             markReady();
@@ -102,16 +102,19 @@ export function useSessionGuard(currentUser, { onEnd, onRefresh, onReady }) {
         onRefresh?.(merged);
         markReady();
       } catch (e) {
-        const msg = String(e?.message || e);
-        if (
-          msg.includes('401')
-          || /session ended/i.test(msg)
-          || /authentication required/i.test(msg)
-        ) {
-          terminate('Session ended. Sign in again.');
-        } else if (isBoot) {
-          markReady();
+        if (e?.sessionExpired || userRef.current?.token) {
+          const msg = String(e?.message || e);
+          if (
+            e?.sessionExpired
+            || msg.includes('401')
+            || /session ended/i.test(msg)
+            || /authentication required/i.test(msg)
+          ) {
+            terminate('Session ended. Sign in again.');
+            return;
+          }
         }
+        if (isBoot) markReady();
       }
     };
 

@@ -99,8 +99,34 @@
 .admin-people-toolbar__actions {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.admin-people-tabs-wrap {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-people-scope-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.admin-people-scope-block__label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.admin-people-scope-block__text {
+  line-height: 1.2;
 }
 
 .admin-people-scope .input-control {
