@@ -114,6 +114,7 @@ function FleetFlipCard({ r }) {
 }
 
 const FLEET_CARDS_PER_PAGE = 3;
+const FLEET_AUTO_MS = 6000;
 
 function gridClassForCount(n) {
   if (n >= 5) return 'fo-fleet-cards__grid--5';
@@ -150,7 +151,7 @@ export function FleetBackendCards({ rows = [], className = '' }) {
     const id = window.setInterval(() => {
       if (document.hidden) return;
       setSlide((p) => p + 1);
-    }, 10_000);
+    }, FLEET_AUTO_MS);
     return () => window.clearInterval(id);
   }, [hold, slideCount]);
 
@@ -163,15 +164,13 @@ export function FleetBackendCards({ rows = [], className = '' }) {
       className={`fo-fleet-cards card fo-fleet-cards--glass ds-glass-panel ${className}`.trim()}
       aria-labelledby="fo-fleet-cards-h"
       data-tour="page-fleet-cards"
-      onMouseEnter={() => setHold(true)}
-      onMouseLeave={() => setHold(false)}
     >
       <div className="fo-fleet-cards__head">
         <div className="fo-fleet-cards__heading">
           <h2 id="fo-fleet-cards-h" className="fo-fleet-cards__title">Backends</h2>
           <InfoTooltip label="How these cards work" align="start">
             Hover the summary for ops detail. Open workspace stays on the card.
-            {carousel ? ' Carousel advances every 10s; use arrows to step.' : null}
+            {carousel ? ' Carousel auto-advances every 6s; pauses while you hover the cards. Use arrows or dots to step.' : null}
           </InfoTooltip>
         </div>
         <div className="fo-fleet-cards__head-actions">
@@ -209,7 +208,15 @@ export function FleetBackendCards({ rows = [], className = '' }) {
         aria-roledescription={carousel ? 'carousel' : undefined}
         aria-label={carousel ? 'Fleet backend cards' : undefined}
       >
-        <div className="hero-cycle__viewport fo-fleet-cards__viewport">
+        <div
+          className="hero-cycle__viewport fo-fleet-cards__viewport"
+          onMouseEnter={() => setHold(true)}
+          onMouseLeave={() => setHold(false)}
+          onFocusCapture={() => setHold(true)}
+          onBlurCapture={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget)) setHold(false);
+          }}
+        >
           <div
             className="hero-cycle__track fo-fleet-cards__track"
             data-page={active}

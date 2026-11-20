@@ -13,10 +13,11 @@ from app.analytics.health_vector import (
     mean_or_none,
 )
 from app.api.environment import env_severity_for
-from app.core.provenance import MOCK_BACKEND_IDS
+from app.core.provenance import resolve_backend_data_lineage
 from app.models.entities import (
     AlertRuleModel,
     BackendModel,
+    BackendTelemetryModel,
     GateTelemetryModel,
     QubitModel,
     QubitTelemetryModel,
@@ -102,10 +103,21 @@ def _router_explanation(backend_state: str, counts: dict, env_sev: str, q_rows: 
     return "; ".join(parts)
 
 
-def _data_lineage(backend_id: str) -> dict:
-    if backend_id in MOCK_BACKEND_IDS:
-        return {"lineage": "simulated", "label": "Demo mock catalog"}
-    return {"lineage": "live", "label": "Provider feed / live discovery"}
+def _latest_telemetry_sources(db: Session, backend_ids: list[str]) -> dict[str, str | None]:
+    """Most recent backend_telemetry.telemetry_source per backend (ingest lineage)."""
+    if not backend_ids:
+        return {}
+    out: dict[str, str | None] = {bid: None for bid in backend_ids}
+    rows = (
+        db.query(BackendTelemetryModel)
+        .filter(BackendTelemetryModel.backend_id.in_(backend_ids))
+        .order_by(BackendTelemetryModel.backend_id, BackendTelemetryModel.timestamp.desc())
+        .all()
+    )
+    for row in rows:
+        if out.get(row.backend_id) is None:
+            out[row.backend_id] = row.telemetry_source
+    return out
 
 
 def _t_gate_us(gates) -> float:
@@ -139,6 +151,7 @@ def _history_by_qubit(db: Session, backend_id: str, n_qubits: int, per_qubit: in
 def build_health_vector_payload(db: Session) -> dict:
     t1_crit = _t1_crit(db)
     backends = db.query(BackendModel).all()
+    telemetry_src = _latest_telemetry_sources(db, [b.backend_id for b in backends])
     out = []
     for b in backends:
         env_sev = env_severity_for(b.backend_id)
@@ -217,7 +230,11 @@ def build_health_vector_payload(db: Session) -> dict:
             if "none" in confidences
             else ("limited" if "limited" in confidences else "high")
         )
-        lineage = _data_lineage(b.backend_id)
+        lineage = resolve_backend_data_lineage(
+            backend_id=b.backend_id,
+            provider_id=b.provider_id,
+            latest_telemetry_source=telemetry_src.get(b.backend_id),
+        )
         if not fallback_2q and not g2 and metric_gaps:
             if b.provider_id == "rigetti_quantum":
                 metric_gaps.add("2Q gate data not supplied by the Rigetti QCS ISA feed")

@@ -4,6 +4,7 @@ import { ArrowLeft } from 'lucide-react'
 import { QtTeleScopeMark } from '@/components/brand/QtTeleScopeMark.jsx'
 import { AuthFridgeVisual } from '@/components/marketing/AuthFridgeVisual'
 import { PublicMarketingHeader } from '@/components/marketing/PublicMarketingHeader'
+import { PublicMarketingFooter } from '@/components/marketing/PublicMarketingFooter'
 import { QuantumBackground } from '@/components/ui/quantum-background'
 import { consoleHomePath } from '@/lib/consoleHome.js'
 
@@ -36,6 +37,7 @@ export function AuthShell({
             {footer ? <div className="reg-cert-footer">{footer}</div> : null}
           </div>
         </div>
+        <PublicMarketingFooter compact />
       </div>
     );
   }
@@ -104,6 +106,7 @@ export function AuthShell({
           </div>
         )}
       </main>
+      <PublicMarketingFooter compact />
     </div>
   )
 }

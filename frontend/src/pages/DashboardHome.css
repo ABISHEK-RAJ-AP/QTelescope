@@ -86,6 +86,11 @@
   min-width: 0;
 }
 
+.fo-fleet-cards__viewport {
+  overflow: hidden;
+  width: 100%;
+}
+
 .fo-fleet-cards__carousel--single .fo-fleet-cards__viewport {
   overflow: visible;
 }

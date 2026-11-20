@@ -186,6 +186,13 @@ export function LoginPage({ onLoginSuccess }) {
               </>
             ) : null}
           </p>
+          <p className="text-center text-xs text-[var(--text-muted)]">
+            <Link to="/privacy" className="hover:text-[var(--accent)]">Privacy</Link>
+            {' · '}
+            <Link to="/terms" className="hover:text-[var(--accent)]">Terms</Link>
+            {' · '}
+            <Link to="/security" className="hover:text-[var(--accent)]">Security</Link>
+          </p>
         </div>
       }
     >

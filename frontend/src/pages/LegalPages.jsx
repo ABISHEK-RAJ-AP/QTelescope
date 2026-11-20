@@ -13,7 +13,7 @@ function LegalShell({ title, children }) {
       </Link>
       <h1 className="mt-6 text-3xl font-bold tracking-tight">{title}</h1>
       <p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">
-        DRAFT — review with C-DAC legal before external publication.
+        Operator and deployment policy for this Q-TeleScope instance.
       </p>
     </header>
     <article className={`${WRAP} prose prose-neutral dark:prose-invert max-w-none text-base leading-relaxed`}>
@@ -43,6 +43,11 @@ export function PrivacyPolicyPage() {
       </p>
       <h2>Retention</h2>
       <p>Retention follows administrator policy and database backups on your instance. Contact your platform owner for export or deletion.</p>
+      <h2>Cookies and local storage</h2>
+      <p>
+        The console stores session tokens and UI preferences (theme, layout) in your browser. No third-party
+        advertising trackers are used in the operator application.
+      </p>
       <h2>Contact</h2>
       <p>Use the organisation contact published for your C-DAC or lab deployment.</p>
     </LegalShell>

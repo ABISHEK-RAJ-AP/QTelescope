@@ -306,9 +306,15 @@ export function RegisterPage() {
   }
 
   const footer = (
-    <>
-      Already have an account? <Link to="/login">Sign in</Link>
-    </>
+    <div className="space-y-2 text-sm text-center text-[var(--text-muted)]">
+      <p>
+        Already have an account? <Link to="/login">Sign in</Link>
+      </p>
+      <p className="text-xs leading-relaxed">
+        By creating an account you agree to our{' '}
+        <Link to="/terms">Terms of Operation</Link> and <Link to="/privacy">Privacy Policy</Link>.
+      </p>
+    </div>
   );
 
   const panelHeadCopy = {

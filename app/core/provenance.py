@@ -57,5 +57,58 @@ def parse_telemetry_source(raw: Optional[str]) -> Dict[str, str]:
     return {"lineage": lineage, "provider_id": provider_id}
 
 
+_PROVIDER_LABEL = {
+    "ibm_quantum": "IBM Quantum API",
+    "rigetti_quantum": "Rigetti QCS API",
+    "ionq_quantum": "IonQ Cloud API",
+    "cdac_quantum": "C-DAC API",
+}
+
+
+def _provider_display(provider_id: Optional[str]) -> str:
+    pid = (provider_id or "unknown").strip()
+    return _PROVIDER_LABEL.get(pid, pid.replace("_", " "))
+
+
+def resolve_backend_data_lineage(
+    *,
+    backend_id: str,
+    provider_id: str,
+    latest_telemetry_source: Optional[str] = None,
+) -> Dict[str, str]:
+    """Per-backend lineage — from last ingest row, not catalog ID alone."""
+    from app.core.hybrid_demo import hybrid_demo_enabled, is_demo_live_provider
+
+    if latest_telemetry_source and ":" in str(latest_telemetry_source):
+        parsed = parse_telemetry_source(latest_telemetry_source)
+        mode = parsed["lineage"]
+        prov = parsed.get("provider_id") or provider_id
+    else:
+        prov = provider_id
+        if backend_id not in MOCK_BACKEND_IDS:
+            mode = "live"
+        elif hybrid_demo_enabled() and is_demo_live_provider(provider_id):
+            mode = "live"
+        elif latest_telemetry_source in (None, "", "api"):
+            mode = "stub"
+        else:
+            mode = "simulated"
+
+    if mode == "live":
+        label = f"Provider API · {_provider_display(prov)}"
+    elif mode == "simulated":
+        label = "Demo catalog (simulated)"
+    elif mode == "replay":
+        label = "Replay snapshot"
+    else:
+        label = "Awaiting provider ingest"
+
+    return {
+        "lineage": mode,
+        "label": label,
+        "telemetry_source": latest_telemetry_source or None,
+    }
+
+
 def utcnow_iso() -> str:
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
