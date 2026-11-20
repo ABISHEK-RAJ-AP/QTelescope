@@ -18,13 +18,14 @@ const dateFmt = new Intl.DateTimeFormat(LOCALE, {
 });
 
 /** Isolated clock — cheap formatters; pauses when tab hidden. */
-export function IstClock() {
+export function IstClock({ compact = false }) {
   const [now, setNow] = useState(() => new Date());
 
-  const label = useMemo(
+  const fullLabel = useMemo(
     () => `${dateFmt.format(now)}, ${timeOnlyFmt.format(now)} IST`,
     [now],
   );
+  const label = compact ? `${timeOnlyFmt.format(now)} IST` : fullLabel;
 
   useEffect(() => {
     const tick = () => setNow(new Date());
@@ -36,9 +37,9 @@ export function IstClock() {
   }, []);
 
   return (
-    <div className="ist-clock">
+    <div className="ist-clock" title={compact ? fullLabel : undefined}>
       <span className="pulse-dot" />
-      <Clock size={14} />
+      <Clock size={14} aria-hidden />
       <span>{label}</span>
     </div>
   );

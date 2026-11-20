@@ -387,17 +387,18 @@ pre,
   width: 100%;
   min-height: 44px;
   margin: 8px 4px 2px;
-  padding: 8px;
+  padding: 10px 12px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   cursor: pointer;
   font-family: inherit;
-  font-weight: inherit;
-  line-height: inherit;
-  letter-spacing: inherit;
-  text-transform: inherit;
-  color: inherit;
+  font-size: var(--font-size-helper);
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  color: var(--text-secondary);
 }
 
 .nav-group-label--button:hover {
@@ -698,44 +699,48 @@ pre,
 }
 
 .app-page-head .page-header__row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    'main trailing'
-    'actions actions';
-  align-items: start;
-  column-gap: 16px;
-  row-gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
   width: 100%;
 }
 
 .app-page-head .page-header__main {
-  grid-area: main;
+  flex: 1 1 14rem;
   min-width: 0;
   max-width: 100%;
 }
 
+.app-page-head .page-header__aside {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex: 0 1 auto;
+  max-width: 100%;
+  margin-left: auto;
+}
+
 .app-page-head .page-header__trailing {
-  grid-area: trailing;
   display: flex;
   align-items: center;
   gap: 10px;
   flex-shrink: 0;
-  justify-self: end;
-  align-self: start;
 }
 
 .app-page-head .page-header__actions--center {
-  grid-area: actions;
-  justify-content: flex-start;
+  justify-content: flex-end;
   align-items: center;
   flex-wrap: wrap;
+  width: auto;
   max-width: 100%;
-  width: 100%;
 }
 
 .app-page-head .page-header__actions {
-  justify-content: center;
+  justify-content: flex-end;
 }
 
 .page-head-refresh-cluster {

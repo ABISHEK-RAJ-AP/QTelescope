@@ -1,13 +1,16 @@
 .collapsible-section__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  flex-wrap: wrap;
   gap: 12px;
 }
 .collapsible-section__toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
   border: 0;
   background: transparent;
   color: inherit;
@@ -17,5 +20,10 @@
   min-width: 0;
 }
 .collapsible-section__title { margin: 0; }
-.collapsible-section__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.collapsible-section__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
 .collapsible-section__body { margin-top: 12px; }

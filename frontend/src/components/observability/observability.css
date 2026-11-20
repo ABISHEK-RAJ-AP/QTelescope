@@ -71,6 +71,16 @@
   gap: 12px;
 }
 
+.page-header__aside {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+
 .page-header__kicker {
   margin: 0 0 2px;
   font-size: var(--font-size-micro-label);
@@ -95,23 +105,10 @@
   row-gap: 6px;
 }
 
-.page-header__title-line {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: 6px 10px;
-  width: 100%;
-  min-width: 0;
-}
-
-.page-header__title-line .page-header__title {
-  flex: 1 1 12rem;
-  min-width: 0;
-}
-
-.page-header__title-line .info-tooltip {
+.page-header__title .page-header__title-help,
+.page-header__title .info-tooltip {
   flex-shrink: 0;
-  margin-top: 0.35rem;
+  align-self: center;
 }
 
 .page-header__title-text {

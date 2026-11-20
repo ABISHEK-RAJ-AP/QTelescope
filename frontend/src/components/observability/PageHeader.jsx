@@ -49,17 +49,15 @@ export function PageHeader({
       <div className="page-header__row">
         <div className="page-header__main">
           {kicker && <p className="page-header__kicker">{kicker}</p>}
-          <div className="page-header__title-line">
-            <h1 className="page-header__title">
-              <span className="page-header__title-text">{title}</span>
-              {backendId ? <BackendRegistryIdChip backendId={backendId} className="page-header__id-chip" /> : null}
-            </h1>
+          <h1 className="page-header__title">
+            <span className="page-header__title-text">{title}</span>
             {description ? (
-              <InfoTooltip label={`About ${title}`} align="start">
+              <InfoTooltip label={`About ${title}`} align="start" className="page-header__title-help">
                 {description}
               </InfoTooltip>
             ) : null}
-          </div>
+            {backendId ? <BackendRegistryIdChip backendId={backendId} className="page-header__id-chip" /> : null}
+          </h1>
           {description && !embedded ? <p className="page-header__desc">{description}</p> : null}
           {lastUpdated ? (
             <div className="page-header__context">
@@ -67,15 +65,29 @@ export function PageHeader({
             </div>
           ) : null}
         </div>
-        <div className="page-header__actions page-header__actions--center">
-          {help}
-          {actions}
-        </div>
-        {trailing ? (
-          <div className="page-header__trailing">
-            {trailing}
+        {embedded && (actions || trailing || help) ? (
+          <div className="page-header__aside">
+            {help}
+            {actions ? (
+              <div className="page-header__actions page-header__actions--center">
+                {actions}
+              </div>
+            ) : null}
+            {trailing ? <div className="page-header__trailing">{trailing}</div> : null}
           </div>
-        ) : null}
+        ) : (
+          <>
+            <div className="page-header__actions page-header__actions--center">
+              {help}
+              {actions}
+            </div>
+            {trailing ? (
+              <div className="page-header__trailing">
+                {trailing}
+              </div>
+            ) : null}
+          </>
+        )}
       </div>
     </header>
   );

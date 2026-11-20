@@ -81,7 +81,6 @@ export function resolvePageContext(state) {
 
   switch (mainTopic) {
     case 'home':
-      breadcrumbs.push({ label: 'Overview' });
       title = 'Fleet overview';
       description = 'Fleet status, open alerts, queue pressure, and per-backend health.';
       break;

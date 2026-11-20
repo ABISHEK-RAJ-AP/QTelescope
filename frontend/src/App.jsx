@@ -828,7 +828,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
             trailing={(
               <div className="app-page-head__global">
                 <OperatorNoticeBell />
-                <IstClock />
+                <IstClock compact />
                 <button
                   type="button"
                   className="btn btn-secondary qt-pressable"
