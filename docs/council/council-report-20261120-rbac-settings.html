@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Council verdict — RBAC &amp; account settings</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color: #0f172a; background: #f8fafc; }
+    body { max-width: 52rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.55; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    .meta { color: #64748b; font-size: 0.9rem; margin-bottom: 1.5rem; }
+    section { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+    h2 { font-size: 1.05rem; margin: 0 0 0.5rem; }
+    .grid { display: grid; gap: 0.5rem; }
+    .tag { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600; }
+    .agree { background: #dcfce7; color: #166534; }
+    .clash { background: #fef3c7; color: #92400e; }
+    details { margin-top: 0.75rem; }
+    summary { cursor: pointer; font-weight: 600; }
+    footer { font-size: 0.85rem; color: #64748b; margin-top: 2rem; }
+    .verdict { border-left: 4px solid #0ea5e9; }
+  </style>
+</head>
+<body>
+  <h1>Q-TeleScope — RBAC &amp; account settings</h1>
+  <p class="meta">Council · 2026-11-20 · Commits ef0fe2d+</p>
+
+  <section class="verdict">
+    <h2>Recommendation</h2>
+    <p><strong>Aligned for VM deploy.</strong> Platform vs organisation split, simplified Settings security, and session cap match operator intent. Pull latest <code>main</code>, rebuild frontend, run pytest subset.</p>
+    <p><strong>Do first on VM:</strong> <code>git pull && cd frontend && npm run build</code></p>
+  </section>
+
+  <section>
+    <h2>Agreement spectrum</h2>
+    <div class="grid">
+      <span><span class="tag agree">Agree</span> Drop Role &amp; access matrix from self-service Settings</span>
+      <span><span class="tag agree">Agree</span> PlatformAdmin = fleet; SuperAdmin/OrgAdmin = one org</span>
+      <span><span class="tag agree">Agree</span> Compact sign-in UI + session cap</span>
+      <span><span class="tag clash">Watch</span> Username <code>superadmin</code> vs role name SuperAdmin</span>
+      <span><span class="tag clash">Watch</span> MAX_SESSIONS_PER_USER=2 (override via env)</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Verification run</h2>
+    <ul>
+      <li>pytest: bootstrap, org admin, session cap, profile label, invite — <strong>16 passed</strong></li>
+      <li>vitest: <strong>44 passed</strong></li>
+      <li>frontend build: OK</li>
+      <li>impeccable detect (UserSettings, AccessApprovalsPanel): <strong>no issues</strong></li>
+    </ul>
+  </section>
+
+  <details>
+    <summary>Full transcript</summary>
+    <p>See <code>docs/council/council-transcript-20261120-rbac-settings.md</code></p>
+  </details>
+
+  <footer>Generated for Q-TeleScope VM refresh · main branch</footer>
+</body>
+</html>

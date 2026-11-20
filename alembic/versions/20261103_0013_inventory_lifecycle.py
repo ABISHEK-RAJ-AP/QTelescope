@@ -16,6 +16,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    from migration_util import drop_column_server_default
+
     bind = op.get_bind()
     if "inventory_assets" not in inspect(bind).get_table_names():
         return
@@ -25,7 +27,7 @@ def upgrade() -> None:
             "inventory_assets",
             sa.Column("lifecycle_state", sa.String(), nullable=False, server_default="active"),
         )
-        op.alter_column("inventory_assets", "lifecycle_state", server_default=None)
+        drop_column_server_default("inventory_assets", "lifecycle_state")
 
 
 def downgrade() -> None:

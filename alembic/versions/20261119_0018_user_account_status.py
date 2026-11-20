@@ -14,6 +14,8 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    from migration_util import drop_column_server_default
+
     bind = op.get_bind()
     if "user_accounts" not in inspect(bind).get_table_names():
         return
@@ -23,7 +25,7 @@ def upgrade() -> None:
             "user_accounts",
             sa.Column("account_status", sa.String(), nullable=False, server_default="active"),
         )
-        op.alter_column("user_accounts", "account_status", server_default=None)
+        drop_column_server_default("user_accounts", "account_status")
 
 
 def downgrade() -> None:
