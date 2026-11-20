@@ -1132,6 +1132,11 @@
   align-items: flex-end;
   flex: 1 1 280px;
 }
+.admin-rules-toolbar__actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 .admin-rules-copy {
   display: flex;
   flex-wrap: wrap;

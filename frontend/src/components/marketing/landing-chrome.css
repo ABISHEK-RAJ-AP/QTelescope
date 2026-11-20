@@ -1,3 +1,16 @@
+@media (prefers-reduced-motion: no-preference) {
+  .landing-reveal {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+    transition: opacity 0.55s ease, transform 0.55s ease;
+  }
+
+  .landing-reveal.is-visible {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 .landing-scroll-progress {
   position: fixed;
   top: 0;
@@ -188,4 +201,31 @@
     transform: none;
     transition: none;
   }
+}
+
+.cdac-footer-mark {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  line-height: 0;
+  opacity: 0.94;
+  transition: opacity 0.15s ease;
+}
+
+.cdac-footer-mark:hover {
+  opacity: 1;
+}
+
+.cdac-footer-mark img {
+  display: block;
+  height: 2.25rem;
+  width: auto;
+}
+
+.cdac-footer-mark--bar img {
+  height: 2.5rem;
+}
+
+.dark .cdac-footer-mark img {
+  filter: brightness(1.08);
 }
