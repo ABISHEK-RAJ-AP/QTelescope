@@ -855,8 +855,8 @@ select.auth-field--invalid {
   font-family: var(--font-mono);
 }
 
-/* Headlines: balance + widow-ish wrap */
-.main-content h1,
+/* Headlines: balance + widow-ish wrap — app chrome titles use full header width */
+.main-content h1:not(.page-header__title),
 .main-content h2,
 .main-content .page-title,
 .main-content .section-title {
@@ -864,6 +864,12 @@ select.auth-field--invalid {
   letter-spacing: -0.01em;
   max-width: 48ch;
   line-height: var(--line-height-heading);
+}
+
+.main-content .page-header__title,
+.main-content .page-header__title-text {
+  max-width: none;
+  text-wrap: wrap;
 }
 
 .main-content p,
