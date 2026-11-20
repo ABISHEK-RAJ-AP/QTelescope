@@ -44,6 +44,7 @@ export const LiveTelemetry = () => {
   const [streamLogs, setStreamLogs] = useState([]);
   const [isConnected, setIsConnected] = useState(true);
   const [reconnecting, setReconnecting] = useState(false);
+  const [awaitingFirstEvent, setAwaitingFirstEvent] = useState(true);
 
   useEffect(() => {
     let eventSource;
@@ -52,19 +53,34 @@ export const LiveTelemetry = () => {
     let streamUrl = `${BASE_URL}/events/stream`;
     let ticketExpiresAt = 0;
     let cancelled = false;
+    setStreamLogs([]);
+    setAwaitingFirstEvent(true);
+
+    const withBackendScope = (url) => {
+      if (!scopeBackend) return url;
+      const joiner = url.includes('?') ? '&' : '?';
+      return `${url}${joiner}backend_id=${encodeURIComponent(scopeBackend)}`;
+    };
 
     const resolveStreamUrl = async () => {
-      if (Date.now() < ticketExpiresAt - 8000) return streamUrl;
+      if (Date.now() < ticketExpiresAt - 8000) return withBackendScope(streamUrl);
       try {
         const raw = localStorage.getItem('quantum_user');
         const token = raw ? JSON.parse(raw)?.token : null;
-        if (!token) return `${BASE_URL}/events/stream`;
+        const base = `${BASE_URL}/events/stream`;
+        if (!token) {
+          streamUrl = withBackendScope(base);
+          return streamUrl;
+        }
         const r = await fetchApi('/auth/stream-ticket', { method: 'POST' });
         ticketExpiresAt = Date.now() + (r.expires_in || 180) * 1000;
-        streamUrl = `${BASE_URL}/events/stream?stream_ticket=${encodeURIComponent(r.stream_ticket)}`;
+        streamUrl = withBackendScope(
+          `${base}?stream_ticket=${encodeURIComponent(r.stream_ticket)}`,
+        );
         return streamUrl;
       } catch {
-        return `${BASE_URL}/events/stream`;
+        streamUrl = withBackendScope(`${BASE_URL}/events/stream`);
+        return streamUrl;
       }
     };
 
@@ -77,6 +93,7 @@ export const LiveTelemetry = () => {
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          setAwaitingFirstEvent(false);
           setStreamLogs((prev) => [data, ...prev].slice(0, 40));
           setIsConnected(true);
           delayMs = 2000;
@@ -101,7 +118,16 @@ export const LiveTelemetry = () => {
       if (reconnectTimer) window.clearTimeout(reconnectTimer);
       eventSource?.close();
     };
-  }, []);
+  }, [scopeBackend]);
+
+  useEffect(() => {
+    if (streamLogs.length) {
+      setAwaitingFirstEvent(false);
+      return undefined;
+    }
+    const t = window.setTimeout(() => setAwaitingFirstEvent(false), 3500);
+    return () => window.clearTimeout(t);
+  }, [streamLogs.length]);
 
   const chrono = useMemo(() => [...streamLogs].reverse(), [streamLogs]);
 
@@ -304,11 +330,11 @@ export const LiveTelemetry = () => {
         {
           name: 'Measurement age',
           type: 'line',
-          data: chrono.map((l) =>
-            l.staleness_seconds != null && Number.isFinite(Number(l.staleness_seconds))
-              ? Number(l.staleness_seconds)
-              : null,
-          ),
+          data: chrono.map((l) => {
+            const raw = l.staleness_seconds;
+            if (raw == null || !Number.isFinite(Number(raw))) return null;
+            return Math.max(0, Number(raw));
+          }),
           itemStyle: { color: sem.warn },
         },
       ],
@@ -318,15 +344,32 @@ export const LiveTelemetry = () => {
     [chrono, isDark, theme.axisLine, theme.splitColor, theme.textColor, tickGaps, xLabels],
   );
 
-  if (!streamLogs.length && isConnected) return <BoneyardSkeleton layout="grid" />;
+  if (!streamLogs.length && isConnected && awaitingFirstEvent) return <BoneyardSkeleton layout="grid" />;
 
   const latest = streamLogs[0] || {};
   const latestModality = latest.t1_by_modality || [];
   const lastGap = tickGaps.length > 1 ? tickGaps[tickGaps.length - 1] : null;
 
+  const chartsPending = streamLogs.length === 0;
+
   return (
-    <div className="page-stack">
-      {scopeBackend && <ContextBar backend={scopeBackend} readOnly />}
+    <div
+      className="page-stack"
+      data-qt-page-pending={awaitingFirstEvent && !streamLogs.length ? 'true' : 'false'}
+      data-qt-charts-pending={chartsPending ? 'true' : 'false'}
+    >
+      {scopeBackend ? (
+        <ContextBar
+          backend={scopeBackend}
+          readOnly
+          hint="SSE KPIs and charts are scoped to this backend. Clear backend in the URL for fleet-wide aggregates."
+        />
+      ) : null}
+      {!scopeBackend ? (
+        <p className="live-scope-note" role="note">
+          Fleet-wide aggregates across all backends. Pick a backend in the URL to scope this stream.
+        </p>
+      ) : null}
       {!isConnected && streamLogs.length === 0 && !reconnecting && (
         <EmptyState
           variant="panel"
@@ -349,7 +392,7 @@ export const LiveTelemetry = () => {
             data-testid="live-sse-status"
             title="SSE aggregate stream; new frames about every 5 seconds from platform storage."
           >
-            {isConnected ? 'Live · ~5s' : 'Offline'}
+            {isConnected ? (scopeBackend ? 'Live · scoped · ~5s' : 'Live · fleet · ~5s') : 'Offline'}
           </div>
         </div>
         <div className="card">
@@ -393,8 +436,12 @@ export const LiveTelemetry = () => {
             {lastGap != null ? `${lastGap.toFixed(1)}s` : 'N/A'}
           </div>
           <div className="card-subtitle">
-            age {latest.staleness_seconds != null ? `${latest.staleness_seconds}s` : 'N/A'} ·{' '}
-            {streamLogs.length} ticks
+            age{' '}
+            {latest.staleness_seconds != null
+              ? `${Math.max(0, Number(latest.staleness_seconds))}s`
+              : 'N/A'}
+            {latest.measurement_clock_skew ? ' · clock skew corrected' : ''} · {streamLogs.length}{' '}
+            ticks
           </div>
         </div>
       </div>
