@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import {
   X, ArrowUpDown, Clock, Activity,
-  Zap, AlertTriangle, ChevronDown, GitCompare, Network, Table2,
+  Zap, AlertTriangle, ChevronDown, GitCompare, Network, Table2, BarChart2,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
@@ -17,7 +17,18 @@ import { unableToLoad } from '../constants/messages.js';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { formatISTTime } from '../utils/time';
+import {
+  distributionStats, heatColor, scaleRatio, sciFmt,
+} from '../lib/calibrationScale.js';
 import './TopologyExplorer.css';
+
+const CALIBRATION_MODES = new Set(['t1', 't2', 'readout']);
+const QUBIT_METRIC_TIPS = {
+  readout: 'Readout assignment error from the latest backend properties feed (probability). Lower is better.',
+  t1: 'T1 coherence time per qubit (µs). Higher is better.',
+  t2: 'T2 coherence time per qubit (µs). Higher is better.',
+};
+const LINK_METRIC_TIP = 'Two-qubit gate error on each coupling from the latest gate calibration (CZ/CX basis gates when reported). Lower is better.';
 
 const STATE_SYMBOL = { GREEN: 'circle', YELLOW: 'diamond', RED: 'triangle', UNKNOWN: 'rect' };
 const stateColors = () => getFleetStateChartColors();
@@ -75,12 +86,27 @@ function layoutNodes(nodes, links) {
   return pos;
 }
 
+function qubitMetricValue(q, mode) {
+  if (mode === 't1') return q.t1 != null ? Number(q.t1) : null;
+  if (mode === 't2') return q.t2 != null ? Number(q.t2) : null;
+  if (mode === 'readout') return q.readout_error != null ? Number(q.readout_error) : null;
+  if (mode === 'freq') return q.frequency != null ? Number(q.frequency) : null;
+  if (mode === 'cal_age') return q.cal_age_hours != null ? Number(q.cal_age_hours) : null;
+  return null;
+}
+
 /** Color a qubit node by the selected metric. Never confuses missing with failed. */
-function metricColor(q, mode) {
+function metricColor(q, mode, qStats) {
   const c = stateColors();
   const sem = getChartSemanticColors();
   if (mode === 'state') return c[q.state] || c.UNKNOWN;
 
+  if (CALIBRATION_MODES.has(mode) && qStats?.n > 0) {
+    const v = qubitMetricValue(q, mode);
+    if (v == null) return sem.unknown;
+    const higher = mode === 't1' || mode === 't2';
+    return heatColor(scaleRatio(v, qStats, higher), sem);
+  }
   if (mode === 't1') {
     if (q.t1 == null) return sem.unknown;
     return q.t1 < 50 ? sem.critical : q.t1 < 100 ? sem.warn : sem.healthy;
@@ -104,6 +130,40 @@ function metricColor(q, mode) {
     return q.cal_age_hours > 24 ? sem.critical : q.cal_age_hours > 12 ? sem.warn : sem.healthy;
   }
   return c.UNKNOWN;
+}
+
+function CalibrationScaleLegend({ title, metricLabel, stats, tip }) {
+  const sem = getChartSemanticColors();
+  const gradient = `linear-gradient(90deg, ${sem.info} 0%, ${sem.critical} 100%)`;
+  const n = stats?.n ?? 0;
+  return (
+    <div className="topo-scale" aria-label={`${title}: ${metricLabel}`}>
+      <div className="topo-scale__head">
+        <span className="topo-scale__title">{title}</span>
+        <span className="topo-scale__metric">{metricLabel}</span>
+        {tip ? (
+          <InfoTooltip label={`About ${metricLabel}`} align="end">
+            <p style={{ margin: 0, maxWidth: 280 }}>{tip}</p>
+          </InfoTooltip>
+        ) : null}
+      </div>
+      <div
+        className="topo-scale__bar"
+        style={{ background: gradient }}
+        role="img"
+        aria-hidden={!n}
+      >
+        <span className="topo-scale__tick topo-scale__tick--min" />
+        <span className="topo-scale__tick topo-scale__tick--med" />
+        <span className="topo-scale__tick topo-scale__tick--max" />
+      </div>
+      <dl className="topo-scale__stats">
+        <div><dt>Median</dt><dd className="font-mono">{n ? sciFmt(stats.median) : '—'}</dd></div>
+        <div><dt>Min</dt><dd className="font-mono">{n ? sciFmt(stats.min) : '—'}</dd></div>
+        <div><dt>Max</dt><dd className="font-mono">{n ? sciFmt(stats.max) : '—'}</dd></div>
+      </dl>
+    </div>
+  );
 }
 
 /** Freshness badge */
@@ -411,7 +471,8 @@ export const TopologyExplorer = () => {
   const [selectedId, setSelectedId] = useState(params.get('qubit') ? String(params.get('qubit')) : null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState('graph'); // graph | table
+  const [viewMode, setViewMode] = useState('graph'); // graph | bars | table
+  const [barSort, setBarSort] = useState('index'); // index | value_desc | value_asc
   const [loadState, setLoadState] = useState('loading');
   const [lastRefresh, setLastRefresh] = useState(null);
   const chartRef = useRef(null);
@@ -493,6 +554,23 @@ export const TopologyExplorer = () => {
   const selectedQubit = qubits.find((q) => q.id === selectedId);
   const big = qubits.length > 40;
 
+  const qubitMetricLabel = COLOR_MODES.find((m) => m.value === colorMode)?.label || 'Metric';
+  const qStats = useMemo(() => {
+    if (!CALIBRATION_MODES.has(colorMode)) return { min: null, max: null, median: null, n: 0 };
+    return distributionStats(qubits.map((q) => qubitMetricValue(q, colorMode)));
+  }, [qubits, colorMode]);
+
+  const linkStats = useMemo(
+    () => distributionStats((graph?.links || []).map((l) => l.gate_error)),
+    [graph],
+  );
+
+  const tableSummary = useMemo(() => ({
+    t1: distributionStats(qubits.map((q) => q.t1)),
+    t2: distributionStats(qubits.map((q) => q.t2)),
+    ro: distributionStats(qubits.map((q) => q.readout_error)),
+  }), [qubits]);
+
   const option = useMemo(() => {
     if (!qubits.length) return null;
     const th = getChartTheme(isDark);
@@ -501,19 +579,27 @@ export const TopologyExplorer = () => {
       symbol: STATE_SYMBOL[q.state] || 'circle',
       symbolSize: q.id === selectedId ? 32 : big ? 20 : 28,
       itemStyle: {
-        color: metricColor(q, colorMode),
+        color: metricColor(q, colorMode, qStats),
         borderColor: q.id === selectedId ? th.tooltipText : 'transparent',
         borderWidth: q.id === selectedId ? 3 : 0,
       },
     }));
-    const links = (graph?.links || []).map((l) => ({
-      source: String(l.source), target: String(l.target), gate_error: l.gate_error,
-      lineStyle: {
-        width: l.gate_error != null ? 1 + Math.min(l.gate_error * 120, 4) : 1.5,
-        color: l.gate_error > 0.03 ? stateColors().RED : th.axisLine,
-        opacity: 0.9,
-      },
-    }));
+    const sem = getChartSemanticColors();
+    const links = (graph?.links || []).map((l) => {
+      const err = l.gate_error;
+      let color = th.axisLine;
+      if (err != null && linkStats.n > 0) {
+        color = heatColor(scaleRatio(err, linkStats, false), sem);
+      } else if (err != null && err > 0.03) color = stateColors().RED;
+      return {
+        source: String(l.source), target: String(l.target), gate_error: err,
+        lineStyle: {
+          width: err != null ? 1.5 + Math.min(err * 100, 3.5) : 1.25,
+          color,
+          opacity: 0.92,
+        },
+      };
+    });
     return {
       animation: false,
       tooltip: {
@@ -553,7 +639,85 @@ export const TopologyExplorer = () => {
         scaleLimit: { min: 0.3, max: 10 },
       }],
     };
-  }, [qubits, positions, graph, colorMode, isDark, selectedId, big, neighbors]);
+  }, [qubits, positions, graph, colorMode, isDark, selectedId, big, neighbors, qStats, linkStats]);
+
+  const barOption = useMemo(() => {
+    if (!CALIBRATION_MODES.has(colorMode) || !qubits.length) return null;
+    const th = getChartTheme(isDark);
+    const sem = getChartSemanticColors();
+    const higher = colorMode === 't1' || colorMode === 't2';
+    const yName = colorMode === 'readout' ? 'Readout assignment error' : colorMode === 't1' ? 'T1 (µs)' : 'T2 (µs)';
+    let rows = qubits.map((q) => ({
+      idx: q.qubit_index,
+      v: qubitMetricValue(q, colorMode),
+      id: q.id,
+      state: q.state,
+    }));
+    if (barSort === 'value_desc') {
+      rows = [...rows].sort((a, b) => (b.v ?? -Infinity) - (a.v ?? -Infinity));
+    } else if (barSort === 'value_asc') {
+      rows = [...rows].sort((a, b) => (a.v ?? Infinity) - (b.v ?? Infinity));
+    } else {
+      rows = [...rows].sort((a, b) => a.idx - b.idx);
+    }
+    const stats = qStats.n ? qStats : distributionStats(rows.map((r) => r.v));
+    const med = stats.median;
+    return {
+      animation: false,
+      grid: { left: 56, right: 24, top: 36, bottom: big ? 72 : 48 },
+      tooltip: {
+        ...baseTooltip(isDark),
+        trigger: 'axis',
+        axisPointer: { type: 'shadow' },
+        formatter: (items) => {
+          const p = items?.[0];
+          if (!p) return '';
+          const row = rows[p.dataIndex];
+          const v = row?.v;
+          return [
+            `<b>Qubit ${row?.idx ?? '?'}</b> · ${row?.state || 'UNKNOWN'}`,
+            `${yName}: ${v == null ? 'N/A' : (colorMode === 'readout' ? sciFmt(v) : fmtUs(v))}`,
+            med != null ? `Fleet median: ${colorMode === 'readout' ? sciFmt(med) : fmtUs(med)}` : '',
+          ].filter(Boolean).join('<br/>');
+        },
+      },
+      xAxis: {
+        type: 'category',
+        name: 'Qubit',
+        nameLocation: 'middle',
+        nameGap: big ? 56 : 28,
+        data: rows.map((r) => r.idx),
+        axisLabel: { color: th.textColor, fontSize: big ? 9 : 11, interval: big ? Math.floor(rows.length / 24) : 0 },
+        axisLine: { lineStyle: { color: th.axisLine } },
+      },
+      yAxis: {
+        type: 'value',
+        name: yName,
+        nameTextStyle: { color: th.textColor },
+        axisLabel: {
+          color: th.textColor,
+          formatter: (v) => (colorMode === 'readout' ? sciFmt(v) : fmtUs(v)),
+        },
+        splitLine: { lineStyle: { color: th.splitColor } },
+      },
+      series: [{
+        type: 'bar',
+        data: rows.map((r) => ({
+          value: r.v,
+          itemStyle: {
+            color: r.v == null ? sem.unknown : heatColor(scaleRatio(r.v, stats, higher), sem),
+          },
+        })),
+        markLine: med != null ? {
+          silent: true,
+          symbol: 'none',
+          lineStyle: { color: th.tooltipText, type: 'dashed', width: 1 },
+          label: { formatter: 'Median', color: th.textColor, fontSize: 11 },
+          data: [{ yAxis: med }],
+        } : undefined,
+      }],
+    };
+  }, [qubits, colorMode, barSort, isDark, big, qStats]);
 
   const onEvents = useMemo(() => ({
     click: (p) => {
@@ -563,6 +727,35 @@ export const TopologyExplorer = () => {
       }
     },
   }), []);
+
+  // ponytail: publish graph node screen coords for launch-film Playwright hover (convertToPixel + layout drift)
+  useEffect(() => {
+    if ((viewMode !== 'graph' && viewMode !== 'bars') || loadState !== 'ready' || !qubits.length) return undefined;
+    const publish = () => {
+      const inst = chartRef.current?.getEchartsInstance?.();
+      if (!inst) return false;
+      const data = inst.getOption()?.series?.[0]?.data;
+      if (!data?.length) return false;
+      const rect = inst.getDom().getBoundingClientRect();
+      const picks = [...new Set([0, Math.floor(data.length / 3), Math.floor((2 * data.length) / 3)])].slice(0, 3);
+      const nodes = picks.map((dataIndex) => {
+        const d = data[dataIndex];
+        const xy = inst.convertToPixel({ seriesIndex: 0 }, [d.x, d.y]);
+        return { dataIndex, name: d.name, x: rect.left + xy[0], y: rect.top + xy[1] };
+      });
+      window.__QT_FILM_TOPO_NODES__ = { ts: Date.now(), nodes };
+      window.__QT_FILM_TOPO_TIP__ = (dataIndex) => {
+        inst.dispatchAction({ type: 'highlight', seriesIndex: 0, dataIndex });
+        inst.dispatchAction({ type: 'showTip', seriesIndex: 0, dataIndex });
+      };
+      return true;
+    };
+    let tries = 0;
+    const id = setInterval(() => {
+      if (publish() || tries++ > 50) clearInterval(id);
+    }, 120);
+    return () => clearInterval(id);
+  }, [viewMode, loadState, qubits.length, option, selectedId]);
 
   const backendName = backends.find((b) => b.backend_id === backendId)?.backend_name;
   const hvTime = vector ? 'live health vector applied' : 'health vector unavailable — topology fields only';
@@ -588,16 +781,32 @@ export const TopologyExplorer = () => {
         </label>
 
         <label className="outline-field">
-          <span>Color</span>
+          <span>Qubit</span>
           <select
             className="input-control"
             value={colorMode}
             onChange={(e) => setColorMode(e.target.value)}
-            aria-label="Colour by metric"
+            aria-label="Qubit metric"
           >
             {COLOR_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
           </select>
         </label>
+
+        {viewMode === 'bars' && (
+          <label className="outline-field">
+            <span>Sort</span>
+            <select
+              className="input-control"
+              value={barSort}
+              onChange={(e) => setBarSort(e.target.value)}
+              aria-label="Sort qubits"
+            >
+              <option value="index">Numerical (ascending)</option>
+              <option value="value_desc">Metric (high → low)</option>
+              <option value="value_asc">Metric (low → high)</option>
+            </select>
+          </label>
+        )}
 
         <label className="outline-field topo-search" role="search">
           <span>Qubit</span>
@@ -629,6 +838,16 @@ export const TopologyExplorer = () => {
           </button>
           <button
             type="button"
+            className={`btn btn-secondary topo-view-btn${viewMode === 'bars' ? ' topo-view-btn--active' : ''}`}
+            onClick={() => setViewMode('bars')}
+            aria-pressed={viewMode === 'bars'}
+            title="Graph view"
+            aria-label="Per-qubit bar graph"
+          >
+            <BarChart2 size={16} aria-hidden />
+          </button>
+          <button
+            type="button"
             className={`btn btn-secondary topo-view-btn${viewMode === 'table' ? ' topo-view-btn--active' : ''}`}
             onClick={() => setViewMode('table')}
             aria-pressed={viewMode === 'table'}
@@ -648,12 +867,37 @@ export const TopologyExplorer = () => {
         )}
       </div>
 
+      {(viewMode === 'graph' || viewMode === 'bars') && loadState === 'ready' && qubits.length > 0 && (
+        <div className="card topo-scale-row">
+          <CalibrationScaleLegend
+            title="Qubit"
+            metricLabel={qubitMetricLabel}
+            stats={CALIBRATION_MODES.has(colorMode) ? qStats : tableSummary.ro}
+            tip={QUBIT_METRIC_TIPS[colorMode] || 'Choose T1, T2, or Readout error for a calibration scale. Health state uses rule-based colours only.'}
+          />
+          <CalibrationScaleLegend
+            title="Coupling"
+            metricLabel="2Q gate error"
+            stats={linkStats}
+            tip={LINK_METRIC_TIP}
+          />
+        </div>
+      )}
+
       {/* Main workspace */}
-      <div className={`topo-workspace${viewMode === 'graph' ? ' topo-workspace--wide' : ''}`}>
+      <div className={`topo-workspace${viewMode === 'graph' || viewMode === 'bars' ? ' topo-workspace--wide' : ''}`}>
         <ChartPanel
-          title={`QPU coupling graph${backendName ? ` — ${backendName}` : ''}`}
+          title={
+            viewMode === 'bars'
+              ? `Per-qubit calibration graph${backendName ? ` — ${backendName}` : ''}`
+              : `QPU coupling graph${backendName ? ` — ${backendName}` : ''}`
+          }
           titleTo={backendId ? buildBackendDetailsPath(backendId, 'qubits') : '/app/backends/qubits'}
-          question="Qubit nodes coloured by selected metric. Shapes indicate health state. Edge width proportional to gate error."
+          question={
+            viewMode === 'bars'
+              ? 'Bar height is the selected qubit metric from the latest properties snapshot. Dashed line = fleet median; colours follow the same min–max scale as the map.'
+              : 'Qubit nodes coloured by selected metric. Shapes indicate health state. Coupling colour follows 2Q gate error scale.'
+          }
           sourceKind="measured"
           asOf={lastRefresh?.toLocaleTimeString()}
           provenanceDetail={`${hvTime}. Layout is computed (spring model); physical chip coordinates are not provided by this backend's API. Missing metrics shown as grey/unknown — not as failures.`}
@@ -665,6 +909,12 @@ export const TopologyExplorer = () => {
           minHeight={560}
           tableAlternative={(
             <div className="topo-table-wrap">
+              <dl className="topo-table-summary" aria-label="Column summary statistics">
+                <div><dt>T1 median</dt><dd className="font-mono">{tableSummary.t1.n ? fmtUs(tableSummary.t1.median) : '—'}</dd></div>
+                <div><dt>T2 median</dt><dd className="font-mono">{tableSummary.t2.n ? fmtUs(tableSummary.t2.median) : '—'}</dd></div>
+                <div><dt>Readout median</dt><dd className="font-mono">{tableSummary.ro.n ? sciFmt(tableSummary.ro.median) : '—'}</dd></div>
+                <div><dt>2Q error median</dt><dd className="font-mono">{linkStats.n ? sciFmt(linkStats.median) : '—'}</dd></div>
+              </dl>
               <table className="custom-table">
                 <thead>
                   <tr>
@@ -705,7 +955,7 @@ export const TopologyExplorer = () => {
           )}
         >
           {viewMode === 'graph' && (
-            <div className="topo-canvas">
+            <div className="topo-canvas" data-tour="page-topology-graph">
               {option && (
                 <QtECharts
                   ref={chartRef}
@@ -718,27 +968,41 @@ export const TopologyExplorer = () => {
             </div>
           )}
 
+          {viewMode === 'bars' && (
+            <div className="topo-canvas topo-canvas--bars" data-tour="page-topology-bars">
+              {!CALIBRATION_MODES.has(colorMode) ? (
+                <EmptyState
+                  variant="panel"
+                  title="Select a calibration metric"
+                  message="Choose T1, T2, or Readout error under Qubit to render the per-qubit distribution graph."
+                />
+              ) : barOption ? (
+                <QtECharts option={barOption} notMerge style={{ height: '100%', width: '100%' }} />
+              ) : null}
+            </div>
+          )}
+
           {/* Legend */}
-          <div className="topo-legend" role="note" aria-label="Colour legend">
-            {colorMode === 'state' ? (
-              <>
-                <span><i className="topo-swatch" style={{ background: stateColors().GREEN }} aria-hidden /> Green ● healthy</span>
-                <span><i className="topo-swatch topo-swatch--rot" style={{ background: stateColors().YELLOW }} aria-hidden /> Yellow ◆ attention</span>
-                <span><i className="topo-swatch" style={{ background: stateColors().RED }} aria-hidden /> Red ▲ degraded</span>
-                <span><i className="topo-swatch" style={{ background: stateColors().UNKNOWN }} aria-hidden /> Grey ■ unknown (not failed)</span>
-              </>
-            ) : colorMode === 't1' || colorMode === 't2' ? (
-              <span>Green ≥100 µs · Amber 50–100 µs · Red &lt;50 µs · Grey = no measurement (not failed)</span>
-            ) : colorMode === 'readout' ? (
-              <span>Green ≤2% · Amber 2–5% · Red &gt;5% · Grey = no measurement (not failed)</span>
-            ) : colorMode === 'freq' ? (
-              <span>Cyan = within normal range (3.5–7 GHz) · Amber = outside range · Grey = no measurement</span>
-            ) : (
-              <span>Green = fresh (&lt;12 h) · Amber = aging (12–24 h) · Red = stale (&gt;24 h) · Grey = no timestamp</span>
-            )}
-            <span>Edge width ∝ gate error · Red edge &gt;3%</span>
-            <span>Scroll to zoom · drag to pan · layout synthetic (no physical coordinates)</span>
-          </div>
+          {viewMode === 'graph' && (
+            <div className="topo-legend" role="note" aria-label="Colour legend">
+              {colorMode === 'state' ? (
+                <>
+                  <span><i className="topo-swatch" style={{ background: stateColors().GREEN }} aria-hidden /> Green ● healthy</span>
+                  <span><i className="topo-swatch topo-swatch--rot" style={{ background: stateColors().YELLOW }} aria-hidden /> Yellow ◆ attention</span>
+                  <span><i className="topo-swatch" style={{ background: stateColors().RED }} aria-hidden /> Red ▲ degraded</span>
+                  <span><i className="topo-swatch" style={{ background: stateColors().UNKNOWN }} aria-hidden /> Grey ■ unknown (not failed)</span>
+                </>
+              ) : CALIBRATION_MODES.has(colorMode) ? (
+                <span>Qubit colour = min→max scale for {qubitMetricLabel.toLowerCase()} (blue best · red worst on this backend). Grey = no sample.</span>
+              ) : colorMode === 'freq' ? (
+                <span>Cyan = within normal range (3.5–7 GHz) · Amber = outside range · Grey = no measurement</span>
+              ) : (
+                <span>Green = fresh (&lt;12 h) · Amber = aging (12–24 h) · Red = stale (&gt;24 h) · Grey = no timestamp</span>
+              )}
+              <span>Coupling colour = 2Q gate error scale · width also scales with error</span>
+              <span>Scroll to zoom · drag to pan · synthetic layout (no chip coordinates in API)</span>
+            </div>
+          )}
         </ChartPanel>
       </div>
 

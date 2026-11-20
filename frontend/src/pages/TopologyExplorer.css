@@ -1,3 +1,59 @@
+.topo-scale-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px 20px;
+  padding: 12px 16px;
+  align-items: stretch;
+}
+.topo-scale { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.topo-scale__head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.topo-scale__title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+.topo-scale__metric { font-size: 0.875rem; font-weight: 650; color: var(--text-primary); }
+.topo-scale__bar {
+  position: relative;
+  height: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+}
+.topo-scale__tick {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 16px;
+  background: var(--text-primary);
+  opacity: 0.85;
+  transform: translateX(-1px);
+}
+.topo-scale__tick--min { left: 0; }
+.topo-scale__tick--med { left: 50%; }
+.topo-scale__tick--max { right: 0; left: auto; }
+.topo-scale__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  font-size: 0.75rem;
+}
+.topo-scale__stats div { display: flex; flex-direction: column; gap: 2px; }
+.topo-scale__stats dt { color: var(--text-muted); font-weight: 600; margin: 0; }
+.topo-scale__stats dd { margin: 0; font-variant-numeric: tabular-nums; color: var(--text-primary); }
+.topo-table-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px 16px;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: var(--bg-card-hover);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.8125rem;
+}
+.topo-table-summary div { display: flex; flex-direction: column; gap: 2px; }
+.topo-table-summary dt { color: var(--text-muted); font-weight: 600; margin: 0; }
+.topo-table-summary dd { margin: 0; font-variant-numeric: tabular-nums; }
+.topo-canvas--bars { min-height: 420px; height: max(480px, calc(100dvh - 280px)); }
+
 .topo-toolbar { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: flex-end; padding: 8px 12px; overflow: visible; }
 .topo-toolbar .input-control { min-width: 7.25rem; width: auto; height: 36px; min-height: 36px; }
 .topo-search { position: relative; flex: 1 1 160px; max-width: 220px; min-width: 140px; }
