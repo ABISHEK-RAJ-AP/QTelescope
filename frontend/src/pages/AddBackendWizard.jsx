@@ -99,14 +99,16 @@ export function AddBackendWizard({ open, onClose, onComplete, isAdmin }) {
     setBusy(true);
     setMsg(null);
     try {
-      await api.saveCredentials(provider.id, {
+      const saveRes = await api.saveCredentials(provider.id, {
         token: token.trim() || undefined,
         endpoint_url: endpoint.trim() || provider.endpoint_url || undefined,
       });
-      const discovery = await api.triggerAutoDiscovery();
+      const discovery = saveRes?.discovered > 0
+        ? { total_backends_discovered: saveRes.discovered, message: saveRes.message }
+        : await api.triggerAutoDiscovery();
       setMsg({
         type: 'ok',
-        text: discovery?.message || `${discovery?.total_backends_discovered ?? 0} backend(s) synchronized.`,
+        text: saveRes?.message || discovery?.message || `${discovery?.total_backends_discovered ?? 0} backend(s) synchronized.`,
       });
       onComplete?.();
       setTimeout(() => onClose?.(), 1400);

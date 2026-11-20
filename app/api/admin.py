@@ -28,7 +28,18 @@ from app.core.provenance import (
     utcnow_iso,
 )
 from app.services.collector_health import list_provider_health, load_all as load_collector_health
-from app.core.rbac import get_current_username, require_admin
+from app.core.rbac import get_current_username, require_admin, require_operator
+from app.providers.credential_live import (
+    build_live_adapter,
+    catalog_spec,
+    env_keys_to_persist,
+    normalize_provider_id,
+    persist_live_env,
+    resolve_endpoint_url,
+    resolve_token,
+    stub_save,
+    validate_live_credentials,
+)
 from app.jobs.telemetry_retention import retention_policy, run_telemetry_retention
 from app.core.rbac_audit import rbac_audit_report
 from app.providers.catalog import (
@@ -45,7 +56,7 @@ from app.core.safe_url import assert_safe_http_url
 
 logger = logging.getLogger("admin")
 
-router = APIRouter(prefix="/admin", tags=["Administration"], dependencies=[Depends(require_admin)])
+router = APIRouter(prefix="/admin", tags=["Administration"])
 
 class IbmTokenSchema(BaseModel):
     token: str = Field(..., min_length=8, max_length=4096)
@@ -78,7 +89,7 @@ class BackendCatalogPatch(BaseModel):
         return [str(t).strip()[:64] for t in v if str(t).strip()]
 
 @router.get("/summary", response_model=DashboardSummaryResponse)
-def get_dashboard_summary(db: Session = Depends(get_db)):
+def get_dashboard_summary(db: Session = Depends(get_db), _: str = Depends(require_operator)):
     ensure_discovered(db)
     total_b = db.query(BackendModel).count()
     op_b = db.query(BackendModel).filter(BackendModel.operational_status == "ONLINE").count()
@@ -105,7 +116,9 @@ def get_dashboard_summary(db: Session = Depends(get_db)):
     )
 
 def _env_configured(env_key: Optional[str], extra_paths: Optional[list] = None) -> bool:
-    if env_key and (getattr(settings, env_key, "") or os.getenv(env_key, "")):
+    from app.core.config import read_env_val
+
+    if env_key and (read_env_val(env_key, "") or os.getenv(env_key, "")).strip():
         return True
     for path in extra_paths or []:
         if os.path.exists(os.path.expanduser(path)):
@@ -114,7 +127,7 @@ def _env_configured(env_key: Optional[str], extra_paths: Optional[list] = None) 
 
 
 @router.get("/credentials")
-def get_configured_credentials():
+def get_configured_credentials(_: str = Depends(require_operator)):
     """Catalog + configured flags. Never returns secret values."""
     live_flags = {
         "ibm_quantum": _env_configured("IBM_QUANTUM_TOKEN", ["~/.qiskit/qiskit-ibm.json"]),
@@ -154,26 +167,13 @@ def _env_credential_write_allowed() -> bool:
     return env_flag("ALLOW_ENV_CREDENTIAL_WRITE", default=not is_production_profile())
 
 
-def _normalize_provider_id_for_live(prov: str) -> str:
-    p = (prov or "").lower().strip()
-    if p in ("ibm", "ibm_quantum"):
-        return "ibm_quantum"
-    if p in ("rigetti", "rigetti_quantum"):
-        return "rigetti_quantum"
-    if p in ("ionq", "ionq_quantum"):
-        return "ionq_quantum"
-    if p in ("cdac", "cdac_quantum", "onprem"):
-        return "cdac_quantum"
-    return p
-
-
 def _after_live_credentials_saved(db: Session, provider_id: str) -> dict:
     """Register vendor backends and keep hybrid demo collecting live for this provider."""
     from app.core.cache import invalidate_operational_cache
     from app.core.hybrid_demo import ensure_demo_live_provider, hybrid_demo_enabled
     from app.discovery.hardware_discovery import HardwareDiscoveryEngine
 
-    norm = _normalize_provider_id_for_live(provider_id)
+    norm = normalize_provider_id(provider_id)
     hybrid_note = None
     if hybrid_demo_enabled():
         merged = ensure_demo_live_provider(norm)
@@ -214,12 +214,12 @@ def _update_env_file(key: str, value: str):
         logger.warning("Failed to update .env: %s", e)
 
 @router.get("/rbac-audit")
-def get_rbac_audit():
+def get_rbac_audit(_: str = Depends(require_admin)):
     return rbac_audit_report()
 
 
 @router.get("/adapters/verification")
-def get_adapter_verification(_: str = Depends(require_admin)):
+def get_adapter_verification(_: str = Depends(require_operator)):
     return {"results": run_live_verification(), "note": "Skipped when cloud tokens absent."}
 
 
@@ -232,7 +232,7 @@ def get_collector_dlq(limit: int = 50, _: str = Depends(require_admin)):
 
 
 @router.get("/facility/mqtt-status")
-def get_facility_mqtt_status():
+def get_facility_mqtt_status(_: str = Depends(require_admin)):
     return mqtt_ingest_status()
 
 
@@ -281,66 +281,36 @@ def save_provider_credentials(
     _: str = Depends(require_admin),
 ):
     """Saves API tokens or endpoints for any quantum hardware provider and synchronizes telemetry."""
-    prov = data.provider_id.lower()
-    token = (data.token or "").strip()
-    url = (data.endpoint_url or "").strip()
+    prov = normalize_provider_id(data.provider_id)
+    spec = catalog_spec(prov)
+    if not spec:
+        raise HTTPException(status_code=400, detail=f"Unknown provider: {data.provider_id}")
 
-    if prov in ["ibm", "ibm_quantum"]:
-        if not token:
-            raise HTTPException(status_code=400, detail="IBM Quantum Token cannot be empty.")
-        os.environ["IBM_QUANTUM_TOKEN"] = token
-        _update_env_file("IBM_QUANTUM_TOKEN", token)
-        adapter = IBMProviderAdapter(api_token=token)
-        if not adapter.is_authenticated:
-            raise HTTPException(status_code=400, detail="IBM Quantum Token authentication failed. Please check your IBM Cloud API Key.")
-    elif prov in ["rigetti", "rigetti_quantum"]:
-        if token:
-            os.environ["RIGETTI_API_KEY"] = token
-            os.environ["QCS_API_KEY"] = token
-            _update_env_file("RIGETTI_API_KEY", token)
-        adapter = RigettiProviderAdapter(api_key=token or None)
-    elif prov in ["ionq", "ionq_quantum"]:
-        if not token:
-            raise HTTPException(status_code=400, detail="IonQ API Key cannot be empty.")
-        os.environ["IONQ_API_KEY"] = token
-        _update_env_file("IONQ_API_KEY", token)
-        adapter = IonQProviderAdapter(api_key=token)
-        if not adapter.is_authenticated:
-            raise HTTPException(status_code=400, detail="IonQ API key was rejected or api.ionq.co did not respond.")
-    elif prov in ["cdac", "cdac_quantum", "onprem"]:
-        if not url:
-            raise HTTPException(status_code=400, detail="On-premise / C-DAC endpoint URL cannot be empty.")
+    token = resolve_token(prov, data.token)
+    url = resolve_endpoint_url(prov, data.endpoint_url)
+    if url:
         url = assert_safe_http_url(url, allow_loopback=not is_production_profile())
-        os.environ["ONPREM_QPU_URL"] = url
-        _update_env_file("ONPREM_QPU_URL", url)
-        adapter = OnPremiseProviderAdapter(endpoint_url=url)
-    else:
-        if prov not in BY_ID:
-            raise HTTPException(status_code=400, detail=f"Unknown provider: {data.provider_id}")
-        spec = BY_ID[prov]
-        if spec["adapter"] == "live":
-            raise HTTPException(status_code=400, detail=f"Live adapter '{prov}' missing required token/url.")
-        needs_token = any(f.get("in") == "token" and f.get("required", True) for f in spec["fields"])
-        needs_url = any(f.get("in") == "endpoint_url" and f.get("required", True) for f in spec["fields"])
-        if needs_token and not token and not stored_configured(prov):
-            raise HTTPException(status_code=400, detail=f"{spec['name']} token cannot be empty.")
-        if needs_url and not url and not stored_configured(prov):
-            raise HTTPException(status_code=400, detail=f"{spec['name']} endpoint URL cannot be empty.")
+
+    if spec.get("adapter") != "live":
         if url:
             url = assert_safe_http_url(url, allow_loopback=not is_production_profile())
-        upsert_stored(prov, token, url, data.extra)
-        return {
-            "status": "STUB",
-            "provider_id": prov,
-            "message": f"{spec['name']} credentials stored. Live poll adapter not installed — slot is STUB until wired.",
-        }
+        return stub_save(prov, token, url, data.extra)
 
-    # Synchronize live telemetry
+    validate_live_credentials(prov, token, url)
+    persist_live_env(prov, token, url)
+    for key, val in env_keys_to_persist(prov, token, url):
+        _update_env_file(key, val)
+
+    adapter = build_live_adapter(prov, token, url)
+    if not adapter:
+        raise HTTPException(status_code=400, detail=f"Live adapter for '{prov}' is not wired.")
+
     collector = TelemetryCollector(db, provider_adapter=adapter)
     collector.run_full_collection_cycle()
 
-    backends = adapter.discover_backends()
-    names = ", ".join(b.get("backend_name") or b.get("backend_id", "") for b in backends) if backends else ""
+    backends = adapter.discover_backends() or []
+    backend_ids = [b.get("backend_id") for b in backends if b.get("backend_id")]
+    names = ", ".join(b.get("backend_name") or b.get("backend_id", "") for b in backends)
     if backends:
         msg = f"Credentials saved. Discovered {len(backends)} backend(s){f' ({names})' if names else ''}."
     else:
@@ -352,16 +322,17 @@ def save_provider_credentials(
         "status": "SUCCESS",
         "provider_id": prov,
         "discovered": len(backends),
+        "backend_ids": backend_ids,
         "message": msg,
         "post_save": post,
     }
 
 @router.get("/data-sources", response_model=List[ProviderResponse])
-def get_data_sources(db: Session = Depends(get_db)):
+def get_data_sources(db: Session = Depends(get_db), _: str = Depends(require_admin)):
     return db.query(ProviderModel).all()
 
 @router.get("/retention/policy")
-def get_retention_policy():
+def get_retention_policy(_: str = Depends(require_admin)):
     return retention_policy()
 
 
@@ -375,14 +346,14 @@ def run_retention_job(
 
 
 @router.get("/scheduler-status")
-def get_scheduler_status(db: Session = Depends(get_db)):
+def get_scheduler_status(db: Session = Depends(get_db), _: str = Depends(require_admin)):
     from app.scheduling.neutral_driver import scheduler_snapshot
 
     return scheduler_snapshot(db)
 
 
 @router.get("/collection-schedules")
-def get_schedules(db: Session = Depends(get_db)):
+def get_schedules(db: Session = Depends(get_db), _: str = Depends(require_admin)):
     schedules = db.query(CollectionScheduleModel).all()
     if not schedules:
         defaults = [
@@ -416,7 +387,7 @@ def update_schedule(
     return {"message": "Schedule updated successfully", "category": s.category}
 
 @router.get("/alert-rules", response_model=List[AlertRuleSchema])
-def get_alert_rules(db: Session = Depends(get_db)):
+def get_alert_rules(db: Session = Depends(get_db), _: str = Depends(require_admin)):
     rules = db.query(AlertRuleModel).all()
     if not rules:
         defaults = [
@@ -523,7 +494,7 @@ def patch_backend_catalog(
 
 
 @router.get("/collector-health")
-def get_collector_health():
+def get_collector_health(_: str = Depends(require_admin)):
     """Per-provider collection status, duration, errors, last success."""
     blob = load_collector_health()
     return {
@@ -619,13 +590,13 @@ def get_audit_log(
 
 
 @router.get("/deployment/profile")
-def get_deployment_profile():
+def get_deployment_profile(_: str = Depends(require_operator)):
     """On-prem / air-gap vs connected deployment capabilities."""
     return deployment_profile()
 
 
 @router.get("/provenance")
-def get_platform_provenance(db: Session = Depends(get_db)):
+def get_platform_provenance(db: Session = Depends(get_db), _: str = Depends(require_operator)):
     """Platform-wide data lineage: mock flag, DB mode, collectors, latest measurement."""
     ensure_discovered(db)
     from sqlalchemy.orm import load_only

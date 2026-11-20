@@ -177,6 +177,8 @@ export async function fetchApi(endpoint, options = {}) {
       endpoint.includes('run-collection')
       || endpoint.includes('auto-discover')
       || endpoint.includes('/import')
+      || endpoint.includes('/credentials')
+      || endpoint.includes('ibm-token')
     ) {
       invalidateApiGetCache('');
     } else {

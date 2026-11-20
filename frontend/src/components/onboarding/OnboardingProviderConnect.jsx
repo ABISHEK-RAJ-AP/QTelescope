@@ -55,23 +55,35 @@ function CredentialModal({
     setBusy(true);
     setFeedback(null);
     try {
-      await api.saveCredentials(provider.id, {
-        token: drafts.token || undefined,
+      const token = String(drafts.token || '').trim();
+      const needsToken = (provider.fields || []).some(
+        (f) => f.in === 'token' && f.required !== false,
+      );
+      if (needsToken && !token && !provider.is_configured) {
+        setFeedback({ type: 'error', text: 'API key is required for this provider.' });
+        setBusy(false);
+        return;
+      }
+      const saveRes = await api.saveCredentials(provider.id, {
+        token: token || undefined,
         endpoint_url: drafts.endpoint_url || provider.endpoint_url || undefined,
         extra: drafts.extra,
       });
       const ver = await api.getAdapterVerification().catch(() => ({ results: [] }));
       const row = (ver?.results || []).find((r) => r.provider_id === provider.id);
       const verified = row?.verified === true;
+      const discovered = saveRes?.discovered ?? saveRes?.backend_ids?.length ?? 0;
+      const detail = saveRes?.message || '';
       setFeedback({
-        type: verified ? 'success' : 'warn',
-        text: verified
-          ? 'Credentials saved and adapter verified.'
-          : 'Credentials saved. Run verification from Configure → Integrations if the adapter did not respond.',
+        type: verified || discovered > 0 ? 'success' : 'warn',
+        text: detail
+          || (verified
+            ? 'Credentials saved and adapter verified.'
+            : 'Credentials saved. Run verification from Configure → Integrations if the adapter did not respond.'),
       });
-      onSaved({ verified, verification: ver?.results || [] });
-      if (verified) {
-        window.setTimeout(onClose, 700);
+      onSaved({ verified, verification: ver?.results || [], saveRes });
+      if (verified || discovered > 0) {
+        window.setTimeout(onClose, 900);
       }
     } catch (err) {
       setFeedback({ type: 'error', text: err?.message || 'Could not save credentials.' });
