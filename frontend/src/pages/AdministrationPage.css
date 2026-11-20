@@ -91,8 +91,9 @@
   gap: 10px;
 }
 
-.admin-people-toolbar__title {
+.admin-people-toolbar__hint {
   margin: 0;
+  width: 100%;
 }
 
 .admin-people-toolbar__actions {

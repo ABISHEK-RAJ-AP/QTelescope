@@ -24,8 +24,10 @@ export function CollapsibleSection({
           onClick={() => setOpen((v) => !v)}
         >
           {open ? <ChevronDown size={16} aria-hidden /> : <ChevronRight size={16} aria-hidden />}
-          <h3 id={id} className="al-h collapsible-section__title">{title}</h3>
-          {help ? <InfoTooltip label={title} align="start">{help}</InfoTooltip> : null}
+          <span className="qt-title-with-help">
+            <h3 id={id} className="al-h collapsible-section__title">{title}</h3>
+            {help ? <InfoTooltip label={title} align="start">{help}</InfoTooltip> : null}
+          </span>
         </button>
         {actions ? <div className="collapsible-section__actions">{actions}</div> : null}
       </header>

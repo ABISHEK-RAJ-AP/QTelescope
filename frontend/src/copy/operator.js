@@ -58,15 +58,15 @@ export const COPY = {
     registerApprovalNote:
       'After email verification, an organisation or platform administrator must approve your account before the first sign-in. Access and role are set during that review in Administration → Access & approvals.',
     accessIntroFleet:
-      'Platform view: every organisation’s pending sign-ups, invitations, and member status across the fleet.',
+      'Fleet-wide view of pending registrations, invitations, and account status across all organisations.',
     accessIntroOrg:
-      'Organisation view: pending sign-ups and members for your organisation only.',
+      'Organisation-scoped view of pending registrations and active members.',
     accessInviteSubtitle:
-      'Pre-provision an active account. Share the temporary password securely; the member changes it under Settings.',
+      'Creates an active account immediately. Share the temporary password through a secure channel; the member sets a new password under Account settings.',
     accessPendingSubtitle:
-      'Self-service accounts appear here after email verification — match the public registration flow (Type → Organisation → Account → Verify).',
+      'Accounts land here after email verification when admin approval is enabled. Assign a role, then approve or reject.',
     accessRejectedSubtitle:
-      'Declined requests stay listed for audit. Re-open to the queue if the decision should change.',
+      'Rejected registrations remain for audit. Re-open to return an account to the pending queue.',
     registerOtpSubtitle: 'Enter the verification code to finish creating your account.',
     registerOtpHintScreen:
       'Email is not configured here — use the verification code from the toast notification and the box below.',

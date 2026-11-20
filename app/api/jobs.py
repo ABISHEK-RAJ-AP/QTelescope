@@ -30,12 +30,26 @@ def get_job_failure_analytics(
     limit: int = Query(500, ge=1, le=2000),
     db: Session = Depends(get_db),
 ):
-    query = db.query(JobRecordModel)
-    if backend_id:
-        query = query.filter(JobRecordModel.backend_id == backend_id)
-    jobs = query.order_by(JobRecordModel.submitted_at.desc()).limit(limit).all()
-    prov = _provider_map(db)
-    return summarize_failures(jobs, prov)
+    empty = {
+        "total_failed": 0,
+        "by_category": [],
+        "by_provider": [],
+        "recent": [],
+        "methodology": "Categories inferred from status + failure_reason text; vendor strings are not rewritten.",
+        "degraded": True,
+    }
+    try:
+        query = db.query(JobRecordModel)
+        if backend_id:
+            query = query.filter(JobRecordModel.backend_id == backend_id)
+        jobs = query.order_by(JobRecordModel.submitted_at.desc()).limit(limit).all()
+        prov = _provider_map(db)
+        out = summarize_failures(jobs, prov)
+        out.pop("degraded", None)
+        return out
+    except Exception:
+        # ponytail: keep jobs UI usable when job_records/backends schema is incomplete in demo DBs.
+        return empty
 
 
 @router.get("", response_model=List[JobRecordResponse])

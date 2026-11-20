@@ -190,9 +190,11 @@ export function resolvePageContext(state) {
       break;
     case 'admin': {
       const sub = adminSubTab || 'hub';
-      breadcrumbs.push({ label: 'Configure' });
-      breadcrumbs.push({ label: ADMIN_LABELS[sub] || sub });
-      title = ADMIN_LABELS[sub] || 'Configure';
+      const sectionLabel = ADMIN_LABELS[sub] || sub;
+      if (sectionLabel !== group) {
+        breadcrumbs.push({ label: sectionLabel });
+      }
+      title = sectionLabel;
       if (sub === 'integrations') {
         description = 'Provider credentials, discovery, and adapter status.';
       } else if (sub === 'rules') {
@@ -200,7 +202,8 @@ export function resolvePageContext(state) {
       } else if (sub === 'collectors') {
         description = 'Collection schedules, last run, and failure queue.';
       } else if (sub === 'access' || sub === 'users') {
-        description = 'Queue, directory, invites, and roles in one place.';
+        description =
+          'Approve registrations, manage the member directory, invite users, and assign roles. Scope follows your organisation filter or fleet-wide access for platform administrators.';
       } else if (sub === 'logs') {
         description = 'Audit and application log search.';
       } else {

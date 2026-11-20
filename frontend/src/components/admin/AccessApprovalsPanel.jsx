@@ -6,7 +6,7 @@ import {
   isFleetUserAdmin,
   isOrgPeopleAdmin,
   roleLabel,
-  rolesSelectableForInvite,
+  rolesAssignableByActor,
 } from '@/lib/permissions.js';
 import { RoleMatrix } from '@/components/admin/RoleMatrix.jsx';
 import { Button } from '@/components/ui/Button';
@@ -35,10 +35,9 @@ const ACCOUNT_STATUS_LABEL = {
   suspended: 'Suspended',
 };
 
-const PEOPLE_HELP_FLEET = `${COPY.auth.accessIntroFleet} ${COPY.auth.accessPendingSubtitle}`;
-const PEOPLE_HELP_ORG = `${COPY.auth.accessIntroOrg} ${COPY.auth.accessPendingSubtitle}`;
-const INVITE_HELP = `${COPY.auth.accessInviteSubtitle} Organisation comes from your scope filter (fleet) or is fixed for organisation administrators.`;
-const MATRIX_HELP = 'Effective access by built-in role. Assign roles in the directory. Custom roles are editable under Security.';
+const INVITE_HELP = `${COPY.auth.accessInviteSubtitle} Pick organisation from the toolbar (fleet) or use your fixed org scope.`;
+const MATRIX_HELP =
+  'Capability matrix for built-in roles. Assign roles in Directory; custom roles live under Security when enabled.';
 
 function sessionUser() {
   try {
@@ -237,17 +236,16 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
 
 
   const roleOptions = useMemo(() => {
-    const legacyAlias = new Set(['Admin', 'Operator', 'Researcher']);
     const seen = new Set();
     const catalog = (roles || []).filter((r) => {
       const id = r.id || r.role;
-      if (!id || seen.has(id) || legacyAlias.has(id)) return false;
+      if (!id || seen.has(id)) return false;
       seen.add(id);
       return true;
     });
-    const allowed = rolesSelectableForInvite(me);
+    const allowed = rolesAssignableByActor(me);
     if (!allowed) return catalog;
-    return catalog.filter((r) => allowed.includes(r.id || r.role));
+    return catalog.filter((r) => allowed.has(r.id || r.role));
   }, [roles, me]);
 
   const directoryRows = useMemo(() => {
@@ -280,11 +278,15 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
   const hiddenTestUsers = scopedRows.filter((u) => TEST_USER.test(u.username || '')).length;
 
   const onRole = async (username, role) => {
+    const next = (role || '').trim();
+    if (!next) return;
+    const current = rows.find((u) => u.username === username)?.role;
+    if (current === next) return;
     setBusy(username);
     const prev = rows;
-    setRows((list) => list.map((u) => (u.username === username ? { ...u, role } : u)));
+    setRows((list) => list.map((u) => (u.username === username ? { ...u, role: next } : u)));
     try {
-      await api.assignUserRole(username, role);
+      await api.assignUserRole(username, next);
     } catch (e) {
       setRows(prev);
       onNotice?.({ type: 'error', text: e?.message || 'Role update failed.' });
@@ -394,15 +396,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
     <div className="admin-access admin-people" data-tour="page-admin-access">
       <header className="card admin-people-toolbar reg-cert-panel">
         <div className="admin-people-toolbar__row">
-          <PeopleTitleRow className="admin-people-toolbar__title">
-            <h2 className="admin-card-title">People &amp; access</h2>
-            <InfoTooltip label="People and access scope">
-              {fleetAdmin ? PEOPLE_HELP_FLEET : PEOPLE_HELP_ORG}
-              {policy?.require_admin_approval
-                ? ' Admin approval is required before first sign-in.'
-                : ' With approval off, verified self-registrations activate immediately.'}
-            </InfoTooltip>
-          </PeopleTitleRow>
+          <PeopleTabBar tab={tab} onTab={setTab} pendingCount={pending.length} />
           <div className="admin-people-toolbar__actions">
             {fleetAdmin ? (
               <label className="admin-people-scope outline-field">
@@ -446,7 +440,11 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
             ) : null}
           </div>
         </div>
-        <PeopleTabBar tab={tab} onTab={setTab} pendingCount={pending.length} />
+        {policy?.require_admin_approval ? (
+          <p className="admin-people-muted admin-people-toolbar__hint" role="status">
+            Admin approval is required before a new member can sign in.
+          </p>
+        ) : null}
       </header>
 
       {tab === 'queue' && (
@@ -520,7 +518,9 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
         <section className="card admin-people-panel" aria-labelledby="admin-dir-h">
           <PeopleTitleRow id="admin-dir-h" className="admin-people-panel__head">
             <h3 className="admin-card-title">Directory</h3>
-            <InfoTooltip label="User directory">Search, sort, assign roles, and suspend or approve accounts in your current scope.</InfoTooltip>
+            <InfoTooltip label="User directory" align="start">
+              Search and sort the directory. Assign roles, suspend accounts, or approve queue entries for the organisation shown in the toolbar.
+            </InfoTooltip>
           </PeopleTitleRow>
           <div className="admin-users-toolbar">
             <label className="admin-users-search outline-field">

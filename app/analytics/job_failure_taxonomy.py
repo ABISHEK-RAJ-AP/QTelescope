@@ -120,6 +120,8 @@ def summarize_failures(
         prov = provider_by_backend.get(bid or "", "unknown")
         reason = getattr(job, "failure_reason", None) or job.get("failure_reason")
         cat = classify_failure(status, reason, prov)
+        if cat not in TAXONOMY:
+            cat = "unknown"
         by_category[cat] = by_category.get(cat, 0) + 1
         by_provider.setdefault(prov, {k: 0 for k in TAXONOMY})
         by_provider[prov][cat] = by_provider[prov].get(cat, 0) + 1
@@ -131,7 +133,7 @@ def summarize_failures(
                     "provider_id": prov,
                     "status": status,
                     "failure_category": cat,
-                    "failure_category_label": TAXONOMY[cat]["label"],
+                    "failure_category_label": TAXONOMY.get(cat, TAXONOMY["unknown"])["label"],
                     "failure_reason": reason,
                 }
             )

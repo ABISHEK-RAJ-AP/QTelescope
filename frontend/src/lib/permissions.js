@@ -171,9 +171,22 @@ const ORG_INVITABLE_ROLES = new Set([
   'Viewer', 'ResearchAnalyst', 'Researcher', 'OpsEngineer', 'Operator', 'IncidentCommander',
 ]);
 
+/** Roles organisation admins may assign (mirrors app.core.org_user_admin.ORG_ASSIGNABLE_ROLES). */
+const ORG_ASSIGNABLE_ROLES = new Set([
+  'Viewer', 'ResearchAnalyst', 'Researcher', 'OpsEngineer', 'Operator', 'IncidentCommander',
+]);
+
 export function rolesSelectableForInvite(actor) {
   const base = ROLE_DEFINITIONS.map((r) => r.id).filter((id) => ORG_INVITABLE_ROLES.has(id));
   if (actor?.role === 'OrgAdmin' || actor?.role === 'SuperAdmin') return base;
+  return null;
+}
+
+/** null = full catalog from API; otherwise restrict directory / pending role selects. */
+export function rolesAssignableByActor(actor) {
+  if (!actor) return ORG_ASSIGNABLE_ROLES;
+  if (isFleetUserAdmin(actor)) return null;
+  if (isOrgPeopleAdmin(actor)) return ORG_ASSIGNABLE_ROLES;
   return null;
 }
 

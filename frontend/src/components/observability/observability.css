@@ -262,11 +262,31 @@
   height: auto;
 }
 
+/* Title + help icon — keep icon beside heading (not stretched across the row). */
+.qt-title-with-help,
+.admin-people-title-row,
+.chart-panel__title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.qt-title-with-help .collapsible-section__title,
+.qt-title-with-help .admin-card-title,
+.qt-title-with-help h2,
+.qt-title-with-help h3,
+.qt-title-with-help h4 {
+  margin: 0;
+}
+
 /* Info tooltip */
 .info-tooltip {
   position: relative;
   display: inline-flex;
   vertical-align: middle;
+  flex-shrink: 0;
   z-index: 1;
 }
 
@@ -274,7 +294,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px;
+  align-self: center;
+  flex-shrink: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
   border: none;
   background: transparent;
   color: var(--text-muted);
@@ -1273,13 +1297,17 @@
   cursor: pointer;
   font-weight: 600;
   font-size: 13px;
+  line-height: 1.45;
   list-style: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 10px 14px;
+  min-height: 44px;
+  padding: 12px 14px;
   color: var(--text-secondary);
+  border-radius: 10px;
+  overflow: visible;
 }
 
 .page-meta-fold summary::-webkit-details-marker {

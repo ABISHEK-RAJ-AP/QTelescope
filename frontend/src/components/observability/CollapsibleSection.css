@@ -1,29 +1,59 @@
+.collapsible-section {
+  --cs-head-min-height: 44px;
+  --cs-head-pad-y: 10px;
+  --cs-head-line-height: 1.45;
+}
+
 .collapsible-section__head {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px;
+  min-height: var(--cs-head-min-height);
 }
+
 .collapsible-section__toggle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  flex: 1 1 auto;
+  gap: 8px;
+  flex: 0 1 auto;
   min-width: 0;
+  min-height: var(--cs-head-min-height);
+  padding: var(--cs-head-pad-y) 4px;
   border: 0;
   background: transparent;
   color: inherit;
-  padding: 0;
   cursor: pointer;
   text-align: left;
-  min-width: 0;
+  line-height: var(--cs-head-line-height);
+  border-radius: 10px;
 }
-.collapsible-section__title { margin: 0; }
+
+.collapsible-section__title {
+  margin: 0;
+  line-height: var(--cs-head-line-height);
+  overflow: visible;
+}
+
+.collapsible-section__toggle .qt-title-with-help {
+  align-items: center;
+}
+
 .collapsible-section__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-left: auto;
+  align-self: center;
 }
-.collapsible-section__body { margin-top: 12px; }
+
+.collapsible-section__body {
+  margin-top: 12px;
+}
+
+/* Chevron stays vertically centered with multi-line titles */
+.collapsible-section__toggle > svg {
+  flex-shrink: 0;
+  align-self: center;
+}
