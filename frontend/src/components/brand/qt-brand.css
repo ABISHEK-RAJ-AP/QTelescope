@@ -1,4 +1,5 @@
 .qt-brand-lockup {
+  position: relative;
   display: inline-flex;
   align-items: center;
   line-height: 0;
@@ -7,6 +8,32 @@
   padding: 0;
   box-shadow: none;
   flex-shrink: 0;
+  isolation: isolate;
+}
+
+/* Soft halo behind lockup on dark surfaces (no box container) */
+.qt-brand-lockup::before {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 50%;
+  height: 140%;
+  transform: translateY(-50%);
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse at 35% 50%,
+    color-mix(in srgb, var(--accent-cyan, #22d3ee) 28%, transparent),
+    transparent 72%
+  );
+  filter: blur(10px);
+}
+
+.dark .qt-brand-lockup::before,
+html.dark .qt-brand-lockup::before {
+  opacity: 1;
 }
 
 .qt-brand-lockup__img {
@@ -33,6 +60,17 @@ html.dark .qt-brand-lockup__img--light {
 .dark .qt-brand-lockup__img--dark,
 html.dark .qt-brand-lockup__img--dark {
   display: block;
+}
+
+.dark .qt-brand-lockup__img--dark,
+html.dark .qt-brand-lockup__img--dark,
+.qt-brand-lockup__img--glow {
+  filter:
+    brightness(1.22)
+    contrast(1.08)
+    drop-shadow(0 0 1px rgba(255, 255, 255, 0.35))
+    drop-shadow(0 0 10px rgba(34, 211, 238, 0.55))
+    drop-shadow(0 0 22px rgba(6, 182, 212, 0.35));
 }
 
 .reg-stage__logo-mark {

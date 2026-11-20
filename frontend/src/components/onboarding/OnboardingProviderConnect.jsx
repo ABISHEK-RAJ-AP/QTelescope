@@ -206,10 +206,14 @@ export function OnboardingProviderConnect({ isAdmin, onNotice }) {
     [verification],
   );
 
-  const liveProviders = useMemo(
-    () => providers.filter((p) => p.adapter === 'live' || p.adapter_status === 'LIVE'),
-    [providers],
-  );
+  const sortedProviders = useMemo(() => {
+    const isLive = (p) => p.adapter === 'live' || p.adapter_status === 'LIVE';
+    return [...providers].sort((a, b) => {
+      const d = Number(isLive(a)) - Number(isLive(b));
+      if (d !== 0) return -d;
+      return (a.name || a.id || '').localeCompare(b.name || b.id || '', undefined, { sensitivity: 'base' });
+    });
+  }, [providers]);
 
   const modalProvider = providers.find((p) => p.id === modalId) || null;
 
@@ -229,13 +233,13 @@ export function OnboardingProviderConnect({ isAdmin, onNotice }) {
 
     {loading ? (
       <p className="onboarding-empty-note" role="status">Loading adapters…</p>
-    ) : liveProviders.length === 0 ? (
+    ) : sortedProviders.length === 0 ? (
       <p className="onboarding-empty-note" role="status">
-        No live adapters returned from the server. Skip this step to use the demo catalog.
+        No providers returned from the server. Skip this step to use the demo catalog, or add backends under Configure.
       </p>
     ) : (
-      <div className="ob-provider-grid" role="list" aria-label="Provider adapters">
-        {liveProviders.map((p) => {
+      <div className="ob-provider-grid ob-provider-grid--tiles" role="list" aria-label="Provider adapters">
+        {sortedProviders.map((p) => {
           const st = providerStatus(p, verBy);
           return (
             <button

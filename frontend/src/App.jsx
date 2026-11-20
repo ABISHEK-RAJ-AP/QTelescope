@@ -62,6 +62,7 @@ import { CommandPalette, useCommandPaletteShortcut } from './components/shell/Co
 import { COPY } from './copy/operator.js';
 import { AccessDenied, ConsoleErrorBoundary, NotFoundPage } from './components/shell/RouteStatus.jsx';
 import { QtFilmReadyWatcher } from './components/shell/QtFilmReadyWatcher.jsx';
+import { SessionBootstrap } from './components/shell/SessionBootstrap.jsx';
 
 function skeletonFor(topic, backendSubTab) {
   if (topic === 'alerts') return 'alerts';
@@ -939,11 +940,7 @@ export const App = () => {
   }
 
   if (!sessionChecked) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-[var(--text-muted)]" role="status">
-        Checking session…
-      </div>
-    );
+    return <SessionBootstrap />;
   }
 
   if (location.pathname.startsWith('/app/onboarding')) {

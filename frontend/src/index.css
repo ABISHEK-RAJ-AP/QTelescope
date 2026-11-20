@@ -262,6 +262,75 @@ pre,
   line-height: 1.2;
 }
 
+.app-session-boot {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+}
+
+.app-session-boot__card {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: min(360px, 100%);
+  padding: 28px 24px 24px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--bg-card) 92%, transparent);
+  box-shadow: 0 20px 48px color-mix(in srgb, #0f172a 18%, transparent);
+}
+
+.app-session-boot__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.app-session-boot__sk-line {
+  height: 10px;
+  width: 100%;
+  border-radius: 6px;
+}
+
+.app-session-boot__sk-line--short {
+  width: 72%;
+}
+
+.app-session-boot__sk-line--med {
+  width: 88%;
+}
+
+.app-session-boot__label {
+  margin: 4px 0 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.app-session-boot__spin {
+  animation: qt-boot-spin 0.9s linear infinite;
+  color: var(--accent-cyan);
+}
+
+@keyframes qt-boot-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .sidebar-subtitle--only {
   margin-left: 2px;
   white-space: nowrap;

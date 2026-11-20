@@ -1,11 +1,11 @@
 import React from 'react';
 import './qt-brand.css';
 
-const LOCKUP_LIGHT = '/brand/q-telescope-lockup-light.jpg';
-const LOCKUP_DARK = '/brand/q-telescope-lockup-dark.png';
+/** Transparent lockup — same asset on light and dark; dark mode uses glow filter. */
+const LOCKUP_TRANSPARENT = '/brand/q-telescope-lockup-dark.png';
 
 /**
- * Official Q-TeleScope lockup (user-supplied assets). No badge/plate wrapper.
+ * Official Q-TeleScope lockup. No badge/plate wrapper.
  * `size` sets logo height in px. `theme`: auto (CSS), light, or dark.
  */
 export function QtTeleScopeMark({
@@ -18,30 +18,23 @@ export function QtTeleScopeMark({
 }) {
   const h = Number(height ?? size) || 32;
   const alt = decorative ? '' : title;
+  const imgClass = [
+    'qt-brand-lockup__img',
+    theme === 'dark' ? 'qt-brand-lockup__img--glow' : '',
+    className,
+  ]
+    .filter(Boolean)
+    .join(' ');
 
-  if (theme === 'light') {
+  if (theme === 'light' || theme === 'dark') {
     return (
       <img
-        className={`qt-brand-lockup__img ${className}`.trim()}
-        src={LOCKUP_LIGHT}
+        className={imgClass}
+        src={LOCKUP_TRANSPARENT}
         alt={alt}
         aria-hidden={decorative || undefined}
         height={h}
-        style={{ height: h }}
-        decoding="async"
-      />
-    );
-  }
-
-  if (theme === 'dark') {
-    return (
-      <img
-        className={`qt-brand-lockup__img ${className}`.trim()}
-        src={LOCKUP_DARK}
-        alt={alt}
-        aria-hidden={decorative || undefined}
-        height={h}
-        style={{ height: h }}
+        style={{ height: h, width: 'auto' }}
         decoding="async"
       />
     );
@@ -55,15 +48,15 @@ export function QtTeleScopeMark({
     >
       <img
         className="qt-brand-lockup__img qt-brand-lockup__img--light"
-        src={LOCKUP_LIGHT}
+        src={LOCKUP_TRANSPARENT}
         alt={alt}
         aria-hidden={decorative || undefined}
         height={h}
         decoding="async"
       />
       <img
-        className="qt-brand-lockup__img qt-brand-lockup__img--dark"
-        src={LOCKUP_DARK}
+        className="qt-brand-lockup__img qt-brand-lockup__img--dark qt-brand-lockup__img--glow"
+        src={LOCKUP_TRANSPARENT}
         alt={decorative ? undefined : alt}
         aria-hidden={decorative ? true : undefined}
         height={h}
