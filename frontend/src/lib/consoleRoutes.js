@@ -5,8 +5,8 @@ import { buildAppPath } from '../appNav.js';
 export const CONSOLE_ROUTES = [
   { id: 'overview', label: 'Overview', nav: 'home', group: 'Console', state: { mainTopic: 'home' } },
   { id: 'compare', label: 'Compare & routing', nav: 'compare', group: 'Console', state: { mainTopic: 'telemetry', telemetrySubTab: 'compare' } },
-  { id: 'operate', label: 'Operator console', nav: 'operations', group: 'Labs', state: { mainTopic: 'operations', operationsSubTab: 'centre' } },
-  { id: 'platform', label: 'Platform health', nav: 'platform', group: 'Labs', state: { mainTopic: 'platform' } },
+  { id: 'operate', label: 'Operator console', nav: 'operations', group: 'Console', state: { mainTopic: 'operations', operationsSubTab: 'centre' } },
+  { id: 'platform', label: 'Platform health', nav: 'platform', group: 'Console', state: { mainTopic: 'platform' } },
   { id: 'inventory', label: 'Backend inventory', nav: 'backends', group: 'Observe', state: { mainTopic: 'backends', backendSubTab: 'inventory' } },
   { id: 'live', label: 'Live telemetry', nav: 'telemetry', group: 'Analyze', state: { mainTopic: 'telemetry', telemetrySubTab: 'live' } },
   { id: 'metrics-explorer', label: 'Metrics explorer', nav: 'telemetry', group: 'Analyze', state: { mainTopic: 'telemetry', telemetrySubTab: 'explorer' } },

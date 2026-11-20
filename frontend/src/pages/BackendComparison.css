@@ -33,6 +33,10 @@
 .bc-defs { margin-top: 10px; font-size: var(--font-size-helper, 0.875rem); }
 .bc-defs summary { cursor: pointer; font-weight: 600; }
 .bc-defs ul { margin: 8px 0 0; padding-left: 1.2rem; }
-.bc-cross-mod { margin: 12px 0 0; padding-left: 1.1rem; font-size: var(--font-size-helper, 0.875rem); color: var(--text-secondary); list-style: disc; }
-.bc-cross-mod li { margin: 4px 0; }
-.bc-gates { color: var(--text-muted); }
+.bc-pairs-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.bc-pairs-head .page-section-title { margin: 0; }
+.bc-pairs-empty { margin: 0; font-size: var(--font-size-helper, 0.875rem); color: var(--text-muted); }
+.bc-defs-dl { margin: 0; font-size: 0.8125rem; line-height: 1.45; }
+.bc-defs-dl dt { font-weight: 600; margin-top: 6px; }
+.bc-defs-dl dt:first-child { margin-top: 0; }
+.bc-defs-dl dd { margin: 2px 0 0; color: var(--text-secondary); }

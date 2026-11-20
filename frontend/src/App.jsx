@@ -2,7 +2,7 @@ import React, { Suspense, useState, useEffect, useRef, useMemo, useCallback } fr
 import {
   LayoutDashboard, Cpu, Activity, CheckCircle2,
   FileText, Settings, LogOut, AlertTriangle, PlaySquare,
-  Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, Server,
+  Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, Server, GitCompare,
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { buildAppPath, parseAppPath, isLegacyAppPath } from './appNav.js';
@@ -587,12 +587,17 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
   };
 
   const navGroups = useMemo(() => {
-    const consoleItems = [
+    const items = [
       { id: 'home', label: 'Overview', icon: LayoutDashboard },
       { id: 'backends', label: 'Backends', icon: Cpu },
+      { id: 'compare', label: 'Compare & routing', icon: GitCompare },
+      { id: 'telemetry', label: 'Telemetry', icon: Activity, children: LABS_TELEMETRY_NAV },
+      { id: 'execution', label: 'Execution', icon: PlaySquare, children: EXECUTION_NAV },
+      { id: 'resources', label: 'Resources', icon: CheckCircle2, children: RESOURCES_NAV },
+      { id: 'platform', label: 'Platform health', icon: Server },
       {
         id: 'alerts',
-        label: 'Alerts & incidents',
+        label: 'Alerts',
         icon: AlertTriangle,
         children: ALERTS_HUB_NAV,
         badge: criticalAlertsCount > 0 ? criticalAlertsCount : (activeAlertsCount > 0 ? activeAlertsCount : 0),
@@ -601,19 +606,9 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
           ? `${criticalAlertsCount} critical · ${activeAlertsCount} active`
           : `${activeAlertsCount} active alerts`,
       },
-      { id: 'compare', label: 'Compare & routing', icon: Activity },
       { id: 'reports', label: 'Reports', icon: FileText },
     ].filter((item) => canSeeNavItem(currentUser, item.id));
-    const labsItems = [
-      { id: 'telemetry', label: 'Telemetry', icon: Activity, children: LABS_TELEMETRY_NAV },
-      { id: 'execution', label: 'Execution', icon: PlaySquare, children: EXECUTION_NAV },
-      { id: 'resources', label: 'Resources', icon: CheckCircle2, children: RESOURCES_NAV },
-      { id: 'platform', label: 'Platform health', icon: Server },
-    ].filter((item) => canSeeNavItem(currentUser, item.id));
-    const groups = [];
-    if (consoleItems.length) groups.push({ items: consoleItems });
-    if (labsItems.length) groups.push({ label: 'Labs', items: labsItems });
-    return groups;
+    return items.length ? [{ items }] : [];
   }, [activeAlertsCount, criticalAlertsCount, currentUser]);
 
   const adminNav = visibleAdminNav(currentUser);

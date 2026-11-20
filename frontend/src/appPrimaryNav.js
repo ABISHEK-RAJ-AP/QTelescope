@@ -1,7 +1,4 @@
-/**
- * Launch IA: 5 primary destinations + Settings + Labs (Material rail ≤7).
- * Legacy deep links unchanged; Labs holds former sprawl.
- */
+/** Sidebar ordering helpers and nested nav targets (see App.jsx nav list). */
 import {
   TELEMETRY_NAV,
   EXECUTION_NAV,
@@ -26,7 +23,6 @@ export const NAV_HELP_PRIMARY = {
   backends: 'All QPUs in one table — open a row for health, queue, and alerts.',
   alerts: 'Grouped alert inbox, incidents, action queue, and timeline.',
   compare: 'Cross-vendor compare and routing recommendation.',
-  labs: 'Advanced telemetry, execution, and platform tools.',
 };
 
 /** Resolve child click → shell state patch */

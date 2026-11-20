@@ -15,6 +15,7 @@ import { getChartTheme, baseTooltip, getFleetStateChartColors, getModalityChartP
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { isSimulatorBackend } from './fleetData.js';
 import { ScopeBanner } from '../components/ds/ScopeBanner.jsx';
+import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
 import './BackendComparison.css';
 
 const MAX_COMPARE = 4;
@@ -362,8 +363,8 @@ export const BackendComparison = () => {
           <strong>Select {MIN_COMPARE}–{MAX_COMPARE} backends</strong>
           <span className="page-hint">
             {sel.length}/{MAX_COMPARE} selected
-            {sel.length >= MIN_COMPARE ? ` · comparing ${sel.length} backend${sel.length === 1 ? '' : 's'}` : ''}
-            {' · ranks and deltas only apply within one modality'}
+            {sel.length >= MIN_COMPARE ? ` · ${sel.length} in view` : ''}
+            {mixed ? ' · mixed modality' : selMod ? ' · ranked within modality' : ''}
           </span>
         </div>
         <div className="bc-chips" role="group" aria-label="Backends to compare">
@@ -389,9 +390,7 @@ export const BackendComparison = () => {
       {mixed && (
         <div className="bc-banner" role="status">
           <AlertTriangle size={16} aria-hidden />
-          <span>
-            <b>Mixed modalities ({selMods.join(', ')}).</b> No ranking or pair deltas. T1, T2 and η_cal are plotted per modality on separate axes: trapped-ion T1 is millions of µs, superconducting is tens to hundreds. Pick backends of one modality for an ordered comparison.
-          </span>
+          <span>Side-by-side only — pick one modality to rank backends and show pair deltas.</span>
         </div>
       )}
       {sel.length < MIN_COMPARE && (
@@ -507,7 +506,6 @@ export const BackendComparison = () => {
                   <tbody>{rows.map((r) => <tr key={r.backend_id}><td>{r.name}</td>{['GREEN', 'YELLOW', 'RED', 'UNKNOWN'].map((s) => <td key={s}>{r.counts?.[s] ?? 'missing'}</td>)}</tr>)}</tbody></table>
               )}>
               <BarChart rows={stateSeries} dark={dark} stacked unit="qubits" />
-              <p className="page-hint bc-note">Counts use modality-specific rules; compare within one modality only.</p>
             </ChartPanel>
 
             <ChartPanel title="Queue depth" titleTo="/app/execution/queues" question="Pending jobs now." sourceKind="cached" minHeight={320}
@@ -558,66 +556,52 @@ export const BackendComparison = () => {
             </div>
           </section>
 
-          <section className="card page-panel">
-            <h3 className="page-section-title">
-              Pair deltas (A − B)
-              {result.pairs?.length ? ` · ${result.pairs.filter((p) => p.ranking_allowed).length} comparable` : ''}
-            </h3>
-            <p className="page-hint bc-note" style={{ marginTop: 0 }} title="T1/T2 and F_limit deltas only when modalities match. η_cal is not pair-ranked across modalities.">
-              {result.methodology}
-            </p>
-            {result.pairs?.length ? (() => {
-              const comparable = result.pairs.filter((p) => p.ranking_allowed);
-              const cross = result.pairs.filter((p) => !p.ranking_allowed);
+          <section className="card page-panel bc-pairs">
+            <div className="bc-pairs-head">
+              <h3 className="page-section-title">Pair deltas (A − B)</h3>
+              <InfoTooltip label="Metrics and router (advisory)">
+                <dl className="bc-defs-dl">
+                  <dt>F_limit</dt>
+                  <dd>Coherence fidelity bound in [0, 1].</dd>
+                  <dt>η_cal</dt>
+                  <dd>Calibration ratio; compare within one modality.</dd>
+                  <dt>Router</dt>
+                  <dd>
+                    Worst qubit wins. T1/T2 floors from per-backend alert rules.
+                    {result.routing_gates ? (
+                      <> GREEN: η≤{result.routing_gates.eta_green_max}, C_exec≥{result.routing_gates.c_exec_min}.
+                        YELLOW: η&gt;{result.routing_gates.eta_yellow_max}.</>
+                    ) : null}
+                  </dd>
+                </dl>
+              </InfoTooltip>
+            </div>
+            {(() => {
+              const comparable = (result.pairs || []).filter((p) => p.ranking_allowed);
+              if (!result.pairs?.length) {
+                return <p className="bc-pairs-empty">Select at least two backends.</p>;
+              }
+              if (!comparable.length) {
+                return <p className="bc-pairs-empty">No comparable pairs — same modality required for ranked deltas.</p>;
+              }
               return (
-                <>
-                  {comparable.length > 0 && (
-                    <div className="table-container" style={{ border: 'none' }}>
-                      <table className="custom-table custom-table--dense">
-                        <thead><tr><th>Pair (same modality)</th><th>Δ F_limit</th><th>Δ T1 (µs)</th><th>Δ T2 (µs)</th></tr></thead>
-                        <tbody>
-                          {comparable.map((p) => (
-                            <tr key={`${p.backend_a}-${p.backend_b}`}>
-                              <td>{meta[p.backend_a]?.backend_name || p.backend_a} vs {meta[p.backend_b]?.backend_name || p.backend_b}</td>
-                              {['F_limit', 't1_mean_us', 't2_mean_us'].map((k) => (
-                                <td key={k}>{fmt(num(p.delta?.[k])) ?? <span className="bc-missing">—</span>}</td>
-                              ))}
-                            </tr>
+                <div className="table-container" style={{ border: 'none' }}>
+                  <table className="custom-table custom-table--dense">
+                    <thead><tr><th>Pair</th><th>Δ F_limit</th><th>Δ T1 (µs)</th><th>Δ T2 (µs)</th></tr></thead>
+                    <tbody>
+                      {comparable.map((p) => (
+                        <tr key={`${p.backend_a}-${p.backend_b}`}>
+                          <td>{meta[p.backend_a]?.backend_name || p.backend_a} vs {meta[p.backend_b]?.backend_name || p.backend_b}</td>
+                          {['F_limit', 't1_mean_us', 't2_mean_us'].map((k) => (
+                            <td key={k}>{fmt(num(p.delta?.[k])) ?? <span className="bc-missing">—</span>}</td>
                           ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                  {cross.length > 0 && (
-                    <ul className="bc-cross-mod">
-                      {cross.map((p) => (
-                        <li key={`${p.backend_a}-${p.backend_b}`}>
-                          {meta[p.backend_a]?.backend_name || p.backend_a} vs {meta[p.backend_b]?.backend_name || p.backend_b}
-                          {' — '}
-                          <span className="bc-missing">different modality (no ranked deltas)</span>
-                        </li>
+                        </tr>
                       ))}
-                    </ul>
-                  )}
-                </>
+                    </tbody>
+                  </table>
+                </div>
               );
-            })() : <p className="page-hint">Need at least two backends in the selection for pair deltas.</p>}
-            <details className="bc-defs">
-              <summary>Metrics &amp; router (advisory)</summary>
-              <ul className="page-hint">
-                <li><b>F_limit</b> — coherence-only fidelity bound: 1 − (t_gate/(3·T1) + t_gate/(3·T2)), in [0, 1].</li>
-                <li><b>η_cal</b> — (1 − F_gate) / (1 − F_limit); capped at 100; compare within one modality only.</li>
-                <li><b>C_exec</b> — reference circuit success (10×1Q, 5×2Q, 10 meas, depth 20), in [0, 1].</li>
-                <li><b>Readout error</b> — assignment error probability in [0, 1].</li>
-                <li><b>Router</b> — {result.routing_summary || 'Worst qubit wins; thresholds from per-backend alert rules.'}</li>
-                {result.routing_gates && (
-                  <li className="bc-gates">
-                    Gates: η_cal ≤ {result.routing_gates.eta_green_max} (GREEN), &gt; {result.routing_gates.eta_yellow_max} (YELLOW);
-                    C_exec ≥ {result.routing_gates.c_exec_min}; T1 floor from {result.routing_gates.t1_crit_source}.
-                  </li>
-                )}
-              </ul>
-            </details>
+            })()}
           </section>
         </>
       )}
