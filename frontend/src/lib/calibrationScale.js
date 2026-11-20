@@ -37,14 +37,29 @@ function parseHex(hex) {
   return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 }
 
+/** Design tokens from getComputedStyle are often rgb(), not #hex. */
+function colorToRgb(input) {
+  if (!input || typeof input !== 'string') return null;
+  const s = input.trim();
+  if (s.startsWith('#')) {
+    const rgb = parseHex(s);
+    if (rgb.every((c) => Number.isFinite(c))) return rgb;
+    return null;
+  }
+  const m = s.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)/i);
+  if (m) return [Number(m[1]), Number(m[2]), Number(m[3])];
+  return null;
+}
+
 function toHex([r, g, b]) {
   const c = (x) => Math.round(Math.max(0, Math.min(255, x))).toString(16).padStart(2, '0');
   return `#${c(r)}${c(g)}${c(b)}`;
 }
 
 export function lerpHex(a, b, t) {
-  const A = parseHex(a);
-  const B = parseHex(b);
+  const A = colorToRgb(a);
+  const B = colorToRgb(b);
+  if (!A || !B) return typeof a === 'string' ? a : b;
   return toHex(A.map((v, i) => v + (B[i] - v) * t));
 }
 

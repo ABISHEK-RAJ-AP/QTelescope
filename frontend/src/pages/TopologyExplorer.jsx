@@ -571,6 +571,53 @@ export const TopologyExplorer = () => {
     ro: distributionStats(qubits.map((q) => q.readout_error)),
   }), [qubits]);
 
+  const topoTableView = useMemo(() => (
+    <div className="topo-table-wrap topo-table-wrap--primary">
+      <dl className="topo-table-summary" aria-label="Column summary statistics">
+        <div><dt>T1 median</dt><dd className="font-mono">{tableSummary.t1.n ? fmtUs(tableSummary.t1.median) : '—'}</dd></div>
+        <div><dt>T2 median</dt><dd className="font-mono">{tableSummary.t2.n ? fmtUs(tableSummary.t2.median) : '—'}</dd></div>
+        <div><dt>Readout median</dt><dd className="font-mono">{tableSummary.ro.n ? sciFmt(tableSummary.ro.median) : '—'}</dd></div>
+        <div><dt>2Q error median</dt><dd className="font-mono">{linkStats.n ? sciFmt(linkStats.median) : '—'}</dd></div>
+      </dl>
+      <table className="custom-table">
+        <thead>
+          <tr>
+            <th>Qubit</th><th>State</th><th>T1</th><th>T2</th>
+            <th>Readout error</th><th>1Q fidelity</th><th>2Q fidelity</th><th>Couplings</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(filteredQubits.length ? filteredQubits : qubits).map((q) => (
+            <tr
+              key={q.id}
+              className={q.id === selectedId ? 'topo-row-sel' : ''}
+              style={{ cursor: 'pointer' }}
+              onClick={() => { setSelectedId(q.id); setDrawerOpen(true); }}
+            >
+              <td>
+                <button type="button" className="topo-nbr" aria-label={`Inspect qubit ${q.qubit_index}`}>Q{q.qubit_index}</button>
+              </td>
+              <td>
+                <span className={`badge ${q.state === 'GREEN' ? 'badge-healthy' : q.state === 'YELLOW' ? 'badge-warning' : q.state === 'RED' ? 'badge-critical' : 'badge-info'}`}>
+                  {q.state}
+                </span>
+              </td>
+              <td className="font-mono text-right">{fmtUs(q.t1)}</td>
+              <td className="font-mono text-right">{fmtUs(q.t2)}</td>
+              <td className="font-mono text-right">{fmt(q.readout_error, 5)}</td>
+              <td className="font-mono text-right">{fmt(q.F_1q, 4)}</td>
+              <td className="font-mono text-right">{fmt(q.F_2q, 4)}</td>
+              <td>{(neighbors.get(q.id) || []).length}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {filteredQubits.length === 0 && search && (
+        <EmptyState variant="inline" compact title="No qubits match" message={`No results for "${search}"`} />
+      )}
+    </div>
+  ), [filteredQubits, qubits, search, selectedId, tableSummary, linkStats, neighbors]);
+
   const option = useMemo(() => {
     if (!qubits.length) return null;
     const th = getChartTheme(isDark);
@@ -888,15 +935,19 @@ export const TopologyExplorer = () => {
       <div className={`topo-workspace${viewMode === 'graph' || viewMode === 'bars' ? ' topo-workspace--wide' : ''}`}>
         <ChartPanel
           title={
-            viewMode === 'bars'
-              ? `Per-qubit calibration graph${backendName ? ` — ${backendName}` : ''}`
-              : `QPU coupling graph${backendName ? ` — ${backendName}` : ''}`
+            viewMode === 'table'
+              ? `Qubit metrics${backendName ? ` — ${backendName}` : ''}`
+              : viewMode === 'bars'
+                ? `Per-qubit calibration graph${backendName ? ` — ${backendName}` : ''}`
+                : `QPU coupling graph${backendName ? ` — ${backendName}` : ''}`
           }
           titleTo={backendId ? buildBackendDetailsPath(backendId, 'qubits') : '/app/backends/qubits'}
           question={
-            viewMode === 'bars'
-              ? 'Bar height is the selected qubit metric from the latest properties snapshot. Dashed line = fleet median; colours follow the same min–max scale as the map.'
-              : 'Qubit nodes coloured by selected metric. Shapes indicate health state. Coupling colour follows 2Q gate error scale.'
+            viewMode === 'table'
+              ? 'Fleet medians and per-qubit properties from the latest topology and health vector. Click a row to inspect.'
+              : viewMode === 'bars'
+                ? 'Bar height is the selected qubit metric from the latest properties snapshot. Dashed line = fleet median; colours follow the same min–max scale as the map.'
+                : 'Qubit nodes coloured by selected metric. Shapes indicate health state. Coupling colour follows 2Q gate error scale.'
           }
           sourceKind="measured"
           asOf={lastRefresh?.toLocaleTimeString()}
@@ -906,54 +957,12 @@ export const TopologyExplorer = () => {
           emptyMessage="This backend reports no qubits or couplings. This may indicate the collector has not completed a discovery run."
           errorMessage={unableToLoad('backend topology')}
           onRetry={load}
-          minHeight={560}
-          tableAlternative={(
-            <div className="topo-table-wrap">
-              <dl className="topo-table-summary" aria-label="Column summary statistics">
-                <div><dt>T1 median</dt><dd className="font-mono">{tableSummary.t1.n ? fmtUs(tableSummary.t1.median) : '—'}</dd></div>
-                <div><dt>T2 median</dt><dd className="font-mono">{tableSummary.t2.n ? fmtUs(tableSummary.t2.median) : '—'}</dd></div>
-                <div><dt>Readout median</dt><dd className="font-mono">{tableSummary.ro.n ? sciFmt(tableSummary.ro.median) : '—'}</dd></div>
-                <div><dt>2Q error median</dt><dd className="font-mono">{linkStats.n ? sciFmt(linkStats.median) : '—'}</dd></div>
-              </dl>
-              <table className="custom-table">
-                <thead>
-                  <tr>
-                    <th>Qubit</th><th>State</th><th>T1</th><th>T2</th>
-                    <th>Readout error</th><th>1Q fidelity</th><th>2Q fidelity</th><th>Couplings</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(filteredQubits.length ? filteredQubits : qubits).map((q) => (
-                    <tr
-                      key={q.id}
-                      className={q.id === selectedId ? 'topo-row-sel' : ''}
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => { setSelectedId(q.id); setDrawerOpen(true); }}
-                    >
-                      <td>
-                        <button type="button" className="topo-nbr" aria-label={`Inspect qubit ${q.qubit_index}`}>Q{q.qubit_index}</button>
-                      </td>
-                      <td>
-                        <span className={`badge ${q.state === 'GREEN' ? 'badge-healthy' : q.state === 'YELLOW' ? 'badge-warning' : q.state === 'RED' ? 'badge-critical' : 'badge-info'}`}>
-                          {q.state}
-                        </span>
-                      </td>
-                      <td className="font-mono text-right">{fmtUs(q.t1)}</td>
-                      <td className="font-mono text-right">{fmtUs(q.t2)}</td>
-                      <td className="font-mono text-right">{fmt(q.readout_error, 5)}</td>
-                      <td className="font-mono text-right">{fmt(q.F_1q, 4)}</td>
-                      <td className="font-mono text-right">{fmt(q.F_2q, 4)}</td>
-                      <td>{(neighbors.get(q.id) || []).length}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {filteredQubits.length === 0 && search && (
-                <EmptyState variant="inline" compact title="No qubits match" message={`No results for "${search}"`} />
-              )}
-            </div>
-          )}
+          minHeight={viewMode === 'table' ? 320 : 560}
+          expandable={viewMode !== 'table'}
+          tableAlternative={viewMode !== 'table' ? topoTableView : undefined}
         >
+          {viewMode === 'table' && topoTableView}
+
           {viewMode === 'graph' && (
             <div className="topo-canvas" data-tour="page-topology-graph">
               {option && (
