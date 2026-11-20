@@ -1,7 +1,7 @@
 import React from 'react';
 import './qt-brand.css';
 
-const LOCKUP_LIGHT = `${import.meta.env.BASE_URL}brand/q-telescope-lockup-light.jpg`;
+const LOCKUP_LIGHT = `${import.meta.env.BASE_URL}brand/q-telescope-lockup-light.png`;
 const LOCKUP_DARK = `${import.meta.env.BASE_URL}brand/q-telescope-lockup-dark.png`;
 
 /**

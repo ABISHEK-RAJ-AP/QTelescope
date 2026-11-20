@@ -42,10 +42,21 @@ html.dark .qt-brand-lockup::before {
   max-width: min(320px, 78vw);
   object-fit: contain;
   display: block;
-  background: transparent;
+  background: transparent !important;
   border: none;
   border-radius: 0;
   box-shadow: none;
+  outline: none;
+}
+
+/* Light theme: no plate, halo, or glow on the lockup */
+html:not(.dark) .qt-brand-lockup__img--light {
+  filter: none;
+  mix-blend-mode: normal;
+}
+
+html:not(.dark) .qt-brand-lockup::before {
+  opacity: 0 !important;
 }
 
 .qt-brand-lockup__img--dark {
