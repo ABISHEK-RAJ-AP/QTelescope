@@ -63,6 +63,7 @@ import { COPY } from './copy/operator.js';
 import { AccessDenied, ConsoleErrorBoundary, NotFoundPage } from './components/shell/RouteStatus.jsx';
 import { QtFilmReadyWatcher } from './components/shell/QtFilmReadyWatcher.jsx';
 import { landingPathForRole } from './lib/permissions.js';
+import { resolveDefaultBackendId, backendExists } from './lib/defaultBackend.js';
 
 function skeletonFor(topic, backendSubTab) {
   if (topic === 'alerts') return 'alerts';
@@ -113,7 +114,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
   const [adminSubTab, setAdminSubTab] = useState('hub');
   const [backendWorkspaceTab, setBackendWorkspaceTab] = useState('overview');
 
-  const [selectedBackendId, setSelectedBackendId] = useState('ibm_brisbane');
+  const [selectedBackendId, setSelectedBackendId] = useState('');
   const [selectedIncidentId, setSelectedIncidentId] = useState('');
   const [selectedAlertId, setSelectedAlertId] = useState('');
 
@@ -195,6 +196,23 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
   };
 
   useEffect(() => {
+    let cancelled = false;
+    api.getBackends()
+      .then((list) => {
+        if (cancelled) return;
+        const fromPath = parseAppPath(location.pathname).selectedBackendId;
+        setSelectedBackendId((cur) => {
+          const pick = fromPath || cur;
+          if (pick && backendExists(list, pick)) return pick;
+          if (cur && backendExists(list, cur)) return cur;
+          return resolveDefaultBackendId(list, fromPath || cur);
+        });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- fleet default once on shell mount
+
+  useEffect(() => {
     const parsed = parseAppPath(location.pathname);
     setMainTopic(parsed.mainTopic);
     setBackendSubTab(parsed.backendSubTab);
@@ -206,7 +224,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
     setInvestigateSubTab(parsed.investigateSubTab);
     setAdminSubTab(parsed.adminSubTab);
     setBackendWorkspaceTab(parsed.backendWorkspaceTab);
-    setSelectedBackendId(parsed.selectedBackendId);
+    if (parsed.selectedBackendId != null) setSelectedBackendId(parsed.selectedBackendId);
     setSelectedIncidentId(parsed.selectedIncidentId || '');
     setSelectedAlertId(parsed.selectedAlertId || '');
   }, [location.pathname]);

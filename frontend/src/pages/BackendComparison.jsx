@@ -154,8 +154,9 @@ export const BackendComparison = () => {
   const [backends, setBackends] = useState(null);
   const [queues, setQueues] = useState({});
   const [selected, setSelected] = useState(() => {
-    const raw = params.get('backends') || params.get('backend');
-    return raw ? raw.split(',').filter(Boolean).slice(0, MAX_COMPARE) : [];
+    const raw = params.get('backends');
+    if (!raw) return [];
+    return raw.split(',').map((s) => s.trim()).filter(Boolean).slice(0, MAX_COMPARE);
   });
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -168,6 +169,22 @@ export const BackendComparison = () => {
     api.getBackends().then((r) => setBackends(r || [])).catch((e) => { setError(String(e.message || e)); setBackends([]); });
     api.getQueues().then((r) => setQueues(Object.fromEntries((r || []).map((q) => [q.backend_id, q])))).catch(() => {});
   }, [tick]);
+
+  useEffect(() => {
+    if (!backends?.length) return;
+    const valid = new Set(backends.map((b) => b.backend_id));
+    setSelected((prev) => {
+      const next = prev.filter((id) => valid.has(id));
+      return next.length === prev.length ? prev : next;
+    });
+    setParams((p) => {
+      const staleScope = p.get('backend');
+      if (!staleScope || valid.has(staleScope)) return p;
+      const n = new URLSearchParams(p);
+      n.delete('backend');
+      return n;
+    }, { replace: true });
+  }, [backends, setParams]);
 
   const sel = selected;
   const key = sel.join('|');

@@ -3,7 +3,8 @@
 import { BACKEND_WORKSPACE_TABS } from './lib/investigationLinks.js';
 import { EXECUTION_NAV, RESOURCES_NAV, TELEMETRY_NAV } from './appSidebarNav.js';
 
-const DEFAULT_BACKEND = 'ibm_brisbane';
+/** Legacy catalog id — resolved at runtime via resolveDefaultBackendId when registry differs (hybrid IBM/Rigetti). */
+const DEFAULT_BACKEND = '';
 
 export function buildAppPath(state) {
   const {
@@ -35,6 +36,7 @@ export function buildAppPath(state) {
       return '/app/operate';
     case 'backends':
       if (backendSubTab === 'details') {
+        if (!selectedBackendId) return '/app/backends/inventory';
         const base = `/app/backends/details/${encodeURIComponent(selectedBackendId)}`;
         const tab = backendWorkspaceTab || 'overview';
         if (tab === 'overview' || !BACKEND_WORKSPACE_TABS.includes(tab)) return base;
@@ -92,7 +94,7 @@ export function parseAppPath(pathname) {
     investigateSubTab: 'timeline',
     adminSubTab: 'integrations',
     backendWorkspaceTab: 'overview',
-    selectedBackendId: DEFAULT_BACKEND,
+    selectedBackendId: null,
     selectedIncidentId: '',
     selectedAlertId: '',
   };
@@ -178,7 +180,7 @@ export function parseAppPath(pathname) {
     out.mainTopic = 'backends';
     if (sub === 'details' && third) {
       out.backendSubTab = 'details';
-      out.selectedBackendId = decodeURIComponent(third);
+      out.selectedBackendId = decodeURIComponent(third) || DEFAULT_BACKEND;
       const tab = parts[3];
       out.backendWorkspaceTab = tab && BACKEND_WORKSPACE_TABS.includes(tab) ? tab : 'overview';
     } else if (sub === 'qubits' || sub === 'inventory') {

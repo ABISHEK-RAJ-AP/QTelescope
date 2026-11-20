@@ -82,6 +82,7 @@ PY
   fi
   # Keep Bearer sessions across uvicorn restarts (demo/lab). Without this, overview 401s after restart.
   upsert_env PERSIST_API_SESSIONS true
+  upsert_env MAX_SESSIONS_PER_USER 8
   upsert_env ADMIN_USERNAME admin
   upsert_env ADMIN_PASSWORD quantum2026
   upsert_env USER_USERNAME user_researcher

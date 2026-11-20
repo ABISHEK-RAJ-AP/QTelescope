@@ -73,9 +73,17 @@ def compare_backends(body: CompareBackendsBody, db: Session = Depends(get_db)):
     cache_k = cache_key("health", "compare", id_key)
 
     def build():
-        for bid in ids:
-            if not db.query(BackendModel).filter(BackendModel.backend_id == bid).first():
-                raise HTTPException(status_code=404, detail=f"Backend not found: {bid}")
+        missing = [
+            bid
+            for bid in ids
+            if not db.query(BackendModel).filter(BackendModel.backend_id == bid).first()
+        ]
+        if missing:
+            hint = "Remove stale ids from the compare URL or pick backends from inventory."
+            raise HTTPException(
+                status_code=404,
+                detail=f"Backend not found: {', '.join(missing)}. {hint}",
+            )
         vec = cached_health_vector(db)
         selected = (
             db.query(BackendModel)
