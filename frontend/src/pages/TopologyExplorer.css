@@ -49,9 +49,40 @@
   border-radius: 8px;
   font-size: 0.8125rem;
 }
-.topo-table-summary div { display: flex; flex-direction: column; gap: 2px; }
+.topo-table-summary div { display: flex; flex-direction: column; gap: 2px; align-items: stretch; }
 .topo-table-summary dt { color: var(--text-muted); font-weight: 600; margin: 0; }
-.topo-table-summary dd { margin: 0; font-variant-numeric: tabular-nums; }
+.topo-table-summary dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--text-primary);
+}
+.topo-qtable-container { border-radius: 8px; overflow: auto; width: 100%; }
+.topo-qtable { width: 100%; table-layout: auto; }
+.topo-qtable th.topo-qtable__num,
+.topo-qtable td.topo-qtable__num {
+  text-align: right;
+  white-space: nowrap;
+}
+.topo-qtable th.topo-qtable__state,
+.topo-qtable td.topo-qtable__state {
+  text-align: center;
+  white-space: nowrap;
+}
+.topo-qtable th.topo-qtable__couplings,
+.topo-qtable td.topo-qtable__couplings {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.topo-qtable th.topo-qtable__qubit,
+.topo-qtable td.topo-qtable__qubit {
+  text-align: left;
+  white-space: nowrap;
+}
+.topo-qtable td.topo-qtable__qubit .topo-nbr { vertical-align: middle; }
+.topo-compare__table th:nth-child(n + 2),
+.topo-compare__table td:nth-child(n + 2) { text-align: right; }
 .topo-canvas--bars { min-height: 420px; height: max(480px, calc(100dvh - 280px)); }
 
 .topo-toolbar { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: flex-end; padding: 8px 12px; overflow: visible; }
@@ -80,8 +111,9 @@
 .topo-nbrs { display: flex; flex-wrap: wrap; gap: 6px; }
 .topo-nbr { border: 1px solid var(--border-color); background: transparent; color: var(--text-primary); border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: pointer; }
 .topo-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.topo-table-wrap { max-height: 360px; overflow: auto; }
+.topo-table-wrap { width: 100%; max-height: 360px; overflow: auto; padding: 4px 8px 12px; }
 .topo-table-wrap--primary { max-height: max(480px, calc(100dvh - 320px)); }
+.chart-panel__table-alt .topo-table-wrap { padding: 8px 0 0; max-height: 420px; }
 .topo-row-sel { background: var(--bg-card-hover); }
 
 .topo-drawer__tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border-color); margin: 0 0 12px; }

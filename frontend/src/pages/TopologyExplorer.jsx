@@ -276,9 +276,9 @@ function CalibrationCompare({ snapshots, selectedIds, onSelectIds }) {
               return (
                 <tr key={m}>
                   <td>{LABELS[m]}</td>
-                  <td className="font-mono text-right">{fmt(va, 4)}</td>
-                  <td className="font-mono text-right">{fmt(vb, 4)}</td>
-                  <td className={`font-mono text-right ${tone}`}>
+                  <td className="font-mono topo-qtable__num">{fmt(va, 4)}</td>
+                  <td className="font-mono topo-qtable__num">{fmt(vb, 4)}</td>
+                  <td className={`font-mono topo-qtable__num ${tone}`}>
                     {delta == null ? 'N/A' : `${delta >= 0 ? '+' : ''}${fmt(delta, 4)}${pct != null ? ` (${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%)` : ''}`}
                   </td>
                 </tr>
@@ -571,6 +571,11 @@ export const TopologyExplorer = () => {
     ro: distributionStats(qubits.map((q) => q.readout_error)),
   }), [qubits]);
 
+  const tableRows = useMemo(() => {
+    const list = filteredQubits.length ? filteredQubits : qubits;
+    return [...list].sort((a, b) => a.qubit_index - b.qubit_index);
+  }, [filteredQubits, qubits]);
+
   const topoTableView = useMemo(() => (
     <div className="topo-table-wrap topo-table-wrap--primary">
       <dl className="topo-table-summary" aria-label="Column summary statistics">
@@ -579,44 +584,52 @@ export const TopologyExplorer = () => {
         <div><dt>Readout median</dt><dd className="font-mono">{tableSummary.ro.n ? sciFmt(tableSummary.ro.median) : '—'}</dd></div>
         <div><dt>2Q error median</dt><dd className="font-mono">{linkStats.n ? sciFmt(linkStats.median) : '—'}</dd></div>
       </dl>
-      <table className="custom-table">
-        <thead>
-          <tr>
-            <th>Qubit</th><th>State</th><th>T1</th><th>T2</th>
-            <th>Readout error</th><th>1Q fidelity</th><th>2Q fidelity</th><th>Couplings</th>
-          </tr>
-        </thead>
-        <tbody>
-          {(filteredQubits.length ? filteredQubits : qubits).map((q) => (
-            <tr
-              key={q.id}
-              className={q.id === selectedId ? 'topo-row-sel' : ''}
-              style={{ cursor: 'pointer' }}
-              onClick={() => { setSelectedId(q.id); setDrawerOpen(true); }}
-            >
-              <td>
-                <button type="button" className="topo-nbr" aria-label={`Inspect qubit ${q.qubit_index}`}>Q{q.qubit_index}</button>
-              </td>
-              <td>
-                <span className={`badge ${q.state === 'GREEN' ? 'badge-healthy' : q.state === 'YELLOW' ? 'badge-warning' : q.state === 'RED' ? 'badge-critical' : 'badge-info'}`}>
-                  {q.state}
-                </span>
-              </td>
-              <td className="font-mono text-right">{fmtUs(q.t1)}</td>
-              <td className="font-mono text-right">{fmtUs(q.t2)}</td>
-              <td className="font-mono text-right">{fmt(q.readout_error, 5)}</td>
-              <td className="font-mono text-right">{fmt(q.F_1q, 4)}</td>
-              <td className="font-mono text-right">{fmt(q.F_2q, 4)}</td>
-              <td>{(neighbors.get(q.id) || []).length}</td>
+      <div className="table-container topo-qtable-container">
+        <table className="custom-table custom-table--dense topo-qtable">
+          <thead>
+            <tr>
+              <th scope="col" className="topo-qtable__qubit">Qubit</th>
+              <th scope="col" className="topo-qtable__state">State</th>
+              <th scope="col" className="topo-qtable__num">T1</th>
+              <th scope="col" className="topo-qtable__num">T2</th>
+              <th scope="col" className="topo-qtable__num">Readout error</th>
+              <th scope="col" className="topo-qtable__num">1Q fidelity</th>
+              <th scope="col" className="topo-qtable__num">2Q fidelity</th>
+              <th scope="col" className="topo-qtable__couplings">Couplings</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {tableRows.map((q) => (
+              <tr
+                key={q.id}
+                className={q.id === selectedId ? 'topo-row-sel' : ''}
+                style={{ cursor: 'pointer' }}
+                onClick={() => { setSelectedId(q.id); setDrawerOpen(true); }}
+              >
+                <td className="topo-qtable__qubit">
+                  <button type="button" className="topo-nbr" aria-label={`Inspect qubit ${q.qubit_index}`}>Q{q.qubit_index}</button>
+                </td>
+                <td className="topo-qtable__state">
+                  <span className={`badge ${q.state === 'GREEN' ? 'badge-healthy' : q.state === 'YELLOW' ? 'badge-warning' : q.state === 'RED' ? 'badge-critical' : 'badge-info'}`}>
+                    {q.state}
+                  </span>
+                </td>
+                <td className="font-mono topo-qtable__num">{fmtUs(q.t1)}</td>
+                <td className="font-mono topo-qtable__num">{fmtUs(q.t2)}</td>
+                <td className="font-mono topo-qtable__num">{fmt(q.readout_error, 5)}</td>
+                <td className="font-mono topo-qtable__num">{fmt(q.F_1q, 4)}</td>
+                <td className="font-mono topo-qtable__num">{fmt(q.F_2q, 4)}</td>
+                <td className="topo-qtable__couplings">{(neighbors.get(q.id) || []).length}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {filteredQubits.length === 0 && search && (
         <EmptyState variant="inline" compact title="No qubits match" message={`No results for "${search}"`} />
       )}
     </div>
-  ), [filteredQubits, qubits, search, selectedId, tableSummary, linkStats, neighbors]);
+  ), [tableRows, filteredQubits.length, search, selectedId, tableSummary, linkStats, neighbors]);
 
   const option = useMemo(() => {
     if (!qubits.length) return null;
