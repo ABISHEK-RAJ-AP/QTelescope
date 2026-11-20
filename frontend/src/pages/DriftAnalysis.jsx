@@ -16,7 +16,7 @@ import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { baseTooltip, getChartTheme, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
-import { fmtMetric, healthLink, timelineLink, modalityOf } from './telemetryPageUtils.js';
+import { fmtMetric, fmtNum, healthLink, timelineLink, modalityOf, METRICS, normMetric } from './telemetryPageUtils.js';
 import { DataPanelToolbar, SortableTh } from '../components/observability/DataViewToolbar.jsx';
 import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
 import './DriftAnalysis.css';
@@ -330,8 +330,10 @@ export const DriftAnalysis = () => {
             <div className="drift-stat-val-purple">{driftData.percent_change != null ? `${driftData.percent_change.toFixed(2)}%` : '—'}</div>
           </div>
           <div className="drift-stat-box">
-            <div className="drift-stat-label">Rate of Change (unit/hr)</div>
-            <div className="drift-stat-val-amber">{driftData.rate_of_change?.toFixed(3) ?? 'N/A'}</div>
+            <div className="drift-stat-label">
+              Rate of change ({METRICS[normMetric(metricApi)]?.unit ? `${METRICS[normMetric(metricApi)].unit}/hr` : 'unit/hr'}, vs prior sample)
+            </div>
+            <div className="drift-stat-val-amber">{fmtNum(driftData.rate_of_change, 2)}</div>
           </div>
           <div className="drift-stat-box">
             <div className="drift-stat-label">Rolling Std Dev</div>

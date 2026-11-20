@@ -41,3 +41,5 @@ def test_three_backends_yields_three_pairs():
     assert len(out["backends"]) == 3
     assert len(out["pairs"]) == 3
     assert out["same_modality_selection"] is True
+    assert "routing_gates" in out and out["routing_gates"]["c_exec_min"] == 0.5
+    assert "routing_summary" in out and "alert" in out["routing_summary"].lower()

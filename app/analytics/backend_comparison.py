@@ -3,13 +3,30 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-METHODOLOGY = (
-    "Rank T1/T2 and F_limit only within the same qpu_modality. "
-    "Do not rank η_cal across modalities (trapped-ion coherence can inflate the ratio). "
-    "Cross-modality rows are side-by-side context, not a league table. "
-    "Units: microseconds for T1/T2; dimensionless probabilities for F_limit, η_cal, C_exec; "
-    "readout error is a probability in [0, 1]."
+from app.analytics.health_vector import C_EXEC_MIN, DELTA_TH, ETA_GREEN, ETA_YELLOW, T_GATE_US
+
+METHODOLOGY_SHORT = (
+    "Compare ranks and pair deltas only within the same modality. "
+    "Cross-modality selections are side-by-side context, not a league table."
 )
+
+ROUTING_GATES = {
+    "eta_green_max": ETA_GREEN,
+    "eta_yellow_max": ETA_YELLOW,
+    "c_exec_min": C_EXEC_MIN,
+    "delta_cal_yellow_min": DELTA_TH,
+    "t_gate_us": T_GATE_US,
+    "t1_crit_source": "per-backend alert rules (Admin → Alert rules)",
+}
+
+
+def routing_summary_text(gates: Dict[str, Any] | None = None) -> str:
+    g = gates or ROUTING_GATES
+    return (
+        "Worst qubit wins. RED: T1 below that backend's alert-rule floor, environment CRITICAL, "
+        f"or any qubit RED. YELLOW: η_cal > {g['eta_yellow_max']} or δ_cal > {g['delta_cal_yellow_min']}. "
+        f"GREEN: η_cal ≤ {g['eta_green_max']} and C_exec ≥ {g['c_exec_min']} with metrics present."
+    )
 
 
 def _delta(a: Optional[float], b: Optional[float]) -> Optional[float]:
@@ -68,11 +85,25 @@ def build_comparison(
                 }
             )
 
+    by_id = {r["backend_id"]: r for r in selected_vec}
+    pairs_out: List[dict] = []
+    for p in pairs:
+        a, b = by_id.get(p["backend_a"], {}), by_id.get(p["backend_b"], {})
+        pairs_out.append(
+            {
+                **p,
+                "t1_crit_a_us": a.get("t1_crit_us"),
+                "t1_crit_b_us": b.get("t1_crit_us"),
+            }
+        )
+
     return {
-        "methodology": METHODOLOGY,
+        "methodology": METHODOLOGY_SHORT,
+        "routing_gates": ROUTING_GATES,
+        "routing_summary": routing_summary_text(ROUTING_GATES),
         "same_modality_selection": same_modality,
         "modalities": sorted(modalities),
         "backend_ids": backend_ids,
         "backends": selected_vec,
-        "pairs": pairs,
+        "pairs": pairs_out,
     }

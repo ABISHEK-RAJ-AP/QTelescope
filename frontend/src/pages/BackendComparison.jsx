@@ -561,39 +561,61 @@ export const BackendComparison = () => {
           <section className="card page-panel">
             <h3 className="page-section-title">
               Pair deltas (A − B)
-              {result.pairs?.length ? ` · ${result.pairs.length} pair${result.pairs.length === 1 ? '' : 's'}` : ''}
+              {result.pairs?.length ? ` · ${result.pairs.filter((p) => p.ranking_allowed).length} comparable` : ''}
             </h3>
-            {sel.length > MIN_COMPARE && (
-              <p className="page-hint" style={{ marginTop: 0 }}>
-                With {sel.length} backends selected, every pair is listed below (not only the first two).
-              </p>
-            )}
-            {result.pairs?.length ? (
-              <div className="table-container" style={{ border: 'none' }}>
-                <table className="custom-table custom-table--dense">
-                  <thead><tr><th>Pair</th><th>Δ F_limit</th><th>Δ T1 (µs)</th><th>Δ T2 (µs)</th></tr></thead>
-                  <tbody>
-                    {result.pairs.map((p) => (
-                      <tr key={`${p.backend_a}-${p.backend_b}`}>
-                        <td>{meta[p.backend_a]?.backend_name || p.backend_a} vs {meta[p.backend_b]?.backend_name || p.backend_b}</td>
-                        {p.ranking_allowed
-                          ? ['F_limit', 't1_mean_us', 't2_mean_us'].map((k) => <td key={k}>{fmt(num(p.delta?.[k])) ?? <span className="bc-missing">missing</span>}</td>)
-                          : <td colSpan={3}><span className="bc-missing">not comparable (different modality)</span></td>}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : <p className="page-hint">Need at least two backends in the selection for pair deltas.</p>}
-            <p className="page-hint bc-note">{result.methodology}</p>
+            <p className="page-hint bc-note" style={{ marginTop: 0 }} title="T1/T2 and F_limit deltas only when modalities match. η_cal is not pair-ranked across modalities.">
+              {result.methodology}
+            </p>
+            {result.pairs?.length ? (() => {
+              const comparable = result.pairs.filter((p) => p.ranking_allowed);
+              const cross = result.pairs.filter((p) => !p.ranking_allowed);
+              return (
+                <>
+                  {comparable.length > 0 && (
+                    <div className="table-container" style={{ border: 'none' }}>
+                      <table className="custom-table custom-table--dense">
+                        <thead><tr><th>Pair (same modality)</th><th>Δ F_limit</th><th>Δ T1 (µs)</th><th>Δ T2 (µs)</th></tr></thead>
+                        <tbody>
+                          {comparable.map((p) => (
+                            <tr key={`${p.backend_a}-${p.backend_b}`}>
+                              <td>{meta[p.backend_a]?.backend_name || p.backend_a} vs {meta[p.backend_b]?.backend_name || p.backend_b}</td>
+                              {['F_limit', 't1_mean_us', 't2_mean_us'].map((k) => (
+                                <td key={k}>{fmt(num(p.delta?.[k])) ?? <span className="bc-missing">—</span>}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {cross.length > 0 && (
+                    <ul className="bc-cross-mod">
+                      {cross.map((p) => (
+                        <li key={`${p.backend_a}-${p.backend_b}`}>
+                          {meta[p.backend_a]?.backend_name || p.backend_a} vs {meta[p.backend_b]?.backend_name || p.backend_b}
+                          {' — '}
+                          <span className="bc-missing">different modality (no ranked deltas)</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </>
+              );
+            })() : <p className="page-hint">Need at least two backends in the selection for pair deltas.</p>}
             <details className="bc-defs">
-              <summary>Metric definitions &amp; routing thresholds (advisory)</summary>
+              <summary>Metrics &amp; router (advisory)</summary>
               <ul className="page-hint">
-                <li><b>F_limit</b> — best fidelity coherence alone allows: 1 − (t_gate/(3·T1) + t_gate/(3·T2)), in [0, 1].</li>
-                <li><b>η_cal</b> — (1 − F_gate) / (1 − F_limit); ratio ≥ 0, capped at 100 in engine; not comparable across modalities.</li>
-                <li><b>C_exec</b> — reference circuit success probability (10×1Q, 5×2Q, 10 meas, depth 20), in [0, 1].</li>
-                <li><b>Readout error</b> — misassignment probability in [0, 1].</li>
-                <li><b>Router</b> — worst qubit wins; RED if any qubit RED, T1 &lt; 40 µs, or environment CRITICAL; GREEN needs η_cal ≤ 1.2 and C_exec ≥ 0.5.</li>
+                <li><b>F_limit</b> — coherence-only fidelity bound: 1 − (t_gate/(3·T1) + t_gate/(3·T2)), in [0, 1].</li>
+                <li><b>η_cal</b> — (1 − F_gate) / (1 − F_limit); capped at 100; compare within one modality only.</li>
+                <li><b>C_exec</b> — reference circuit success (10×1Q, 5×2Q, 10 meas, depth 20), in [0, 1].</li>
+                <li><b>Readout error</b> — assignment error probability in [0, 1].</li>
+                <li><b>Router</b> — {result.routing_summary || 'Worst qubit wins; thresholds from per-backend alert rules.'}</li>
+                {result.routing_gates && (
+                  <li className="bc-gates">
+                    Gates: η_cal ≤ {result.routing_gates.eta_green_max} (GREEN), &gt; {result.routing_gates.eta_yellow_max} (YELLOW);
+                    C_exec ≥ {result.routing_gates.c_exec_min}; T1 floor from {result.routing_gates.t1_crit_source}.
+                  </li>
+                )}
               </ul>
             </details>
           </section>

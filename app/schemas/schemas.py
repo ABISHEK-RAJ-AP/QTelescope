@@ -103,6 +103,7 @@ class ParameterDriftPoint(BaseModel):
     pct_change: Optional[float]
     change_direction: str # INCREASING, DECREASING, STABLE
     rate_of_change: Optional[float]
+    interval_hours: Optional[float] = None
     rolling_avg: Optional[float]
     rolling_std_dev: Optional[float]
     drift_status: str # NORMAL, DRIFTING, CRITICAL_DRIFT
@@ -231,6 +232,7 @@ class ScheduleUpdateSchema(BaseModel):
 
 class AlertRuleSchema(BaseModel):
     rule_id: str
+    backend_id: Optional[str] = None
     metric_name: str
     operator: str
     threshold_value: float
@@ -240,6 +242,7 @@ class AlertRuleSchema(BaseModel):
 
 class AlertRuleCreateSchema(BaseModel):
     rule_id: Optional[str] = None
+    backend_id: str
     metric_name: str
     operator: str
     threshold_value: float
@@ -254,6 +257,12 @@ class AlertRuleUpdateSchema(BaseModel):
     severity: Optional[str] = None
     enabled: Optional[bool] = None
     description: Optional[str] = None
+
+
+class AlertRulesCopySchema(BaseModel):
+    source_backend_id: str
+    target_backend_id: str
+    replace: bool = True
 
 
 class DashboardSummaryResponse(BaseModel):

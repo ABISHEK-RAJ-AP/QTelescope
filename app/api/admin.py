@@ -1,7 +1,7 @@
 import logging
 import os
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field, field_validator
@@ -13,7 +13,7 @@ from app.models.entities import (
 )
 from app.schemas.schemas import (
     ProviderResponse, ScheduleUpdateSchema, AlertRuleSchema,
-    AlertRuleCreateSchema, AlertRuleUpdateSchema, DashboardSummaryResponse
+    AlertRuleCreateSchema, AlertRuleUpdateSchema, AlertRulesCopySchema, DashboardSummaryResponse
 )
 from app.providers.ibm_adapter import IBMProviderAdapter
 from app.providers.rigetti_adapter import RigettiProviderAdapter
@@ -44,6 +44,14 @@ from app.jobs.telemetry_retention import retention_policy, run_telemetry_retenti
 from app.core.rbac_audit import rbac_audit_report
 from app.providers.catalog import (
     CATALOG, BY_ID, upsert_stored, stored_configured, public_extra,
+)
+from app.alerts.rule_backend import (
+    copy_backend_rules,
+    ensure_backend_rules,
+    list_backend_rules,
+    migrate_legacy_fleet_rules,
+    new_rule_id,
+    reset_backend_rules,
 )
 from app.alerts.rule_eval import effective_thresholds, load_rules
 from app.analytics.modality_thresholds import normalize_modality, modality_profile
@@ -399,21 +407,16 @@ def update_schedule(
     return {"message": "Schedule updated successfully", "category": s.category}
 
 @router.get("/alert-rules", response_model=List[AlertRuleSchema])
-def get_alert_rules(db: Session = Depends(get_db), _: str = Depends(require_admin)):
-    rules = db.query(AlertRuleModel).all()
-    if not rules:
-        defaults = [
-            {"rule_id": "rule_t1", "metric_name": "T1", "operator": "<", "threshold_value": 40.0, "severity": "CRITICAL", "enabled": True, "description": "Superconducting: T1 coherence (µs) below critical floor"},
-            {"rule_id": "rule_t2", "metric_name": "T2", "operator": "<", "threshold_value": 30.0, "severity": "CRITICAL", "enabled": True, "description": "Superconducting: T2 coherence (µs) below critical floor"},
-            {"rule_id": "rule_ro", "metric_name": "READOUT_ERROR", "operator": ">", "threshold_value": 0.08, "severity": "WARNING", "enabled": True, "description": "Readout error exceeds acceptable upper bound"},
-            {"rule_id": "rule_queue", "metric_name": "QUEUE_JOBS", "operator": ">", "threshold_value": 50.0, "severity": "WARNING", "enabled": True, "description": "Pending queue length exceeds threshold"},
-            {"rule_id": "rule_calib", "metric_name": "CALIBRATION_AGE", "operator": ">", "threshold_value": 24.0, "severity": "WARNING", "enabled": True, "description": "Calibration age exceeds 24 hours"}
-        ]
-        for r in defaults:
-            db.add(AlertRuleModel(**r))
-        db.commit()
-        rules = db.query(AlertRuleModel).all()
-    return rules
+def get_alert_rules(
+    backend_id: str = Query(..., min_length=1),
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    backend = db.query(BackendModel).filter(BackendModel.backend_id == backend_id).first()
+    if not backend:
+        raise HTTPException(status_code=404, detail="Backend not found")
+    migrate_legacy_fleet_rules(db)
+    return list_backend_rules(db, backend_id)
 
 @router.post("/alert-rules", response_model=AlertRuleSchema)
 def create_alert_rule(
@@ -421,16 +424,23 @@ def create_alert_rule(
     db: Session = Depends(get_db),
     _: str = Depends(require_admin),
 ):
-    """Allows administrators to dynamically create new alert & health monitoring rules."""
+    """Create an alert rule scoped to one backend."""
+    backend_id = rule_in.backend_id.strip()
+    backend = db.query(BackendModel).filter(BackendModel.backend_id == backend_id).first()
+    if not backend:
+        raise HTTPException(status_code=404, detail="Backend not found")
+    migrate_legacy_fleet_rules(db)
+    ensure_backend_rules(db, backend_id)
     metric = rule_in.metric_name.strip().upper()
-    rule_id = (rule_in.rule_id or f"rule_{metric.lower()}_{uuid.uuid4().hex[:4]}").strip().replace(" ", "_")
-    
+    rule_id = (rule_in.rule_id or new_rule_id(backend_id, metric)).strip().replace(" ", "_")
+
     existing = db.query(AlertRuleModel).filter(AlertRuleModel.rule_id == rule_id).first()
     if existing:
         raise HTTPException(status_code=400, detail=f"Alert rule with ID '{rule_id}' already exists.")
 
     rule = AlertRuleModel(
         rule_id=rule_id,
+        backend_id=backend_id,
         metric_name=metric,
         operator=rule_in.operator.strip(),
         threshold_value=rule_in.threshold_value,
@@ -481,14 +491,52 @@ def delete_alert_rule(rule_id: str, db: Session = Depends(get_db), _: str = Depe
     return {"status": "SUCCESS", "message": f"Alert rule '{rule_id}' deleted successfully."}
 
 
+@router.post("/alert-rules/copy")
+def copy_alert_rules(
+    body: AlertRulesCopySchema,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    for bid in (body.source_backend_id, body.target_backend_id):
+        if not db.query(BackendModel).filter(BackendModel.backend_id == bid).first():
+            raise HTTPException(status_code=404, detail=f"Backend '{bid}' not found")
+    migrate_legacy_fleet_rules(db)
+    ensure_backend_rules(db, body.source_backend_id)
+    count = copy_backend_rules(
+        db,
+        body.source_backend_id.strip(),
+        body.target_backend_id.strip(),
+        replace=body.replace,
+    )
+    return {"status": "SUCCESS", "rules_copied": count}
+
+
+@router.post("/alert-rules/reset/{backend_id}")
+def reset_alert_rules_for_backend(
+    backend_id: str,
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    if not db.query(BackendModel).filter(BackendModel.backend_id == backend_id).first():
+        raise HTTPException(status_code=404, detail="Backend not found")
+    migrate_legacy_fleet_rules(db)
+    count = reset_backend_rules(db, backend_id)
+    return {"status": "SUCCESS", "rules_reset": count}
+
+
 @router.get("/alert-thresholds")
-def get_alert_threshold_preview(db: Session = Depends(get_db), _: str = Depends(require_admin)):
-    """Fleet rule values merged with modality-specific T1/T2 floors (µs) for each backend."""
-    rules = load_rules(db)
-    by_modality = {mod: effective_thresholds(rules, mod) for mod in _MODALITIES}
+def get_alert_threshold_preview(
+    backend_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    _: str = Depends(require_admin),
+):
+    """Resolved alert limits for a backend (from that backend's rule set)."""
+    migrate_legacy_fleet_rules(db)
     backends = db.query(BackendModel).order_by(BackendModel.backend_name).all()
     backend_rows = []
     for b in backends:
+        ensure_backend_rules(db, b.backend_id)
+        rules = load_rules(db, b.backend_id)
         eff = effective_thresholds(rules, b.qpu_modality)
         backend_rows.append(
             {
@@ -498,15 +546,18 @@ def get_alert_threshold_preview(db: Session = Depends(get_db), _: str = Depends(
                 "effective": eff,
             }
         )
+    policy_hint = (
+        "Each backend has its own rule set (defaults seeded from modality). "
+        "Copy or reset rules per backend under Alert rules."
+    )
+    selected = None
+    if backend_id:
+        selected = next((r for r in backend_rows if r["backend_id"] == backend_id), None)
     return {
-        "policy": (
-            "QUEUE_JOBS, CALIBRATION_AGE, and READOUT_ERROR use fleet-wide rules for every backend. "
-            "T1 and T2 fleet rules apply only to superconducting QPUs; trapped-ion, neutral-atom, and "
-            "simulator backends use modality reference floors so microsecond thresholds are not misapplied."
-        ),
+        "policy_hint": policy_hint,
         "modality_defaults": {k: modality_profile(k) for k in _MODALITIES},
-        "effective_by_modality": by_modality,
         "backends": backend_rows,
+        "selected": selected,
     }
 
 @router.patch("/backends/{backend_id}/catalog")

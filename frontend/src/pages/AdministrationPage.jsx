@@ -38,7 +38,9 @@ const METRICS = [
 ];
 const OPERATORS = ['<', '<=', '>', '>=', '=='];
 const SEVERITIES = ['CRITICAL', 'WARNING', 'INFO'];
-const EMPTY_RULE = { rule_id: '', metric_name: 'T1', operator: '<', threshold_value: '', severity: 'WARNING', enabled: true, description: '' };
+const EMPTY_RULE = { rule_id: '', backend_id: '', metric_name: 'T1', operator: '<', threshold_value: '', severity: 'WARNING', enabled: true, description: '' };
+const RULE_POLICY_HINT =
+  'Each backend has its own rule set. New backends get modality defaults; edit, copy from another backend, or reset anytime.';
 const FRESH_MS = 6 * 3600 * 1000; // telemetry "flowing" = last success within 6h
 
 function sessionUser() {
@@ -676,9 +678,15 @@ function fmtUs(v) {
   return n >= 10_000 ? `${(n / 1000).toFixed(0)}k µs` : `${n} µs`;
 }
 
-function Rules({ rules, canEdit, reload }) {
+function Rules({ canEdit }) {
+  const [backends, setBackends] = useState([]);
+  const [selectedBackend, setSelectedBackend] = useState('');
+  const [rules, setRules] = useState([]);
+  const [rulesLoading, setRulesLoading] = useState(false);
   const [thresholds, setThresholds] = useState(null);
-  const [previewBackend, setPreviewBackend] = useState('');
+  const [copyFrom, setCopyFrom] = useState('');
+  const [resetAsk, setResetAsk] = useState(false);
+  const [copyAsk, setCopyAsk] = useState(false);
   const [showTestRules, setShowTestRules] = useState(false);
   const testRuleCount = useMemo(() => rules.filter((r) => TEST_RULE_ID.test(r.rule_id)).length, [rules]);
   const [purgeTestAsk, setPurgeTestAsk] = useState(false);
@@ -695,23 +703,48 @@ function Rules({ rules, canEdit, reload }) {
   const [note, setNote] = useState(null);
   const reason = canEdit ? undefined : 'Admin role required';
 
-  useEffect(() => {
-    api.getAlertThresholds().then(setThresholds).catch(() => setThresholds(null));
-  }, [rules]);
-
-  const previewRow = useMemo(() => {
-    if (!thresholds) return null;
-    if (previewBackend) {
-      return thresholds.backends?.find((b) => b.backend_id === previewBackend) || null;
+  const reloadRules = useCallback(async (backendId) => {
+    if (!backendId) {
+      setRules([]);
+      return;
     }
-    return null;
-  }, [thresholds, previewBackend]);
+    setRulesLoading(true);
+    try {
+      const [rows, th] = await Promise.all([
+        api.getAlertRules(backendId),
+        api.getAlertThresholds(backendId),
+      ]);
+      setRules(Array.isArray(rows) ? rows : []);
+      setThresholds(th);
+    } catch {
+      setRules([]);
+      setThresholds(null);
+    } finally {
+      setRulesLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    api.getBackends().then((list) => {
+      const items = Array.isArray(list) ? list : [];
+      setBackends(items);
+      setSelectedBackend((prev) => prev || (items[0]?.backend_id ?? ''));
+    }).catch(() => setBackends([]));
+  }, []);
+
+  useEffect(() => {
+    if (selectedBackend) reloadRules(selectedBackend);
+  }, [selectedBackend, reloadRules]);
+
+  const previewRow = useMemo(() => thresholds?.selected || thresholds?.backends?.find((b) => b.backend_id === selectedBackend) || null, [thresholds, selectedBackend]);
+  const selectedMeta = useMemo(() => backends.find((b) => b.backend_id === selectedBackend), [backends, selectedBackend]);
 
   const open = (r) => {
+    if (!selectedBackend) return;
     setFormErr(null);
     setEditing(r
       ? { mode: 'edit', orig: r, form: { ...r, threshold_value: String(r.threshold_value), description: r.description || '' } }
-      : { mode: 'create', orig: EMPTY_RULE, form: { ...EMPTY_RULE } });
+      : { mode: 'create', orig: EMPTY_RULE, form: { ...EMPTY_RULE, backend_id: selectedBackend } });
   };
   const validate = (f, mode) => {
     const e = {};
@@ -743,17 +776,41 @@ function Rules({ rules, canEdit, reload }) {
       }
       setNote({ type: 'success', text: `Rule ${editing.mode === 'create' ? 'created' : 'updated'}.` });
       setEditing(null);
-      await reload();
+      await reloadRules(selectedBackend);
     } catch (er) { setFormErr(errText(er)); } finally { setSaving(false); }
   };
   const toggle = async (r) => {
-    try { await api.updateAlertRule(r.rule_id, { enabled: !r.enabled }); setNote({ type: 'success', text: `${r.rule_id} ${r.enabled ? 'disabled' : 'enabled'}.` }); await reload(); }
+    try { await api.updateAlertRule(r.rule_id, { enabled: !r.enabled }); setNote({ type: 'success', text: `${r.rule_id} ${r.enabled ? 'disabled' : 'enabled'}.` }); await reloadRules(selectedBackend); }
     catch (er) { setNote({ type: 'error', text: `Toggle failed: ${errText(er)}` }); }
   };
   const doDelete = async () => {
     const id = deleting; setDeleting(null);
-    try { await api.deleteAlertRule(id); setNote({ type: 'success', text: `Rule ${id} deleted.` }); await reload(); }
+    try { await api.deleteAlertRule(id); setNote({ type: 'success', text: `Rule ${id} deleted.` }); await reloadRules(selectedBackend); }
     catch (er) { setNote({ type: 'error', text: `Delete failed: ${errText(er)}` }); }
+  };
+
+  const doCopyRules = async () => {
+    if (!copyFrom || !selectedBackend || copyFrom === selectedBackend) return;
+    setCopyAsk(false);
+    try {
+      const res = await api.copyAlertRules({ source_backend_id: copyFrom, target_backend_id: selectedBackend, replace: true });
+      setNote({ type: 'success', text: `Copied ${res.rules_copied ?? 0} rule(s) to this backend.` });
+      setCopyFrom('');
+      await reloadRules(selectedBackend);
+    } catch (er) {
+      setNote({ type: 'error', text: `Copy failed: ${errText(er)}` });
+    }
+  };
+
+  const doResetRules = async () => {
+    setResetAsk(false);
+    try {
+      const res = await api.resetAlertRules(selectedBackend);
+      setNote({ type: 'success', text: `Reset ${res.rules_reset ?? 0} default rule(s).` });
+      await reloadRules(selectedBackend);
+    } catch (er) {
+      setNote({ type: 'error', text: `Reset failed: ${errText(er)}` });
+    }
   };
 
   const purgeTestRules = async () => {
@@ -764,7 +821,7 @@ function Rules({ rules, canEdit, reload }) {
       const res = await Promise.allSettled(ids.map((id) => api.deleteAlertRule(id)));
       const ok = res.filter((r) => r.status === 'fulfilled').length;
       setNote({ type: 'success', text: `Removed ${ok} test rule${ok === 1 ? '' : 's'}.` });
-      await reload();
+      await reloadRules(selectedBackend);
     } catch (er) {
       setNote({ type: 'error', text: `Purge failed: ${errText(er)}` });
     } finally {
@@ -778,10 +835,13 @@ function Rules({ rules, canEdit, reload }) {
       <div className="card" style={{ padding: 0 }} data-tour="page-admin-rules">
         <div className="admin-card-header-actions admin-pad">
           <div>
-            <h3 className="admin-card-title" style={{ marginBottom: 2 }}>Alert rules</h3>
+            <h3 className="admin-card-title" style={{ marginBottom: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
+              Alert rules
+              <button type="button" className="admin-icon-hint" title={RULE_POLICY_HINT} aria-label="About alert rules">?</button>
+            </h3>
             <p className="page-hint" style={{ margin: 0 }}>
-              Fleet-wide queue, calibration, and readout rules apply to every backend.
-              T1/T2 rules apply to superconducting QPUs only; other modalities use reference coherence floors.
+              {selectedMeta ? `${selectedMeta.backend_name || selectedBackend}` : 'Select a backend'}
+              {previewRow?.modality ? ` · ${previewRow.modality}` : selectedMeta?.qpu_modality ? ` · ${selectedMeta.qpu_modality}` : ''}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -801,71 +861,79 @@ function Rules({ rules, canEdit, reload }) {
                 </button>
               </>
             )}
-            <button type="button" className="btn btn-primary" disabled={!canEdit} title={reason} onClick={() => open(null)}><Plus size={14} /> Add rule</button>
+            <button type="button" className="btn btn-primary" disabled={!canEdit || !selectedBackend} title={reason} onClick={() => open(null)}><Plus size={14} /> Add rule</button>
           </div>
         </div>
-        <div className="admin-pad" style={{ paddingTop: 0 }}><Notice note={note} /></div>
-        {thresholds && (
-          <div className="admin-pad" style={{ paddingTop: 0, paddingBottom: 12 }}>
-            <div className="admin-sub" style={{ marginBottom: 8 }}>{thresholds.policy}</div>
-            <div className="admin-modal-grid-2" style={{ alignItems: 'end', marginBottom: 10 }}>
-              <label className="admin-field">
-                <span className="admin-input-label">Effective thresholds preview</span>
+        <div className="admin-pad" style={{ paddingTop: 0 }}>
+          <Notice note={note} />
+          <div className="admin-modal-grid-2" style={{ alignItems: 'end', marginTop: 8, marginBottom: rulesLoading ? 8 : 12 }}>
+            <label className="admin-field">
+              <span className="admin-input-label">Backend</span>
+              <select
+                className="input-control"
+                value={selectedBackend}
+                onChange={(e) => setSelectedBackend(e.target.value)}
+                aria-label="Backend for alert rules"
+              >
+                {!backends.length && <option value="">No backends</option>}
+                {backends.map((b) => (
+                  <option key={b.backend_id} value={b.backend_id}>
+                    {b.backend_name || b.backend_id}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="admin-field" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <label className="admin-field" style={{ flex: '1 1 160px', margin: 0 }}>
+                <span className="admin-input-label">Copy from</span>
                 <select
                   className="input-control"
-                  value={previewBackend}
-                  onChange={(e) => setPreviewBackend(e.target.value)}
-                  aria-label="Backend for threshold preview"
+                  value={copyFrom}
+                  disabled={!canEdit}
+                  onChange={(e) => setCopyFrom(e.target.value)}
+                  aria-label="Source backend to copy rules from"
                 >
-                  <option value="">Select backend…</option>
-                  {(thresholds.backends || []).map((b) => (
-                    <option key={b.backend_id} value={b.backend_id}>
-                      {b.backend_name || b.backend_id} ({b.modality})
-                    </option>
+                  <option value="">Choose…</option>
+                  {backends.filter((b) => b.backend_id !== selectedBackend).map((b) => (
+                    <option key={b.backend_id} value={b.backend_id}>{b.backend_name || b.backend_id}</option>
                   ))}
                 </select>
               </label>
+              <button
+                type="button"
+                className="btn btn-secondary btn--xs"
+                disabled={!canEdit || !copyFrom || !selectedBackend}
+                onClick={() => setCopyAsk(true)}
+              >
+                Copy rules
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary btn--xs"
+                disabled={!canEdit || !selectedBackend}
+                title={reason}
+                onClick={() => setResetAsk(true)}
+              >
+                Reset defaults
+              </button>
             </div>
-            {previewRow?.effective && (
-              <table className="custom-table admin-table admin-threshold-preview">
-                <thead>
-                  <tr>
-                    <th>Metric</th>
-                    <th>Effective limit</th>
-                    <th>Source</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>T1 (µs)</td>
-                    <td className="admin-mono">{fmtUs(previewRow.effective.t1_crit_us)}</td>
-                    <td>{previewRow.effective.t1_t2_from_fleet_rules ? 'Fleet rule + modality' : 'Modality default'}</td>
-                  </tr>
-                  <tr>
-                    <td>T2 (µs)</td>
-                    <td className="admin-mono">{fmtUs(previewRow.effective.t2_crit_us)}</td>
-                    <td>{previewRow.effective.t1_t2_from_fleet_rules ? 'Fleet rule + modality' : 'Modality default'}</td>
-                  </tr>
-                  <tr>
-                    <td>QUEUE_JOBS</td>
-                    <td className="admin-mono">&gt; {previewRow.effective.queue_jobs}</td>
-                    <td>Fleet rule</td>
-                  </tr>
-                  <tr>
-                    <td>CALIBRATION_AGE (h)</td>
-                    <td className="admin-mono">&gt; {previewRow.effective.calibration_age_hours}</td>
-                    <td>Fleet rule</td>
-                  </tr>
-                  <tr>
-                    <td>READOUT_ERROR</td>
-                    <td className="admin-mono">&gt; {previewRow.effective.readout_error}</td>
-                    <td>Fleet rule</td>
-                  </tr>
-                </tbody>
-              </table>
-            )}
           </div>
-        )}
+          {rulesLoading && <p className="admin-sub">Loading rules…</p>}
+          {previewRow?.effective && !rulesLoading && (
+            <table className="custom-table admin-table admin-threshold-preview">
+              <thead>
+                <tr><th>Metric</th><th>Effective limit</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>T1 (µs)</td><td className="admin-mono">{fmtUs(previewRow.effective.t1_crit_us)}</td></tr>
+                <tr><td>T2 (µs)</td><td className="admin-mono">{fmtUs(previewRow.effective.t2_crit_us)}</td></tr>
+                <tr><td>QUEUE_JOBS</td><td className="admin-mono">&gt; {previewRow.effective.queue_jobs}</td></tr>
+                <tr><td>CALIBRATION_AGE (h)</td><td className="admin-mono">&gt; {previewRow.effective.calibration_age_hours}</td></tr>
+                <tr><td>READOUT_ERROR</td><td className="admin-mono">&gt; {previewRow.effective.readout_error}</td></tr>
+              </tbody>
+            </table>
+          )}
+        </div>
         <div className="table-container" style={{ border: 'none' }}>
           <table className="custom-table admin-table">
             <thead><tr><th>Rule</th><th>Condition</th><th>Severity</th><th>Status</th><th style={{ textAlign: 'right' }}>Actions</th></tr></thead>
@@ -884,7 +952,9 @@ function Rules({ rules, canEdit, reload }) {
                   </td>
                 </tr>
               ))}
-              {rules.length === 0 && <TableEmpty colSpan={5} title="No alert rules" message="Add a rule to define thresholds and escalation." />}
+              {!rulesLoading && rules.length === 0 && (
+                <TableEmpty colSpan={5} title="No alert rules" message={selectedBackend ? 'Add a rule or reset defaults for this backend.' : 'Select a backend.'} />
+              )}
             </tbody>
           </table>
         </div>
@@ -931,6 +1001,29 @@ function Rules({ rules, canEdit, reload }) {
             </div>
           </form>
         </Modal>
+      )}
+      {copyAsk && (
+        <ConfirmDialog
+          dlg={{
+            title: 'Copy alert rules?',
+            body: `Replace all rules on ${selectedMeta?.backend_name || selectedBackend} with the set from ${backends.find((b) => b.backend_id === copyFrom)?.backend_name || copyFrom}.`,
+            confirm: 'Copy rules',
+            onConfirm: doCopyRules,
+          }}
+          onCancel={() => setCopyAsk(false)}
+        />
+      )}
+      {resetAsk && (
+        <ConfirmDialog
+          dlg={{
+            title: 'Reset to defaults?',
+            body: `Restore modality default rules for ${selectedMeta?.backend_name || selectedBackend}. Custom rules on this backend will be removed.`,
+            confirm: 'Reset',
+            danger: true,
+            onConfirm: doResetRules,
+          }}
+          onCancel={() => setResetAsk(false)}
+        />
       )}
       {discardAsk && (
         <ConfirmDialog
@@ -1143,10 +1236,9 @@ export const AdministrationPage = ({ section = 'integrations', onNavigateSection
   const load = useCallback(async () => {
     const miss = [];
     const t = (name, p, fallback) => p.catch(() => { miss.push(name); return fallback; });
-    const [creds, schedules, rules, dlq, mqtt, health, scheduler] = await Promise.all([
+    const [creds, schedules, dlq, mqtt, health, scheduler] = await Promise.all([
       t('credentials', api.getCredentials(), null),
       t('schedules', api.getSchedules(), []),
-      t('alert rules', api.getAlertRules(), []),
       t('DLQ', api.getCollectorDlq(), null),
       t('MQTT', api.getFacilityMqttStatus(), null),
       t('collector health', api.getCollectorHealth(), null),
@@ -1154,7 +1246,7 @@ export const AdministrationPage = ({ section = 'integrations', onNavigateSection
     ]);
     if (miss.length >= 6) { setLoadError('Admin services unreachable.'); return; }
     setLoadError(null);
-    setData({ providers: creds?.providers || [], schedules: schedules || [], rules: rules || [], dlq, mqtt, health: health?.providers || [], scheduler, miss });
+    setData({ providers: creds?.providers || [], schedules: schedules || [], dlq, mqtt, health: health?.providers || [], scheduler, miss });
     setLastRefresh(new Date());
   }, []);
 
@@ -1191,7 +1283,7 @@ export const AdministrationPage = ({ section = 'integrations', onNavigateSection
       {active === 'integrations' && <Integrations navigate={navigate} providers={data.providers} health={data.health} verification={verification} setVerification={setVerification} canEdit={canEdit} reload={load} />}
       {active === 'collectors' && <Collectors {...data} canEdit={canEdit} reload={load} />}
       {active === 'logs' && <AdminAuditLog />}
-      {active === 'rules' && <Rules rules={data.rules} canEdit={canEdit} reload={load} />}
+      {active === 'rules' && <Rules canEdit={canEdit} />}
     </div>
   );
 };

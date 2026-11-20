@@ -47,5 +47,5 @@ def test_effective_thresholds_superconducting_vs_ion():
     eff_ion = effective_thresholds({}, "trapped_ion")
     assert eff_sc["t1_crit_us"] == 40.0
     assert eff_ion["t1_crit_us"] > 100_000
-    assert eff_sc["t1_t2_from_fleet_rules"] is True
-    assert eff_ion["t1_t2_from_fleet_rules"] is False
+    assert eff_sc["t1_t2_from_backend_rules"] is False
+    assert eff_ion["t1_t2_from_backend_rules"] is False

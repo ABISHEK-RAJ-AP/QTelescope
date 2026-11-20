@@ -322,11 +322,15 @@ export const api = {
   triggerAutoDiscovery: () => fetchApi('/admin/auto-discover', { method: 'POST' }),
   runCollection: () => fetchApi('/admin/run-collection', { method: 'POST' }),
   purgeCollectorDlq: () => fetchApi('/admin/collector-dlq', { method: 'DELETE' }),
-  getAlertRules: () => fetchApi('/admin/alert-rules'),
+  getAlertRules: (backendId) => fetchApi(`/admin/alert-rules?backend_id=${encodeURIComponent(backendId)}`),
   createAlertRule: (data) => fetchApi('/admin/alert-rules', { method: 'POST', body: JSON.stringify(data) }),
   updateAlertRule: (ruleId, data) => fetchApi(`/admin/alert-rules/${ruleId}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteAlertRule: (ruleId) => fetchApi(`/admin/alert-rules/${ruleId}`, { method: 'DELETE' }),
-  getAlertThresholds: () => fetchApi('/admin/alert-thresholds'),
+  copyAlertRules: (data) => fetchApi('/admin/alert-rules/copy', { method: 'POST', body: JSON.stringify(data) }),
+  resetAlertRules: (backendId) => fetchApi(`/admin/alert-rules/reset/${encodeURIComponent(backendId)}`, { method: 'POST' }),
+  getAlertThresholds: (backendId) => fetchApi(
+    backendId ? `/admin/alert-thresholds?backend_id=${encodeURIComponent(backendId)}` : '/admin/alert-thresholds',
+  ),
 
   // Device capability sheets
   getDeviceCapabilityCoverage: () => fetchApi('/device-capabilities/coverage'),

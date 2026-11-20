@@ -5,12 +5,17 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.analytics.modality_thresholds import normalize_modality, t1_crit_us, t2_crit_us
+from app.analytics.modality_thresholds import modality_profile, normalize_modality
 from app.models.entities import AlertRuleModel
 
 
-def load_rules(db: Session) -> Dict[str, AlertRuleModel]:
-    rows = db.query(AlertRuleModel).filter(AlertRuleModel.enabled.is_(True)).all()
+def load_rules(db: Session, backend_id: Optional[str] = None) -> Dict[str, AlertRuleModel]:
+    q = db.query(AlertRuleModel).filter(AlertRuleModel.enabled.is_(True))
+    if backend_id:
+        q = q.filter(AlertRuleModel.backend_id == backend_id)
+    else:
+        q = q.filter(AlertRuleModel.backend_id.is_(None))
+    rows = q.all()
     return {r.metric_name.upper(): r for r in rows}
 
 
@@ -43,7 +48,7 @@ def effective_thresholds(
         "queue_jobs": rule_threshold(rules, "QUEUE_JOBS", 50.0),
         "calibration_age_hours": rule_threshold(rules, "CALIBRATION_AGE", 24.0),
         "readout_error": rule_threshold(rules, "READOUT_ERROR", 0.08),
-        "t1_t2_from_fleet_rules": mod == "superconducting",
+        "t1_t2_from_backend_rules": bool(rules.get("T1") or rules.get("T2")),
     }
 
 
@@ -51,11 +56,13 @@ def coherence_thresholds(
     rules: Dict[str, AlertRuleModel],
     modality: Optional[str],
 ) -> Dict[str, float]:
-    mod = normalize_modality(modality)
-    t1_rule = rule_threshold(rules, "T1", 40.0)
-    t2_rule = rule_threshold(rules, "T2", 30.0)
+    prof = modality_profile(modality)
+    t1_default = float(prof["t1_crit_us"])
+    t2_default = float(prof["t2_crit_us"])
+    t1_crit = rule_threshold(rules, "T1", t1_default)
+    t2_crit = rule_threshold(rules, "T2", t2_default)
     return {
-        "t1_crit_us": t1_crit_us(mod, t1_rule if mod == "superconducting" else None),
-        "t2_crit_us": t2_crit_us(mod, t2_rule if mod == "superconducting" else None),
-        "t1_warn_us": t1_crit_us(mod, t1_rule if mod == "superconducting" else None) + 10.0,
+        "t1_crit_us": t1_crit,
+        "t2_crit_us": t2_crit,
+        "t1_warn_us": t1_crit + 10.0,
     }

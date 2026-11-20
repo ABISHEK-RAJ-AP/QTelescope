@@ -206,7 +206,14 @@ function DashboardHomeInner() {
       .sort((a, b) => String(a.qpu_modality).localeCompare(String(b.qpu_modality)) || a.t1_mean - b.t1_mean),
     [d.coherence],
   );
-  const t1Crit = d.health?.t1_crit_us;
+  const t1Crit = useMemo(() => {
+    if (!cohRows.length) return null;
+    const mods = new Set(cohRows.map((c) => String(c.qpu_modality || '').toLowerCase()));
+    if (mods.size !== 1) return null;
+    const mod = [...mods][0];
+    const row = (d.health?.backends || []).find((b) => String(b.qpu_modality || '').toLowerCase() === mod);
+    return row?.t1_crit_us ?? null;
+  }, [cohRows, d.health]);
   const cohOption = useMemo(() => {
     const sem = getChartSemanticColors();
     const names = cohRows.map((c) => `${shortName(c.backend_name)} (${c.qpu_modality})`);

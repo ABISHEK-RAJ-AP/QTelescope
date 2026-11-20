@@ -236,7 +236,10 @@ class TelemetryCollector:
                 self.db.query(BackendModel).filter(BackendModel.backend_id == backend_id).first()
             )
             modality = backend_row.qpu_modality if backend_row else None
-            rules = load_rules(self.db)
+            from app.alerts.rule_backend import ensure_backend_rules
+
+            ensure_backend_rules(self.db, backend_id)
+            rules = load_rules(self.db, backend_id)
             coh = coherence_thresholds(rules, modality)
             eff = effective_thresholds(rules, modality)
             rule_sev = {

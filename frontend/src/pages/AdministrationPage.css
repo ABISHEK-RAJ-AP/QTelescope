@@ -1093,4 +1093,17 @@
 .admin-modal-close { background: none; border: 0; cursor: pointer; color: var(--text-muted); }
 .admin-danger { background: var(--accent-rose); border-color: var(--accent-rose); }
 .admin-card-title { display: flex; align-items: center; gap: 8px; }
+.admin-icon-hint {
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card-hover);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+}
 .admin-cred-footer { flex-wrap: wrap; }

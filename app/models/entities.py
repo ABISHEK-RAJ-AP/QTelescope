@@ -198,6 +198,7 @@ class AlertRuleModel(Base):
     __tablename__ = "alert_rules"
     
     rule_id = Column(String, primary_key=True, index=True)
+    backend_id = Column(String, nullable=True, index=True)
     metric_name = Column(String, nullable=False) # T1, T2, READOUT_ERROR, QUEUE_JOBS, CALIBRATION_AGE
     operator = Column(String, nullable=False) # <, >, <=, >=, ==
     threshold_value = Column(Float, nullable=False)
