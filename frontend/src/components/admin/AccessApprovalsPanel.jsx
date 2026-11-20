@@ -462,7 +462,11 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
             {loading && pending.length === 0 ? (
               <p className="admin-people-muted">Loading…</p>
             ) : pending.length === 0 ? (
-              <TableEmpty colSpan={1} title="Queue empty" message="Verified self-registrations appear here when admin approval is on." />
+              <TableEmpty
+                as="block"
+                title="Queue empty"
+                message="Verified self-registrations appear here when admin approval is on."
+              />
             ) : (
               <div className="admin-access-grid">
                 {pending.map((u) => (

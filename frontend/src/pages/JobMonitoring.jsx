@@ -425,7 +425,7 @@ export const JobMonitoring = () => {
         {layout === 'grid' ? (
           <div className="dvt-grid" aria-label="Jobs">
             {shown.length === 0 ? (
-              <div style={{ gridColumn: '1 / -1', padding: '8px 14px' }}><TableEmpty colSpan={1} title="No jobs match" message="Adjust filters or search." /></div>
+              <div style={{ gridColumn: '1 / -1', padding: '8px 14px' }}><TableEmpty as="block" title="No jobs match" message="Adjust filters or search." /></div>
             ) : shown.map((j) => (
               <article key={j.job_id} className="dvt-card" data-selected={j.job_id === selectedId || undefined}>
                 <header className="dvt-card__head">

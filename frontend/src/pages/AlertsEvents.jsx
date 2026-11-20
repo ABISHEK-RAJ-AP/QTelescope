@@ -747,9 +747,9 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
             actions={<ViewModeToggle value={incLayout} onChange={setIncLayout} />}
           />
           {incidents.length === 0 ? (
-            <div className="al-pad"><TableEmpty colSpan={1} title="No incidents" message="Incidents are created when rules escalate alerts." /></div>
+            <div className="al-pad"><TableEmpty as="block" title="No incidents" message="Incidents are created when rules escalate alerts." /></div>
           ) : filteredIncidents.length === 0 ? (
-            <div className="al-pad"><TableEmpty colSpan={1} title="No matches" message="Try a different search." action={<button type="button" className="btn btn-secondary btn--xs" onClick={() => setIncQuery('')}>Clear search</button>} /></div>
+            <div className="al-pad"><TableEmpty as="block" title="No matches" message="Try a different search." action={<button type="button" className="btn btn-secondary btn--xs" onClick={() => setIncQuery('')}>Clear search</button>} /></div>
           ) : incLayout === 'table' ? (
             <div className="al-pad al-pad--table">
               <EnterpriseDataTable
@@ -938,7 +938,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
             {listLayout === 'grid' ? (
               <div className="dvt-grid al-alert-grid">
                 {pageRows.length === 0 ? (
-                  <div style={{ gridColumn: '1 / -1' }}><TableEmpty colSpan={1} title={alerts.length === 0 ? 'No alerts recorded' : 'No alerts match filters'} message={alerts.length === 0 ? 'No alerts in the store.' : `Filters exclude all ${alerts.length} stored alerts.`} action={alerts.length ? <button type="button" className="btn btn-secondary btn--xs" onClick={clearFilters}>Reset filters</button> : undefined} /></div>
+                  <div style={{ gridColumn: '1 / -1' }}><TableEmpty as="block" title={alerts.length === 0 ? 'No alerts recorded' : 'No alerts match filters'} message={alerts.length === 0 ? 'No alerts in the store.' : `Filters exclude all ${alerts.length} stored alerts.`} action={alerts.length ? <button type="button" className="btn btn-secondary btn--xs" onClick={clearFilters}>Reset filters</button> : undefined} /></div>
                 ) : pageRows.map((g) => {
                   const multi = grouped && g.count > 1;
                   const a = g.items[0];

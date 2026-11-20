@@ -272,7 +272,7 @@ export const OpsTimeline = () => {
         {layout === 'grid' ? (
           <div className="dvt-grid">
             {sorted.length === 0 ? (
-              <div style={{ gridColumn: '1 / -1', padding: '8px 14px' }}><TableEmpty colSpan={1} title={events.length === 0 ? 'Timeline empty' : 'No matching events'} message={events.length === 0 ? 'Nothing recorded yet.' : 'Adjust filters.'} /></div>
+              <div style={{ gridColumn: '1 / -1', padding: '8px 14px' }}><TableEmpty as="block" title={events.length === 0 ? 'Timeline empty' : 'No matching events'} message={events.length === 0 ? 'Nothing recorded yet.' : 'Adjust filters.'} /></div>
             ) : pageEvents.map((e) => {
               const key = `${e.backend_id || 'fleet'} · ${e.kind.replace('_', ' ')}|${e.at}`;
               return (

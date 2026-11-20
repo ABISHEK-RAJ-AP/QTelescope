@@ -350,7 +350,7 @@ export const QueueMonitoring = () => {
         {layout === 'grid' ? (
           <div className="dvt-grid" aria-label="Queues by backend">
             {displayQueues.length === 0 ? (
-              <div style={{ gridColumn: '1 / -1', padding: '8px 14px' }}><TableEmpty colSpan={1} title="No queues reported" message="Collectors have not produced queue telemetry." /></div>
+              <div style={{ gridColumn: '1 / -1', padding: '8px 14px' }}><TableEmpty as="block" title="No queues reported" message="Collectors have not produced queue telemetry." /></div>
             ) : displayQueues.map((q) => {
               const a = anBy[q.backend_id];
               return (

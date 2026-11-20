@@ -247,7 +247,7 @@ export const DriftAnalysis = () => {
         {layout === 'grid' ? (
           <div className="dvt-grid">
             {rankedSummaries.length === 0 ? (
-              <div style={{ gridColumn: '1 / -1', padding: '8px 14px' }}><TableEmpty colSpan={1} title="No drift summaries" message="Change metric or wait for additional stored samples." /></div>
+              <div style={{ gridColumn: '1 / -1', padding: '8px 14px' }}><TableEmpty as="block" title="No drift summaries" message="Change metric or wait for additional stored samples." /></div>
             ) : rankedSummaries.map((r) => (
               <article key={r.backend_id} className="dvt-card" data-active={r.backend_id === selectedBackend || undefined}>
                 <header className="dvt-card__head">

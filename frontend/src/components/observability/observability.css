@@ -669,6 +669,12 @@
   background: transparent !important;
 }
 
+.obs-table-empty-block {
+  padding: 12px 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* Detail modal (centered; legacy class names detail-drawer*) */
 .detail-drawer-backdrop {
   position: fixed;

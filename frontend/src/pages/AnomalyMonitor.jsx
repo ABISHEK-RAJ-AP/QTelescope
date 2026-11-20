@@ -310,7 +310,7 @@ export const AnomalyMonitor = () => {
             {layout === 'grid' ? (
               <div className="dvt-grid">
                 {hits.length === 0 ? (
-                  <div style={{ gridColumn: '1 / -1', padding: '8px 14px' }}><TableEmpty colSpan={1} title={scopeBackend ? 'No flags for backend' : 'No flagged qubits'} message="Change metric or clear the backend filter." /></div>
+                  <div style={{ gridColumn: '1 / -1', padding: '8px 14px' }}><TableEmpty as="block" title={scopeBackend ? 'No flags for backend' : 'No flagged qubits'} message="Change metric or clear the backend filter." /></div>
                 ) : hits.map((h) => (
                   <article key={`${h.backend_id}-${h.qubit_index}`} className="dvt-card">
                     <header className="dvt-card__head">

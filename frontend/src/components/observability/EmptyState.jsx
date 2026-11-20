@@ -33,13 +33,34 @@ export function EmptyState({
   );
 }
 
-/** Empty row inside `.custom-table` */
-export function TableEmpty({ colSpan, title, message, hint }) {
+const emptyInlineProps = (props) => ({
+  variant: 'inline',
+  compact: true,
+  align: 'start',
+  title: props.title,
+  message: props.message,
+  hint: props.hint,
+  action: props.action,
+});
+
+/** `as="row"` (default): `<tbody>` only. `as="block"`: panels, grids, collapsible bodies. */
+export function TableEmpty({
+  colSpan = 1,
+  title,
+  message,
+  hint,
+  action,
+  as = 'row',
+}) {
+  const body = <EmptyState {...emptyInlineProps({ title, message, hint, action })} />;
+
+  if (as === 'block') {
+    return <div className="obs-table-empty-block">{body}</div>;
+  }
+
   return (
     <tr className="obs-table-empty-row">
-      <td colSpan={colSpan}>
-        <EmptyState variant="inline" compact title={title} message={message} hint={hint} align="start" />
-      </td>
+      <td colSpan={colSpan}>{body}</td>
     </tr>
   );
 }
