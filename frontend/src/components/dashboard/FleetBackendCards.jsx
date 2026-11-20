@@ -170,7 +170,7 @@ export function FleetBackendCards({ rows = [], className = '' }) {
           <h2 id="fo-fleet-cards-h" className="fo-fleet-cards__title">Backends</h2>
           <InfoTooltip label="How these cards work" align="start">
             Hover the summary for ops detail. Open workspace stays on the card.
-            {carousel ? ' Carousel auto-advances every 6s; pauses while you hover the cards. Use arrows or dots to step.' : null}
+            {carousel ? ' Carousel auto-advances every 6s; pauses while you hover the cards. Use the arrows to step pages.' : null}
           </InfoTooltip>
         </div>
         <div className="fo-fleet-cards__head-actions">
@@ -244,21 +244,6 @@ export function FleetBackendCards({ rows = [], className = '' }) {
             ))}
           </div>
         </div>
-        {carousel ? (
-          <div className="fo-fleet-cards__dots" role="tablist" aria-label="Choose backend page">
-            {pages.map((_, idx) => (
-              <button
-                key={idx}
-                type="button"
-                role="tab"
-                className={`fo-fleet-cards__dot${idx === active ? ' is-active' : ''}`}
-                aria-selected={idx === active}
-                aria-label={`Page ${idx + 1}`}
-                onClick={() => setSlide(idx)}
-              />
-            ))}
-          </div>
-        ) : null}
       </div>
     </section>
   );
