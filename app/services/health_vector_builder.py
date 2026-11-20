@@ -107,13 +107,13 @@ def build_health_vector_payload(db: Session) -> dict:
         for q in qubits:
             series = by_idx.get(q.qubit_index) or []
             qt = series[0] if series else None
-            t1 = qt.t1 if qt else None
-            t2 = qt.t2 if qt else None
-            if qt and qt.readout_error is not None:
-                from app.core.metric_bounds import clamp_probability
-                ro = clamp_probability(qt.readout_error)
+            if qt:
+                from app.core.metric_bounds import clamp_positive_time_us, clamp_probability
+                t1 = clamp_positive_time_us(qt.t1) if qt.t1 is not None else None
+                t2 = clamp_positive_time_us(qt.t2) if qt.t2 is not None else None
+                ro = clamp_probability(qt.readout_error) if qt.readout_error is not None else None
             else:
-                ro = None
+                t1 = t2 = ro = None
             t1s = [h.t1 for h in series[:24] if h.t1 is not None]
             t1_base = sigma = None
             history_n = len(t1s)

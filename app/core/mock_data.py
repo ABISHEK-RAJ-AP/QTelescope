@@ -2,7 +2,7 @@ import random
 import datetime
 from typing import List, Dict, Any, Optional
 
-from app.core.metric_bounds import clamp_probability
+from app.core.metric_bounds import clamp_positive_time_us, clamp_probability
 
 def utcnow():
     return datetime.datetime.now(datetime.timezone.utc)
@@ -13,6 +13,15 @@ def _jitter_rate(base: float, spread: float = 0.12) -> float:
     if base <= 0:
         return clamp_probability(random.uniform(1e-5, 5e-4)) or 0.0
     return clamp_probability(base * random.uniform(1.0 - spread, 1.0 + spread)) or 0.0
+
+
+def _jitter_coherence_us(base: float, spread: float = 0.08) -> float:
+    """T1/T2 in µs — stay strictly positive."""
+    if base <= 0:
+        return clamp_positive_time_us(random.uniform(1.0, 50.0)) or 1.0
+    raw = base * random.uniform(1.0 - spread, 1.0 + spread)
+    floor = max(0.01, base * 0.05)
+    return clamp_positive_time_us(max(floor, raw)) or floor
 
 # ==============================================================================
 # CENTRALIZED MOCK QUANTUM HARDWARE DATA STORE
@@ -212,22 +221,22 @@ def get_mock_backend_properties(backend_id: str) -> Dict[str, Any]:
 
     qubits = []
     for i in range(n_qubits):
-        t1_val = metrics["avg_t1_us"] + random.uniform(-metrics["avg_t1_us"] * 0.08, metrics["avg_t1_us"] * 0.08)
-        t2_val = metrics["avg_t2_us"] + random.uniform(-metrics["avg_t2_us"] * 0.08, metrics["avg_t2_us"] * 0.08)
-        
+        t1_val = _jitter_coherence_us(metrics["avg_t1_us"])
+        t2_val = _jitter_coherence_us(metrics["avg_t2_us"])
+
         # Inject controlled outlier for drift demo if IBM
         if backend_id == "ibm_brisbane" and i in [14, 42]:
-            t1_val = random.uniform(36.0, 48.0)
-            t2_val = random.uniform(28.0, 42.0)
-            
+            t1_val = clamp_positive_time_us(random.uniform(36.0, 48.0)) or 36.0
+            t2_val = clamp_positive_time_us(random.uniform(28.0, 42.0)) or 28.0
+
         qubits.append({
             "qubit_index": i,
             "t1": t1_val,
             "t2": t2_val,
             "frequency": metrics["qubit_freq_base"] + (i * metrics["qubit_freq_step"]),
             "readout_error": _jitter_rate(metrics["readout_error"]),
-            "prob_meas0_prep1": 0.01,
-            "prob_meas1_prep0": 0.01,
+            "prob_meas0_prep1": _jitter_rate(0.01, spread=0.25),
+            "prob_meas1_prep0": _jitter_rate(0.01, spread=0.25),
             "anharmonicity": metrics["anharmonicity"],
             "readout_length": metrics["readout_length_ns"]
         })
@@ -238,10 +247,10 @@ def get_mock_backend_properties(backend_id: str) -> Dict[str, Any]:
             "gate_name": f"1q_{i}",
             "gate_type": "1q",
             "qubits": [i],
-            "error_rate": metrics["gate_error_1q"],
+            "error_rate": _jitter_rate(metrics["gate_error_1q"]),
             "gate_length": 35.0
         })
-        
+
     edges = get_mock_connectivity(backend_id)
     for e in edges:
         q1, q2 = e["qubits"]
@@ -249,7 +258,7 @@ def get_mock_backend_properties(backend_id: str) -> Dict[str, Any]:
             "gate_name": f"2q_{q1}_{q2}",
             "gate_type": "2q",
             "qubits": [q1, q2],
-            "error_rate": metrics["gate_error_2q"],
+            "error_rate": _jitter_rate(metrics["gate_error_2q"]),
             "gate_length": 220.0
         })
 

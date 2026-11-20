@@ -63,15 +63,20 @@ def refresh(*, force: bool, if_stale_hours: float) -> dict:
             return {"skipped": True, "telemetry_age_hours": age}
 
         removed = []
-        purge_ids = set(JUNK_BACKEND_IDS)
-        if settings.ENABLE_MOCK_DATA:
-            for row in db.query(BackendModel).all():
-                if row.backend_id not in MOCK_BACKEND_IDS:
-                    purge_ids.add(row.backend_id)
-        for bid in purge_ids:
-            if db.query(BackendModel).filter(BackendModel.backend_id == bid).first():
-                purge_backend(db, bid)
-                removed.append(bid)
+        if force:
+            for row in list(db.query(BackendModel).all()):
+                purge_backend(db, row.backend_id)
+                removed.append(row.backend_id)
+        else:
+            purge_ids = set(JUNK_BACKEND_IDS)
+            if settings.ENABLE_MOCK_DATA:
+                for row in db.query(BackendModel).all():
+                    if row.backend_id not in MOCK_BACKEND_IDS:
+                        purge_ids.add(row.backend_id)
+            for bid in purge_ids:
+                if db.query(BackendModel).filter(BackendModel.backend_id == bid).first():
+                    purge_backend(db, bid)
+                    removed.append(bid)
 
         orphans = _resolve_orphan_alerts(db)
         deduped = dedupe_open_alerts(db)
