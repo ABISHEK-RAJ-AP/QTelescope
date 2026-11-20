@@ -113,14 +113,12 @@ function FleetFlipCard({ r }) {
   );
 }
 
-const FLEET_CARDS_PER_PAGE = 3;
+const FLEET_CARDS_PER_PAGE = 4;
 const FLEET_AUTO_MS = 6000;
 
-function gridClassForCount(n) {
-  if (n >= 5) return 'fo-fleet-cards__grid--5';
-  if (n === 4) return 'fo-fleet-cards__grid--4';
-  if (n === 3) return 'fo-fleet-cards__grid--3';
-  return 'fo-fleet-cards__grid--2';
+/** Fixed four-across layout on desktop; carousel when fleet has more than four backends. */
+function gridClassForCount() {
+  return 'fo-fleet-cards__grid--4';
 }
 
 export function FleetBackendCards({ rows = [], className = '' }) {
@@ -231,7 +229,7 @@ export function FleetBackendCards({ rows = [], className = '' }) {
             {pages.map((pageRows, idx) => (
               <div key={idx} className="hero-cycle__pane fo-fleet-cards__pane">
                 <ul
-                  className={`fo-fleet-cards__grid ${gridClassForCount(pageRows.length)}`}
+                  className={`fo-fleet-cards__grid ${gridClassForCount()}`}
                   aria-label={carousel ? `Backend cards, page ${idx + 1} of ${slideCount}` : 'Backend cards'}
                 >
                   {pageRows.map((r) => (
