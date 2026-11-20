@@ -216,16 +216,26 @@
   opacity: 1;
 }
 
-.cdac-footer-mark img {
+.cdac-footer-mark__img {
   display: block;
   height: 2.25rem;
   width: auto;
 }
 
-.cdac-footer-mark--bar img {
+.cdac-footer-mark--bar .cdac-footer-mark__img {
   height: 2.5rem;
 }
 
-.dark .cdac-footer-mark img {
-  filter: brightness(1.08);
+.cdac-footer-mark__img--dark {
+  display: none;
+}
+
+html.dark .cdac-footer-mark__img--light,
+.dark .cdac-footer-mark__img--light {
+  display: none;
+}
+
+html.dark .cdac-footer-mark__img--dark,
+.dark .cdac-footer-mark__img--dark {
+  display: block;
 }

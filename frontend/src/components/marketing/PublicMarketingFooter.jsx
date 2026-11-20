@@ -2,7 +2,12 @@ import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { usePublicRegistration } from '@/lib/usePublicRegistration'
 import { QtTeleScopeMark } from '@/components/brand/QtTeleScopeMark.jsx'
-import { CDAC_HOME_URL, CDAC_LOGO_SRC } from '@/lib/publicBrand.js'
+import {
+  CDAC_HOME_URL,
+  CDAC_LOGO_ON_DARK_SRC,
+  CDAC_LOGO_SRC,
+  cdacCopyrightLine,
+} from '@/lib/publicBrand.js'
 
 const FOOTER_SECTIONS = [
   {
@@ -54,7 +59,23 @@ function CdacFooterLogo({ className = '' }) {
       rel="noopener noreferrer"
       aria-label="Centre for Development of Advanced Computing (C-DAC) — opens cdac.in"
     >
-      <img src={CDAC_LOGO_SRC} alt="C-DAC" width={132} height={94} decoding="async" />
+      <img
+        className="cdac-footer-mark__img cdac-footer-mark__img--light"
+        src={CDAC_LOGO_SRC}
+        alt="C-DAC"
+        width={132}
+        height={94}
+        decoding="async"
+      />
+      <img
+        className="cdac-footer-mark__img cdac-footer-mark__img--dark"
+        src={CDAC_LOGO_ON_DARK_SRC}
+        alt=""
+        width={132}
+        height={94}
+        aria-hidden
+        decoding="async"
+      />
     </a>
   )
 }
@@ -88,7 +109,7 @@ export function PublicMarketingFooter({ className = '', compact = false }) {
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row text-xs">
           <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 sm:flex-1">
             <CdacFooterLogo />
-            <p className="text-center sm:text-left m-0">© {currentYear} Q-TeleScope · quantum observability</p>
+            <p className="text-center sm:text-left m-0">{cdacCopyrightLine(currentYear)}</p>
           </div>
           <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 items-center">
             <a href="/#capabilities" className="font-semibold hover:text-cyan-600 dark:hover:text-cyan-400">
@@ -168,7 +189,7 @@ export function PublicMarketingFooter({ className = '', compact = false }) {
 
         <div className="mt-12 flex flex-col items-center gap-4 border-t border-neutral-200/80 pt-8 sm:flex-row sm:justify-between dark:border-neutral-800/80">
           <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center sm:text-left m-0 order-2 sm:order-1">
-            © {currentYear} Q-TeleScope. All rights reserved.
+            {cdacCopyrightLine(currentYear)}
           </p>
           <CdacFooterLogo className="cdac-footer-mark--bar order-1 sm:order-2" />
         </div>

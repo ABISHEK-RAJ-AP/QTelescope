@@ -1,8 +1,8 @@
 import React from 'react';
 import './qt-brand.css';
 
-/** Transparent lockup — same asset on light and dark; dark mode uses glow filter. */
-const LOCKUP_TRANSPARENT = '/brand/q-telescope-lockup-dark.png';
+const LOCKUP_LIGHT = `${import.meta.env.BASE_URL}brand/q-telescope-lockup-light.jpg`;
+const LOCKUP_DARK = `${import.meta.env.BASE_URL}brand/q-telescope-lockup-dark.png`;
 
 /**
  * Official Q-TeleScope lockup. No badge/plate wrapper.
@@ -26,11 +26,13 @@ export function QtTeleScopeMark({
     .filter(Boolean)
     .join(' ');
 
-  if (theme === 'light' || theme === 'dark') {
+  const src = theme === 'light' ? LOCKUP_LIGHT : theme === 'dark' ? LOCKUP_DARK : null;
+
+  if (src) {
     return (
       <img
         className={imgClass}
-        src={LOCKUP_TRANSPARENT}
+        src={src}
         alt={alt}
         aria-hidden={decorative || undefined}
         height={h}
@@ -48,7 +50,7 @@ export function QtTeleScopeMark({
     >
       <img
         className="qt-brand-lockup__img qt-brand-lockup__img--light"
-        src={LOCKUP_TRANSPARENT}
+        src={LOCKUP_LIGHT}
         alt={alt}
         aria-hidden={decorative || undefined}
         height={h}
@@ -56,7 +58,7 @@ export function QtTeleScopeMark({
       />
       <img
         className="qt-brand-lockup__img qt-brand-lockup__img--dark qt-brand-lockup__img--glow"
-        src={LOCKUP_TRANSPARENT}
+        src={LOCKUP_DARK}
         alt={decorative ? undefined : alt}
         aria-hidden={decorative ? true : undefined}
         height={h}
