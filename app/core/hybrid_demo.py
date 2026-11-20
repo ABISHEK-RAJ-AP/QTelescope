@@ -38,6 +38,23 @@ def is_demo_live_provider(provider_id: str) -> bool:
     return hybrid_demo_enabled() and provider_id in demo_live_provider_ids()
 
 
+def ensure_demo_live_provider(provider_id: str) -> list[str]:
+    """
+    When hybrid demo is on, add a provider to DEMO_LIVE_PROVIDERS (e.g. after IBM token save).
+    Returns sorted live provider ids after the merge.
+    """
+    pid = (provider_id or "").strip()
+    if not pid:
+        return sorted(demo_live_provider_ids())
+    live = set(demo_live_provider_ids())
+    if pid in live:
+        return sorted(live)
+    live.add(pid)
+    merged = ",".join(sorted(live))
+    os.environ["DEMO_LIVE_PROVIDERS"] = merged
+    return sorted(live)
+
+
 def hybrid_demo_public_snapshot() -> dict:
     live = sorted(demo_live_provider_ids())
     return {

@@ -59,8 +59,9 @@ export function useSessionGuard(currentUser, { onEnd, onRefresh, onReady }) {
 
     const scheduleServerExpiry = (expiresAt) => {
       if (expiryTimerRef.current) clearTimeout(expiryTimerRef.current);
-      if (!expiresAt) return;
-      const ms = expiresAt * 1000 - Date.now();
+      const at = Number(expiresAt);
+      if (!Number.isFinite(at) || at <= 0) return;
+      const ms = at * 1000 - Date.now();
       if (ms <= 0) {
         terminate('Session expired. Sign in again.');
         return;
@@ -70,11 +71,15 @@ export function useSessionGuard(currentUser, { onEnd, onRefresh, onReady }) {
       }, ms + 50);
     };
 
-    const sync = async ({ isBoot } = {}) => {
+    const sync = async ({ isBoot, bootRetry } = {}) => {
       try {
         const me = await api.getMe();
         if (!me?.authenticated) {
           if (userRef.current?.token) {
+            if (isBoot && !bootRetry) {
+              await new Promise((r) => setTimeout(r, 250));
+              return sync({ isBoot: true, bootRetry: true });
+            }
             terminate('Session ended. Sign in again.');
           } else {
             markReady();
@@ -102,17 +107,9 @@ export function useSessionGuard(currentUser, { onEnd, onRefresh, onReady }) {
         onRefresh?.(merged);
         markReady();
       } catch (e) {
-        if (e?.sessionExpired || userRef.current?.token) {
-          const msg = String(e?.message || e);
-          if (
-            e?.sessionExpired
-            || msg.includes('401')
-            || /session ended/i.test(msg)
-            || /authentication required/i.test(msg)
-          ) {
-            terminate('Session ended. Sign in again.');
-            return;
-          }
+        if (e?.sessionExpired) {
+          terminate('Session ended. Sign in again.');
+          return;
         }
         if (isBoot) markReady();
       }

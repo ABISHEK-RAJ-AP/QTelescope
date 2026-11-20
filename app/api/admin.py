@@ -154,6 +154,41 @@ def _env_credential_write_allowed() -> bool:
     return env_flag("ALLOW_ENV_CREDENTIAL_WRITE", default=not is_production_profile())
 
 
+def _normalize_provider_id_for_live(prov: str) -> str:
+    p = (prov or "").lower().strip()
+    if p in ("ibm", "ibm_quantum"):
+        return "ibm_quantum"
+    if p in ("rigetti", "rigetti_quantum"):
+        return "rigetti_quantum"
+    if p in ("ionq", "ionq_quantum"):
+        return "ionq_quantum"
+    if p in ("cdac", "cdac_quantum", "onprem"):
+        return "cdac_quantum"
+    return p
+
+
+def _after_live_credentials_saved(db: Session, provider_id: str) -> dict:
+    """Register vendor backends and keep hybrid demo collecting live for this provider."""
+    from app.core.cache import invalidate_operational_cache
+    from app.core.hybrid_demo import ensure_demo_live_provider, hybrid_demo_enabled
+    from app.discovery.hardware_discovery import HardwareDiscoveryEngine
+
+    norm = _normalize_provider_id_for_live(provider_id)
+    hybrid_note = None
+    if hybrid_demo_enabled():
+        merged = ensure_demo_live_provider(norm)
+        _update_env_file("DEMO_LIVE_PROVIDERS", ",".join(merged))
+        hybrid_note = f"Hybrid demo: live collection enabled for {', '.join(merged)}."
+    discovery = {}
+    try:
+        discovery = HardwareDiscoveryEngine.run_auto_discovery(db, trigger_type="credential_save")
+    except Exception as exc:
+        logger.warning("Post-credential auto-discovery failed: %s", exc)
+        discovery = {"status": "ERROR", "error": str(exc)}
+    invalidate_operational_cache()
+    return {"hybrid_note": hybrid_note, "discovery": discovery}
+
+
 def _update_env_file(key: str, value: str):
     if not _env_credential_write_allowed():
         return
@@ -224,14 +259,19 @@ def save_ibm_token(
 
     backends = adapter.discover_backends()
     names = ", ".join(b.get("backend_name") or b.get("backend_id", "") for b in backends)
+    post = _after_live_credentials_saved(db, "ibm_quantum")
+    msg = (
+        f"IBM Quantum authenticated. Discovered {len(backends)} QPU(s){f' ({names})' if names else ''}."
+        if backends
+        else "IBM Quantum authenticated. Discovery returned 0 backends for this account."
+    )
+    if post.get("hybrid_note"):
+        msg = f"{msg} {post['hybrid_note']}"
     return {
         "status": "SUCCESS",
         "discovered": len(backends),
-        "message": (
-            f"IBM Quantum authenticated. Discovered {len(backends)} QPU(s){f' ({names})' if names else ''}."
-            if backends
-            else "IBM Quantum authenticated. Discovery returned 0 backends for this account."
-        ),
+        "message": msg,
+        "post_save": post,
     }
 
 @router.post("/credentials")
@@ -305,11 +345,15 @@ def save_provider_credentials(
         msg = f"Credentials saved. Discovered {len(backends)} backend(s){f' ({names})' if names else ''}."
     else:
         msg = "Credentials saved. Discovery returned 0 backends from the vendor (empty catalog or controller unreachable)."
+    post = _after_live_credentials_saved(db, prov)
+    if post.get("hybrid_note"):
+        msg = f"{msg} {post['hybrid_note']}"
     return {
         "status": "SUCCESS",
         "provider_id": prov,
         "discovered": len(backends),
         "message": msg,
+        "post_save": post,
     }
 
 @router.get("/data-sources", response_model=List[ProviderResponse])

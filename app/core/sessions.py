@@ -13,6 +13,13 @@ _LOCK = threading.Lock()
 _SESSIONS: Dict[str, Dict[str, Any]] = {}
 SESSION_TTL_SECONDS = int(os.getenv("SESSION_TTL_SECONDS", str(24 * 3600)))
 MAX_SESSIONS_PER_USER = max(1, int(os.getenv("MAX_SESSIONS_PER_USER", "2")))
+SESSION_SLIDE_ON_ACCESS = os.getenv("SESSION_SLIDE_ON_ACCESS", "true").lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+SESSION_SLIDE_INTERVAL_SECONDS = max(60, int(os.getenv("SESSION_SLIDE_INTERVAL_SECONDS", "300")))
 _DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "data")
 _SESSIONS_PATH = os.path.join(_DATA_DIR, "api_sessions.json")
 
@@ -96,6 +103,22 @@ def create_session(username: str, role: str, extra: Optional[Dict[str, Any]] = N
     return token
 
 
+def _maybe_slide_session(token: str, rec: Dict[str, Any]) -> Dict[str, Any]:
+    """Extend TTL on activity so active tabs are not dropped while the user is working."""
+    if not SESSION_SLIDE_ON_ACCESS:
+        return rec
+    now = _now()
+    last_slide = float(rec.get("last_slid_at") or rec.get("created_at") or 0)
+    if now - last_slide < SESSION_SLIDE_INTERVAL_SECONDS:
+        return rec
+    rec = dict(rec)
+    rec["expires_at"] = now + SESSION_TTL_SECONDS
+    rec["last_slid_at"] = now
+    _SESSIONS[token] = rec
+    _save_file()
+    return rec
+
+
 def get_session(token: str) -> Optional[Dict[str, Any]]:
     if not token or not token.startswith("qtok_"):
         return None
@@ -109,6 +132,7 @@ def get_session(token: str) -> Optional[Dict[str, Any]]:
             _SESSIONS.pop(token, None)
             _save_file()
             return None
+        rec = _maybe_slide_session(token, rec)
         return dict(rec)
 
 
