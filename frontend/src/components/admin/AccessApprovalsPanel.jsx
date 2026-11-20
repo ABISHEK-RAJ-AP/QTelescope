@@ -118,11 +118,7 @@ function PendingCard({ user, roleOptions, canEdit, busy, onRole, onApprove, onRe
               className="input-control"
               value={draftRole}
               disabled={busy}
-              onChange={(e) => {
-                const next = e.target.value;
-                setDraftRole(next);
-                onRole(user.username, next);
-              }}
+              onChange={(e) => onRole(user.username, e.target.value)}
             >
               {roleOptions.map((r) => (
                 <option key={r.id || r.role} value={r.id || r.role}>
@@ -290,23 +286,40 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
   const pageUsers = directoryRows.slice((dirPageSafe - 1) * DIR_PAGE, dirPageSafe * DIR_PAGE);
   const hiddenTestUsers = scopedRows.filter((u) => TEST_USER.test(u.username || '')).length;
 
-  const onRole = async (username, role) => {
+  const applyRole = async (username, role) => {
     const next = (role || '').trim();
     if (!next) return;
-    const current = rows.find((u) => u.username === username)?.role;
-    if (current === next) return;
-    setBusy(username);
+    setBusy(`role:${username}`);
     const prev = rows;
     setRows((list) => list.map((u) => (u.username === username ? { ...u, role: next } : u)));
     try {
       await api.assignUserRole(username, next);
+      onNotice?.({ type: 'success', text: `${username} is now ${roleLabel(next)}.` });
     } catch (e) {
       setRows(prev);
       onNotice?.({ type: 'error', text: e?.message || 'Role update failed.' });
     } finally {
       setBusy('');
+      setConfirm(null);
     }
   };
+
+  const requestRoleChange = (username, nextRole) => {
+    if (!canEdit) return;
+    const current = rows.find((u) => u.username === username)?.role;
+    const next = (nextRole || '').trim();
+    if (!next || current === next) return;
+    setConfirm({
+      kind: 'role',
+      username,
+      nextRole: next,
+      prevRole: current,
+      title: 'Change role?',
+      body: `Update ${username} from ${roleLabel(current) || current || '—'} to ${roleLabel(next) || next}. Permissions take effect on next sign-in.`,
+    });
+  };
+
+  const onRole = (username, role) => requestRoleChange(username, role);
 
   const applyStatus = async (username, accountStatus) => {
     setBusy(`status:${username}`);
@@ -596,7 +609,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
                           <select
                             className="input-control admin-users-role-select"
                             value={u.role || 'Operator'}
-                            disabled={busy === u.username}
+                            disabled={busy === u.username || busy === `role:${u.username}`}
                             aria-label={`Role for ${u.username}`}
                             onChange={(e) => onRole(u.username, e.target.value)}
                           >
@@ -774,11 +787,18 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
         dlg={confirm ? {
           title: confirm.title,
           body: confirm.body,
-          confirm: 'Confirm',
-          danger: confirm.accountStatus === 'rejected' || confirm.accountStatus === 'suspended',
-          onConfirm: () => applyStatus(confirm.username, confirm.accountStatus),
+          confirm: confirm.kind === 'role' ? 'Change role' : 'Confirm',
+          danger: confirm.kind !== 'role'
+            && (confirm.accountStatus === 'rejected' || confirm.accountStatus === 'suspended'),
+          onConfirm: () => (
+            confirm.kind === 'role'
+              ? applyRole(confirm.username, confirm.nextRole)
+              : applyStatus(confirm.username, confirm.accountStatus)
+          ),
         } : null}
-        busy={Boolean(confirm && busy === `status:${confirm.username}`)}
+        busy={Boolean(confirm && (
+          busy === `status:${confirm.username}` || busy === `role:${confirm.username}`
+        ))}
         onCancel={() => setConfirm(null)}
       />
     </div>

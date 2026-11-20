@@ -45,7 +45,11 @@ from app.core.rbac_audit import rbac_audit_report
 from app.providers.catalog import (
     CATALOG, BY_ID, upsert_stored, stored_configured, public_extra,
 )
-from app.providers.truth import provider_truth_label, truth_help
+from app.alerts.rule_eval import effective_thresholds, load_rules
+from app.analytics.modality_thresholds import normalize_modality, modality_profile
+
+_MODALITIES = ("superconducting", "trapped_ion", "neutral_atom", "simulator")
+from app.providers.truth import provider_truth_label, truth_help, truth_status_title
 from app.providers.live_harness import run_live_verification
 from app.services.collector_dlq import list_failures as list_collector_dlq
 from app.services.circuit_breaker import snapshot as circuit_snapshot
@@ -142,12 +146,17 @@ def get_configured_credentials(_: str = Depends(require_operator)):
         pid = item["id"]
         configured = bool(live_flags.get(pid) or stored_configured(pid))
         truth = provider_truth_label(item, configured=configured)
+        optional_cred = pid == "rigetti_quantum" or any(
+            f.get("required") is False for f in item.get("fields") or []
+        )
         entry = {
             **item,
             "is_configured": configured,
+            "credential_optional": optional_cred,
             "adapter_status": "LIVE" if item["adapter"] == "live" else "STUB",
             "truth_label": truth,
-            "truth_help": truth_help(truth),
+            "truth_title": truth_status_title(truth, provider_id=pid),
+            "truth_help": truth_help(truth, provider_id=pid),
             "public_fields": public_extra(pid, item["fields"]),
         }
         if pid == "cdac_quantum":
@@ -220,7 +229,10 @@ def get_rbac_audit(_: str = Depends(require_admin)):
 
 @router.get("/adapters/verification")
 def get_adapter_verification(_: str = Depends(require_operator)):
-    return {"results": run_live_verification(), "note": "Skipped when cloud tokens absent."}
+    return {
+        "results": run_live_verification(),
+        "note": "Providers without required credentials are skipped. Rigetti public QCS is always probed.",
+    }
 
 
 @router.get("/collector-dlq")
@@ -391,8 +403,8 @@ def get_alert_rules(db: Session = Depends(get_db), _: str = Depends(require_admi
     rules = db.query(AlertRuleModel).all()
     if not rules:
         defaults = [
-            {"rule_id": "rule_t1", "metric_name": "T1", "operator": "<", "threshold_value": 40.0, "severity": "CRITICAL", "enabled": True, "description": "T1 coherence time drops below critical threshold"},
-            {"rule_id": "rule_t2", "metric_name": "T2", "operator": "<", "threshold_value": 30.0, "severity": "CRITICAL", "enabled": True, "description": "T2 coherence time drops below critical threshold"},
+            {"rule_id": "rule_t1", "metric_name": "T1", "operator": "<", "threshold_value": 40.0, "severity": "CRITICAL", "enabled": True, "description": "Superconducting: T1 coherence (µs) below critical floor"},
+            {"rule_id": "rule_t2", "metric_name": "T2", "operator": "<", "threshold_value": 30.0, "severity": "CRITICAL", "enabled": True, "description": "Superconducting: T2 coherence (µs) below critical floor"},
             {"rule_id": "rule_ro", "metric_name": "READOUT_ERROR", "operator": ">", "threshold_value": 0.08, "severity": "WARNING", "enabled": True, "description": "Readout error exceeds acceptable upper bound"},
             {"rule_id": "rule_queue", "metric_name": "QUEUE_JOBS", "operator": ">", "threshold_value": 50.0, "severity": "WARNING", "enabled": True, "description": "Pending queue length exceeds threshold"},
             {"rule_id": "rule_calib", "metric_name": "CALIBRATION_AGE", "operator": ">", "threshold_value": 24.0, "severity": "WARNING", "enabled": True, "description": "Calibration age exceeds 24 hours"}
@@ -467,6 +479,35 @@ def delete_alert_rule(rule_id: str, db: Session = Depends(get_db), _: str = Depe
     db.delete(rule)
     db.commit()
     return {"status": "SUCCESS", "message": f"Alert rule '{rule_id}' deleted successfully."}
+
+
+@router.get("/alert-thresholds")
+def get_alert_threshold_preview(db: Session = Depends(get_db), _: str = Depends(require_admin)):
+    """Fleet rule values merged with modality-specific T1/T2 floors (µs) for each backend."""
+    rules = load_rules(db)
+    by_modality = {mod: effective_thresholds(rules, mod) for mod in _MODALITIES}
+    backends = db.query(BackendModel).order_by(BackendModel.backend_name).all()
+    backend_rows = []
+    for b in backends:
+        eff = effective_thresholds(rules, b.qpu_modality)
+        backend_rows.append(
+            {
+                "backend_id": b.backend_id,
+                "backend_name": b.backend_name,
+                "modality": normalize_modality(b.qpu_modality),
+                "effective": eff,
+            }
+        )
+    return {
+        "policy": (
+            "QUEUE_JOBS, CALIBRATION_AGE, and READOUT_ERROR use fleet-wide rules for every backend. "
+            "T1 and T2 fleet rules apply only to superconducting QPUs; trapped-ion, neutral-atom, and "
+            "simulator backends use modality reference floors so microsecond thresholds are not misapplied."
+        ),
+        "modality_defaults": {k: modality_profile(k) for k in _MODALITIES},
+        "effective_by_modality": by_modality,
+        "backends": backend_rows,
+    }
 
 @router.patch("/backends/{backend_id}/catalog")
 def patch_backend_catalog(

@@ -8,10 +8,11 @@ from sqlalchemy.orm import Session
 from app.analytics.health_vector import (
     HEALTH_MODEL_VERSION,
     T_GATE_US,
-    T1_CRIT_US,
     evaluate_qubit,
     mean_or_none,
 )
+from app.analytics.modality_thresholds import t1_crit_us as modality_t1_crit
+from app.analytics.modality_thresholds import threshold_summary
 from app.api.environment import env_severity_for
 from app.core.provenance import resolve_backend_data_lineage
 from app.models.entities import (
@@ -25,11 +26,15 @@ from app.models.entities import (
 from datetime import timedelta
 
 
-def _t1_crit(db: Session) -> float:
+def _global_t1_rule_us(db: Session) -> float | None:
     rule = db.query(AlertRuleModel).filter(AlertRuleModel.rule_id == "rule_t1").first()
-    if rule and rule.threshold_value:
+    if rule and rule.threshold_value is not None:
         return float(rule.threshold_value)
-    return T1_CRIT_US
+    return None
+
+
+def _t1_crit_for_backend(db: Session, modality: str | None) -> float:
+    return modality_t1_crit(modality, _global_t1_rule_us(db))
 
 
 def _latest_gates(db: Session, backend_id: str):
@@ -149,11 +154,15 @@ def _history_by_qubit(db: Session, backend_id: str, n_qubits: int, per_qubit: in
 
 
 def build_health_vector_payload(db: Session) -> dict:
-    t1_crit = _t1_crit(db)
+    global_t1 = _global_t1_rule_us(db)
     backends = db.query(BackendModel).all()
     telemetry_src = _latest_telemetry_sources(db, [b.backend_id for b in backends])
     out = []
     for b in backends:
+        t1_crit = _t1_crit_for_backend(db, b.qpu_modality)
+        thresh = threshold_summary(b.qpu_modality)
+        if global_t1 is not None and thresh["modality"] == "superconducting":
+            thresh["t1_crit_us"] = t1_crit
         env_sev = env_severity_for(b.backend_id)
         g1, g2 = _latest_gates(db, b.backend_id)
         fallback_1q = mean_or_none([g.gate_error for g in g1])
@@ -253,6 +262,7 @@ def build_health_vector_payload(db: Session) -> dict:
                 "env_severity": env_sev,
                 "t_gate_us": t_gate,
                 "t1_crit_us": t1_crit,
+                "threshold_profile": thresh,
                 "data_lineage": lineage["lineage"],
                 "data_source_label": lineage["label"],
                 "metric_gaps": sorted(metric_gaps),
@@ -270,7 +280,7 @@ def build_health_vector_payload(db: Session) -> dict:
         "health_model_version": HEALTH_MODEL_VERSION,
         "disclaimer": "Advisory readiness only — not vendor calibration or scheduler exclusion.",
         "t_gate_us": T_GATE_US,
-        "t1_crit_us": t1_crit,
+        "t1_crit_us": global_t1,
         "backends": out,
     }
 

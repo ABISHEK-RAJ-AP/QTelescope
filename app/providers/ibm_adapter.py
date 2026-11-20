@@ -245,10 +245,18 @@ class IBMProviderAdapter(BaseProviderAdapter):
                 _, st = self._http_request(f"{self.base_url}/backends/{backend_id}/status", headers=headers, timeout=8)
                 is_op = bool(st.get("state") is True or st.get("status") in ["active", "online"])
                 pending = st.get("length_queue", 0)
+                eta = st.get("estimated_time") or st.get("estimated_wait")
+                wait_s = None
+                if eta is not None:
+                    try:
+                        wait_s = float(eta)
+                    except (TypeError, ValueError):
+                        wait_s = None
                 res = {
                     "backend_id": backend_id,
                     "operational": is_op,
                     "pending_jobs": pending,
+                    "estimated_wait_time": wait_s,
                     "status_message": st.get("message") or ("Operational" if is_op else "Maintenance"),
                     "timestamp": utcnow().isoformat(),
                 }

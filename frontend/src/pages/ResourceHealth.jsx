@@ -407,7 +407,7 @@ export const ResourceHealth = () => {
                 <div className="hv-model-tip">
                   <p><strong>Vector H</strong> = F_limit, η_cal, δ_cal, C_exec · {payload.health_model_version}</p>
                   <ul>
-                    <li>T1 floor: {payload.t1_crit_us} µs</li>
+                    <li>T1 floor: {active?.t1_crit_us ?? payload?.t1_crit_us} µs{active?.threshold_profile?.modality ? ` (${active.threshold_profile.modality})` : ''}</li>
                     <li>GREEN: η_cal ≤ 1.2 and limits OK</li>
                     <li>YELLOW: η_cal &gt; 1.5 (recalibrate)</li>
                     <li>RED: T1 or C_exec breach</li>

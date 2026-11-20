@@ -228,12 +228,28 @@ function Integrations({ providers, health, verification, setVerification, canEdi
                     <tr>
                       <td><strong>{p.name}</strong><div className="admin-sub">{p.vendor} · {p.modality}</div></td>
                       <td><Stage ok={live} label={live ? 'Implemented' : 'Stub only'} title={live ? 'Polling adapter exists' : 'Credentials are stored but no poll adapter is installed'} /></td>
-                      <td><Stage ok={p.is_configured} label={p.is_configured ? 'Configured' : 'Not set'} /></td>
+                      <td>
+                        <Stage
+                          ok={p.is_configured || p.credential_optional}
+                          label={
+                            p.credential_optional && !p.is_configured
+                              ? 'Optional'
+                              : p.is_configured
+                                ? 'Configured'
+                                : 'Not set'
+                          }
+                          title={
+                            p.credential_optional
+                              ? 'Public or optional credential — adapter can run without stored secrets'
+                              : undefined
+                          }
+                        />
+                      </td>
                       <td>
                         <Stage
                           ok={conn}
                           label={!live ? 'N/A' : v ? (v.skipped ? 'Not testable' : v.verified ? 'Verified' : 'Failed') : 'Not run'}
-                          title={v?.skipped ? v.reason : v?.truth_label}
+                          title={v?.skipped ? v.reason : (v?.truth_title || p.truth_title || p.truth_help)}
                         />
                       </td>
                       <td>
@@ -270,12 +286,15 @@ function Integrations({ providers, health, verification, setVerification, canEdi
           )}
         >
           <form className="admin-cred-form" onSubmit={(e) => { e.preventDefault(); if (!Object.keys(errors(editProvider)).length) setConfirm(editProvider.id); }}>
-            <p className="page-hint" style={{ margin: 0 }}>
-              {editProvider.truth_help} Leave secrets blank to keep stored values.
-              {(editProvider.adapter === 'live' || editProvider.adapter_status === 'LIVE')
-                ? ' Saving runs a live check and collection pass.'
-                : ' Stub providers store credentials only.'}
-            </p>
+            <div className="page-hint admin-cred-intro" style={{ margin: 0 }}>
+              <p>{editProvider.truth_help}</p>
+              <p>Leave secret fields blank to keep values already stored on the server.</p>
+              {(editProvider.adapter === 'live' || editProvider.adapter_status === 'LIVE') ? (
+                <p>Saving runs a connection check and one telemetry collection pass.</p>
+              ) : (
+                <p>This provider stores credentials only; no live poll adapter is installed.</p>
+              )}
+            </div>
             <div className="admin-cred-fields">
               {editProvider.fields.map((f) => {
                 const err = dirty(editProvider) ? errors(editProvider)[f.key] : null;
@@ -651,7 +670,15 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
 }
 
 /* ------------------------------- Rules ------------------------------- */
+function fmtUs(v) {
+  if (v == null || !Number.isFinite(Number(v))) return '—';
+  const n = Number(v);
+  return n >= 10_000 ? `${(n / 1000).toFixed(0)}k µs` : `${n} µs`;
+}
+
 function Rules({ rules, canEdit, reload }) {
+  const [thresholds, setThresholds] = useState(null);
+  const [previewBackend, setPreviewBackend] = useState('');
   const [showTestRules, setShowTestRules] = useState(false);
   const testRuleCount = useMemo(() => rules.filter((r) => TEST_RULE_ID.test(r.rule_id)).length, [rules]);
   const [purgeTestAsk, setPurgeTestAsk] = useState(false);
@@ -667,6 +694,18 @@ function Rules({ rules, canEdit, reload }) {
   const [formErr, setFormErr] = useState(null);
   const [note, setNote] = useState(null);
   const reason = canEdit ? undefined : 'Admin role required';
+
+  useEffect(() => {
+    api.getAlertThresholds().then(setThresholds).catch(() => setThresholds(null));
+  }, [rules]);
+
+  const previewRow = useMemo(() => {
+    if (!thresholds) return null;
+    if (previewBackend) {
+      return thresholds.backends?.find((b) => b.backend_id === previewBackend) || null;
+    }
+    return null;
+  }, [thresholds, previewBackend]);
 
   const open = (r) => {
     setFormErr(null);
@@ -740,7 +779,10 @@ function Rules({ rules, canEdit, reload }) {
         <div className="admin-card-header-actions admin-pad">
           <div>
             <h3 className="admin-card-title" style={{ marginBottom: 2 }}>Alert rules</h3>
-            <p className="page-hint" style={{ margin: 0 }}>Threshold rules evaluated against backend telemetry.</p>
+            <p className="page-hint" style={{ margin: 0 }}>
+              Fleet-wide queue, calibration, and readout rules apply to every backend.
+              T1/T2 rules apply to superconducting QPUs only; other modalities use reference coherence floors.
+            </p>
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             {testRuleCount > 0 && (
@@ -763,6 +805,67 @@ function Rules({ rules, canEdit, reload }) {
           </div>
         </div>
         <div className="admin-pad" style={{ paddingTop: 0 }}><Notice note={note} /></div>
+        {thresholds && (
+          <div className="admin-pad" style={{ paddingTop: 0, paddingBottom: 12 }}>
+            <div className="admin-sub" style={{ marginBottom: 8 }}>{thresholds.policy}</div>
+            <div className="admin-modal-grid-2" style={{ alignItems: 'end', marginBottom: 10 }}>
+              <label className="admin-field">
+                <span className="admin-input-label">Effective thresholds preview</span>
+                <select
+                  className="input-control"
+                  value={previewBackend}
+                  onChange={(e) => setPreviewBackend(e.target.value)}
+                  aria-label="Backend for threshold preview"
+                >
+                  <option value="">Select backend…</option>
+                  {(thresholds.backends || []).map((b) => (
+                    <option key={b.backend_id} value={b.backend_id}>
+                      {b.backend_name || b.backend_id} ({b.modality})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            {previewRow?.effective && (
+              <table className="custom-table admin-table admin-threshold-preview">
+                <thead>
+                  <tr>
+                    <th>Metric</th>
+                    <th>Effective limit</th>
+                    <th>Source</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>T1 (µs)</td>
+                    <td className="admin-mono">{fmtUs(previewRow.effective.t1_crit_us)}</td>
+                    <td>{previewRow.effective.t1_t2_from_fleet_rules ? 'Fleet rule + modality' : 'Modality default'}</td>
+                  </tr>
+                  <tr>
+                    <td>T2 (µs)</td>
+                    <td className="admin-mono">{fmtUs(previewRow.effective.t2_crit_us)}</td>
+                    <td>{previewRow.effective.t1_t2_from_fleet_rules ? 'Fleet rule + modality' : 'Modality default'}</td>
+                  </tr>
+                  <tr>
+                    <td>QUEUE_JOBS</td>
+                    <td className="admin-mono">&gt; {previewRow.effective.queue_jobs}</td>
+                    <td>Fleet rule</td>
+                  </tr>
+                  <tr>
+                    <td>CALIBRATION_AGE (h)</td>
+                    <td className="admin-mono">&gt; {previewRow.effective.calibration_age_hours}</td>
+                    <td>Fleet rule</td>
+                  </tr>
+                  <tr>
+                    <td>READOUT_ERROR</td>
+                    <td className="admin-mono">&gt; {previewRow.effective.readout_error}</td>
+                    <td>Fleet rule</td>
+                  </tr>
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
         <div className="table-container" style={{ border: 'none' }}>
           <table className="custom-table admin-table">
             <thead><tr><th>Rule</th><th>Condition</th><th>Severity</th><th>Status</th><th style={{ textAlign: 'right' }}>Actions</th></tr></thead>

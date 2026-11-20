@@ -4,6 +4,12 @@ from app.providers.ibm_adapter import IBMProviderAdapter
 from app.normalizers.telemetry_normalizer import TelemetryNormalizer
 from app.monitoring.freshness import CalibrationFreshnessMonitor
 from app.alerts.alert_engine import AlertEngine
+from app.alerts.rule_eval import (
+    coherence_thresholds,
+    effective_thresholds,
+    load_rules,
+    rule_severity,
+)
 from app.core.provenance import infer_collection_lineage
 from app.models.entities import (
     ProviderModel, BackendModel, QubitModel, GateModel, ConnectivityEdgeModel,
@@ -226,6 +232,20 @@ class TelemetryCollector:
                 .filter(AlertModel.status.in_(["ACTIVE", "ACKNOWLEDGED"]))
                 .all()
             )
+            backend_row = (
+                self.db.query(BackendModel).filter(BackendModel.backend_id == backend_id).first()
+            )
+            modality = backend_row.qpu_modality if backend_row else None
+            rules = load_rules(self.db)
+            coh = coherence_thresholds(rules, modality)
+            eff = effective_thresholds(rules, modality)
+            rule_sev = {
+                "T1": rule_severity(rules, "T1", "CRITICAL"),
+                "T2": rule_severity(rules, "T2", "CRITICAL"),
+                "QUEUE_JOBS": rule_severity(rules, "QUEUE_JOBS", "WARNING"),
+                "CALIBRATION_AGE": rule_severity(rules, "CALIBRATION_AGE", "WARNING"),
+                "READOUT_ERROR": rule_severity(rules, "READOUT_ERROR", "WARNING"),
+            }
             triggered = AlertEngine.evaluate_telemetry(
                 backend_id=backend_id,
                 operational=status_norm["operational"],
@@ -233,7 +253,12 @@ class TelemetryCollector:
                 calibration_freshness=freshness,
                 calibration_age_hours=age_hrs,
                 qubits_telemetry=qubits_norm,
-                existing_active_alerts=active_alerts
+                existing_active_alerts=active_alerts,
+                coherence=coh,
+                queue_threshold=float(eff["queue_jobs"]),
+                calibration_age_threshold=float(eff["calibration_age_hours"]),
+                readout_error_threshold=float(eff["readout_error"]),
+                rule_severities=rule_sev,
             )
             for new_alt in triggered:
                 self.db.add(new_alt)

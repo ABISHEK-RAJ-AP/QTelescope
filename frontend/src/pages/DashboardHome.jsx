@@ -221,8 +221,8 @@ function DashboardHomeInner() {
         },
       },
       legend: { top: 0, textStyle: { color: theme.textColor, fontSize: 11 } },
-      grid: { top: 30, left: 8, right: 24, bottom: 8, containLabel: true },
-      yAxis: { type: 'category', data: names, axisLabel: { color: theme.textColor, fontSize: 11 }, axisLine: { show: false }, axisTick: { show: false } },
+      grid: { top: 30, left: 8, right: 24, bottom: 16, containLabel: true },
+      yAxis: { type: 'category', data: names, axisLabel: { color: theme.textColor, fontSize: 11 }, axisLine: { lineStyle: { color: theme.axisLine } } },
       xAxis: {
         type: 'log', min: 1, name: 'T1 (µs, log)', nameTextStyle: { color: theme.textColor, fontSize: 10 },
         axisLabel: { color: theme.textColor, fontSize: 10 }, splitLine: { lineStyle: { color: theme.splitColor, type: 'dashed' } },
@@ -255,8 +255,9 @@ function DashboardHomeInner() {
     return {
       backgroundColor: 'transparent',
       tooltip: baseTooltip(resolved === 'dark'),
-      xAxis: { type: 'category', data: queueRows.map((q) => shortName(rows.find((r) => r.backend_id === q.backend_id)?.backend_name || q.backend_id)), axisLabel: { color: theme.textColor, rotate: 24, fontSize: 10 }, axisLine: { lineStyle: { color: theme.axisLine } } },
-      yAxis: { type: 'value', name: 'pending', nameTextStyle: { color: theme.textColor }, axisLabel: { color: theme.textColor }, splitLine: { lineStyle: { color: theme.splitColor } } },
+      grid: { left: 12, right: 12, top: 16, bottom: 8, containLabel: true },
+      xAxis: { type: 'category', data: queueRows.map((q) => shortName(rows.find((r) => r.backend_id === q.backend_id)?.backend_name || q.backend_id)), axisLabel: { color: theme.textColor, rotate: 28, fontSize: 10, hideOverlap: true }, axisLine: { lineStyle: { color: theme.axisLine } } },
+      yAxis: { type: 'value', name: 'pending jobs', minInterval: 1, nameTextStyle: { color: theme.textColor }, axisLabel: { color: theme.textColor }, splitLine: { lineStyle: { color: theme.splitColor } } },
       series: [{ type: 'bar', barMaxWidth: 28, data: queueRows.map((q) => q.pending_jobs ?? null), itemStyle: { color: sem.accent, borderRadius: [4, 4, 0, 0] } }],
     };
   }, [queueRows, rows, theme, resolved]);
@@ -270,8 +271,9 @@ function DashboardHomeInner() {
     return {
       backgroundColor: 'transparent',
       tooltip: baseTooltip(resolved === 'dark'),
-      xAxis: { type: 'category', data: calRows.map((c) => shortName(c.backend_name || c.backend_id)), axisLabel: { color: theme.textColor, rotate: 24, fontSize: 10 }, axisLine: { lineStyle: { color: theme.axisLine } } },
-      yAxis: { type: 'value', name: 'hours', nameTextStyle: { color: theme.textColor }, axisLabel: { color: theme.textColor }, splitLine: { lineStyle: { color: theme.splitColor } } },
+      grid: { left: 12, right: 12, top: 16, bottom: 8, containLabel: true },
+      xAxis: { type: 'category', data: calRows.map((c) => shortName(c.backend_name || c.backend_id)), axisLabel: { color: theme.textColor, rotate: 28, fontSize: 10, hideOverlap: true }, axisLine: { lineStyle: { color: theme.axisLine } } },
+      yAxis: { type: 'value', name: 'hours', minInterval: 1, nameTextStyle: { color: theme.textColor }, axisLabel: { color: theme.textColor }, splitLine: { lineStyle: { color: theme.splitColor } } },
       series: [{ type: 'bar', barMaxWidth: 28, data: calRows.map((c) => Number(c.calibration_age)), itemStyle: { color: sem.info, borderRadius: [4, 4, 0, 0] } }],
     };
   }, [calRows, theme, resolved]);

@@ -142,30 +142,32 @@ def get_module_status():
 def explain_fleet_health(db: Session = Depends(get_db)):
     """Structured narratives for each backend router decision."""
     vec = get_health_vector(db)
-    t1_crit = vec.get("t1_crit_us", T1_CRIT_US)
     return {
         "health_model_version": vec.get("health_model_version"),
-        "backends": [explain_backend(b, t1_crit=t1_crit) for b in vec.get("backends", [])],
+        "backends": [
+            explain_backend(b, t1_crit=b.get("t1_crit_us") or vec.get("t1_crit_us", T1_CRIT_US))
+            for b in vec.get("backends", [])
+        ],
     }
 
 
 @router.get("/explain/{backend_id}")
 def explain_backend_health(backend_id: str, db: Session = Depends(get_db)):
     vec = get_health_vector(db)
-    t1_crit = vec.get("t1_crit_us", T1_CRIT_US)
     match = next((b for b in vec.get("backends", []) if b["backend_id"] == backend_id), None)
     if not match:
         raise HTTPException(status_code=404, detail="Backend not found in health vector")
+    t1_crit = match.get("t1_crit_us") or vec.get("t1_crit_us", T1_CRIT_US)
     return explain_backend(match, t1_crit=t1_crit)
 
 
 @router.get("/explain/{backend_id}/qubits/{qubit_index}")
 def explain_qubit_health(backend_id: str, qubit_index: int, db: Session = Depends(get_db)):
     vec = get_health_vector(db)
-    t1_crit = vec.get("t1_crit_us", T1_CRIT_US)
     match = next((b for b in vec.get("backends", []) if b["backend_id"] == backend_id), None)
     if not match:
         raise HTTPException(status_code=404, detail="Backend not found")
+    t1_crit = match.get("t1_crit_us") or vec.get("t1_crit_us", T1_CRIT_US)
     q = next((x for x in match.get("qubits", []) if x["qubit_index"] == qubit_index), None)
     if not q:
         raise HTTPException(status_code=404, detail="Qubit not found")

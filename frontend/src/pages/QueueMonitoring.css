@@ -11,11 +11,31 @@
 .qm-charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
 @media (max-width: 1000px) { .qm-charts { grid-template-columns: 1fr; } }
 .qm-charts .chart-panel { margin: 0; height: 100%; }
+.qm-charts .chart-panel__body:has(.chart-panel__stage) {
+  padding-bottom: 8px;
+}
+.qm-charts .chart-panel__stage {
+  display: flex;
+  align-items: stretch;
+}
+.qm-bar-chart {
+  flex: 1;
+  min-height: 0;
+}
 
 .qm-seg { display: inline-flex; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; }
 .qm-seg button { background: transparent; border: 0; color: var(--text-secondary); padding: 3px 10px; font-size: 12px; cursor: pointer; }
 .qm-seg button[aria-pressed='true'] { background: var(--bg-card-hover); color: var(--text-primary); font-weight: 600; }
 .qm-seg button:focus-visible, .qm-link:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: -2px; }
+.qm-charts .chart-panel__head {
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: flex-start;
+}
+.qm-charts .chart-panel__actions {
+  flex-shrink: 0;
+  margin-left: auto;
+}
 
 .qm-alt { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
 .qm-alt th, .qm-alt td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--border-color); font-variant-numeric: tabular-nums; }

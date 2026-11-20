@@ -6,6 +6,7 @@ from app.providers.truth import (
     STUB,
     ionq_live_enabled,
     provider_truth_label,
+    truth_status_title,
 )
 from app.providers.live_harness import run_live_verification
 from app.facility.mqtt_boundary import NotBuiltFacilityMqtt, mqtt_ingest_status
@@ -32,6 +33,11 @@ def test_ionq_kill_switch_mock_only(monkeypatch):
     item = BY_ID["ionq_quantum"]
     assert provider_truth_label(item, configured=True) == MOCK_ONLY
     assert not ionq_live_enabled()
+
+
+def test_rigetti_truth_title_not_raw_enum():
+    assert "QCS" in truth_status_title(LIVE_UNVERIFIED, provider_id="rigetti_quantum")
+    assert "LIVE_" not in truth_status_title(LIVE_UNVERIFIED, provider_id="rigetti_quantum")
 
 
 def test_live_harness_skips_without_secrets(monkeypatch):

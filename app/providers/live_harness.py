@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 from app.providers.catalog import BY_ID
 from app.providers.credential_live import build_live_adapter, env_token_for, normalize_provider_id
 from app.providers.sdk.contract import run_adapter_contract
-from app.providers.truth import provider_truth_label
+from app.providers.truth import provider_truth_label, truth_status_title
 
 _LIVE_PROVIDER_IDS = ("ibm_quantum", "rigetti_quantum", "ionq_quantum")
 
@@ -35,35 +35,41 @@ def run_live_verification() -> List[Dict[str, Any]]:
         token = env_token_for(pid) if env_key else ""
         public_ok = pid == "rigetti_quantum"
         if (not token or len(token.strip()) < 8) and not public_ok:
+            label = provider_truth_label(item, configured=False)
             out.append(
                 {
                     "provider_id": pid,
                     "skipped": True,
-                    "reason": f"{env_key or 'credentials'} not set",
-                    "truth_label": provider_truth_label(item, configured=False),
+                    "reason": "Required API credentials are not configured on the server.",
+                    "truth_label": label,
+                    "truth_title": truth_status_title(label, provider_id=pid),
                 }
             )
             continue
         adapter = _adapter_for(normalize_provider_id(pid), token or "")
         if not adapter:
+            label = provider_truth_label(item, configured=False)
             out.append(
                 {
                     "provider_id": pid,
                     "skipped": True,
-                    "reason": "No live adapter wired",
-                    "truth_label": provider_truth_label(item, configured=False),
+                    "reason": "Live telemetry adapter is not installed for this provider.",
+                    "truth_label": label,
+                    "truth_title": truth_status_title(label, provider_id=pid),
                 }
             )
             continue
         probe = _probe_backend_id(adapter)
         result = run_adapter_contract(adapter, probe_backend_id=probe)
         verified = bool(result.get("ok"))
+        label = provider_truth_label(item, configured=True, verified=verified)
         out.append(
             {
                 "provider_id": pid,
                 "skipped": False,
                 "verified": verified,
-                "truth_label": provider_truth_label(item, configured=True, verified=verified),
+                "truth_label": label,
+                "truth_title": truth_status_title(label, provider_id=pid),
                 "contract": result,
             }
         )

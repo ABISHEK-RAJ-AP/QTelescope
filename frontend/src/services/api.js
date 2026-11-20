@@ -326,6 +326,7 @@ export const api = {
   createAlertRule: (data) => fetchApi('/admin/alert-rules', { method: 'POST', body: JSON.stringify(data) }),
   updateAlertRule: (ruleId, data) => fetchApi(`/admin/alert-rules/${ruleId}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteAlertRule: (ruleId) => fetchApi(`/admin/alert-rules/${ruleId}`, { method: 'DELETE' }),
+  getAlertThresholds: () => fetchApi('/admin/alert-thresholds'),
 
   // Device capability sheets
   getDeviceCapabilityCoverage: () => fetchApi('/device-capabilities/coverage'),

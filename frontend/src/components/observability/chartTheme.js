@@ -146,23 +146,115 @@ export function chartLabelStyle(isDark, px = 11) {
   return { color: t.textColor, fontSize: scaledFont(px) };
 }
 
+function isSparklineAxes(xAxis, yAxis) {
+  const xs = xAxis == null ? [] : Array.isArray(xAxis) ? xAxis : [xAxis];
+  const ys = yAxis == null ? [] : Array.isArray(yAxis) ? yAxis : [yAxis];
+  if (!xs.length && !ys.length) return false;
+  return xs.every((a) => a && a.show === false) && ys.every((a) => a && a.show === false);
+}
+
+function maxCategoryLabelRotate(xAxis) {
+  const xs = xAxis == null ? [] : Array.isArray(xAxis) ? xAxis : [xAxis];
+  let max = 0;
+  for (const a of xs) {
+    if (!a || a.type !== 'category') continue;
+    const r = a.axisLabel?.rotate;
+    if (typeof r === 'number') max = Math.max(max, Math.abs(r));
+  }
+  return max;
+}
+
+/** Shared axis styling: visible spines, readable names, reduced label collision. */
+export function axisChrome(axis, isDark, role = 'y') {
+  if (!axis || typeof axis !== 'object') return axis;
+  const t = getChartTheme(isDark);
+  const explicitHide = axis.show === false || axis.axisLine?.show === false;
+  return {
+    ...axis,
+    axisLine: explicitHide
+      ? { show: false, ...(axis.axisLine || {}) }
+      : {
+          show: true,
+          lineStyle: { color: t.axisLine, width: 1, ...(axis.axisLine?.lineStyle || {}) },
+          ...(axis.axisLine || {}),
+        },
+    axisTick: {
+      show: explicitHide ? false : axis.axisTick?.show !== false,
+      lineStyle: { color: t.axisLine, ...(axis.axisTick?.lineStyle || {}) },
+      ...(axis.axisTick || {}),
+    },
+    axisLabel: {
+      color: t.textColor,
+      fontSize: scaledFont(10),
+      hideOverlap: axis.axisLabel?.hideOverlap !== false,
+      margin: axis.axisLabel?.margin ?? scaledFont(8),
+      ...(axis.axisLabel || {}),
+    },
+    nameTextStyle: {
+      color: t.textColor,
+      fontSize: scaledFont(10),
+      ...(axis.nameTextStyle || {}),
+    },
+    nameGap: axis.nameGap ?? (role === 'x' ? scaledFont(30) : scaledFont(24)),
+    splitLine: {
+      show:
+        axis.splitLine?.show
+        ?? ((axis.type === 'value' || axis.type === 'log' || axis.type === 'time')
+          && role === 'y'),
+      lineStyle: { color: t.splitColor, ...(axis.splitLine?.lineStyle || {}) },
+      ...(typeof axis.splitLine === 'object' ? axis.splitLine : {}),
+    },
+  };
+}
+
+function polishAxes(list, isDark, role) {
+  if (list == null || list === false) return list;
+  const arr = Array.isArray(list) ? list : [list];
+  const out = arr.map((a) => axisChrome(a, isDark, role));
+  return Array.isArray(list) ? out : out[0];
+}
+
+function polishGridEntry(grid, { hasLegend, legPos, legPad, rotateDeg }) {
+  const g = {
+    left: 12,
+    right: 16,
+    containLabel: true,
+    ...(grid || {}),
+  };
+  const bottomPad = scaledFont(24) + (rotateDeg >= 20 ? scaledFont(28) : rotateDeg > 0 ? scaledFont(14) : 0);
+  if (hasLegend) {
+    if (legPos === 'bottom') {
+      g.top = Math.max(Number(g.top) || 0, scaledFont(18));
+      g.bottom = Math.max(Number(g.bottom) || 0, legPad);
+    } else {
+      g.top = Math.max(Number(g.top) || 0, legPad);
+      g.bottom = Math.max(Number(g.bottom) || 0, bottomPad);
+    }
+  } else {
+    g.top = Math.max(Number(g.top) || 0, scaledFont(36));
+    g.bottom = Math.max(Number(g.bottom) || 0, bottomPad);
+  }
+  return g;
+}
+
 /** Reserve space for legend + axis labels so titles do not overlap series. */
 export function polishChartOption(option, isDark, { legendPosition } = {}) {
   if (!option || typeof option !== 'object') return option;
   const out = { ...option };
+  const sparkline = isSparklineAxes(out.xAxis, out.yAxis);
+
+  if (!sparkline) {
+    out.xAxis = polishAxes(out.xAxis, isDark, 'x');
+    out.yAxis = polishAxes(out.yAxis, isDark, 'y');
+  }
+
+  const rotateDeg = maxCategoryLabelRotate(out.xAxis);
   const hasLegend = out.legend != null && out.legend !== false;
   const legPos = legendPosition
     || (out.legend?.bottom != null ? 'bottom' : 'top');
 
-  const grid = {
-    left: 12,
-    right: 16,
-    containLabel: true,
-    ...(out.grid || {}),
-  };
-
+  const legPad = scaledFont(36);
   if (hasLegend) {
-    const legPad = scaledFont(36);
     out.legend = {
       type: 'scroll',
       orient: 'horizontal',
@@ -178,19 +270,30 @@ export function polishChartOption(option, isDark, { legendPosition } = {}) {
     if (legPos === 'bottom') {
       out.legend.bottom = out.legend.bottom ?? 2;
       delete out.legend.top;
-      grid.top = grid.top ?? scaledFont(18);
-      grid.bottom = Math.max(Number(grid.bottom) || 0, legPad);
     } else {
       out.legend.top = out.legend.top ?? 2;
       delete out.legend.bottom;
-      grid.top = Math.max(Number(grid.top) || 0, legPad);
-      grid.bottom = grid.bottom ?? scaledFont(28);
     }
-  } else {
-    grid.top = grid.top ?? scaledFont(16);
-    grid.bottom = grid.bottom ?? scaledFont(24);
   }
 
-  out.grid = grid;
+  if (Array.isArray(out.grid)) {
+    out.grid = out.grid.map((g) => polishGridEntry(g, { hasLegend, legPos, legPad, rotateDeg }));
+  } else {
+    out.grid = polishGridEntry(out.grid, { hasLegend, legPos, legPad, rotateDeg });
+  }
+
+  if (Array.isArray(out.series)) {
+    out.series = out.series.map((s) => {
+      if (!s || typeof s !== 'object' || !s.label || s.label.show === false) return s;
+      return {
+        ...s,
+        label: {
+          overflow: 'truncate',
+          ...(s.label || {}),
+        },
+      };
+    });
+  }
+
   return out;
 }
