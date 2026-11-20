@@ -5,8 +5,10 @@ from typing import Any, Dict, List, Optional
 
 METHODOLOGY = (
     "Rank T1/T2 and F_limit only within the same qpu_modality. "
+    "Do not rank η_cal across modalities (trapped-ion coherence can inflate the ratio). "
     "Cross-modality rows are side-by-side context, not a league table. "
-    "Units: microseconds for T1/T2; dimensionless for F_limit and health-vector means."
+    "Units: microseconds for T1/T2; dimensionless probabilities for F_limit, η_cal, C_exec; "
+    "readout error is a probability in [0, 1]."
 )
 
 

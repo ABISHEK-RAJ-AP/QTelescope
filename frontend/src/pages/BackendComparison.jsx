@@ -62,8 +62,40 @@ const DIST_METRICS = [
   { id: 't2', label: 'T2', unit: 'µs', key: 't2', sensitive: true, log: true, positive: true },
   { id: 'ro', label: 'Readout error', unit: '', key: 'readout_error', positive: true, rate: true },
   { id: 'fl', label: 'F_limit', unit: '', key: 'F_limit', sensitive: true },
-  { id: 'eta', label: 'η_cal', unit: '', key: 'eta_cal', sensitive: true, log: true, positive: true },
-  { id: 'cx', label: 'C_exec', unit: '', key: 'C_exec' },
+  { id: 'eta', label: 'η_cal', unit: 'ratio', key: 'eta_cal', sensitive: true, log: true, positive: true, dimensionless: true },
+  { id: 'cx', label: 'C_exec', unit: 'probability', key: 'C_exec', dimensionless: true },
+];
+
+const VECTOR_CHARTS = [
+  {
+    id: 'vfl',
+    label: 'Coherence infidelity (1 − F_limit)',
+    vectorKey: 'F_limit',
+    transform: (v) => (v == null ? null : 1 - v),
+    yMax: 0.0025,
+    tableFmt: (v) => (v == null ? null : (1 - v).toExponential(3)),
+  },
+  {
+    id: 'veta',
+    label: 'η_cal',
+    vectorKey: 'eta_cal',
+    log: true,
+    splitModality: true,
+    unit: 'ratio (dimensionless)',
+  },
+  {
+    id: 'vcx',
+    label: 'C_exec',
+    vectorKey: 'C_exec',
+    unit: 'probability [0, 1]',
+    tableFmt: (v) => (v == null ? null : v.toFixed(4)),
+  },
+  {
+    id: 'vd',
+    label: 'δ_cal',
+    vectorKey: 'delta_cal',
+    unit: 'σ from baseline',
+  },
 ];
 
 const num = (v) => (v != null && Number.isFinite(Number(v)) ? Number(v) : null);
@@ -74,6 +106,14 @@ const fmt = (v, metric) => {
     if (pct >= 10) return `${pct.toFixed(2)}%`;
     if (pct >= 1) return `${pct.toFixed(3)}%`;
     return `${pct.toFixed(4)}%`;
+  }
+  const key = metric?.key || metric?.id;
+  if (key === 'F_limit' || key === 'fl') return v.toFixed(6);
+  if (key === 'C_exec' || key === 'cx') return v.toFixed(4);
+  if (key === 'eta_cal' || key === 'eta') {
+    const a = Math.abs(v);
+    if (a >= 100) return v.toFixed(1);
+    return v.toFixed(4);
   }
   const a = Math.abs(v);
   if (a >= 1e5) return v.toExponential(2);
@@ -122,26 +162,33 @@ function BoxChart({ rows, metric, dark }) {
   return <QtECharts option={option} style={{ height: 320, width: '100%' }} notMerge />;
 }
 
-function BarChart({ rows, dark, stacked, unit }) {
+function BarChart({ rows, dark, stacked, unit, log, yMin, yMax }) {
   const t = getChartTheme(dark);
   const option = useMemo(() => ({
     grid: { left: 48, right: 12, top: stacked ? 28 : 12, bottom: 40 },
     tooltip: baseTooltip(dark),
     legend: stacked ? { top: 0, textStyle: { color: t.textColor }, data: rows.series.map((s) => s.name) } : undefined,
     xAxis: { type: 'category', data: rows.names, ...axisBase(t), axisLabel: { color: t.textColor, interval: 0 } },
-    yAxis: { type: 'value', name: unit, ...axisBase(t) },
+    yAxis: {
+      type: log ? 'log' : 'value',
+      name: unit,
+      min: yMin,
+      max: yMax,
+      ...axisBase(t),
+      scale: !log,
+    },
     series: rows.series.map((s) => ({ ...s, type: 'bar', barMaxWidth: 36, stack: stacked ? 'x' : undefined })),
-  }), [rows, dark, stacked, unit, t]);
+  }), [rows, dark, stacked, unit, log, yMin, yMax, t]);
   return <QtECharts option={option} style={{ height: 320, width: '100%' }} notMerge />;
 }
 
-function RangeCell({ s, sensitive, mixed }) {
+function RangeCell({ s, metric, mixed }) {
   if (!s) return <span className="bc-missing">missing</span>;
   return (
     <span className="bc-range">
-      <b>{fmt(s.med)}</b>
-      <small>{fmt(s.min)} – {fmt(s.max)}</small>
-      {sensitive && mixed && <span className="bc-warnmark" title="Value scale differs by modality">⚠ modality-specific</span>}
+      <b>{fmt(s.med, metric)}</b>
+      <small>{fmt(s.min, metric)} – {fmt(s.max, metric)}</small>
+      {metric?.sensitive && mixed && <span className="bc-warnmark" title="Value scale differs by modality">⚠ modality-specific</span>}
     </span>
   );
 }
@@ -263,26 +310,28 @@ export const BackendComparison = () => {
 
   const queueRows = useMemo(() => rows.map((b) => ({ b, pending: num(queues[b.backend_id]?.pending_jobs) })), [rows, queues]);
 
-  const vectorRows = useMemo(() => {
-    const keys = [
-      { k: 'F_limit', label: 'F_limit' },
-      { k: 'eta_cal', label: 'η_cal' },
-      { k: 'C_exec', label: 'C_exec' },
-      { k: 'delta_cal', label: 'δ_cal' },
-    ];
-    return keys.map(({ k, label }) => ({
-      key: k,
-      label,
-      names: rows.map((r) => r.short),
-      series: [{
-        name: label,
-        data: rows.map((r) => {
-          const v = num(r.vector?.[k]);
-          return v == null ? null : { value: v, itemStyle: { color: r.color } };
-        }),
-      }],
+  const vectorChartGroups = useMemo(() => VECTOR_CHARTS.flatMap((spec) => {
+    const split = spec.splitModality && selMods.length > 1;
+    const groups = split
+      ? selMods.map((mod) => ({ title: mod, list: rows.filter((r) => r.qpu_modality === mod) }))
+      : [{ title: null, list: rows }];
+    return groups.map((g) => ({
+      spec,
+      title: g.title,
+      chartRows: {
+        names: g.list.map((r) => r.short),
+        series: [{
+          name: spec.label,
+          data: g.list.map((r) => {
+            const raw = num(r.vector?.[spec.vectorKey]);
+            const v = spec.transform ? spec.transform(raw) : raw;
+            return v == null ? null : { value: v, itemStyle: { color: r.color } };
+          }),
+        }],
+      },
+      list: g.list,
     }));
-  }, [rows]);
+  }), [rows, selMods]);
 
   const routingPick = useMemo(
     () => (result && rows.length && !mixed ? pickRoutingRecommendation(rows, meta, queues) : null),
@@ -380,9 +429,15 @@ export const BackendComparison = () => {
               <span key={r.backend_id}>
                 <i style={{ borderColor: r.color }} />
                 {r.name}
+                {r.data_source_label ? ` · ${r.data_source_label}` : ''}
                 {r.missing_compare_data ? ' (no health data)' : ''}
               </span>
             ))}
+            {rows.some((r) => r.metric_gaps?.length) && (
+              <span className="page-hint">
+                Feed gaps: {rows.filter((r) => r.metric_gaps?.length).map((r) => `${r.short}: ${r.metric_gaps.join('; ')}`).join(' · ')}
+              </span>
+            )}
             {rows.length !== sel.length && (
               <span className="page-hint">Selection mismatch — refresh or re-pick backends.</span>
             )}
@@ -410,15 +465,38 @@ export const BackendComparison = () => {
               );
             }))}
 
-            {vectorRows.map((vr) => (
-              <ChartPanel key={vr.label} title={`Vector · ${vr.label}`} question="Backend-level mean from health vector (not cross-modality rank)." sourceKind="derived" minHeight={320}
-                state={vr.series[0].data.some((d) => d?.value != null) ? 'ready' : 'empty'}
-                emptyTitle="No measurements" emptyMessage="Health vector field not reported for these backends."
+            {vectorChartGroups.map((vg) => (
+              <ChartPanel
+                key={`${vg.spec.id}-${vg.title || 'all'}`}
+                title={`Vector · ${vg.spec.label}${vg.title ? ` · ${vg.title}` : ''}`}
+                question={
+                  vg.spec.splitModality
+                    ? 'Backend-level mean η_cal — plot per modality only; do not rank trapped-ion vs superconducting.'
+                    : vg.spec.id === 'vfl'
+                      ? 'Mean 1 − F_limit so small coherence gaps are visible (not cross-modality rank).'
+                      : 'Backend-level mean from health vector (dimensionless; not cross-modality rank).'
+                }
+                sourceKind="derived"
+                minHeight={320}
+                state={vg.chartRows.series[0].data.some((d) => d?.value != null) ? 'ready' : 'empty'}
+                emptyTitle="No measurements"
+                emptyMessage="Health vector field not reported for these backends."
                 tableAlternative={(
-                  <table className="custom-table custom-table--dense"><thead><tr><th>Backend</th><th>{vr.label}</th></tr></thead>
-                    <tbody>{rows.map((r) => <tr key={r.backend_id}><td>{r.name}</td><td>{fmt(num(r.vector?.[vr.key])) ?? 'missing'}</td></tr>)}</tbody></table>
-                )}>
-                <BarChart rows={vr} dark={dark} unit="" />
+                  <table className="custom-table custom-table--dense"><thead><tr><th>Backend</th><th>{vg.spec.label}</th></tr></thead>
+                    <tbody>{vg.list.map((r) => {
+                      const raw = num(r.vector?.[vg.spec.vectorKey]);
+                      const display = vg.spec.tableFmt ? vg.spec.tableFmt(raw) : fmt(raw, { key: vg.spec.vectorKey });
+                      return <tr key={r.backend_id}><td>{r.name}</td><td>{display ?? 'missing'}</td></tr>;
+                    })}</tbody></table>
+                )}
+              >
+                <BarChart
+                  rows={vg.chartRows}
+                  dark={dark}
+                  unit={vg.spec.unit || ''}
+                  log={vg.spec.log}
+                  yMax={vg.spec.yMax}
+                />
               </ChartPanel>
             ))}
 
@@ -449,7 +527,7 @@ export const BackendComparison = () => {
               <table className="custom-table custom-table--dense">
                 <thead>
                   <tr>
-                    <th>Backend</th><th>Modality</th><th>Router</th>
+                    <th>Backend</th><th>Modality</th><th>Data</th><th>Router</th>
                     {DIST_METRICS.map((m) => <th key={m.id}>{m.label}{m.unit ? ` (${m.unit})` : ''}</th>)}
                     <th>Queue</th>
                   </tr>
@@ -466,8 +544,12 @@ export const BackendComparison = () => {
                     >
                       <td><span className="bc-dot" style={{ borderColor: r.color }} aria-hidden /> {r.name}</td>
                       <td>{(r.qpu_modality || 'unknown').replace('_', ' ')}</td>
-                      <td><span className={`badge badge-${r.router === 'GREEN' ? 'healthy' : r.router === 'YELLOW' ? 'warning' : r.router === 'RED' ? 'critical' : 'info'}`}>{r.router}</span></td>
-                      {DIST_METRICS.map((m) => <td key={m.id}><RangeCell s={distStats(r, m)} sensitive={m.sensitive} mixed={mixed} /></td>)}
+                      <td className="bc-lineage">{r.data_source_label || <span className="bc-missing">unknown</span>}</td>
+                      <td>
+                        <span className={`badge badge-${r.router === 'GREEN' ? 'healthy' : r.router === 'YELLOW' ? 'warning' : r.router === 'RED' ? 'critical' : 'info'}`}>{r.router}</span>
+                        {r.router_reason ? <div className="bc-router-reason" title={r.router_reason}>{r.router_reason}</div> : null}
+                      </td>
+                      {DIST_METRICS.map((m) => <td key={m.id}><RangeCell s={distStats(r, m)} metric={m} mixed={mixed} /></td>)}
                       <td>{num(queues[r.backend_id]?.pending_jobs) ?? <span className="bc-missing">missing</span>}</td>
                     </tr>
                   ))}
@@ -504,6 +586,16 @@ export const BackendComparison = () => {
               </div>
             ) : <p className="page-hint">Need at least two backends in the selection for pair deltas.</p>}
             <p className="page-hint bc-note">{result.methodology}</p>
+            <details className="bc-defs">
+              <summary>Metric definitions &amp; routing thresholds (advisory)</summary>
+              <ul className="page-hint">
+                <li><b>F_limit</b> — best fidelity coherence alone allows: 1 − (t_gate/(3·T1) + t_gate/(3·T2)), in [0, 1].</li>
+                <li><b>η_cal</b> — (1 − F_gate) / (1 − F_limit); ratio ≥ 0, capped at 100 in engine; not comparable across modalities.</li>
+                <li><b>C_exec</b> — reference circuit success probability (10×1Q, 5×2Q, 10 meas, depth 20), in [0, 1].</li>
+                <li><b>Readout error</b> — misassignment probability in [0, 1].</li>
+                <li><b>Router</b> — worst qubit wins; RED if any qubit RED, T1 &lt; 40 µs, or environment CRITICAL; GREEN needs η_cal ≤ 1.2 and C_exec ≥ 0.5.</li>
+              </ul>
+            </details>
           </section>
         </>
       )}

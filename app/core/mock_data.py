@@ -1,3 +1,4 @@
+import os
 import random
 import datetime
 from typing import List, Dict, Any, Optional
@@ -212,6 +213,12 @@ def get_mock_backend_status(backend_id: str) -> Dict[str, Any]:
 
 def get_mock_backend_properties(backend_id: str) -> Dict[str, Any]:
     """Generates physical qubit coherence times, gate fidelities, and environmental metrics."""
+    seed_raw = os.environ.get("DEMO_MOCK_RANDOM_SEED")
+    if seed_raw:
+        try:
+            random.seed(int(seed_raw))
+        except ValueError:
+            pass
     b = MOCK_HARDWARE_BACKENDS.get(backend_id, MOCK_HARDWARE_BACKENDS["ibm_brisbane"])
     metrics = b["base_metrics"]
     n_qubits = b["qubit_count"]

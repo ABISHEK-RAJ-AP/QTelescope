@@ -13,6 +13,7 @@ from app.analytics.health_vector import (
     mean_or_none,
 )
 from app.api.environment import env_severity_for
+from app.core.provenance import MOCK_BACKEND_IDS
 from app.models.entities import (
     AlertRuleModel,
     BackendModel,
@@ -63,6 +64,50 @@ def _gate_error_for(gates, qubit_index: int, fallback):
     return fallback
 
 
+def _resolve_2q_error(g2, qubit_index: int, fallback_1q, fallback_2q):
+    """Use backend 1Q mean as conservative 2Q proxy when the feed omits 2Q fidelity."""
+    g2e = _gate_error_for(g2, qubit_index, fallback_2q)
+    if g2e is not None:
+        return g2e, []
+    if fallback_2q is not None:
+        return fallback_2q, []
+    if fallback_1q is not None:
+        return fallback_1q, ["2Q gate fidelity not in feed; using backend 1Q mean as conservative proxy"]
+    return None, ["2Q gate fidelity missing — C_exec and η_cal may be unavailable"]
+
+
+def _router_explanation(backend_state: str, counts: dict, env_sev: str, q_rows: list) -> str:
+    parts: list[str] = []
+    env = (env_sev or "").upper()
+    if env == "CRITICAL":
+        parts.append("environment CRITICAL")
+    n_red = int(counts.get("RED") or 0)
+    n_yellow = int(counts.get("YELLOW") or 0)
+    if backend_state == "RED" and n_red:
+        parts.append(f"{n_red} qubit(s) RED — worst qubit wins for backend routing")
+        tallies: dict[str, int] = {}
+        for q in q_rows:
+            if q.get("state") != "RED":
+                continue
+            for reason in q.get("reasons") or []:
+                tallies[reason] = tallies.get(reason, 0) + 1
+        for reason, n in sorted(tallies.items(), key=lambda x: (-x[1], x[0]))[:2]:
+            parts.append(f"{reason} ({n}×)")
+    elif backend_state == "YELLOW" and n_yellow:
+        parts.append(f"{n_yellow} qubit(s) YELLOW — worst qubit wins")
+    elif backend_state == "GREEN":
+        parts.append("all qubits pass GREEN gates")
+    elif backend_state == "UNKNOWN":
+        parts.append("insufficient metrics for GREEN (see per-qubit UNKNOWN)")
+    return "; ".join(parts)
+
+
+def _data_lineage(backend_id: str) -> dict:
+    if backend_id in MOCK_BACKEND_IDS:
+        return {"lineage": "simulated", "label": "Demo mock catalog"}
+    return {"lineage": "live", "label": "Provider feed / live discovery"}
+
+
 def _t_gate_us(gates) -> float:
     durs = [g.gate_duration for g in gates if g.gate_duration]
     if not durs:
@@ -104,6 +149,7 @@ def build_health_vector_payload(db: Session) -> dict:
         qubits = db.query(QubitModel).filter(QubitModel.backend_id == b.backend_id).all()
         by_idx = _history_by_qubit(db, b.backend_id, len(qubits) or 1)
         q_rows = []
+        metric_gaps: set[str] = set()
         for q in qubits:
             series = by_idx.get(q.qubit_index) or []
             qt = series[0] if series else None
@@ -121,12 +167,16 @@ def build_health_vector_payload(db: Session) -> dict:
                 t1_base = statistics.fmean(t1s)
                 stdev = statistics.pstdev(t1s)
                 sigma = stdev if stdev > 0 else None
+            ge1 = _gate_error_for(g1, q.qubit_index, fallback_1q)
+            ge2, gap_notes = _resolve_2q_error(g2, q.qubit_index, fallback_1q, fallback_2q)
+            for note in gap_notes:
+                metric_gaps.add(note)
             vec = evaluate_qubit(
                 t1=t1,
                 t2=t2,
                 readout_error=ro,
-                gate_error_1q=_gate_error_for(g1, q.qubit_index, fallback_1q),
-                gate_error_2q=_gate_error_for(g2, q.qubit_index, fallback_2q),
+                gate_error_1q=ge1,
+                gate_error_2q=ge2,
                 t_gate_us=t_gate,
                 t1_crit=t1_crit,
                 t1_base=t1_base,
@@ -167,19 +217,28 @@ def build_health_vector_payload(db: Session) -> dict:
             if "none" in confidences
             else ("limited" if "limited" in confidences else "high")
         )
+        lineage = _data_lineage(b.backend_id)
+        if not fallback_2q and not g2 and metric_gaps:
+            if b.provider_id == "rigetti_quantum":
+                metric_gaps.add("2Q gate data not supplied by the Rigetti QCS ISA feed")
         out.append(
             {
                 "backend_id": b.backend_id,
                 "backend_name": b.backend_name,
                 "qpu_modality": b.qpu_modality,
                 "operational_status": b.operational_status,
+                "provider_id": b.provider_id,
                 "router": backend_state,
+                "router_reason": _router_explanation(backend_state, counts, env_sev, q_rows),
                 "recommended_action": action,
                 "action_scope": "advisory",
                 "confidence": backend_confidence,
                 "env_severity": env_sev,
                 "t_gate_us": t_gate,
                 "t1_crit_us": t1_crit,
+                "data_lineage": lineage["lineage"],
+                "data_source_label": lineage["label"],
+                "metric_gaps": sorted(metric_gaps),
                 "counts": counts,
                 "vector": {
                     "F_limit": mean_or_none([r["F_limit"] for r in q_rows]),

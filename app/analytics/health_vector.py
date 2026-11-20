@@ -16,6 +16,8 @@ C_EXEC_MIN = 0.5
 REF_CIRCUIT = {"n1q": 10, "n2q": 5, "n_meas": 10, "depth": 20}
 HEALTH_MODEL_VERSION = "2.0.0-advisory"
 MIN_T1_SAMPLES_FOR_DELTA = 3
+ETA_CAP = 100.0
+ETA_SMALL_DENOM = 1e-6
 
 
 def _pos(x: Optional[float]) -> Optional[float]:
@@ -50,8 +52,13 @@ def eta_cal(f_gate: Optional[float], f_limit: Optional[float]) -> Optional[float
         return None
     denom = 1.0 - fl
     if denom <= 1e-15:
-        return 0.0 if fg >= fl else float("inf")
-    return (1.0 - fg) / denom
+        return 0.0 if fg >= fl else ETA_CAP
+    raw = (1.0 - fg) / denom
+    if not math.isfinite(raw):
+        return ETA_CAP
+    if denom < ETA_SMALL_DENOM or raw > ETA_CAP:
+        return min(ETA_CAP, raw)
+    return raw
 
 
 def delta_cal(
@@ -88,14 +95,19 @@ def c_exec(
     if f1q is None or f2q is None or pread is None or t1 is None or tg is None:
         return None
     try:
-        p = float(pread)
+        from app.core.metric_bounds import clamp_probability
+
+        p = clamp_probability(float(pread))
         a, b = float(f1q), float(f2q)
     except (TypeError, ValueError):
         return None
-    if min(a, b, 1.0 - p) < 0:
+    if p is None or min(a, b, 1.0 - p) < 0:
         return None
     deco = math.exp(-float(depth) * tg / t1)
-    return (a ** n1q) * (b ** n2q) * ((1.0 - p) ** n_meas) * deco
+    val = (a ** n1q) * (b ** n2q) * ((1.0 - p) ** n_meas) * deco
+    if not math.isfinite(val):
+        return None
+    return max(0.0, min(1.0, val))
 
 
 def assess_confidence(
@@ -208,14 +220,17 @@ def evaluate_qubit(
     circuit: Optional[Dict[str, int]] = None,
     t1_history_points: int = 0,
 ) -> Dict[str, Any]:
+    from app.core.metric_bounds import clamp_probability
+
     circ = circuit or REF_CIRCUIT
     f_limit = fidelity_limit(t1, t2, t_gate_us)
     f1q = (1.0 - float(gate_error_1q)) if gate_error_1q is not None else None
     f2q = (1.0 - float(gate_error_2q)) if gate_error_2q is not None else None
+    ro = clamp_probability(readout_error) if readout_error is not None else None
     eta = eta_cal(f1q, f_limit)
     delta = delta_cal(t1, t1_base, sigma_t1)
     c_value = c_exec(
-        f1q, circ["n1q"], f2q, circ["n2q"], readout_error,
+        f1q, circ["n1q"], f2q, circ["n2q"], ro,
         circ["n_meas"], circ["depth"], t_gate_us, t1,
     )
     decision = route(t1, t1_crit, eta, delta, c_value, env_severity)

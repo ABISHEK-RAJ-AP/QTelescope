@@ -28,3 +28,8 @@
 .bc-row-click { cursor: pointer; }
 .bc-row-click:hover { background: var(--bg-card-hover); }
 .bc-warnmark { color: var(--accent-amber); font-size: var(--font-size-micro-label, 0.75rem); }
+.bc-router-reason { margin-top: 4px; max-width: 16rem; font-size: var(--font-size-micro-label, 0.75rem); color: var(--text-muted); line-height: 1.35; }
+.bc-lineage { font-size: var(--font-size-helper, 0.875rem); color: var(--text-secondary); max-width: 9rem; }
+.bc-defs { margin-top: 10px; font-size: var(--font-size-helper, 0.875rem); }
+.bc-defs summary { cursor: pointer; font-weight: 600; }
+.bc-defs ul { margin: 8px 0 0; padding-left: 1.2rem; }

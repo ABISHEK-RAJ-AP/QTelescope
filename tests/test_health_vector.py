@@ -1,4 +1,5 @@
 from app.analytics.health_vector import (
+    ETA_CAP,
     assess_confidence,
     c_exec,
     eta_cal,
@@ -42,6 +43,19 @@ def test_delta_insufficient_history_limits_confidence():
     meta = assess_confidence(t1=100.0, eta=1.0, delta=None, c_value=0.8, t1_history_points=1)
     assert meta["confidence"] == "limited"
     assert meta["delta_cal_status"] == "insufficient_history"
+
+
+def test_c_exec_clamps_when_readout_unphysical():
+    val = c_exec(0.999, 10, 0.99, 5, -0.0018, 10, 20, 0.05, 200.0)
+    assert val is not None
+    assert 0.0 <= val <= 1.0
+
+
+def test_eta_cal_capped_for_near_unity_f_limit():
+    fl = fidelity_limit(10_000_000.0, 2_500_000.0, 0.05)
+    eta = eta_cal(0.9996, fl)
+    assert eta is not None
+    assert eta <= ETA_CAP
 
 
 def test_evaluate_qubit_red_on_dropped_t1():
