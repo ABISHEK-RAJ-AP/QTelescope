@@ -12,6 +12,7 @@ import { roleLabel } from '../lib/permissions.js';
 import { Toggle } from '../components/ui/Toggle.jsx';
 import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
 import { ConfirmDialog } from '../components/observability/ConfirmDialog.jsx';
+import { MfaTotpEnrollPanel } from '../components/settings/MfaTotpEnrollPanel.jsx';
 import './UserSettings.css';
 
 const THEME_OPTIONS = [
@@ -43,6 +44,7 @@ export function UserSettings({ currentUser, onUserUpdate }) {
   const [mfa, setMfa] = useState({ enabled: false });
   const [enroll, setEnroll] = useState(null);
   const [otp, setOtp] = useState('');
+  const [mfaEnrollBusy, setMfaEnrollBusy] = useState(false);
   const [backups, setBackups] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [sessionsBusy, setSessionsBusy] = useState(false);
@@ -144,6 +146,7 @@ export function UserSettings({ currentUser, onUserUpdate }) {
   };
 
   const confirmMfa = async () => {
+    setMfaEnrollBusy(true);
     try {
       const r = await api.confirmMfaEnroll(otp);
       setMfa({ enabled: true });
@@ -153,6 +156,8 @@ export function UserSettings({ currentUser, onUserUpdate }) {
       notifySuccess('Two-factor authentication enabled.');
     } catch (e) {
       notifyError(e?.message || 'Invalid code.');
+    } finally {
+      setMfaEnrollBusy(false);
     }
   };
 
@@ -307,19 +312,15 @@ export function UserSettings({ currentUser, onUserUpdate }) {
           {!mfa.enabled && !enroll && (
             <button type="button" className="btn btn-primary" onClick={startMfa}>Enable 2FA</button>
           )}
-          {enroll && (
-            <div className="us-mfa-box">
-              <p>Scan or enter this secret in your authenticator:</p>
-              <p className="us-secret">{enroll.secret}</p>
-              <p className="page-hint">{enroll.otpauth_url}</p>
-              <div className="us-field">
-                <label>Verification code
-                  <input inputMode="numeric" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="6-digit code" />
-                </label>
-              </div>
-              <button type="button" className="btn btn-primary" onClick={confirmMfa}>Confirm & enable</button>
-            </div>
-          )}
+          {enroll ? (
+            <MfaTotpEnrollPanel
+              enroll={enroll}
+              otp={otp}
+              onOtpChange={setOtp}
+              onConfirm={confirmMfa}
+              confirming={mfaEnrollBusy}
+            />
+          ) : null}
           {backups && (
             <div className="us-mfa-box">
               <p><strong>Save these recovery codes once.</strong> They will not be shown again.</p>

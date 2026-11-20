@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button'
 import { useTheme } from '@/components/ui/ThemeProvider'
 import { usePublicRegistration } from '@/lib/usePublicRegistration'
 import { QtTeleScopeMark } from '@/components/brand/QtTeleScopeMark.jsx'
+import { consoleHomePath } from '@/lib/consoleHome.js'
 
 export function PublicMarketingHeader({ className = '' }) {
   const { pathname } = useLocation()
@@ -15,6 +16,7 @@ export function PublicMarketingHeader({ className = '' }) {
   const isDark = resolved === 'dark'
   const onLogin = pathname.startsWith('/login')
   const onRegister = pathname.startsWith('/register')
+  const brandHome = consoleHomePath()
 
   const navLinks = [
     { label: 'Capabilities', href: '/#capabilities' },
@@ -31,7 +33,7 @@ export function PublicMarketingHeader({ className = '' }) {
       <div className="w-full flex min-h-[72px] items-center justify-between px-6 sm:px-8 lg:px-12">
         {/* Left End: C-DAC Brand & Title (Clean, NO container box around logo) */}
         <div className="flex items-center gap-3 flex-shrink-0">
-          <Link to="/" className="group inline-flex flex-col gap-0.5" aria-label="Q-TeleScope home">
+          <Link to={brandHome} className="group inline-flex flex-col gap-0.5" aria-label="Q-TeleScope home">
             <QtTeleScopeMark
               size={42}
               className="qt-brand-lockup--header transition-transform group-hover:scale-[1.02]"

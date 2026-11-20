@@ -5,6 +5,7 @@ import { QtTeleScopeMark } from '@/components/brand/QtTeleScopeMark.jsx'
 import { AuthFridgeVisual } from '@/components/marketing/AuthFridgeVisual'
 import { PublicMarketingHeader } from '@/components/marketing/PublicMarketingHeader'
 import { QuantumBackground } from '@/components/ui/quantum-background'
+import { consoleHomePath } from '@/lib/consoleHome.js'
 
 /** Shared layout id for login / register / MFA / forgot / reset. */
 export const AUTH_LAYOUT_ID = 'qt-auth-shell'
@@ -19,6 +20,7 @@ export function AuthShell({
 }) {
   const isCert = layout === 'cert';
   const isRegisterStudio = layout === 'register-studio';
+  const homePath = consoleHomePath();
 
   if (isRegisterStudio) {
     return (
@@ -75,10 +77,10 @@ export function AuthShell({
                   Coherence, calibration drift, and incidents — one console.
                 </p>
                 <Link
-                  to="/"
+                  to={homePath}
                   className="pt-1 text-sm text-slate-500 hover:text-cyan-400 inline-flex items-center gap-1.5 min-h-11 transition-colors"
                 >
-                  <ArrowLeft className="size-3.5" aria-hidden /> Home
+                  <ArrowLeft className="size-3.5" aria-hidden /> {homePath.startsWith('/app') ? 'Console' : 'Home'}
                 </Link>
               </div>
             </div>

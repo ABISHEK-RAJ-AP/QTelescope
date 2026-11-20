@@ -12,6 +12,7 @@ import { usePublicFilmReady } from '@/hooks/usePublicFilmReady.js'
 import { AuthDemoPresets } from '@/components/AuthDemoPresets.jsx'
 import { COPY } from '@/copy/operator.js'
 import { usePublicRegistration } from '@/lib/usePublicRegistration'
+import { readSessionUser } from '@/lib/sessionAuth.js'
 
 export function LoginPage({ onLoginSuccess }) {
   usePublicFilmReady('login')
@@ -69,6 +70,48 @@ export function LoginPage({ onLoginSuccess }) {
     }
     navigate(landing)
   }
+
+  useEffect(() => {
+    const stored = readSessionUser()
+    if (!stored?.token) return undefined
+    let cancelled = false
+    ;(async () => {
+      try {
+        const me = await api.getMe()
+        if (cancelled || !me?.authenticated) return
+        if (onLoginSuccess) {
+          onLoginSuccess({
+            ...stored,
+            username: me.username ?? stored.username,
+            role: me.role ?? stored.role,
+            role_label: me.role_label,
+            permissions: me.permissions,
+            full_name: me.full_name ?? stored.full_name,
+            email: me.email ?? stored.email,
+            org: me.org ?? stored.org,
+            session_expires_at: me.expires_at,
+          })
+          return
+        }
+        const postLogin = safePostLoginRedirect(sessionStorage.getItem('qre_post_login_redirect'))
+        sessionStorage.removeItem('qre_post_login_redirect')
+        if (postLogin) {
+          navigate(postLogin, { replace: true })
+          return
+        }
+        if (shouldRunOnboarding(stored)) {
+          navigate('/app/onboarding', { replace: true })
+          return
+        }
+        navigate(landingPathForRole(me.role ?? stored.role), { replace: true })
+      } catch {
+        /* stale token — stay on sign-in */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [navigate, onLoginSuccess])
 
   useEffect(() => {
     api.getConfigStatus()

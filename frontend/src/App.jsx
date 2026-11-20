@@ -62,7 +62,7 @@ import { CommandPalette, useCommandPaletteShortcut } from './components/shell/Co
 import { COPY } from './copy/operator.js';
 import { AccessDenied, ConsoleErrorBoundary, NotFoundPage } from './components/shell/RouteStatus.jsx';
 import { QtFilmReadyWatcher } from './components/shell/QtFilmReadyWatcher.jsx';
-import { SessionBootstrap } from './components/shell/SessionBootstrap.jsx';
+import { landingPathForRole } from './lib/permissions.js';
 
 function skeletonFor(topic, backendSubTab) {
   if (topic === 'alerts') return 'alerts';
@@ -84,7 +84,7 @@ function initialsFor(user) {
   return String(n).slice(0, 2).toUpperCase();
 }
 
-function AppShell({ currentUser, onLogout, onUserUpdate }) {
+function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false }) {
   const { actions: pageActions } = usePageActions();
   const { resolved, setTheme } = useTheme();
 
@@ -726,7 +726,12 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
           if (!e.currentTarget.contains(e.relatedTarget)) setHoverExpand(false);
         }}
       >
-        <Link to="/" className="sidebar-header" title="Q-TeleScope home" aria-label="Q-TeleScope home">
+        <Link
+          to={landingPathForRole(currentUser?.role) || '/app/overview'}
+          className="sidebar-header"
+          title="Console home"
+          aria-label="Console home"
+        >
           <div className="sidebar-header__stack">
             <QtTeleScopeMark
               size={effectiveCollapsed ? 26 : 28}
@@ -839,13 +844,17 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
         </header>
 
         <div id="page-content" tabIndex={-1} className={`page-container page-container--${density}`}>
-          <ConsoleErrorBoundary resetKey={location.pathname}>
-            <Suspense fallback={<BoneyardSkeleton layout={skeletonFor(mainTopic, backendSubTab)} />}>
-              <div className="page-enter" data-route={location.pathname}>
-                {renderContent()}
-              </div>
-            </Suspense>
-          </ConsoleErrorBoundary>
+          {sessionBooting ? (
+            <BoneyardSkeleton layout={skeletonFor(mainTopic, backendSubTab)} />
+          ) : (
+            <ConsoleErrorBoundary resetKey={location.pathname}>
+              <Suspense fallback={<BoneyardSkeleton layout={skeletonFor(mainTopic, backendSubTab)} />}>
+                <div className="page-enter" data-route={location.pathname}>
+                  {renderContent()}
+                </div>
+              </Suspense>
+            </ConsoleErrorBoundary>
+          )}
         </div>
       </main>
     </div>
@@ -945,10 +954,6 @@ export const App = () => {
     );
   }
 
-  if (!sessionChecked) {
-    return <SessionBootstrap />;
-  }
-
   if (location.pathname.startsWith('/app/onboarding')) {
     return (
       <OnboardingFlow currentUser={currentUser} />
@@ -958,7 +963,12 @@ export const App = () => {
   return (
     <AlertsSummaryProvider>
       <PageActionsProvider>
-        <AppShell currentUser={currentUser} onLogout={endSession} onUserUpdate={setCurrentUser} />
+        <AppShell
+          currentUser={currentUser}
+          onLogout={endSession}
+          onUserUpdate={setCurrentUser}
+          sessionBooting={!sessionChecked}
+        />
       </PageActionsProvider>
     </AlertsSummaryProvider>
   );

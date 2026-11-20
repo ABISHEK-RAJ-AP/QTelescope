@@ -321,6 +321,164 @@
   line-height: 1.5;
 }
 
+/* TOTP enroll — cert-studio card pattern */
+.us-mfa-enroll {
+  margin-top: var(--ds-space-md, 16px);
+  padding: clamp(1rem, 2vw, 1.5rem);
+  border-radius: var(--ds-radius-card, 14px);
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  box-shadow: 0 12px 40px color-mix(in oklch, var(--bg-dark) 18%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-space-lg, 20px);
+}
+
+.us-mfa-enroll__hero {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  color: var(--accent-cyan);
+}
+
+.us-mfa-enroll__hero svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.us-mfa-enroll__title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.us-mfa-enroll__lede {
+  margin: 4px 0 0;
+  font-size: var(--font-size-helper, 0.875rem);
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.us-mfa-enroll__grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--ds-space-lg, 24px);
+  align-items: start;
+}
+
+@media (max-width: 720px) {
+  .us-mfa-enroll__grid {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+}
+
+.us-mfa-enroll__qr-card {
+  margin: 0;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan) 35%, var(--border-color));
+  background: #fff;
+  text-align: center;
+}
+
+.us-mfa-enroll__qr-card img {
+  display: block;
+  border-radius: 6px;
+}
+
+.us-mfa-enroll__qr-placeholder {
+  display: block;
+  width: 192px;
+  height: 192px;
+  border-radius: 6px;
+  background: linear-gradient(
+    110deg,
+    var(--bg-dark) 8%,
+    color-mix(in srgb, var(--bg-card) 80%, white) 18%,
+    var(--bg-dark) 33%
+  );
+  background-size: 200% 100%;
+  animation: us-mfa-qr-shimmer 1.2s ease-in-out infinite;
+}
+
+@keyframes us-mfa-qr-shimmer {
+  to {
+    background-position-x: -200%;
+  }
+}
+
+.us-mfa-enroll__qr-card figcaption {
+  margin-top: 8px;
+  font-size: var(--font-size-metadata, 0.8125rem);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.us-mfa-enroll__manual {
+  min-width: 0;
+}
+
+.us-mfa-enroll__step-label {
+  margin: 0 0 8px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+
+.us-mfa-enroll__steps {
+  margin: 0 0 12px;
+  padding-left: 1.15rem;
+  font-size: var(--font-size-helper, 0.875rem);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.us-mfa-enroll__secret-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.us-mfa-enroll__secret {
+  flex: 1 1 12rem;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
+  word-break: break-all;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-dark);
+  color: var(--text-primary);
+}
+
+.us-mfa-enroll__copy {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.us-mfa-enroll__verify {
+  margin: 0;
+}
+
+.us-mfa-enroll__otp {
+  letter-spacing: 0.35em;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  max-width: 12rem;
+}
+
+.us-mfa-enroll__confirm {
+  align-self: flex-start;
+}
+
 .us-secret {
   font-family: ui-monospace, monospace;
   word-break: break-all;
