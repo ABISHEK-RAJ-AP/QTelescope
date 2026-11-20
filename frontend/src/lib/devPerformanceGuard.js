@@ -6,8 +6,13 @@ if (typeof window !== 'undefined') {
   const isPerfNoise = (msg, stack) => {
     const blob = `${String(msg || '')}\n${String(stack || '')}`;
     if (blob.includes('reportAllChanges')) return true;
+    if (/\bVM\d+:/.test(blob) && /reportAllChanges|PerformanceObserver/i.test(blob)) {
+      return true;
+    }
     if (/reading 'startTime'|Cannot read properties of undefined.*startTime/i.test(blob)) {
-      return blob.includes('reportAllChanges') || /\bVM\d+:/.test(blob) || blob.includes('PerformanceObserver');
+      return blob.includes('reportAllChanges')
+        || /\bVM\d+:/.test(blob)
+        || blob.includes('PerformanceObserver');
     }
     return false;
   };

@@ -41,33 +41,21 @@ const Badge = ({ status }) => {
 };
 
 function CalFlipCard({ name, modality, status, ageLabel, calibrated, action, onOpen, onDrift }) {
-  const [open, setOpen] = useState(false);
-  const show = () => setOpen(true);
-  const hide = () => setOpen(false);
   return (
-    <article
-      className={`cs-flip${open ? ' is-open' : ''}`}
-      onMouseLeave={hide}
-      aria-label={`${name}. Hover the summary for calibration detail.`}
-    >
-      <div className="cs-flip__stage">
-        <div className="cs-flip__inner">
-          <div className="cs-flip__face" onMouseEnter={show} onFocus={show}>
-            <header className="cs-flip__head">
-              <h4 className="cs-flip__name">{name}</h4>
-              <Badge status={status} />
-            </header>
-            <p className="cs-flip__meta">{modality}</p>
-            <p className="cs-flip__age">{ageLabel}</p>
-          </div>
-          <div className="cs-flip__face cs-flip__face--back" onMouseEnter={show}>
-            <p className="cs-flip__back-title">{name}</p>
-            <dl className="cs-flip__stats">
-              <div><dt>Calibrated</dt><dd>{calibrated}</dd></div>
-              <div><dt>Next</dt><dd>{action}</dd></div>
-            </dl>
-            <button type="button" className="fs-link" onClick={onDrift}>Drift analysis</button>
-          </div>
+    <article className="cs-flip" aria-label={`${name} calibration status`}>
+      <div className="cs-flip__body">
+        <header className="cs-flip__head">
+          <h4 className="cs-flip__name">{name}</h4>
+          <Badge status={status} />
+        </header>
+        <p className="cs-flip__meta">{modality}</p>
+        <p className="cs-flip__age">{ageLabel}</p>
+        <div className="cs-flip__detail">
+          <dl className="cs-flip__stats">
+            <div><dt>Calibrated</dt><dd>{calibrated}</dd></div>
+            <div><dt>Next</dt><dd>{action}</dd></div>
+          </dl>
+          <button type="button" className="fs-link cs-flip__drift" onClick={onDrift}>Drift analysis</button>
         </div>
       </div>
       <button
