@@ -139,7 +139,8 @@
 }
 
 .us-card {
-  flex: 1;
+  align-self: start;
+  width: 100%;
   border-radius: var(--ds-radius-card, 14px);
   border: 1px solid var(--border-color);
   background: var(--bg-card);
@@ -174,16 +175,23 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--ds-space-md, 16px) var(--ds-space-lg, 24px);
+  max-width: 44rem;
 }
 
 @media (max-width: 720px) {
   .us-grid {
     grid-template-columns: 1fr;
+    max-width: none;
   }
+}
+
+.us-grid--profile {
+  max-width: 36rem;
 }
 
 .us-grid--wide {
   grid-template-columns: 1fr;
+  max-width: 28rem;
 }
 
 .us-field label {
@@ -198,8 +206,8 @@
 .us-field input,
 .us-field select,
 .us-field textarea {
-  padding: 14px 16px;
-  min-height: 48px;
+  padding: 10px 14px;
+  min-height: 42px;
   border-radius: var(--ds-radius-control, 10px);
   border: 1px solid var(--border-color);
   background: var(--bg-dark);
@@ -666,6 +674,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
+  max-width: 40rem;
 }
 
 .us-toggle-row {

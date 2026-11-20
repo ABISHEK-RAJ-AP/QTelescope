@@ -57,12 +57,12 @@ export function AlertsSummaryProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    refreshSummary({ force: true });
+    refreshSummary({ force: true }).catch(() => {});
     const interval = setInterval(() => {
       if (typeof document !== 'undefined' && document.hidden) return;
-      refreshSummary({ force: false });
+      refreshSummary({ force: false }).catch(() => {});
     }, POLL_MS);
-    const kick = setTimeout(() => refreshSummary({ force: false }), 800);
+    const kick = setTimeout(() => refreshSummary({ force: false }).catch(() => {}), 800);
     return () => {
       clearInterval(interval);
       clearTimeout(kick);

@@ -9,7 +9,6 @@ import { shouldRunOnboarding } from '@/lib/onboardingState'
 import { landingPathForRole } from '@/lib/permissions.js'
 import { safePostLoginRedirect } from '@/lib/safePostLoginRedirect'
 import { usePublicFilmReady } from '@/hooks/usePublicFilmReady.js'
-import { AuthDemoPresets } from '@/components/AuthDemoPresets.jsx'
 import { COPY } from '@/copy/operator.js'
 import { usePublicRegistration } from '@/lib/usePublicRegistration'
 import { readSessionUser } from '@/lib/sessionAuth.js'
@@ -28,7 +27,6 @@ export function LoginPage({ onLoginSuccess }) {
   const [captchaKey, setCaptchaKey] = useState(0)
   const [mfaToken, setMfaToken] = useState('')
   const [mfaCode, setMfaCode] = useState('')
-  const [showDevPresets, setShowDevPresets] = useState(true)
   const [signInSubtitle, setSignInSubtitle] = useState(COPY.auth.signInSubtitle)
 
   const finishSession = async (res) => {
@@ -116,14 +114,11 @@ export function LoginPage({ onLoginSuccess }) {
   useEffect(() => {
     api.getConfigStatus()
       .then((s) => {
-        if (s?.bootstrap && Object.prototype.hasOwnProperty.call(s.bootstrap, 'show_dev_login_presets')) {
-          setShowDevPresets(Boolean(s.bootstrap.show_dev_login_presets))
-        }
         if (s?.ldap?.enabled) {
           setSignInSubtitle(COPY.auth.signInDirectory)
         }
       })
-      .catch(() => setShowDevPresets(true))
+      .catch(() => {})
   }, [])
 
   const handleSubmit = async (e) => {
@@ -187,14 +182,6 @@ export function LoginPage({ onLoginSuccess }) {
               </>
             ) : null}
           </p>
-          <AuthDemoPresets
-            visible={showDevPresets}
-            onSelect={(user, pass) => {
-              setUsername(user);
-              setPassword(pass);
-              setError('');
-            }}
-          />
         </div>
       }
     >

@@ -217,7 +217,7 @@ export function UserSettings({ currentUser, onUserUpdate }) {
             <h3 id="us-profile-h" className="us-card__title">Contact & identity</h3>
             <p className="us-card__desc">Shown on acknowledgements, alert comments, and audit exports.</p>
           </header>
-          <div className="us-grid">
+          <div className="us-grid us-grid--profile">
             <div className="us-field">
               <label>Full name
                 <input value={profile.full_name || ''} onChange={(e) => setProfile({ ...profile, full_name: e.target.value })} />

@@ -55,7 +55,7 @@ def bootstrap_security_report(admin_username: str, user_username: str, superadmi
         reserved.append(superadmin_username)
     return {
         "block_default_bootstrap_credentials": blocked,
-        "show_dev_login_presets": not blocked,
+        "show_dev_login_presets": False,
         "reserved_usernames": reserved,
         "hint": (
             "Set BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS=true and configure bootstrap passwords for production."
