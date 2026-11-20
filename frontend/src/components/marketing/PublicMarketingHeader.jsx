@@ -4,7 +4,7 @@ import { ArrowRight, Moon, Sun, Menu, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useTheme } from '@/components/ui/ThemeProvider'
 import { usePublicRegistration } from '@/lib/usePublicRegistration'
-import cdacLogo from '../../assets/cdaclogo.png'
+import { QtTeleScopeMark } from '@/components/brand/QtTeleScopeMark.jsx'
 
 export function PublicMarketingHeader({ className = '' }) {
   const { pathname } = useLocation()
@@ -32,10 +32,10 @@ export function PublicMarketingHeader({ className = '' }) {
         {/* Left End: C-DAC Brand & Title (Clean, NO container box around logo) */}
         <div className="flex items-center gap-3 flex-shrink-0">
           <Link to="/" className="flex items-center gap-3 group">
-            <img
-              src={cdacLogo}
-              alt="C-DAC Logo"
-              className="h-10 w-auto object-contain transition-transform group-hover:scale-105"
+            <QtTeleScopeMark
+              size={40}
+              className="transition-transform group-hover:scale-105"
+              decorative
             />
             <div className="flex flex-col">
               <span className="font-extrabold text-xl tracking-tight text-neutral-950 dark:text-white whitespace-nowrap">

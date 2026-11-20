@@ -4,9 +4,9 @@ import { Check, Moon, SkipForward, Sun } from 'lucide-react';
 import { QuantumBackground } from '@/components/ui/quantum-background';
 import { PublicMarketingFooter } from '@/components/marketing/PublicMarketingFooter';
 import { useTheme } from '@/components/ui/ThemeProvider';
-import cdacLogo from '../../assets/cdaclogo.png';
+import { QtTeleScopeMark } from '@/components/brand/QtTeleScopeMark.jsx';
 
-export const STEP_LABELS = ['Overview', 'Integrations', 'Inventory', 'Console'];
+export const STEP_LABELS = ['Overview', 'Connect', 'Inventory', 'Console'];
 export const STEP_IDS = ['welcome', 'connect', 'analyze', 'features'];
 
 export function OnboardingMarketingHeader({ currentUser, onExit, stepIndex, onStepChange, maxReachableIndex }) {
@@ -17,10 +17,10 @@ export function OnboardingMarketingHeader({ currentUser, onExit, stepIndex, onSt
     <header className="relative z-30 w-full shrink-0 border-b border-neutral-200/60 bg-white/85 backdrop-blur-xl dark:border-neutral-800/60 dark:bg-[#070a0f]/80">
       <div className="flex min-h-[56px] w-full items-center gap-4 px-4 sm:px-6 lg:px-10">
         <Link to="/app/overview" className="flex shrink-0 items-center gap-3 group">
-          <img
-            src={cdacLogo}
-            alt="C-DAC"
-            className="h-9 w-auto object-contain transition-transform group-hover:scale-105"
+          <QtTeleScopeMark
+            size={36}
+            className="transition-transform group-hover:scale-105"
+            decorative
           />
           <div className="flex flex-col">
             <span className="text-lg font-extrabold tracking-tight text-neutral-950 dark:text-white">

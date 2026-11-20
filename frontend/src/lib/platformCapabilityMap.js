@@ -47,10 +47,11 @@ export const INTRO_SLIDES = [
 ];
 
 export const CONNECT_GUIDE = [
-  { n: '01', title: 'Select providers', body: 'IBM Quantum, Rigetti, IonQ, or C-DAC/on-prem. Each one is optional.' },
-  { n: '02', title: 'Store credentials', body: 'Tokens stay on the server. Saved secrets are not shown again.' },
-  { n: '03', title: 'Run discovery', body: 'Next step refreshes catalog, metrics coverage, and collector status.' },
-  { n: '04', title: 'Skip if needed', body: 'Demo catalog works without keys. Add credentials later under Configure, Integrations.' },
+  { n: '01', title: 'Select providers', body: 'IBM Quantum, Rigetti, IonQ, or C-DAC on-prem. Configure only what you operate today.' },
+  { n: '02', title: 'Store credentials', body: 'API keys and controller URLs are stored on the platform server over HTTPS. Secrets are never echoed back.' },
+  { n: '03', title: 'Verify adapter', body: 'After saving, run live verification under Configure → Integrations when you need production telemetry.' },
+  { n: '04', title: 'Run discovery', body: 'The next step refreshes backend inventory, metric coverage, and collector status.' },
+  { n: '05', title: 'Skip if needed', body: 'The demo catalog works without keys. Add credentials later under Configure → Integrations.' },
 ];
 
 export const ONBOARDING_FAQ = [

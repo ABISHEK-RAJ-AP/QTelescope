@@ -23,8 +23,7 @@ import {
 } from './appPrimaryNav.js';
 import { buildDriftInvestigationLocation } from './lib/investigationLinks.js';
 import { parseScopeSearch } from './lib/appScopeQuery.js';
-import cdacLogo from './assets/cdaclogo.png';
-import { LazyImage } from './components/ui/LazyImage.jsx';
+import { QtTeleScopeMark } from './components/brand/QtTeleScopeMark.jsx';
 import { IstClock } from './components/shell/IstClock.jsx';
 import { LoginPage } from './pages/LoginPage.jsx';
 import {
@@ -727,7 +726,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate }) {
         }}
       >
         <Link to="/" className="sidebar-header" title="Q-TeleScope home">
-          <LazyImage src={cdacLogo} alt="C-DAC" className="sidebar-logo-img" />
+          <QtTeleScopeMark size={28} className="sidebar-logo-mark" decorative />
           {!effectiveCollapsed && (
             <div>
               <div className="sidebar-title">Q-TeleScope</div>

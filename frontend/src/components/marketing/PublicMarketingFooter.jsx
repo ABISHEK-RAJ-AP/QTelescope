@@ -2,7 +2,7 @@ import React, { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { usePublicRegistration } from '@/lib/usePublicRegistration'
 import { Activity, Cpu, Layers, ExternalLink } from 'lucide-react'
-import cdacLogo from '../../assets/cdaclogo.png'
+import { QtTeleScopeMark } from '@/components/brand/QtTeleScopeMark.jsx'
 
 const FOOTER_SECTIONS = [
   {
@@ -76,10 +76,10 @@ export function PublicMarketingFooter({ className = '', compact = false }) {
           {/* Brand Info Column */}
           <div className="lg:col-span-2 space-y-4">
             <Link to="/" className="flex items-center gap-3 group">
-              <img
-                src={cdacLogo}
-                alt="C-DAC Logo"
-                className="h-10 w-auto object-contain transition-transform group-hover:scale-105"
+              <QtTeleScopeMark
+                size={40}
+                className="transition-transform group-hover:scale-105"
+                decorative
               />
               <div className="flex flex-col">
                 <span className="font-extrabold text-xl tracking-tight text-neutral-950 dark:text-white">

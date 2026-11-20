@@ -1,0 +1,48 @@
+.qt-brand-mark {
+  display: block;
+  flex-shrink: 0;
+  --qt-mark-plate: color-mix(in srgb, var(--accent-cyan, #0284c7) 12%, var(--bg-card, #fff));
+  --qt-mark-stroke: var(--accent-cyan, #0284c7);
+  --qt-mark-plate-border: color-mix(in srgb, var(--accent-cyan, #0284c7) 28%, var(--border-color, #e2e8f0));
+}
+
+.qt-brand-mark__plate {
+  fill: var(--qt-mark-plate);
+  stroke: var(--qt-mark-plate-border);
+  stroke-width: 1;
+}
+
+.qt-brand-mark__ring,
+.qt-brand-mark__tail {
+  stroke: var(--qt-mark-stroke);
+}
+
+/* Public marketing surfaces (Tailwind .dark on html) */
+.dark .qt-brand-mark,
+html.dark .qt-brand-mark {
+  --qt-mark-plate: color-mix(in srgb, #22d3ee 14%, #0f172a);
+  --qt-mark-stroke: #22d3ee;
+  --qt-mark-plate-border: color-mix(in srgb, #22d3ee 35%, #1e293b);
+}
+
+.qt-brand-mark--on-dark {
+  --qt-mark-plate: color-mix(in srgb, #22d3ee 12%, #0b1220);
+  --qt-mark-stroke: #22d3ee;
+  --qt-mark-plate-border: color-mix(in srgb, #22d3ee 30%, #1e293b);
+}
+
+.reg-stage__logo-mark {
+  width: 120px;
+  height: auto;
+}
+
+.auth-cert-card__logo-mark {
+  margin: 0 auto;
+  width: 56px;
+  height: 56px;
+}
+
+.sidebar-logo-mark {
+  width: 28px;
+  height: 28px;
+}

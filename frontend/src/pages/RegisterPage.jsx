@@ -14,7 +14,7 @@ import {
   HeartHandshake,
   Layers,
 } from 'lucide-react'
-import cdacLogo from '../assets/cdaclogo.png'
+import { QtTeleScopeMark } from '@/components/brand/QtTeleScopeMark.jsx'
 import {
   buildOrgString,
   orgTilesForRegister,
@@ -362,7 +362,7 @@ export function RegisterPage() {
       ) : (
         <div className={`reg-stage reg-stage--flow reg-stage--step-${flowStep}${flowStep !== 'type' ? ' reg-stage--detail' : ''}`}>
           <div className="reg-stage__brand">
-            <img src={cdacLogo} alt="" className="reg-stage__logo" width={120} height={40} />
+            <QtTeleScopeMark size={56} className="reg-stage__logo-mark" decorative />
             <p className="reg-stage__wordmark">Q-TeleScope</p>
             <div className="reg-stage__fridge">
               <AuthFridgeVisual />

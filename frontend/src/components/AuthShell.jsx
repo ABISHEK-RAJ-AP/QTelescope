@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
-import cdacLogo from '../assets/cdaclogo.png'
+import { QtTeleScopeMark } from '@/components/brand/QtTeleScopeMark.jsx'
 import { AuthFridgeVisual } from '@/components/marketing/AuthFridgeVisual'
 import { PublicMarketingHeader } from '@/components/marketing/PublicMarketingHeader'
 import { QuantumBackground } from '@/components/ui/quantum-background'
@@ -49,7 +49,7 @@ export function AuthShell({
       <main className={`relative z-10 flex-1 flex items-center justify-center px-4 sm:px-6${isCert ? ' py-6' : ' py-10'}`}>
         {isCert ? (
           <div className={`auth-cert-card w-full ${maxWidth}`}>
-            <img src={cdacLogo} alt="" className="auth-cert-card__logo" width={120} height={48} />
+            <QtTeleScopeMark size={56} className="auth-cert-card__logo-mark" />
             <p className="auth-cert-card__wordmark">Q-TeleScope</p>
             <header className="auth-cert-card__head">
               <h1>{title}</h1>
@@ -64,7 +64,7 @@ export function AuthShell({
           >
             <div className="auth-shell__brand lg:col-span-5 relative z-10 flex flex-col gap-3 p-6 sm:p-8 text-white min-h-[520px] lg:min-h-0 overflow-hidden">
               <div className="flex items-center gap-2.5 shrink-0">
-                <img src={cdacLogo} alt="" className="h-8 w-auto" />
+                <QtTeleScopeMark size={32} className="qt-brand-mark--on-dark" decorative />
                 <span className="text-lg font-semibold tracking-tight">Q-TeleScope</span>
               </div>
 

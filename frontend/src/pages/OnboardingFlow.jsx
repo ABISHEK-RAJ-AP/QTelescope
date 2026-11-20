@@ -18,6 +18,7 @@ import {
 } from '@/lib/onboardingState';
 import { isPlatformAdmin } from '@/lib/permissions.js';
 import { OnboardingShell, STEP_IDS } from '@/components/onboarding/OnboardingChrome';
+import { Field, fieldClass } from '@/components/AuthShell';
 import '@/components/onboarding/onboarding.css';
 
 const STEPS = STEP_IDS;
@@ -28,6 +29,17 @@ function hasVendorKeys(list) {
 }
 
 const PRIMARY_PROVIDERS = ['ibm_quantum', 'rigetti_quantum', 'ionq_quantum', 'cdac_quantum'];
+
+function discoveryStatusMessage(poll, discoverRes, backendCount) {
+  if (discoverRes?.error) {
+    return `Discovery did not complete. ${discoverRes.error}`;
+  }
+  const n = discoverRes?.total_backends_discovered ?? backendCount ?? 0;
+  if (poll) {
+    return `Discovery complete. ${n} backend${n === 1 ? '' : 's'} synchronized in the fleet catalog.`;
+  }
+  return `Fleet catalog ready. ${n} backend${n === 1 ? '' : 's'} available on this server.`;
+}
 
 function FaqBlock({ items, defaultOpen = 0 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -51,6 +63,34 @@ function FaqBlock({ items, defaultOpen = 0 }) {
         );
       })}
     </div>
+  );
+}
+
+function OnboardingSecretField({
+  forId, label, name, value, onChange, visible, onToggle,
+}) {
+  return (
+    <Field label={label} forId={forId}>
+      <div className="onboarding-secret-field">
+        <input
+          id={forId}
+          type={visible ? 'text' : 'password'}
+          className={`${fieldClass} onboarding-secret-field__input`}
+          value={value}
+          onChange={onChange}
+          autoComplete="new-password"
+          name={name || 'provider-credential'}
+        />
+        <button
+          type="button"
+          className="onboarding-secret-field__toggle"
+          onClick={onToggle}
+          aria-label={visible ? 'Hide credential' : 'Show credential'}
+        >
+          {visible ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+        </button>
+      </div>
+    </Field>
   );
 }
 
@@ -122,9 +162,7 @@ export function OnboardingFlow({ currentUser }) {
       summary,
       configuredCount: configured,
       polled: poll,
-      discoverMessage: discoverRes?.error
-        ? String(discoverRes.error)
-        : (poll ? `Vendor poll finished. ${discoverRes?.total_backends_discovered ?? (backends || []).length} backend(s).` : 'No IBM / IonQ / on-prem keys saved. Showing the catalog already on this server.'),
+      discoverMessage: discoveryStatusMessage(poll, discoverRes, (backends || []).length),
     });
     setAnalysisDone(true);
     setAnalysisBusy(false);
@@ -138,7 +176,7 @@ export function OnboardingFlow({ currentUser }) {
 
   const saveProvider = async (providerId) => {
     if (!isAdmin) {
-      setSaveNote('Only Admin can save provider keys. Skip to use the lab catalog.');
+      setSaveNote('Only an administrator can save provider credentials. Continue without keys to use the demo catalog.');
       return;
     }
     const draft = drafts[providerId] || { extra: {} };
@@ -293,18 +331,17 @@ export function OnboardingFlow({ currentUser }) {
           )}
 
           {step === 'connect' && (
-            <div className="onboarding-layout-split onboarding-layout-split--wide-left">
-              <div className="onboarding-card">
-                <p className="onboarding-intro-badge">Integrations</p>
-                <h2 className="onboarding-slide-title" style={{ fontSize: '1.35rem' }}>Provider credentials</h2>
-                <p className="onboarding-slide-body" style={{ maxWidth: 'none' }}>
+            <div className="onboarding-connect-layout">
+              <div className="onboarding-card onboarding-connect-main">
+                <h2 className="onboarding-slide-title onboarding-slide-title--compact">Provider credentials</h2>
+                <p className="onboarding-slide-body onboarding-slide-body--wide">
                   Add cloud or on-prem credentials. Keys stay on the server and are not shown again.
                   {!isAdmin && ' Your role can view the catalog; an Admin saves live tokens.'}
                 </p>
                 {saveNote && (
-                  <p className="page-hint" style={{ marginTop: 12 }} role="status">{saveNote}</p>
+                  <p className="onboarding-inline-notice" role="status">{saveNote}</p>
                 )}
-                <div className="onboarding-provider-grid" style={{ marginTop: 20 }}>
+                <div className="onboarding-provider-grid onboarding-provider-grid--connect">
                   {providers.length === 0 && (
                     <p className="onboarding-empty-note" role="status">
                       Provider list still loading, or the server is unreachable. Skip to use the demo catalog.
@@ -328,65 +365,81 @@ export function OnboardingFlow({ currentUser }) {
                       if (field.in === 'endpoint_url') return cur.endpoint_url ?? p.endpoint_url ?? p.public_fields?.endpoint_url ?? '';
                       return cur[field.in] || '';
                     };
+                    const statusLabel = [p.truth_label || p.adapter_status, p.is_configured ? 'Configured' : null]
+                      .filter(Boolean)
+                      .join(' · ');
                     return (
-                      <div key={p.id} className="onboarding-provider-card">
-                        <h4>{p.name}</h4>
-                        <p>
-                          {p.vendor} · {p.modality} · {p.truth_label || p.adapter_status}
-                          {p.is_configured ? ' · configured' : ''}
-                        </p>
-                        {p.fields?.map((field) => (
-                          <div key={field.key} style={{ marginBottom: 10 }}>
-                            <label className="admin-input-label">{field.label}</label>
-                            {field.secret ? (
-                              <div className="admin-input-wrapper">
-                                <input
-                                  type={vis[field.key] ? 'text' : 'password'}
-                                  className="input-control admin-input-field"
-                                  placeholder={field.label}
+                      <form
+                        key={p.id}
+                        className="onboarding-provider-card onboarding-provider-card--connect"
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          if (isAdmin) saveProvider(p.id);
+                        }}
+                      >
+                        <header className="onboarding-provider-card__head">
+                          <div>
+                            <h4>{p.name}</h4>
+                            <p className="onboarding-provider-card__meta">
+                              {p.vendor} · {p.modality.replace(/_/g, ' ')}
+                            </p>
+                          </div>
+                          <span className="onboarding-provider-card__status">{statusLabel}</span>
+                        </header>
+                        <div className="onboarding-provider-card__fields">
+                          {p.fields?.map((field) => {
+                            const inputId = `${p.id}-${field.key}`;
+                            if (field.secret) {
+                              return (
+                                <OnboardingSecretField
+                                  key={field.key}
+                                  forId={inputId}
+                                  name={field.key}
+                                  label={field.label}
                                   value={fieldValue(field)}
                                   onChange={(e) => setField(field, e.target.value)}
-                                  autoComplete="off"
-                                />
-                                <button
-                                  type="button"
-                                  className="admin-input-toggle-btn"
-                                  onClick={() => setShowSecret((s) => ({
+                                  visible={!!vis[field.key]}
+                                  onToggle={() => setShowSecret((s) => ({
                                     ...s,
                                     [p.id]: { ...(s[p.id] || {}), [field.key]: !vis[field.key] },
                                   }))}
-                                >
-                                  {vis[field.key] ? <EyeOff size={15} /> : <Eye size={15} />}
-                                </button>
-                              </div>
-                            ) : (
-                              <input
-                                type="text"
-                                className="input-control"
-                                style={{ width: '100%' }}
-                                placeholder={field.label}
-                                value={fieldValue(field)}
-                                onChange={(e) => setField(field, e.target.value)}
-                              />
-                            )}
-                          </div>
-                        ))}
-                        <button
-                          type="button"
-                          className="btn btn-primary btn-sm"
-                          disabled={!isAdmin}
-                          onClick={() => saveProvider(p.id)}
-                        >
-                          Save {p.name}
-                        </button>
-                      </div>
+                                />
+                              );
+                            }
+                            const auto = field.in === 'endpoint_url' ? 'url' : 'off';
+                            return (
+                              <Field key={field.key} label={field.label} forId={inputId}>
+                                <input
+                                  id={inputId}
+                                  name={field.key}
+                                  type={field.in === 'endpoint_url' ? 'url' : 'text'}
+                                  className={fieldClass}
+                                  placeholder={field.placeholder || ''}
+                                  value={fieldValue(field)}
+                                  onChange={(e) => setField(field, e.target.value)}
+                                  autoComplete={auto}
+                                />
+                              </Field>
+                            );
+                          })}
+                        </div>
+                        <footer className="onboarding-provider-card__foot">
+                          <button
+                            type="submit"
+                            className="btn btn-primary btn-sm"
+                            disabled={!isAdmin}
+                          >
+                            Save {p.name}
+                          </button>
+                        </footer>
+                      </form>
                     );
                   })}
                 </div>
               </div>
-              <div className="onboarding-side-panel">
+              <aside className="onboarding-side-panel onboarding-connect-rail" aria-label="Integration guide">
                 <p className="onboarding-section-title">Integration steps</p>
-                <ul className="onboarding-guide-steps">
+                <ul className="onboarding-guide-steps onboarding-guide-steps--rail">
                   {CONNECT_GUIDE.map((g) => (
                     <li key={g.n}>
                       <span className="onboarding-guide-steps__num">{g.n}</span>
@@ -397,9 +450,9 @@ export function OnboardingFlow({ currentUser }) {
                     </li>
                   ))}
                 </ul>
-                <p className="onboarding-section-title" style={{ marginTop: 18 }}>FAQ</p>
-                <FaqBlock items={ONBOARDING_FAQ.slice(0, 2)} />
-              </div>
+                <p className="onboarding-section-title onboarding-section-title--spaced">FAQ</p>
+                <FaqBlock items={ONBOARDING_FAQ} defaultOpen={0} />
+              </aside>
             </div>
           )}
 
@@ -408,7 +461,7 @@ export function OnboardingFlow({ currentUser }) {
               <h2 className="onboarding-slide-title" style={{ fontSize: '1.35rem' }}>Inventory</h2>
               <p className="onboarding-slide-body" style={{ maxWidth: 'none' }}>
                 {analysisBusy
-                  ? (pollVendors ? 'Calling IBM, IonQ, or the lab controller you configured.' : 'Reading backends already stored on this server.')
+                  ? (pollVendors ? 'Refreshing catalog from configured providers.' : 'Loading fleet catalog from this server.')
                   : discovery.discoverMessage}
               </p>
               {analysisBusy ? (
