@@ -243,3 +243,51 @@ html.dark .cdac-footer-mark__img--dark,
 .dark .cdac-footer-mark__img--dark {
   display: block;
 }
+
+.public-footer-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.public-footer-compact__brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+@media (min-width: 640px) {
+  .public-footer-compact__brand {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1rem;
+    text-align: left;
+  }
+}
+
+.public-footer-compact__copy {
+  color: #525252;
+  line-height: 1.45;
+  max-width: 36rem;
+}
+
+.dark .public-footer-compact__copy {
+  color: #a3a3a3;
+}
+
+.public-footer-compact__nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem 1rem;
+}
+
+@media (min-width: 640px) {
+  .public-footer-compact__nav {
+    justify-content: flex-end;
+  }
+}

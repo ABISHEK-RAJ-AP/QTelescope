@@ -8,6 +8,7 @@ import {
   CDAC_LOGO_SRC,
   cdacCopyrightLine,
 } from '@/lib/publicBrand.js'
+import '@/components/marketing/landing-chrome.css'
 
 const FOOTER_SECTIONS = [
   {
@@ -106,14 +107,12 @@ export function PublicMarketingFooter({ className = '', compact = false }) {
       <footer
         className={`relative z-20 w-full border-t border-neutral-200/80 bg-white/95 px-6 py-4 dark:border-neutral-800/80 dark:bg-[#070a0f]/95 backdrop-blur-md text-neutral-600 dark:text-neutral-400 ${className}`}
       >
-        <div className="mx-auto grid w-full max-w-6xl gap-4 text-xs sm:grid-cols-[auto_1fr] sm:items-center sm:gap-x-6">
-          <div className="flex justify-center sm:justify-start">
+        <div className="public-footer-compact mx-auto w-full max-w-6xl text-xs">
+          <div className="public-footer-compact__brand">
             <CdacFooterLogo />
+            <p className="public-footer-compact__copy m-0">{cdacCopyrightLine(currentYear)}</p>
           </div>
-          <p className="m-0 text-center text-neutral-600 dark:text-neutral-400 sm:text-left leading-snug">
-            {cdacCopyrightLine(currentYear)}
-          </p>
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 items-center sm:col-span-2 sm:justify-end">
+          <nav className="public-footer-compact__nav" aria-label="Footer">
             <a href="/#capabilities" className="font-semibold hover:text-cyan-600 dark:hover:text-cyan-400">
               Capabilities
             </a>
@@ -129,7 +128,7 @@ export function PublicMarketingFooter({ className = '', compact = false }) {
             {LEGAL_LINKS.map((link) => (
               <LegalLink key={link.href} link={link} className="font-semibold text-neutral-600 dark:text-neutral-400" />
             ))}
-          </div>
+          </nav>
         </div>
       </footer>
     )

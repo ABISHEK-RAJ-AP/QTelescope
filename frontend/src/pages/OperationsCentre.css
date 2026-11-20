@@ -6,35 +6,7 @@
   gap: var(--ds-space-page, 16px);
 }
 
-.ops-page .dashboard-exceptions {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  align-items: stretch;
-}
-
-.ops-page .dashboard-exception-stat__val {
-  font-size: 1.75rem;
-}
-
-.ops-page .dashboard-exception-stat__lbl {
-  font-size: 0.9375rem;
-  font-weight: 600;
-}
-
-.ops-page .dashboard-exception-stat__sub {
-  font-size: 0.8125rem;
-}
-
-@media (max-width: 1100px) {
-  .ops-page .dashboard-exceptions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 560px) {
-  .ops-page .dashboard-exceptions {
-    grid-template-columns: 1fr;
-  }
-}
+/* Exception strip layout: ExceptionStrip.css (imported by component). */
 
 .oc-cal-panel {
   padding: 0.85rem 1rem 1rem;
@@ -71,6 +43,21 @@
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+}
+
+@media (min-width: 900px) {
+  .oc-queue__head {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
+  }
+
+  .oc-queue__head > div:first-child {
+    flex: 1 1 14rem;
+    min-width: 0;
+  }
 }
 
 .oc-queue__title {
@@ -342,12 +329,13 @@
 }
 
 .oc-item--grid .oc-item__main {
-  grid-template-columns: 1fr;
+  grid-template-columns: auto 1fr;
+  flex: 1;
+  width: 100%;
 }
 
 .oc-item--grid .oc-item__badge {
-  justify-self: start;
-  max-width: 100%;
+  margin-top: 0.1rem;
 }
 .oc-item--grid .oc-item__title,
 .oc-item--grid .oc-item__detail,
@@ -420,13 +408,17 @@
 
 .oc-list--grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   align-items: stretch;
 }
 
 @media (max-width: 1280px) {
   .oc-list--grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  .oc-list--grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 640px) {

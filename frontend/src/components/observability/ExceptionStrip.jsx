@@ -1,6 +1,7 @@
 import React from 'react';
 import { AnimatedNumber } from '../ui/AnimatedNumber.jsx';
 import { InfoTooltip } from './InfoTooltip.jsx';
+import './ExceptionStrip.css';
 
 function StatValue({ value, tone }) {
   const n = Number(value);
