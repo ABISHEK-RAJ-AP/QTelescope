@@ -86,9 +86,9 @@ export function PublicMarketingFooter({ className = '', compact = false }) {
         className={`relative z-20 w-full border-t border-neutral-200/80 bg-white/95 px-6 py-4 dark:border-neutral-800/80 dark:bg-[#070a0f]/95 backdrop-blur-md text-neutral-600 dark:text-neutral-400 ${className}`}
       >
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row text-xs">
-          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 sm:flex-1">
             <CdacFooterLogo />
-            <p className="text-center sm:text-left m-0">© {currentYear} C-DAC · Q-TeleScope quantum observability</p>
+            <p className="text-center sm:text-left m-0">© {currentYear} Q-TeleScope · quantum observability</p>
           </div>
           <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 items-center">
             <a href="/#capabilities" className="font-semibold hover:text-cyan-600 dark:hover:text-cyan-400">
@@ -134,13 +134,6 @@ export function PublicMarketingFooter({ className = '', compact = false }) {
             <p className="max-w-sm text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
               T1/T2 coherence, gate fidelity, calibration snapshots, and alerts for QPU fleets.
             </p>
-
-            <div className="pt-2 flex flex-col gap-3 items-start">
-              <CdacFooterLogo />
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 m-0 max-w-xs leading-relaxed">
-                Centre for Development of Advanced Computing (C-DAC), Government of India
-              </p>
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:col-span-3">
@@ -173,18 +166,11 @@ export function PublicMarketingFooter({ className = '', compact = false }) {
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col gap-6 border-t border-neutral-200/80 pt-8 dark:border-neutral-800/80">
-          <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-            <CdacFooterLogo className="cdac-footer-mark--bar" />
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center sm:text-right m-0 max-w-xl">
-              © {currentYear} Centre for Development of Advanced Computing (C-DAC). All rights reserved.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-6 text-xs text-neutral-500 dark:text-neutral-400 sm:justify-end">
-            {LEGAL_LINKS.map((link) => (
-              <LegalLink key={link.name} link={link} />
-            ))}
-          </div>
+        <div className="mt-12 flex flex-col items-center gap-4 border-t border-neutral-200/80 pt-8 sm:flex-row sm:justify-between dark:border-neutral-800/80">
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 text-center sm:text-left m-0 order-2 sm:order-1">
+            © {currentYear} Q-TeleScope. All rights reserved.
+          </p>
+          <CdacFooterLogo className="cdac-footer-mark--bar order-1 sm:order-2" />
         </div>
       </div>
     </footer>
