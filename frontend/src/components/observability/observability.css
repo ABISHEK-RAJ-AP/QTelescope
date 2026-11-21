@@ -520,6 +520,17 @@
   flex: 1 1 100%;
 }
 
+.context-bar__scope-help {
+  margin-left: auto;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+label.outline-field.context-bar__backend-field {
+  min-width: min(100%, 14rem);
+  max-width: 20rem;
+}
+
 /* Chart panel */
 .chart-panel.card {
   display: flex;

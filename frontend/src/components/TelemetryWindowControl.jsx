@@ -28,8 +28,8 @@ export function TelemetryWindowControl({ hours, onChange }) {
   };
 
   return (
-    <label className="context-bar__field context-bar__field--boxed telemetry-window-control">
-      <span className="context-bar__label-text">Lookback</span>
+    <label className="outline-field telemetry-window-control">
+      <span>Lookback</span>
       <select
         className="input-control"
         value={selectValue}

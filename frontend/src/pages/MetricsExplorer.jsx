@@ -197,32 +197,32 @@ export const MetricsExplorer = () => {
     <div className="page-stack" data-tour="page-metrics-explorer">
       <section className="card page-panel" aria-label="Metrics explorer controls">
         <div className="page-toolbar-unified" aria-label="Scope and metrics">
-          <label className="context-bar__field context-bar__field--boxed">
-            <span className="context-bar__label-text">Backend</span>
+          <label className="outline-field">
+            <span>Backend</span>
             <select className="input-control" value={selectedBackend || ''} onChange={(e) => setBackend(e.target.value)} aria-label="Backend scope">
               {backends.map((b) => (
                 <option key={b.backend_id} value={b.backend_id}>{b.backend_name || b.backend_id}</option>
               ))}
             </select>
           </label>
-          <label className="context-bar__field context-bar__field--boxed">
-            <span className="context-bar__label-text">Lookback</span>
+          <label className="outline-field">
+            <span>Lookback</span>
             <select className="input-control" value={windowHours} onChange={(e) => setWindowHours(Number(e.target.value))} aria-label="Lookback hours">
               {[6, 12, 24, 48, 168].map((h) => (
                 <option key={h} value={h}>{h} h</option>
               ))}
             </select>
           </label>
-          <label className="context-bar__field context-bar__field--boxed">
-            <span className="context-bar__label-text">Metric</span>
+          <label className="outline-field">
+            <span>Metric</span>
             <select className="input-control" value={metricId} onChange={(e) => setMetricId(e.target.value)} aria-label="Metric">
               {EXPLORER_METRICS.map((m) => (
                 <option key={m.id} value={m.id}>{m.label}</option>
               ))}
             </select>
           </label>
-          <label className="context-bar__field context-bar__field--boxed">
-            <span className="context-bar__label-text">Compare</span>
+          <label className="outline-field">
+            <span>Compare</span>
             <select className="input-control" value={compareBackend} onChange={(e) => setCompareBackend(e.target.value)} aria-label="Compare backend">
               <option value="">None</option>
               {backends.filter((b) => b.backend_id !== selectedBackend).map((b) => (
@@ -230,8 +230,8 @@ export const MetricsExplorer = () => {
               ))}
             </select>
           </label>
-          <label className="context-bar__field context-bar__field--boxed">
-            <span className="context-bar__label-text">Saved</span>
+          <label className="outline-field">
+            <span>Saved</span>
             <select
               className="input-control"
               value=""
@@ -247,8 +247,8 @@ export const MetricsExplorer = () => {
               ))}
             </select>
           </label>
-          <label className="context-bar__field context-bar__field--boxed">
-            <span className="context-bar__label-text">Name</span>
+          <label className="outline-field">
+            <span>Name</span>
             <input className="input-control" placeholder="Query name" aria-label="Save query as" value={saveName} onChange={(e) => setSaveName(e.target.value)} />
           </label>
           <div className="ops-filter__actions">

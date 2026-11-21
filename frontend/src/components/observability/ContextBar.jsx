@@ -38,15 +38,8 @@ export function ContextBar({
   return (
     <div className="context-bar card page-panel" role="region" aria-label="View context">
       {showBackend && (
-        <div className="context-bar__field context-bar__field--boxed">
-          <div className="context-bar__label-row qt-title-with-help">
-            <span className="context-bar__label-text">Backend</span>
-            {scopeHelp ? (
-              <InfoTooltip label="Stream scope" align="start">
-                {scopeHelp}
-              </InfoTooltip>
-            ) : null}
-          </div>
+        <label className="outline-field context-bar__backend-field">
+          <span>Backend</span>
           <select
             className="input-control"
             value={backend || ''}
@@ -61,7 +54,7 @@ export function ContextBar({
               </option>
             ))}
           </select>
-        </div>
+        </label>
       )}
       {showTimeRange && hours != null && onHoursChange && (
         <div className="context-bar__field context-bar__field--range">
@@ -79,6 +72,11 @@ export function ContextBar({
       )}
       {children}
       {hint && <span className="page-hint context-bar__hint">{hint}</span>}
+      {scopeHelp ? (
+        <InfoTooltip className="context-bar__scope-help" label="Stream scope" align="end">
+          {scopeHelp}
+        </InfoTooltip>
+      ) : null}
     </div>
   );
 }
