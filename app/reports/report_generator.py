@@ -5,12 +5,76 @@ import html
 from collections import Counter
 from typing import Any, Dict, List, Optional
 
+from app.reports.branding_assets import report_brand_marks_html
+
+IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+
+COLUMN_LABELS: Dict[str, str] = {
+    "alert_id": "Alert ID",
+    "backend_id": "Backend",
+    "resource_type": "Resource kind",
+    "resource_id": "Resource ID",
+    "rule_type": "Rule / metric",
+    "severity": "Severity",
+    "status": "Lifecycle status",
+    "summary": "Operator summary",
+    "detected_at": "Detected (IST)",
+    "backend_name": "Backend name",
+    "provider": "Provider",
+    "type": "Modality / type",
+    "qubits": "Qubit count",
+    "quantum_volume": "Quantum volume",
+    "calibration_id": "Calibration ID",
+    "age_hours": "Age (hours)",
+    "freshness": "Freshness class",
+    "timestamp": "Snapshot time (IST)",
+    "message": "Summary",
+}
+
+FIELD_GLOSSARY: Dict[str, Dict[str, str]] = {
+    "alerts": {
+        "alert_id": "Stable identifier for this alert row in the telemetry store.",
+        "backend_id": "QPU or simulator the alert relates to (parsed from the resource).",
+        "resource_type": "Whether the alert targets a backend, qubit, gate, queue, or calibration asset.",
+        "resource_id": "Fully qualified resource key (often backend plus qubit index).",
+        "rule_type": "Threshold rule or metric family that fired (stored alert_type).",
+        "severity": "INFO, WARNING, or CRITICAL — drives paging and dashboard emphasis.",
+        "status": "ACTIVE, ACKNOWLEDGED, or RESOLVED lifecycle state.",
+        "summary": "Human-readable message shown to operators in the console.",
+        "detected_at": "When the condition was first recorded (India Standard Time).",
+    },
+    "backend_monitoring": {
+        "backend_id": "Canonical backend key used across APIs and routing.",
+        "backend_name": "Display name shown in the operator console.",
+        "provider": "Vendor or internal provider identifier.",
+        "type": "Hardware vs simulator and modality family.",
+        "qubits": "Advertised usable qubit count for capacity planning.",
+        "status": "Operational status: ONLINE, OFFLINE, MAINTENANCE, etc.",
+        "quantum_volume": "Vendor quantum volume metric when published.",
+    },
+    "calibration": {
+        "backend_id": "Backend that owns this calibration snapshot.",
+        "calibration_id": "Vendor or internal calibration identifier.",
+        "age_hours": "Hours since the snapshot timestamp (staleness input).",
+        "freshness": "Fresh, Aging, or Stale classification for routing decisions.",
+        "timestamp": "When the calibration snapshot was captured (IST).",
+    },
+}
+
 
 class ReportGenerator:
     """CSV, JSON, and printable HTML exports for audit evidence."""
 
-    ORG_NAME = "Q-TeleScope · Quantum Telemetry"
+    ORG_NAME = "C-DAC · Q-TeleScope Quantum Telemetry"
     PLATFORM = "Quantum Monitoring & Resource Platform"
+    FOOTER_RESTRICTED = (
+        "RESTRICTED — C-DAC internal operations record. "
+        "Authorised programme personnel only; do not redistribute outside approved channels."
+    )
+    FOOTER_INTEGRITY = (
+        "Evidence ZIP archives include SHA-256 package and manifest hashes. "
+        "Verify downloads with sha256sum before long-term retention."
+    )
 
     @staticmethod
     def generate_csv_report(data: List[Dict[str, Any]], fieldnames: List[str]) -> str:
@@ -143,13 +207,25 @@ class ReportGenerator:
         return f'<section class="kpi-grid" aria-label="Summary">{inner}</section>'
 
     @staticmethod
-    def generate_glossary_html(fieldnames: List[str]) -> str:
+    def column_label(field: str) -> str:
+        return COLUMN_LABELS.get(field, field.replace("_", " ").title())
+
+    @staticmethod
+    def generate_glossary_html(report_type: str, fieldnames: List[str]) -> str:
         if not fieldnames:
             return ""
-        lis = "".join(f"<li><code>{html.escape(f)}</code></li>" for f in fieldnames)
+        type_glossary = FIELD_GLOSSARY.get(report_type, {})
+        lis: List[str] = []
+        for field in fieldnames:
+            label = ReportGenerator.column_label(field)
+            desc = type_glossary.get(field, "Exported telemetry field from the live store.")
+            lis.append(
+                f"<li><strong>{html.escape(label)}</strong> "
+                f"(<code>{html.escape(field)}</code>) — {html.escape(desc)}</li>"
+            )
         return (
-            '<section class="glossary"><h2>Column reference</h2>'
-            f"<ul>{lis}</ul></section>"
+            '<section class="glossary"><h2>Field definitions</h2>'
+            f"<ul>{''.join(lis)}</ul></section>"
         )
 
     @staticmethod
@@ -173,7 +249,7 @@ class ReportGenerator:
         display_rows = table_rows[:row_limit] if row_limit is not None else table_rows
         headers = fieldnames or (list(table_rows[0].keys()) if table_rows else [])
 
-        th_html = "".join(f"<th>{html.escape(h.replace('_', ' ').title())}</th>" for h in headers)
+        th_html = "".join(f"<th>{html.escape(ReportGenerator.column_label(h))}</th>" for h in headers)
         tr_html = ""
         for row in display_rows:
             tds = "".join(f"<td>{html.escape(str(row.get(h, '') or '—'))}</td>" for h in headers)
@@ -183,7 +259,8 @@ class ReportGenerator:
 
         summary_block = ReportGenerator.generate_summary_html(report_type, aggregates, scope_label) if include_summary else ""
         charts_block = ReportGenerator.generate_charts_html(report_type, aggregates) if include_charts else ""
-        glossary_block = ReportGenerator.generate_glossary_html(headers) if include_glossary else ""
+        glossary_block = ReportGenerator.generate_glossary_html(report_type, headers) if include_glossary else ""
+        brand_marks = report_brand_marks_html()
         truncated_note = ""
         if row_limit is not None and len(table_rows) > len(display_rows):
             truncated_note = (
@@ -218,10 +295,23 @@ class ReportGenerator:
       transform: rotate(-18deg); pointer-events: none; user-select: none;
     }}
     .head-band {{
-      display: flex; justify-content: space-between; gap: 16px;
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 16px;
       padding: 20px 24px; border-bottom: 3px solid #0891b2;
       background: linear-gradient(180deg, #ecfeff 0%, #fff 100%);
     }}
+    .head-lead {{
+      display: flex; flex-direction: column; gap: 10px; min-width: 0;
+    }}
+    .head-logos {{
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    }}
+    .head-logos--text {{
+      font-size: 13px; font-weight: 700; color: #0e7490; letter-spacing: 0.04em;
+    }}
+    .head-logos__sep {{ color: #94a3b8; font-weight: 500; }}
+    .report-logo {{ height: auto; max-width: 120px; object-fit: contain; }}
+    .report-logo--cdac {{ max-width: 88px; }}
+    .report-logo--qt {{ max-width: 140px; }}
     .org {{ font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #0e7490; font-weight: 700; }}
     .title {{ font-size: 22px; font-weight: 700; color: #0f172a; margin: 6px 0 0; }}
     .subtitle {{ font-size: 13px; color: #475569; margin-top: 4px; }}
@@ -257,9 +347,15 @@ class ReportGenerator:
     .glossary {{ margin-top: 18px; font-size: 11px; color: #475569; }}
     .glossary ul {{ margin: 6px 0 0; padding-left: 18px; }}
     .foot-band {{
-      border-top: 2px solid #0891b2; padding: 12px 24px; font-size: 10px; color: #64748b;
-      display: flex; justify-content: space-between; gap: 12px; background: #f1f5f9;
+      border-top: 2px solid #0891b2; padding: 14px 24px; font-size: 10px; color: #64748b;
+      display: flex; flex-direction: column; gap: 8px; background: #f1f5f9;
     }}
+    .foot-band__row {{
+      display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+    }}
+    .foot-logos {{ display: flex; align-items: center; gap: 10px; opacity: 0.85; }}
+    .foot-logos .report-logo {{ max-height: 22px; max-width: 72px; }}
+    .foot-logos .report-logo--qt {{ max-width: 96px; }}
     @media print {{
       body {{ background: #fff; padding: 0; }}
       .sheet {{ border: none; box-shadow: none; max-width: none; }}
@@ -271,10 +367,13 @@ class ReportGenerator:
   <article class="sheet">
     {watermark}
     <header class="head-band">
-      <div>
-        <div class="org">{html.escape(ReportGenerator.ORG_NAME)}</div>
-        <h1 class="title">{html.escape(title)}</h1>
-        <p class="subtitle">{html.escape(subtitle)}</p>
+      <div class="head-lead">
+        {brand_marks}
+        <div>
+          <div class="org">{html.escape(ReportGenerator.ORG_NAME)}</div>
+          <h1 class="title">{html.escape(title)}</h1>
+          <p class="subtitle">{html.escape(subtitle)}</p>
+        </div>
       </div>
       <div class="meta">
         <strong>Generated</strong>
@@ -295,8 +394,14 @@ class ReportGenerator:
       {glossary_block}
     </div>
     <footer class="foot-band">
-      <span>Confidential — internal operations evidence. Verify hashes on downloadable ZIP snapshots where applicable.</span>
-      <span>© {datetime.datetime.now().year} C-DAC quantum telemetry programme</span>
+      <div class="foot-band__row">
+        <span>{html.escape(ReportGenerator.FOOTER_RESTRICTED)}</span>
+        <div class="foot-logos">{brand_marks}</div>
+      </div>
+      <div class="foot-band__row">
+        <span>{html.escape(ReportGenerator.FOOTER_INTEGRITY)}</span>
+        <span>© {datetime.datetime.now(IST).year} Centre for Development of Advanced Computing · Q-TeleScope</span>
+      </div>
     </footer>
   </article>
 </body>

@@ -31,7 +31,7 @@ export const COPY = {
     noLinkedAlerts: 'No alerts linked to this incident.',
   },
   reports: {
-    evidenceDesc: 'Immutable ZIP of alerts, incidents, calibration and qubit summaries, sealed with SHA-256 hashes for later verification.',
+    evidenceDesc: 'Tamper-evident ZIP bundles (alerts, incidents, calibration, qubit summaries) with manifest and package SHA-256 hashes for verification before archival.',
   },
   platform: {
     dbUnreachable: 'Data store unreachable — check Settings → System health.',

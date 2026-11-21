@@ -22,7 +22,14 @@ import './ReportsPage.css';
 const REPORTS = [
   { type: 'backend_monitoring', title: 'Backend inventory', body: 'Operational status, qubit counts, provider, quantum volume.', fields: 'backend_id, name, provider, type, qubits, status, QV', scopeKey: (r) => r.backend_id },
   { type: 'calibration', title: 'Calibration freshness', body: 'Snapshot age, freshness class, calibration identifiers.', fields: 'backend_id, calibration_id, age_hours, freshness, timestamp', scopeKey: (r) => r.backend_id },
-  { type: 'alerts', title: 'Alert log', body: 'Every stored alert: severity, resource, status, detection time.', fields: 'alert_id, resource, type, severity, status, detected_at', scopeKey: (r) => r.resource, prefix: true },
+  {
+    type: 'alerts',
+    title: 'Alert log',
+    body: 'Stored alerts with backend, resource target, rule, severity, status, and IST detection time.',
+    fields: 'alert_id, backend_id, resource_type, resource_id, rule_type, severity, status, summary, detected_at',
+    scopeKey: (r) => r.backend_id || r.resource_id,
+    prefix: false,
+  },
 ];
 const FORMATS = [
   { id: 'csv', label: 'CSV', hint: 'Spreadsheet-ready' },
@@ -32,6 +39,22 @@ const FORMATS = [
 
 const kb = (n) => (n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`);
 const short = (h) => (h ? `${h.slice(0, 10)}…${h.slice(-4)}` : '—');
+const previewColLabel = (key) =>
+  ({
+    alert_id: 'Alert ID',
+    backend_id: 'Backend',
+    resource_type: 'Resource kind',
+    resource_id: 'Resource ID',
+    rule_type: 'Rule / metric',
+    summary: 'Operator summary',
+    detected_at: 'Detected (IST)',
+    backend_name: 'Backend name',
+    calibration_id: 'Calibration ID',
+    age_hours: 'Age (hours)',
+    freshness: 'Freshness',
+    timestamp: 'Snapshot (IST)',
+    quantum_volume: 'Quantum volume',
+  }[key] || key.replace(/_/g, ' '));
 
 export const ReportsPage = () => {
   const { setActions, clearActions } = usePageActions();
@@ -228,7 +251,9 @@ export const ReportsPage = () => {
 
       <section className="card rp-card" aria-labelledby="rp-ev-h" data-tour="page-evidence">
         <h3 id="rp-ev-h" className="rp-h">Evidence snapshots</h3>
-        <p className="rp-desc rp-desc--compact">Immutable ZIP with SHA-256 manifest. Fleet or single-backend scope.</p>
+        <p className="rp-desc rp-desc--compact">
+          Tamper-evident ZIP packages with manifest and package SHA-256 hashes. Fleet or single-backend scope — verify downloads before archival.
+        </p>
         <div className="rp-snaprow">
           <label className="rp-label">Scope
             <select className="input-control" value={snapScope} onChange={(e) => setSnapScope(e.target.value)}>

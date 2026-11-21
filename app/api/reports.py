@@ -1,3 +1,4 @@
+import datetime
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
@@ -34,6 +35,7 @@ _BACKEND_COLS = load_only(
 
 _ALERT_COLS = load_only(
     AlertModel.alert_id,
+    AlertModel.resource_type,
     AlertModel.resource_id,
     AlertModel.alert_type,
     AlertModel.severity,
@@ -41,6 +43,26 @@ _ALERT_COLS = load_only(
     AlertModel.detected_at,
     AlertModel.message,
 )
+
+IST = datetime.timezone(datetime.timedelta(hours=5, minutes=30))
+
+
+def _alert_backend_id(alert: AlertModel) -> str:
+    res_id = alert.resource_id or ""
+    rtype = (alert.resource_type or "").upper()
+    if rtype == "BACKEND":
+        return res_id
+    if "_Q" in res_id:
+        return res_id.rsplit("_Q", 1)[0]
+    return res_id
+
+
+def _format_ist(dt: Optional[datetime.datetime]) -> str:
+    if not dt:
+        return ""
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=datetime.timezone.utc)
+    return dt.astimezone(IST).strftime("%Y-%m-%d %I:%M:%S %p IST")
 
 
 class ReportImportBody(BaseModel):
@@ -80,15 +102,28 @@ def _build_report(report_type: str, db: Session) -> Tuple[str, str, List[str], L
         )
         data = [{
             "alert_id": a.alert_id,
-            "resource": a.resource_id,
-            "type": a.alert_type,
+            "backend_id": _alert_backend_id(a),
+            "resource_type": a.resource_type,
+            "resource_id": a.resource_id,
+            "rule_type": a.alert_type,
             "severity": a.severity,
             "status": a.status,
-            "detected_at": str(a.detected_at),
+            "summary": (a.message or "").strip(),
+            "detected_at": _format_ist(a.detected_at),
         } for a in alerts]
-        fieldnames = ["alert_id", "resource", "type", "severity", "status", "detected_at"]
+        fieldnames = [
+            "alert_id",
+            "backend_id",
+            "resource_type",
+            "resource_id",
+            "rule_type",
+            "severity",
+            "status",
+            "summary",
+            "detected_at",
+        ]
         title = "Alert & Incident Report"
-        subtitle = "Stored alerts with severity, resource, and lifecycle status"
+        subtitle = "Stored alerts with backend scope, resource target, rule, and lifecycle status"
         return title, subtitle, fieldnames, data
 
     if report_type == "calibration":
@@ -126,7 +161,12 @@ def _scope_rows(
     elif report_type == "calibration":
         scoped = [r for r in data if r.get("backend_id") == bid]
     else:
-        scoped = [r for r in data if str(r.get("resource") or "").startswith(f"{bid}_") or r.get("resource") == bid]
+        scoped = [
+            r for r in data
+            if r.get("backend_id") == bid
+            or str(r.get("resource_id") or "").startswith(f"{bid}_")
+            or r.get("resource_id") == bid
+        ]
     return scoped, f"Backend {bid}"
 
 
@@ -303,12 +343,14 @@ def export_bundle(db: Session = Depends(get_db)):
         } for b in backends],
         "alerts": [{
             "alert_id": a.alert_id,
-            "resource": a.resource_id,
-            "type": a.alert_type,
+            "backend_id": _alert_backend_id(a),
+            "resource_type": a.resource_type,
+            "resource_id": a.resource_id,
+            "rule_type": a.alert_type,
             "severity": a.severity,
             "status": a.status,
-            "detected_at": str(a.detected_at),
-            "message": a.message,
+            "summary": (a.message or "").strip(),
+            "detected_at": _format_ist(a.detected_at),
         } for a in alerts],
         "calibrations": [{
             "backend_id": s.backend_id,

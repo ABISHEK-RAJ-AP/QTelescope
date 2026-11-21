@@ -19,15 +19,41 @@ def test_html_report_has_header_footer_and_table():
     )
     assert "Q-TeleScope" in html
     assert "Telemetry detail" in html
-    assert "Confidential" in html
+    assert "Field definitions" in html
+    assert "RESTRICTED" in html
+    assert "head-logos" in html or "C-DAC" in html
     assert "<table" in html
     assert "chart-bar" in html
     assert "online" in html
     assert "motion-div" not in html
 
 
+def test_alert_glossary_describes_columns():
+    fieldnames = [
+        "alert_id", "backend_id", "resource_type", "resource_id",
+        "rule_type", "severity", "status", "summary", "detected_at",
+    ]
+    glossary = ReportGenerator.generate_glossary_html("alerts", fieldnames)
+    assert "Stable identifier" in glossary
+    assert "<code>rule_type</code>" in glossary
+    assert "India Standard Time" in glossary
+
+
 def test_preview_row_limit():
-    rows = [{"alert_id": f"a{i}", "severity": "high", "status": "open", "resource": "x", "type": "t", "detected_at": "now"} for i in range(10)]
+    rows = [
+        {
+            "alert_id": f"a{i}",
+            "backend_id": "ibm_q1",
+            "severity": "CRITICAL",
+            "status": "ACTIVE",
+            "resource_id": "ibm_q1_Q3",
+            "resource_type": "QUBIT",
+            "rule_type": "t1_degradation",
+            "summary": "T1 below threshold",
+            "detected_at": "2026-01-01 10:00:00 AM IST",
+        }
+        for i in range(10)
+    ]
     fieldnames = list(rows[0].keys())
     html = ReportGenerator.generate_html_report(
         "Alerts",
