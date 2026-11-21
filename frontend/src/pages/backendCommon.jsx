@@ -95,10 +95,9 @@ export function TelemetryCoverageHint({ unknownCount, totalCount, className = ''
   return (
     <span className={`bk-coverage-hint${className ? ` ${className}` : ''}`} role="status">
       <AlertTriangle size={14} aria-hidden className="bk-coverage-hint__icon" />
-      <span className="bk-coverage-hint__nums" title={COVERAGE_HELP}>
+      <span className="bk-coverage-hint__nums" aria-label={`${unknown} of ${total} qubits lack T1/T2 in stored telemetry`}>
         {unknown}/{total}
       </span>
-      <span className="bk-coverage-hint__label">partial coherence</span>
       <InfoTooltip label="Partial coherence coverage">{COVERAGE_HELP}</InfoTooltip>
     </span>
   );

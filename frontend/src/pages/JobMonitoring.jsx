@@ -23,6 +23,7 @@ import { TableEmpty } from '../components/observability/EmptyState.jsx';
 import { getChartTheme, baseTooltip, getChartSemanticColors, getJobStatusChartColors } from '../components/observability/chartTheme.js';
 import { buildBackendDetailsPath, buildTimelineInvestigationLocation, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
+import { sortCopy } from '../lib/sortCopy.js';
 import { formatIST } from '../utils/time';
 import { DataPanelToolbar } from '../components/observability/DataViewToolbar.jsx';
 import { EnterpriseDataTable } from '../components/observability/EnterpriseDataTable.jsx';
@@ -168,7 +169,7 @@ export const JobMonitoring = () => {
     const done = list.filter((j) => meta(j.status).terminal);
     const ok = counts.COMPLETED || 0;
     const active = (counts.RUNNING || 0) + (counts.QUEUED || 0);
-    const backends = new Set(list.map((j) => j.backend_id)).toSorted();
+    const backends = sortCopy([...new Set(list.map((j) => j.backend_id))]);
     const per = backends.map((id) => {
       const mine = list.filter((j) => j.backend_id === id);
       const term = mine.filter((j) => meta(j.status).terminal);

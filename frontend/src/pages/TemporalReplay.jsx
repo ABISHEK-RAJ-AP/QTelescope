@@ -193,6 +193,7 @@ export const TemporalReplay = () => {
         backend={backendId}
         backends={backends}
         onBackendChange={setBackend}
+        scopeHelp={`${COPY.replay.notLive} ${COPY.replay.coverageLegend}`}
       />
 
       {error && <ErrorState variant="panel" message={unableToLoad('replay timeline')} onRetry={loadTimeline} />}
@@ -204,22 +205,11 @@ export const TemporalReplay = () => {
 
       {frames.length > 0 && (
         <>
-          <p className="tm-callout tm-callout--info" role="note">
-            {COPY.replay.notLive}{' '}
-            Newest saved frame: <strong>{lastAt ? formatISTTime(lastAt) : '—'}</strong>
-            {frameAgeH != null && (
-              frameAgeH < 1
-                ? ` (${Math.round(frameAgeH * 60)} min ago)`
-                : ` (${fmtNum(frameAgeH, 1)} h ago)`
-            )}.
-            {!isStale(lastAt) && frameAgeH != null && frameAgeH <= 1 ? ' Data is recent but still replay-only — not live streaming.' : ''}
-          </p>
           {isStale(lastAt) && (
             <p className="tm-callout tm-callout--bad" role="status">
-              {COPY.replay.staleCollector} Last save: {formatISTTime(lastAt)}.
+              Stale replay data · last save {formatISTTime(lastAt)}. Collector may be paused.
             </p>
           )}
-          <p className="page-hint" style={{ margin: 0 }} role="note">{COPY.replay.coverageLegend}</p>
           <div className="card tm-player" role="group" aria-label="Replay controls">
             <button type="button" className="btn btn-secondary" onClick={() => { setPlaying(false); setIndex((i) => Math.max(0, i - 1)); }} aria-label="Previous frame" disabled={index <= 0}><SkipBack size={16} /></button>
             <button
@@ -230,7 +220,21 @@ export const TemporalReplay = () => {
             <button type="button" className="btn btn-secondary" onClick={() => { setPlaying(false); setIndex((i) => Math.min(maxIdx, i + 1)); }} aria-label="Next frame" disabled={index >= maxIdx}><SkipForward size={16} /></button>
             <input id="replay-scrub" type="range" min={0} max={maxIdx} value={index} aria-label="Replay frame" aria-valuetext={`Frame ${index + 1} of ${frames.length}, ${frame?.at ? formatISTTime(frame.at) : ''}`}
               onChange={(e) => { setPlaying(false); setIndex(Number(e.target.value)); }} />
-            <span className="page-hint" style={{ margin: 0 }}>Frame {index + 1} / {frames.length} · {frame?.at ? formatISTTime(frame.at) : '—'}</span>
+            <span className="page-hint" style={{ margin: 0, flex: '1 1 auto' }}>
+              Frame {index + 1}/{frames.length}
+              {frame?.at ? ` · ${formatISTTime(frame.at)}` : ''}
+              {lastAt ? (
+                <>
+                  {' · '}
+                  Newest {formatISTTime(lastAt)}
+                  {frameAgeH != null
+                    ? frameAgeH < 1
+                      ? ` (${Math.round(frameAgeH * 60)}m ago)`
+                      : ` (${fmtNum(frameAgeH, 1)}h ago)`
+                    : ''}
+                </>
+              ) : null}
+            </span>
           </div>
 
           <div className="tm-kpis">

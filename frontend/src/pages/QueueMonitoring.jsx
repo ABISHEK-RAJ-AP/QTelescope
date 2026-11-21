@@ -397,13 +397,11 @@ export const QueueMonitoring = () => {
         <div className="qm-kpi"><div className="qm-kpi__label">History samples</div><div className="qm-kpi__value">{(analytics?.backends || []).reduce((a, b) => a + b.samples, 0)}</div><div className="qm-kpi__sub">{analytics ? COPY.queue.historySub : 'History unavailable'}</div></div>
       </section>
       <section className="qm-charts">
-        <p className="qm-hint page-hint" role="note">
-          Est. wait uses the latest status poll when the vendor supplies it; otherwise ~values come from stored history mean (hover cells for detail).
-        </p>
         <ChartPanel
           title="Queue depth and wait by backend"
           titleTo="/app/execution/jobs"
           question="Current snapshot — longest wait and depth first."
+          help="Est. wait uses the latest status poll when the vendor supplies it; otherwise ~values come from stored history mean (hover cells for detail)."
           sourceKind="cached" asOf={asOf}
           provenanceDetail="Latest collected backend telemetry; may differ from vendor portal."
           state={ranked.length ? 'ready' : 'empty'} emptyTitle="No queues" minHeight={barChartHeight}

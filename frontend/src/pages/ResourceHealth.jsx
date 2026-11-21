@@ -348,7 +348,7 @@ export const ResourceHealth = () => {
             <button type="button" className="btn btn-secondary" onClick={applyRouter} disabled={busy || fleet.RED === 0}>
               {busy ? 'Applying…' : `Advisory-quarantine all RED (${fleet.RED})`}
             </button>
-            <span className="page-hint" style={{ margin: 0 }}>Advisory actions apply to routing recommendations for this fleet.</span>
+            <InfoTooltip label="Advisory actions">Advisory actions apply to routing recommendations for this fleet. Platform DB only — does not change vendor schedulers.</InfoTooltip>
           </div>
         </div>
 

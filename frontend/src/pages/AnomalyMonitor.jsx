@@ -17,6 +17,7 @@ import {
 } from '../components/observability/DetailModalLayout.jsx';
 import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
 import { ContextBar } from '../components/observability/ContextBar.jsx';
+import { sortCopy } from '../lib/sortCopy.js';
 import { getChartTheme, baseTooltip, getChartSemanticColors, getAnomalySeverityChartColors, getChartInkColor } from '../components/observability/chartTheme.js';
 import { useAppScope } from '../hooks/useAppScope.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
@@ -152,7 +153,7 @@ export const AnomalyMonitor = () => {
     const all = (data?.hits || []).filter((h) => !scopeBackend || h.backend_id === scopeBackend)
       .map((h) => ({ ...h, dev: deviation(h) }));
     const mul = sort.dir === 'asc' ? 1 : -1;
-    return all.toSorted((a, b) => {
+    return sortCopy(all, (a, b) => {
       let c = 0;
       if (sort.key === 'backend') {
         c = String(a.backend_name || a.backend_id).localeCompare(String(b.backend_name || b.backend_id));
@@ -172,7 +173,7 @@ export const AnomalyMonitor = () => {
   const mixedModality = useMemo(() => new Set(hits.map((h) => modalityOf(backends, h.backend_id)).filter(Boolean)).size > 1, [hits, backends]);
 
   const heat = useMemo(() => {
-    const cols = new Set(hits.map((h) => h.qubit_index)).toSorted((a, b) => a - b);
+    const cols = sortCopy([...new Set(hits.map((h) => h.qubit_index))], (a, b) => a - b);
     const ys = rows.map((b) => b.backend_name || b.backend_id);
     return {
       cols,
