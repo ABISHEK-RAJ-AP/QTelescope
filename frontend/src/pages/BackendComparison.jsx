@@ -14,8 +14,8 @@ import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { getChartTheme, baseTooltip, getFleetStateChartColors, getModalityChartPalette } from '../components/observability/chartTheme.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { isSimulatorBackend } from './fleetData.js';
-import { ScopeBanner } from '../components/ds/ScopeBanner.jsx';
 import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
+import { notifyOperatorNotice } from '../lib/toast.js';
 import './BackendComparison.css';
 
 const MAX_COMPARE = 4;
@@ -123,8 +123,34 @@ const fmt = (v, metric) => {
   return v.toFixed(4);
 };
 
+const ROUTING_STATUS_COPY = {
+  GREEN: 'Healthy routing — suitable for new submissions.',
+  YELLOW: 'Caution — queue or calibration pressure; review before submitting.',
+  RED: 'Degraded — avoid new work on this backend if you can.',
+  UNKNOWN: 'Routing status not reported.',
+};
+
+function routingNoticeVariant(router) {
+  if (router === 'RED') return 'critical';
+  if (router === 'YELLOW') return 'warn';
+  return 'info';
+}
+
+function routingNoticeBody(pick) {
+  const bits = [ROUTING_STATUS_COPY[pick.router] || ROUTING_STATUS_COPY.UNKNOWN];
+  if (pick.pending != null) {
+    bits.push(`${pick.pending} job${pick.pending === 1 ? '' : 's'} waiting in queue.`);
+  } else {
+    bits.push('Queue depth not available.');
+  }
+  if (pick.fLim != null) {
+    bits.push(`Limiting gate fidelity ${fmt(pick.fLim, { key: 'F_limit' })}.`);
+  }
+  return bits.join(' ');
+}
+
 function stats(values) {
-  const v = values.slice().sort((a, b) => a - b);
+  const v = values.toSorted((a, b) => a - b);
   if (!v.length) return null;
   const q = (p) => {
     const i = (v.length - 1) * p;
@@ -339,6 +365,42 @@ export const BackendComparison = () => {
     [result, rows, mixed, meta, queues],
   );
 
+  useEffect(() => {
+    if (!routingPick || mixed) return;
+    const queuePath = buildBackendDetailsPath(routingPick.id, 'queues');
+    notifyOperatorNotice({
+      id: `compare-routing-${routingPick.id}`,
+      title: `Suggested backend · ${routingPick.name}`,
+      body: routingNoticeBody(routingPick),
+      variant: routingNoticeVariant(routingPick.router),
+      actions: [
+        {
+          id: 'queue',
+          label: 'View queue',
+          onClick: () => navigate(queuePath),
+          dismiss: false,
+        },
+        { id: 'dismiss', label: 'Dismiss', dismiss: true },
+      ],
+    });
+  }, [routingPick, mixed, navigate]);
+
+  const rowsWithGaps = useMemo(
+    () => rows.filter((r) => r.metric_gaps?.length),
+    [rows],
+  );
+
+  useEffect(() => {
+    if (!rowsWithGaps.length || sel.length < MIN_COMPARE) return;
+    notifyOperatorNotice({
+      id: `compare-feed-gaps-${key}`,
+      title: 'Telemetry gaps',
+      body: `${rowsWithGaps.length} backend${rowsWithGaps.length === 1 ? '' : 's'} in this comparison have incomplete provider feeds. Details are listed below the colour key.`,
+      variant: 'warn',
+      actions: [{ id: 'dismiss', label: 'Dismiss', dismiss: true }],
+    });
+  }, [key, rowsWithGaps.length, sel.length]);
+
   if (!backends) return <BoneyardSkeleton layout="grid" />;
   if (!backends.length) {
     return <div className="page-stack">{error ? <ErrorState variant="panel" message={error} onRetry={reload} /> : <EmptyState variant="panel" title="No backends" message="Register QPUs in Administration before comparing." />}</div>;
@@ -406,42 +468,44 @@ export const BackendComparison = () => {
 
       {result && rows.length > 0 && (
         <>
-          {routingPick ? (
-            <ScopeBanner
-              title="Routing recommendation"
-              variant={routingPick.router === 'RED' ? 'critical' : routingPick.router === 'YELLOW' ? 'warn' : 'info'}
-              items={[{
-                term: routingPick.name,
-                detail: `${routingPick.router} routing · ${routingPick.pending != null ? `${routingPick.pending} pending jobs` : 'queue unknown'}${routingPick.fLim != null ? ` · F_limit ${fmt(routingPick.fLim)}` : ''}`,
-              }]}
-              action={(
-                <button type="button" className="btn btn-secondary" onClick={() => navigate(buildBackendDetailsPath(routingPick.id, 'queues'))}>
-                  Open queue tab
-                </button>
-              )}
-            />
-          ) : mixed ? (
-            <p className="page-hint">Pick one modality to get a routing recommendation.</p>
+          {mixed ? (
+            <p className="page-hint">Pick one modality to see a routing recommendation (toast).</p>
           ) : null}
           <div className="bc-legend" aria-label="Backend colours">
             {rows.map((r) => (
-              <span key={r.backend_id}>
-                <i style={{ borderColor: r.color }} />
-                {r.name}
-                {r.data_source_label ? ` · ${r.data_source_label}` : ''}
-                {r.missing_compare_data ? ' (no health data)' : ''}
+              <span key={r.backend_id} className="bc-legend__item">
+                <i style={{ borderColor: r.color }} aria-hidden />
+                <span>{r.short}</span>
+                {r.missing_compare_data ? (
+                  <span className="bc-legend__note">(health data pending)</span>
+                ) : null}
               </span>
             ))}
-            {rows.some((r) => r.metric_gaps?.length) && (
-              <span className="page-hint">
-                Feed gaps: {rows.filter((r) => r.metric_gaps?.length).map((r) => `${r.short}: ${r.metric_gaps.join('; ')}`).join(' · ')}
-              </span>
-            )}
             {rows.length !== sel.length && (
               <span className="page-hint">Selection mismatch — refresh or re-pick backends.</span>
             )}
             {busy && <span className="page-hint">updating…</span>}
           </div>
+          {rowsWithGaps.length > 0 && (
+            <section className="bc-feed-gaps" aria-label="Telemetry feed gaps">
+              <h3 className="bc-feed-gaps__title">Incomplete provider feeds</h3>
+              <ul className="bc-feed-gaps__list">
+                {rowsWithGaps.map((r) => (
+                  <li key={r.backend_id} className="bc-feed-gaps__backend">
+                    <span className="bc-feed-gaps__name">{r.short}</span>
+                    {r.data_source_label ? (
+                      <span className="bc-feed-gaps__source">{r.data_source_label}</span>
+                    ) : null}
+                    <ul className="bc-feed-gaps__gaps">
+                      {r.metric_gaps.map((gap) => (
+                        <li key={gap}>{gap}</li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
 
           <section className="bc-grid">
             {DIST_METRICS.map((m) => distGroups(m).map((g) => {

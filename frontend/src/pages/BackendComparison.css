@@ -17,7 +17,38 @@
 .bc-banner svg { flex: none; margin-top: 2px; color: var(--accent-amber); }
 
 .bc-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: var(--font-size-micro-label, 0.75rem); align-items: center; color: var(--text-secondary); }
-.bc-legend i, .bc-dot { display: inline-block; width: 12px; height: 10px; border: 2px solid; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.bc-legend__item { display: inline-flex; align-items: center; gap: 4px; }
+.bc-legend__note { color: var(--text-muted); font-size: 0.6875rem; }
+.bc-legend i, .bc-dot { display: inline-block; width: 12px; height: 10px; border: 2px solid; border-radius: 2px; vertical-align: -1px; flex-shrink: 0; }
+.bc-feed-gaps {
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--ds-radius-card, 8px);
+  background: var(--bg-card);
+  font-size: var(--font-size-helper, 0.875rem);
+  line-height: 1.45;
+}
+.bc-feed-gaps__title {
+  margin: 0 0 8px;
+  font-size: var(--font-size-label, 0.8125rem);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.bc-feed-gaps__list,
+.bc-feed-gaps__gaps {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+.bc-feed-gaps__backend { margin-bottom: 10px; }
+.bc-feed-gaps__backend:last-child { margin-bottom: 0; }
+.bc-feed-gaps__name { font-weight: 600; color: var(--text-primary); }
+.bc-feed-gaps__source {
+  display: block;
+  font-size: var(--font-size-micro-label, 0.75rem);
+  color: var(--text-muted);
+  margin: 2px 0 4px;
+}
+.bc-feed-gaps__gaps { color: var(--text-secondary); }
 
 .bc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 16px; align-items: start; width: 100%; min-width: 0; }
 .bc-grid .chart-panel { min-width: 0; }

@@ -18,6 +18,7 @@
 :root {
   --font-scale: 1;
   --ui-density: 1.1;
+  --shell-chrome-bar-height: 64px;
   --bg-dark: #f8fafc;
   --bg-card: #ffffff;
   --bg-card-hover: #f1f5f9;
@@ -225,9 +226,10 @@ pre,
 
 /* Sidebar Header */
 .sidebar-header {
-  min-height: 64px;
-  height: auto;
-  padding: 10px 12px;
+  min-height: var(--shell-chrome-bar-height);
+  height: var(--shell-chrome-bar-height);
+  padding: 0 12px;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -688,9 +690,11 @@ pre,
 
 .app-page-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
-  padding: 14px 20px 12px;
+  min-height: var(--shell-chrome-bar-height);
+  padding: 0 20px;
+  box-sizing: border-box;
   background: var(--bg-sidebar);
   border-bottom: 1px solid var(--border-color);
   position: sticky;
@@ -1049,7 +1053,7 @@ pre,
     max-width: 100%;
   }
   .app-page-head {
-    padding: 10px 14px 10px;
+    padding: 0 14px;
   }
   .page-container--comfortable .chart-panel__body:not(:has(.chart-panel__stage)) {
     min-height: 220px;

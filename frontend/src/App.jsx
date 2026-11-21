@@ -743,7 +743,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
         >
           <div className="sidebar-header__stack">
             <QtTeleScopeMark
-              size={effectiveCollapsed ? 30 : 34}
+              size={effectiveCollapsed ? 34 : 40}
               className={`sidebar-logo-mark${effectiveCollapsed ? ' sidebar-logo-mark--icon-only' : ''}`}
               decorative
             />
