@@ -870,16 +870,18 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
         className={`main-content${collapsed ? ' main-content--collapsed' : ''}${hoverExpand && collapsed ? ' main-content--hover-expanded' : ''}`}
       >
         <header className="app-page-head">
-          <button
-            type="button"
-            className="btn btn-secondary btn-icon-only app-page-head__menu qt-pressable"
-            aria-expanded={mobileNavOpen}
-            aria-controls="console-sidebar-nav"
-            onClick={() => setMobileNavOpen((open) => !open)}
-          >
-            <span className="visually-hidden">{mobileNavOpen ? 'Close menu' : 'Open menu'}</span>
-            {mobileNavOpen ? <X size={18} aria-hidden /> : <Menu size={18} aria-hidden />}
-          </button>
+          {mobileShell ? (
+            <button
+              type="button"
+              className="btn btn-secondary btn-icon-only app-page-head__menu qt-pressable"
+              aria-expanded={mobileNavOpen}
+              aria-controls="console-sidebar-nav"
+              aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
+              onClick={() => setMobileNavOpen((open) => !open)}
+            >
+              {mobileNavOpen ? <X size={18} aria-hidden /> : <Menu size={18} aria-hidden />}
+            </button>
+          ) : null}
           <PageHeader
             embedded
             breadcrumbs={headerBreadcrumbs}

@@ -56,9 +56,11 @@ html {
 }
 
 /* —— Mobile shell: off-canvas nav, full-width content —— */
-.app-page-head__menu {
-  display: none;
-  flex-shrink: 0;
+/* Beat `.btn { display: inline-flex }` later in index.css */
+@media (min-width: 900px) {
+  .app-page-head > .app-page-head__menu.btn {
+    display: none !important;
+  }
 }
 
 .sidebar-backdrop {
@@ -66,10 +68,13 @@ html {
 }
 
 @media (max-width: 899px) {
-  .app-page-head__menu {
-    display: inline-flex;
+  .app-page-head > .app-page-head__menu.btn {
+    display: inline-flex !important;
     align-items: center;
     justify-content: center;
+    min-width: 40px;
+    padding: 0;
+    flex-shrink: 0;
   }
 
   .sidebar-backdrop {
@@ -115,6 +120,104 @@ html {
 
   body.shell-mobile-nav-open {
     overflow: hidden;
+  }
+
+  /* Page chrome — stop header / KPI / toolbar horizontal bleed */
+  .app-page-head {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--shell-chrome-bar-height);
+    padding-inline: max(10px, env(safe-area-inset-left)) max(10px, env(safe-area-inset-right));
+    overflow: hidden;
+  }
+
+  .app-page-head .page-header {
+    flex: 1 1 12rem;
+    min-width: 0;
+  }
+
+  .app-page-head .page-header__title {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    font-size: clamp(1.05rem, 4.2vw, 1.35rem);
+  }
+
+  .app-page-head .page-header__aside,
+  .app-page-head .page-header__actions {
+    width: 100%;
+    max-width: 100%;
+    justify-content: flex-start;
+  }
+
+  .app-page-head__global {
+    flex-wrap: wrap;
+    gap: 6px;
+    max-width: 100%;
+  }
+
+  .main-content {
+    overflow-x: clip;
+  }
+
+  .page-container,
+  .page-stack,
+  .dashboard-home,
+  .card,
+  .ops-page {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .page-toolbar-unified,
+  .context-bar,
+  .data-view-toolbar,
+  .ops-toolbar {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .context-bar .context-bar__field,
+  .context-bar .input-control,
+  .context-bar select {
+    min-width: 0;
+    max-width: 100%;
+    flex: 1 1 9rem;
+  }
+
+  .fo-fleet-cards {
+    overflow: hidden;
+    padding-inline: var(--ds-space-md, 16px);
+  }
+
+  .hero-cycle__viewport,
+  .fo-fleet-cards__viewport {
+    max-width: 100%;
+  }
+
+  .table-container,
+  .custom-table-wrap,
+  .table-scroll,
+  .mc-scroll,
+  .admin-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .ds-glass-hero .dashboard-exceptions.ds-hero-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 420px) {
+  .ds-glass-hero .dashboard-exceptions.ds-hero-tiles {
+    grid-template-columns: 1fr;
+  }
+
+  .fo-fleet-cards__inventory {
+    width: 100%;
+    justify-content: center;
   }
 }
 
