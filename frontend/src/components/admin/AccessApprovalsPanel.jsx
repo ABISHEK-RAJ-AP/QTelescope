@@ -11,7 +11,7 @@ import {
 import { RoleMatrix } from '@/components/admin/RoleMatrix.jsx';
 import { Button } from '@/components/ui/Button';
 import { Field, fieldClass } from '@/components/AuthShell';
-import { TableEmpty } from '@/components/observability/EmptyState.jsx';
+import { EmptyState, TableEmpty } from '@/components/observability/EmptyState.jsx';
 import { ConfirmDialog } from '@/components/observability/ConfirmDialog.jsx';
 import { CollapsibleSection } from '@/components/observability/CollapsibleSection.jsx';
 import { InfoTooltip } from '@/components/observability/InfoTooltip.jsx';
@@ -494,8 +494,10 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
             {loading && pending.length === 0 ? (
               <p className="admin-people-muted">Loading…</p>
             ) : pending.length === 0 ? (
-              <TableEmpty
-                as="block"
+              <EmptyState
+                variant="inline"
+                compact
+                align="start"
                 title="Queue empty"
                 message="Verified self-registrations appear here when admin approval is on."
               />
