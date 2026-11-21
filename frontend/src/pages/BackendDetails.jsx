@@ -15,7 +15,7 @@ import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { PageRelatedLink, PageRelatedNav } from '../components/observability/PageRelatedNav.jsx';
 import { baseTooltip, getChartTheme, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { BACKEND_WORKSPACE_TABS } from '../lib/investigationLinks.js';
-import { STATES, STATE_GLYPH, STATE_LABEL, ageMinutes, formatAge, isStale, lineageOf, median, modalityName, num, providerName, scopeSearch, useProviderLineage } from './backendUtils.js';
+import { STATES, STATE_GLYPH, STATE_TIER, ageMinutes, formatAge, isStale, lineageOf, median, modalityName, num, providerName, scopeSearch, useProviderLineage } from './backendUtils.js';
 import { BackendRegistryIdChip, BackendStatusStrip, Sparkline, StateBar, TelemetryCoverageHint } from './backendCommon.jsx';
 import { formatEnumLabel } from '../lib/displayLabels.js';
 import { ListPager } from '../components/observability/ListPager.jsx';
@@ -434,7 +434,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
                   ))}
                 </div>
                 <div className="bd-legend">
-                  {STATES.map((s) => <span key={s}>{STATE_GLYPH[s]} {STATE_LABEL[s]}{s === 'YELLOW' ? ' (dot marker)' : s === 'RED' ? ' (diamond marker)' : s === 'UNKNOWN' ? ' (hatched)' : ''}</span>)}
+                  {STATES.map((s) => <span key={s}>{STATE_GLYPH[s]} {STATE_TIER[s]}{s === 'YELLOW' ? ' (dot marker)' : s === 'RED' ? ' (diamond marker)' : s === 'UNKNOWN' ? ' (hatched)' : ''}</span>)}
                 </div>
                 {!hv && <p className="page-hint" style={{ marginTop: 8 }}>No health scoring available: all qubits shown as Unknown.</p>}
               </section>
@@ -448,7 +448,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
                   <label className="outline-field">
                     <span>State</span>
                     <select className="input-control" value={qState} onChange={(e) => { setQState(e.target.value); setQPage(0); }}>
-                      <option value="ALL">All</option>{STATES.map((s) => <option key={s} value={s}>{STATE_LABEL[s]}</option>)}
+                      <option value="ALL">All</option>{STATES.map((s) => <option key={s} value={s}>{STATE_TIER[s]}</option>)}
                     </select>
                   </label>
                   <span className="bk-muted bk-toolbar__count" aria-live="polite">{qFiltered.length} of {qubitRows.length} qubits</span>
@@ -462,7 +462,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
                       {qShown.map((q) => (
                         <tr key={q.qubit_index}>
                           <td><Link className="bd-link" to={link('/app/resources/health')}>Q{q.qubit_index}</Link></td>
-                          <td>{STATE_GLYPH[q.state]} {STATE_LABEL[q.state]}</td>
+                          <td>{STATE_GLYPH[q.state]} {STATE_TIER[q.state]}</td>
                           <td>{q.status || '—'}</td>
                           <td className="bk-r">{fmtDur(q.t1)}</td>
                           <td className="bk-r">{fmtDur(q.t2)}</td>

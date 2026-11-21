@@ -422,6 +422,15 @@ button.bk-chip:focus-visible, .bk-link:focus-visible, .bk-th:focus-visible { out
   font-variant-numeric: tabular-nums;
 }
 .bk-statebar__legend li { display: inline-flex; align-items: center; gap: 6px; }
+.bk-statebar__summary {
+  margin: 0;
+  font-size: var(--font-size-micro-label, 0.75rem);
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+}
+.bk-legend-count { font-weight: 600; }
+.bk-legend-tier { color: var(--text-secondary); }
 .bk-legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
 .bk-legend-dot--GREEN { background: var(--accent-emerald); }
 .bk-legend-dot--YELLOW { background: var(--accent-amber); }

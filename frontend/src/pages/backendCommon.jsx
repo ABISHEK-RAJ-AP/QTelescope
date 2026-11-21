@@ -4,7 +4,7 @@ import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { getChartTheme } from '../components/observability/chartTheme.js';
-import { STATES, STATE_GLYPH, STATE_LABEL } from './backendUtils.js';
+import { STATES, STATE_GLYPH, STATE_TIER } from './backendUtils.js';
 import { formatEnumLabel, formatOperationalStatus } from '../lib/displayLabels.js';
 import { COPY } from '../copy/operator.js';
 import './BackendInventory.css';
@@ -53,22 +53,37 @@ export function LineageTag({ lineage, compact = false, showDemo = true }) {
   );
 }
 
-export function StateBar({ counts, total, label, emptyLabel = 'No qubit health' }) {
+export function StateBar({ counts, total, label, emptyLabel = 'No qubit health', compact = false }) {
   const t = total ?? STATES.reduce((a, s) => a + (counts?.[s] || 0), 0);
   if (!t) return <span className="bk-muted">{emptyLabel}</span>;
-  const text = STATES.filter((s) => counts?.[s]).map((s) => `${counts[s]} ${STATE_LABEL[s].toLowerCase()}`).join(', ');
+  const parts = STATES.filter((s) => counts?.[s]).map((s) => ({
+    key: s,
+    n: counts[s],
+    tier: STATE_TIER[s],
+    phrase: `${counts[s]} ${STATE_TIER[s].toLowerCase()}`,
+  }));
+  const text = parts.map((p) => p.phrase).join(', ');
+  const ariaText = parts.map((p) => `${p.n} qubits ${p.tier.toLowerCase()}`).join(', ');
   return (
-    <div className="bk-statebar" title={label || text}>
-      <div className="bk-bar" role="img" aria-label={`${label ? `${label}: ` : ''}${text}`}>
+    <div className="bk-statebar" title={label ? `${label} — ${ariaText}` : ariaText}>
+      <div className="bk-bar" role="img" aria-label={`${label ? `${label}: ` : ''}${ariaText}`}>
         {STATES.map((s) => (counts?.[s] ? (
-          <span key={s} className={`bk-seg bk-seg--${s}`} style={{ width: `${(counts[s] / t) * 100}%` }} />
+          <span key={s} className={`bk-seg bk-seg--${s}`} style={{ width: `${(counts[s] / t) * 100}%` }} title={`${counts[s]} ${STATE_TIER[s].toLowerCase()}`} />
         ) : null))}
       </div>
-      <ul className="bk-statebar__legend">
-        {STATES.filter((s) => counts?.[s]).map((s) => (
-          <li key={s}><span className={`bk-legend-dot bk-legend-dot--${s}`} aria-hidden />{counts[s]} {STATE_LABEL[s]}</li>
-        ))}
-      </ul>
+      {compact ? (
+        <p className="bk-statebar__summary">{parts.map((p) => p.phrase).join(' · ')}</p>
+      ) : (
+        <ul className="bk-statebar__legend">
+          {parts.map((p) => (
+            <li key={p.key} title={`${p.tier} — qubits within health-vector tier`}>
+              <span className={`bk-legend-dot bk-legend-dot--${p.key}`} aria-hidden />
+              <span className="bk-legend-count">{p.n}</span>
+              <span className="bk-legend-tier">{p.tier}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
@@ -127,7 +142,7 @@ export function BackendStatusStrip({ operationalStatus, routingState, routingAct
           <dt>Routing advisory</dt>
           <dd>
             <span className="bd-routing bk-status-strip__route" data-s={routingState} title={routeTitle}>
-              {STATE_LABEL[routingState] || formatEnumLabel(routingState)}
+              {STATE_TIER[routingState] || formatEnumLabel(routingState)}
             </span>
           </dd>
         </div>

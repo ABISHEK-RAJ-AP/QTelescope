@@ -17,7 +17,7 @@ import { buildBackendDetailsPath, buildDriftInvestigationLocation } from '../lib
 import { useAppScope } from '../hooks/useAppScope.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { formatBackendTitle, formatModalityLabel } from '../lib/displayLabels.js';
-import { STATE_LABEL } from './backendUtils.js';
+import { STATE_TIER } from './backendUtils.js';
 import { mergeScopeSearch } from '../lib/appScopeQuery.js';
 import { BackendRegistryIdChip, TelemetryCoverageCallout } from './backendCommon.jsx';
 import './ResourceHealth.css';
@@ -366,7 +366,7 @@ export const ResourceHealth = () => {
                   {total ? <StateBar counts={b.counts} total={total} /> : <span className="page-hint">No qubits reported</span>}
                   <div className="hv-backend__nums">G {b.counts?.GREEN || 0} · Y {b.counts?.YELLOW || 0} · R {b.counts?.RED || 0}{b.counts?.UNKNOWN ? ` · ? ${b.counts.UNKNOWN}` : ''}</div>
                 </div>
-                <span className={`badge badge-${b.router === 'GREEN' ? 'healthy' : b.router === 'YELLOW' ? 'warning' : b.router === 'RED' ? 'critical' : 'info'}`} title="Routing advisory">{STATE_LABEL[b.router] || b.router}</span>
+                <span className={`badge badge-${b.router === 'GREEN' ? 'healthy' : b.router === 'YELLOW' ? 'warning' : b.router === 'RED' ? 'critical' : 'info'}`} title="Routing advisory">{STATE_TIER[b.router] || b.router}</span>
               </button>
             );
           })}
@@ -395,7 +395,7 @@ export const ResourceHealth = () => {
                 <span className="hv-toolbar__states-label" id="hv-state-filter-label">Health state</span>
                 <span className="hv-chips" role="group" aria-labelledby="hv-state-filter-label">
                   {['ALL', ...STATES].map((s) => (
-                    <button key={s} type="button" className="hv-chip" aria-pressed={stateFilter === s} onClick={() => setStateFilter(s)}>{s === 'ALL' ? 'All' : STATE_LABEL[s] || s}</button>
+                    <button key={s} type="button" className="hv-chip" aria-pressed={stateFilter === s} onClick={() => setStateFilter(s)}>{s === 'ALL' ? 'All' : STATE_TIER[s] || s}</button>
                   ))}
                 </span>
               </div>

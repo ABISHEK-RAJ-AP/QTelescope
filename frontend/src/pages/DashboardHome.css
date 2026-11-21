@@ -281,6 +281,10 @@
   font-size: var(--font-size-micro-label, 0.75rem);
 }
 
+.fo-fleet-card__health .bk-statebar__summary {
+  font-size: var(--font-size-micro-label, 0.75rem);
+}
+
 .fo-fleet-card__cta {
   display: inline-flex;
   align-items: center;

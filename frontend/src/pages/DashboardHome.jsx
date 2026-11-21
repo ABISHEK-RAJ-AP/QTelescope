@@ -27,6 +27,7 @@ import { DashboardBentoGrid } from '../components/dashboard/DashboardBentoGrid.j
 import { usePageLayout } from '../hooks/usePageLayout.js';
 import { buildBackendDetailsPath, buildTimelineInvestigationLocation } from '../lib/investigationLinks.js';
 import { STALE_MIN, ageMinutes, fmtAge, groupTimeline, isSimulatorBackend, lineageByProvider, sevBadge } from './fleetData.js';
+import { STATE_TIER } from './backendUtils.js';
 import { StateBar } from './fleetShared.jsx';
 import { dropAlertsCoveredByIncidents } from './opsHelpers.js';
 import { FLEET_TELEMETRY_EMPTY, unableToLoad } from '../constants/messages.js';
@@ -494,7 +495,7 @@ function DashboardHomeInner() {
                     </div>
                     <div role="cell"><StateBar counts={r.counts} /></div>
                     <div role="cell" className="fo-adv">
-                      <strong>{r.router || 'UNKNOWN'}</strong>
+                      <strong>{(r.router && STATE_TIER[r.router]) || (r.router === 'UNKNOWN' ? 'Not assessed' : r.router || '—')}</strong>
                       <span className="fs-muted">{(r.recommended_action || '—').replace(/_/g, ' ')}</span>
                     </div>
                     <div role="cell" className="fo-alerts">

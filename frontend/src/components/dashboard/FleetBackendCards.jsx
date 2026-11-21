@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatBackendTitle, formatModalityLabel, formatProviderLabel } from '@/lib/displayLabels.js';
 import { buildBackendDetailsPath } from '@/lib/investigationLinks.js';
 import { StateBar, StatusText } from '@/pages/backendCommon.jsx';
-import { STATE_LABEL } from '@/pages/backendUtils.js';
+import { STATE_TIER } from '@/pages/backendUtils.js';
 import { InfoTooltip } from '@/components/observability/InfoTooltip.jsx';
 
 function cardMeta(r) {
@@ -36,7 +36,7 @@ function calLine(r) {
 function routingLine(r) {
   const key = r.router || 'UNKNOWN';
   if (key === 'UNKNOWN') return 'Not assessed';
-  return STATE_LABEL[key] || key;
+  return STATE_TIER[key] || key;
 }
 
 function alertsHref(r, severity) {
@@ -74,7 +74,7 @@ function FleetFlipCard({ r }) {
               <StatusText status={r.operational_status || 'UNKNOWN'} />
             </header>
             <div className="fo-fleet-card__health">
-              <StateBar counts={r.counts} label={`${title} qubit health`} emptyLabel="Health data not available yet" />
+              <StateBar counts={r.counts} label={`${title} qubit health`} emptyLabel="Health data not available yet" compact />
             </div>
           </div>
 

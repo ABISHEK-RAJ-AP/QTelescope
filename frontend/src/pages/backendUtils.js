@@ -4,7 +4,15 @@ import { parseDate } from '../utils/time';
 import { formatModalityLabel, formatProviderLabel } from '../lib/displayLabels.js';
 
 export const STATES = ['GREEN', 'YELLOW', 'RED', 'UNKNOWN'];
+/** Legacy colour names — prefer STATE_TIER in operator UI (bar carries hue). */
 export const STATE_LABEL = { GREEN: 'Green', YELLOW: 'Yellow', RED: 'Red', UNKNOWN: 'Unknown' };
+/** Operator-facing qubit / routing tiers (health vector, advisory routing). */
+export const STATE_TIER = {
+  GREEN: 'Nominal',
+  YELLOW: 'Watch',
+  RED: 'Degraded',
+  UNKNOWN: 'Unscored',
+};
 // Glyphs so state is never color-only.
 export const STATE_GLYPH = { GREEN: '●', YELLOW: '▲', RED: '◆', UNKNOWN: '○' };
 
