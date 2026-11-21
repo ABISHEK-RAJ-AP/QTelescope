@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { api } from '../../services/api';
 import { listPermissionsForRole, roleLabel } from '../../lib/permissions';
+import { sortCopy } from '../../lib/sortCopy.js';
 
 const LOCKED_BUILTIN = new Set(['SuperAdmin', 'Admin', 'PlatformAdmin']);
 
@@ -69,7 +70,7 @@ export function RoleAccessModal({ roleId, onClose, onSaved }) {
       await api.patchCustomRole(roleId, {
         id: roleId,
         label: label.trim() || roleId,
-        permissions: selected.toSorted(),
+        permissions: sortCopy([...selected]),
       });
       onSaved?.();
       onClose();

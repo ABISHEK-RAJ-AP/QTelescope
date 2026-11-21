@@ -7,13 +7,18 @@ export function sortCopy(items, compareFn) {
 }
 
 /** ponytail: one-time polyfill so existing `.toSorted()` call sites work in older browsers. */
-export function installImmutableSortPolyfill() {
-  if (typeof Array.prototype.toSorted === 'function') return;
-  Object.defineProperty(Array.prototype, 'toSorted', {
+function defineToSorted(Ctor) {
+  if (typeof Ctor?.prototype?.toSorted === 'function') return;
+  Object.defineProperty(Ctor.prototype, 'toSorted', {
     value(compareFn) {
-      return this.slice().sort(compareFn);
+      return [...this].sort(compareFn);
     },
     writable: true,
     configurable: true,
   });
+}
+
+export function installImmutableSortPolyfill() {
+  defineToSorted(Array);
+  defineToSorted(Set);
 }

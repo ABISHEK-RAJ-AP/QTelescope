@@ -286,7 +286,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
     alerts.forEach((a) => {
       if (a.backend_id && !registryIds.has(a.backend_id)) s.add(a.backend_id);
     });
-    return s.toSorted();
+    return sortCopy([...s]);
   }, [alerts, registryIds]);
 
   // ---- counts (source of truth: full /alerts list) ----
