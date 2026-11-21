@@ -3,10 +3,7 @@
  * Structural shifts use --bp-*; grids use auto-fill / container queries where possible.
  */
 
-/* Prevent horizontal bleed without clipping focus rings in main scroll */
-html {
-  overflow-x: clip;
-}
+/* min-width:0 chain contains bleed; avoid overflow:clip on ancestors (breaks position:sticky) */
 
 #root,
 .app-container {
@@ -128,7 +125,7 @@ html {
     height: auto;
     min-height: var(--shell-chrome-bar-height);
     padding-inline: max(10px, env(safe-area-inset-left)) max(10px, env(safe-area-inset-right));
-    overflow: hidden;
+    top: var(--shell-sticky-top, var(--a11y-preheader-height, 32px));
   }
 
   .app-page-head .page-header {
@@ -154,10 +151,6 @@ html {
     flex-wrap: wrap;
     gap: 6px;
     max-width: 100%;
-  }
-
-  .main-content {
-    overflow-x: clip;
   }
 
   .page-container,

@@ -20,17 +20,11 @@ export function A11yPreheader() {
 
   const handleSkipToMain = useCallback((e) => {
     e.preventDefault();
-    const target = document.getElementById('page-content') || document.getElementById('main-content');
+    const target = document.getElementById('page-content');
     if (!target) return;
-    if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    target.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
-    const focusTarget = () => target.focus({ preventScroll: true });
-    if (typeof target.scrollIntoView === 'function' && !reduced) {
-      setTimeout(focusTarget, 350);
-    } else {
-      focusTarget();
-    }
+    target.setAttribute('tabindex', '-1');
+    /* scroll-margin-top on #page-content + html scroll-padding-top clear sticky chrome */
+    target.focus({ preventScroll: false });
   }, []);
 
   const toolBtn = (id, title, icon, expanded) => (
@@ -58,6 +52,7 @@ export function A11yPreheader() {
         href="#page-content"
         className="a11y-preheader__skip"
         onClick={handleSkipToMain}
+        id="shell-skip-link"
       >
         Skip to main content
       </a>

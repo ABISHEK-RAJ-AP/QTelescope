@@ -3,6 +3,8 @@
 :root {
   --a11y-preheader-height: 32px;
   --ceg-preheader-height: var(--a11y-preheader-height);
+  --shell-sticky-top: var(--a11y-preheader-height);
+  --shell-chrome-stack: calc(var(--a11y-preheader-height) + var(--shell-chrome-bar-height, 64px));
   --shell-a11y-hover-text: var(--accent-cyan);
   --shell-a11y-hover-bg: rgba(2, 132, 199, 0.1);
 }
@@ -22,8 +24,10 @@
   background: #0a192f;
   color: rgba(255, 255, 255, 0.92);
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 5000;
   overflow: visible;
   flex-shrink: 0;
