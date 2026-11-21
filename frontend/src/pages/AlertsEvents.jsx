@@ -112,7 +112,7 @@ function groupAlerts(alerts, grouped) {
     const times = g.items.map((a) => toMs(a.detected_at)).filter((t) => t != null);
     return {
       ...g, sev, st, count: g.items.length,
-      worst: [...g.items].sort((a, b) => sevRank(a.severity) - sevRank(b.severity))[0].severity,
+      worst: g.items.toSorted((a, b) => sevRank(a.severity) - sevRank(b.severity))[0].severity,
       latest: Math.max(...times), first: Math.min(...times),
       latestIso: g.items.find((a) => toMs(a.detected_at) === Math.max(...times))?.detected_at,
       lo: vals.length ? Math.min(...vals) : null, hi: vals.length ? Math.max(...vals) : null,
@@ -274,7 +274,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
     }
   }, [error, alerts.length, incidents.length]);
 
-  const backends = useMemo(() => [...new Set(alerts.map((a) => a.backend_id).filter(Boolean))].sort(), [alerts]);
+  const backends = useMemo(() => new Set(alerts.map((a) => a.backend_id).filter(Boolean)).toSorted(), [alerts]);
 
   const orphanBackends = useMemo(() => {
     if (!registryIds?.size) return [];
@@ -282,7 +282,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
     alerts.forEach((a) => {
       if (a.backend_id && !registryIds.has(a.backend_id)) s.add(a.backend_id);
     });
-    return [...s].sort();
+    return s.toSorted();
   }, [alerts, registryIds]);
 
   // ---- counts (source of truth: full /alerts list) ----
@@ -1164,7 +1164,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                           </td>
                         </tr>
                         {multi && open && (() => {
-                          const kids = g.items.slice().sort((x, y) => sevRank(x.severity) - sevRank(y.severity) || String(x.resource_id).localeCompare(String(y.resource_id), undefined, { numeric: true }));
+                          const kids = g.items.toSorted((x, y) => sevRank(x.severity) - sevRank(y.severity) || String(x.resource_id).localeCompare(String(y.resource_id), undefined, { numeric: true }));
                           const cpages = Math.max(1, Math.ceil(kids.length / CHILD_PAGE));
                           const cp = Math.min(childPage[g.key] || 1, cpages);
                           const shown = kids.slice((cp - 1) * CHILD_PAGE, cp * CHILD_PAGE);

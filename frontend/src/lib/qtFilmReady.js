@@ -53,6 +53,25 @@ export function probeQtFilmReady() {
     if (visible(n)) reasons.push('echart-pending');
   });
 
+  if (path === '/app/overview' || path.startsWith('/app/overview')) {
+    const fleet = document.querySelector('.fo-fleet-card');
+    const kpi = document.querySelector('[data-tour="page-kpis"] .fo-kpi-tile');
+    if (!fleet || !visible(fleet)) reasons.push('overview-fleet-pending');
+    if (!kpi || !visible(kpi)) reasons.push('overview-kpi-pending');
+  }
+  if (path.includes('/telemetry/topology')) {
+    const canvas = document.querySelector('.topo-canvas canvas');
+    if (!canvas || !visible(canvas) || canvas.width < 16) reasons.push('topology-canvas-pending');
+  }
+  if (path.includes('/backends/inventory')) {
+    const inv = document.querySelector('[data-tour="page-inventory"]');
+    if (!inv || !visible(inv)) reasons.push('inventory-pending');
+  }
+  if (path.includes('/alerts')) {
+    const kpi = document.querySelector('[data-tour="page-alert-kpis"]');
+    if (!kpi || !visible(kpi)) reasons.push('alerts-kpi-pending');
+  }
+
   const main = document.querySelector('.main-content') || document.querySelector('.landing-main') || document.body;
   if (main) {
     main.querySelectorAll('canvas').forEach((c) => {

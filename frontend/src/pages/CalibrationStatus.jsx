@@ -121,7 +121,7 @@ export const CalibrationStatus = () => {
   }, [load, lastRefresh, setActions, clearActions]);
 
   // oldest first; missing snapshots last (age unknown, never plotted as 0)
-  const ranked = useMemo(() => (rows || []).slice().sort((a, b) => (b.age ?? -1) - (a.age ?? -1)), [rows]);
+  const ranked = useMemo(() => (rows || []).toSorted((a, b) => (b.age ?? -1) - (a.age ?? -1)), [rows]);
   const tableRows = useMemo(
     () => ranked.map(({ b, c, age, status }) => ({
       id: b.backend_id,
@@ -192,7 +192,7 @@ export const CalibrationStatus = () => {
 
   const option = useMemo(() => {
     const t = getChartTheme(resolved === 'dark');
-    const list = plotted.slice().reverse();
+    const list = plotted.toReversed();
     return {
       grid: { left: 150, right: 40, top: 16, bottom: 32 },
       tooltip: { ...baseTooltip(resolved === 'dark'), trigger: 'item', formatter: (p) => `${p.name}<br/>${p.value.toFixed(1)} h · ${p.data.status}` },

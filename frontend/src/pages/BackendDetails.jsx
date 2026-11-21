@@ -172,7 +172,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
 
   const worstQubits = useMemo(() => {
     const rank = { RED: 0, YELLOW: 1, GREEN: 2, UNKNOWN: 3 };
-    return [...qubitRows].sort((a, b) => (rank[a.state] ?? 9) - (rank[b.state] ?? 9) || a.qubit_index - b.qubit_index).slice(0, 12);
+    return qubitRows.toSorted((a, b) => (rank[a.state] ?? 9) - (rank[b.state] ?? 9) || a.qubit_index - b.qubit_index).slice(0, 12);
   }, [qubitRows]);
 
   if (!backendId) {
@@ -199,7 +199,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
 
   const events = [
     ...alerts.map((a) => ({ id: a.alert_id, ts: a.detected_at, text: `${a.alert_type} · ${a.message}`, sev: a.severity, tail: a.status })),
-    ...[...d.calHist].sort((a, b) => parseTs(b.calibration_timestamp) - parseTs(a.calibration_timestamp)).slice(0, 5).map((c) => ({ id: `cal-${c.id}`, ts: c.calibration_timestamp, text: `Calibration ${c.calibration_identifier || ''} recorded (${c.freshness_status})`, tail: 'CALIBRATION' })),
+    ...d.calHist.toSorted((a, b) => parseTs(b.calibration_timestamp) - parseTs(a.calibration_timestamp)).slice(0, 5).map((c) => ({ id: `cal-${c.id}`, ts: c.calibration_timestamp, text: `Calibration ${c.calibration_identifier || ''} recorded (${c.freshness_status})`, tail: 'CALIBRATION' })),
   ].sort((a, b) => (parseTs(b.ts) - parseTs(a.ts))).slice(0, 8);
 
   const needle = qSearch.trim().toLowerCase().replace(/^q/, '');
@@ -236,7 +236,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
   const jPages = Math.max(1, Math.ceil(jobs.length / JOB_PAGE_SIZE));
   const jCur = Math.min(jPage, jPages);
   const jobsShown = jobs.slice((jCur - 1) * JOB_PAGE_SIZE, jCur * JOB_PAGE_SIZE);
-  const calHistSorted = [...d.calHist].sort((a, b) => parseTs(b.calibration_timestamp) - parseTs(a.calibration_timestamp));
+  const calHistSorted = d.calHist.toSorted((a, b) => parseTs(b.calibration_timestamp) - parseTs(a.calibration_timestamp));
   const secErr = (name) => d.failed.includes(name);
 
   return (

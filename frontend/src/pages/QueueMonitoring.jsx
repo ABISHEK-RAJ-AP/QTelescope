@@ -186,7 +186,7 @@ export const QueueMonitoring = () => {
 
   const anBy = useMemo(() => Object.fromEntries((analytics?.backends || []).map((b) => [b.backend_id, b])), [analytics]);
   const pendingSort = (v) => (v == null ? -1 : Number(v));
-  const ranked = useMemo(() => [...(queues || [])].sort((a, b) => pendingSort(b.pending_jobs) - pendingSort(a.pending_jobs)
+  const ranked = useMemo(() => (queues || []).toSorted((a, b) => pendingSort(b.pending_jobs) - pendingSort(a.pending_jobs)
     || (resolveWaitSeconds(b.pending_jobs, b.estimated_wait_time, null).seconds || 0)
     - (resolveWaitSeconds(a.pending_jobs, a.estimated_wait_time, null).seconds || 0)), [queues]);
 
@@ -370,7 +370,7 @@ export const QueueMonitoring = () => {
     .map((q) => ({ q, r: resolveWaitSeconds(q.pending_jobs, q.estimated_wait_time, anBy[q.backend_id]) }))
     .filter((x) => x.r.seconds != null);
   const worstWait = waitRanked.length
-    ? [...waitRanked].sort((a, b) => b.r.seconds - a.r.seconds)[0].q
+    ? waitRanked.toSorted((a, b) => b.r.seconds - a.r.seconds)[0].q
     : null;
   const idle = queues.filter((q) => q.pending_jobs === 0).length;
   const sel = queues.find((q) => q.backend_id === selectedId);

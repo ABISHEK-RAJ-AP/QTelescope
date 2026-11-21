@@ -59,7 +59,7 @@ function QubitDrawerBody({ hit, metric, modality, nav }) {
     return () => { live = false; };
   }, [hit, metric]);
 
-  const series = useMemo(() => [...(state.hist || [])].reverse().filter((h) => h[metric] != null), [state.hist, metric]);
+  const series = useMemo(() => (state.hist || []).toReversed().filter((h) => h[metric] != null), [state.hist, metric]);
   const cpTs = state.detail?.change_point_timestamp;
   const option = useMemo(() => {
     const sem = getChartSemanticColors();
@@ -152,7 +152,7 @@ export const AnomalyMonitor = () => {
     const all = (data?.hits || []).filter((h) => !scopeBackend || h.backend_id === scopeBackend)
       .map((h) => ({ ...h, dev: deviation(h) }));
     const mul = sort.dir === 'asc' ? 1 : -1;
-    return all.slice().sort((a, b) => {
+    return all.toSorted((a, b) => {
       let c = 0;
       if (sort.key === 'backend') {
         c = String(a.backend_name || a.backend_id).localeCompare(String(b.backend_name || b.backend_id));
@@ -172,7 +172,7 @@ export const AnomalyMonitor = () => {
   const mixedModality = useMemo(() => new Set(hits.map((h) => modalityOf(backends, h.backend_id)).filter(Boolean)).size > 1, [hits, backends]);
 
   const heat = useMemo(() => {
-    const cols = [...new Set(hits.map((h) => h.qubit_index))].sort((a, b) => a - b);
+    const cols = new Set(hits.map((h) => h.qubit_index)).toSorted((a, b) => a - b);
     const ys = rows.map((b) => b.backend_name || b.backend_id);
     return {
       cols,

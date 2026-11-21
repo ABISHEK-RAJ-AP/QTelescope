@@ -44,7 +44,7 @@ const COLUMNS = [
   { key: 'queue', label: 'Queue', right: true },
 ];
 
-const uniq = (rows, k) => [...new Set(rows.map((r) => r[k]))].sort();
+const uniq = (rows, k) => [...new Set(rows.map((r) => r[k]))].toSorted();
 
 export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
   const [data, setData] = useState(() => hydrateBackendInventoryFromCache());
@@ -165,7 +165,7 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
     const { key, dir } = sort;
     const sign = dir === 'asc' ? 1 : -1;
     // nulls sort last in both directions
-    return [...list].sort((a, b) => {
+    return list.toSorted((a, b) => {
       const av = a[key]; const bv = b[key];
       if (av == null && bv == null) return 0;
       if (av == null) return 1;

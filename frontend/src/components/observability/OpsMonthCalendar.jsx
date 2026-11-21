@@ -31,7 +31,7 @@ function buildGrid(year, month) {
 }
 
 function worstSev(items) {
-  return [...items].sort((a, b) => (SEV_RANK[a.severity] ?? 9) - (SEV_RANK[b.severity] ?? 9))[0]?.severity;
+  return items.toSorted((a, b) => (SEV_RANK[a.severity] ?? 9) - (SEV_RANK[b.severity] ?? 9))[0]?.severity;
 }
 
 function statusMix(items) {

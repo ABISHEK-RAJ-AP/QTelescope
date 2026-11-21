@@ -69,7 +69,7 @@ export function RoleAccessModal({ roleId, onClose, onSaved }) {
       await api.patchCustomRole(roleId, {
         id: roleId,
         label: label.trim() || roleId,
-        permissions: [...selected].sort(),
+        permissions: selected.toSorted(),
       });
       onSaved?.();
       onClose();

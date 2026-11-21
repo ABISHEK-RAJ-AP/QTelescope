@@ -57,7 +57,7 @@ export function groupAlerts(alerts) {
     if (a.detected_at > g.latest) g.latest = a.detected_at;
     m.set(k, g);
   });
-  return [...m.values()].sort(
+  return m.values().toSorted(
     (x, y) => sevRank(x.severity) - sevRank(y.severity) || y.count - x.count,
   );
 }

@@ -573,7 +573,7 @@ export const TopologyExplorer = () => {
 
   const tableRows = useMemo(() => {
     const list = filteredQubits.length ? filteredQubits : qubits;
-    return [...list].sort((a, b) => a.qubit_index - b.qubit_index);
+    return list.toSorted((a, b) => a.qubit_index - b.qubit_index);
   }, [filteredQubits, qubits]);
 
   const topoTableView = useMemo(() => (
@@ -714,11 +714,11 @@ export const TopologyExplorer = () => {
       state: q.state,
     }));
     if (barSort === 'value_desc') {
-      rows = [...rows].sort((a, b) => (b.v ?? -Infinity) - (a.v ?? -Infinity));
+      rows = rows.toSorted((a, b) => (b.v ?? -Infinity) - (a.v ?? -Infinity));
     } else if (barSort === 'value_asc') {
-      rows = [...rows].sort((a, b) => (a.v ?? Infinity) - (b.v ?? Infinity));
+      rows = rows.toSorted((a, b) => (a.v ?? Infinity) - (b.v ?? Infinity));
     } else {
-      rows = [...rows].sort((a, b) => a.idx - b.idx);
+      rows = rows.toSorted((a, b) => a.idx - b.idx);
     }
     const stats = qStats.n ? qStats : distributionStats(rows.map((r) => r.v));
     const med = stats.median;

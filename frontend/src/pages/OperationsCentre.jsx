@@ -258,7 +258,7 @@ export const OperationsCentre = () => {
       ? LANES.flatMap(([id]) => lanes[id].map((item) => ({ item, laneId: id })))
       : (lanes[laneFilter] || []).map((item) => ({ item, laneId: laneFilter }));
     const rank = (s) => ({ CRITICAL: 0, WARNING: 1, INFO: 2 }[s] ?? 3);
-    return raw.slice().sort((a, b) => rank(a.item.severity) - rank(b.item.severity) || a.laneId.localeCompare(b.laneId));
+    return raw.toSorted((a, b) => rank(a.item.severity) - rank(b.item.severity) || a.laneId.localeCompare(b.laneId));
   }, [laneFilter, lanes]);
 
   const actionable = useMemo(

@@ -168,7 +168,7 @@ export const JobMonitoring = () => {
     const done = list.filter((j) => meta(j.status).terminal);
     const ok = counts.COMPLETED || 0;
     const active = (counts.RUNNING || 0) + (counts.QUEUED || 0);
-    const backends = [...new Set(list.map((j) => j.backend_id))].sort();
+    const backends = new Set(list.map((j) => j.backend_id)).toSorted();
     const per = backends.map((id) => {
       const mine = list.filter((j) => j.backend_id === id);
       const term = mine.filter((j) => meta(j.status).terminal);

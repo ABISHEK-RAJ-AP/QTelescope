@@ -168,7 +168,7 @@ export const PlatformHealth = () => {
   const durationOption = useMemo(() => {
     const t = getChartTheme(isDark);
     const sem = getChartSemanticColors();
-    const rows = [...providersWithDuration].sort((a, b) => (a.duration_ms || 0) - (b.duration_ms || 0));
+    const rows = providersWithDuration.toSorted((a, b) => (a.duration_ms || 0) - (b.duration_ms || 0));
     return {
       grid: { left: 110, right: 24, top: 8, bottom: 28 },
       tooltip: { ...baseTooltip(isDark), trigger: 'item', formatter: (p) => `${p.name}<br/>${p.value} ms (last run)` },

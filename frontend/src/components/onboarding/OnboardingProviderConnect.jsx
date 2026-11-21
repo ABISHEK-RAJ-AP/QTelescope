@@ -194,7 +194,7 @@ export function OnboardingProviderConnect({ isAdmin, onNotice }) {
         api.getCredentials(),
         api.getAdapterVerification().catch(() => ({ results: [] })),
       ]);
-      const list = (creds?.providers || []).slice().sort((a, b) => {
+      const list = (creds?.providers || []).toSorted((a, b) => {
         const an = (a.name || a.id || '').toLowerCase();
         const bn = (b.name || b.id || '').toLowerCase();
         return an.localeCompare(bn);
@@ -220,7 +220,7 @@ export function OnboardingProviderConnect({ isAdmin, onNotice }) {
 
   const sortedProviders = useMemo(() => {
     const isLive = (p) => p.adapter === 'live' || p.adapter_status === 'LIVE';
-    return [...providers].sort((a, b) => {
+    return providers.toSorted((a, b) => {
       const d = Number(isLive(a)) - Number(isLive(b));
       if (d !== 0) return -d;
       return (a.name || a.id || '').localeCompare(b.name || b.id || '', undefined, { sensitivity: 'base' });

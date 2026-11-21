@@ -127,9 +127,9 @@ export const OpsTimeline = () => {
     });
     const b = [...map.values()].map((x) => ({
       ...x,
-      worst: [...x.items].sort((p, q) => sevRank(p.severity) - sevRank(q.severity))[0].severity,
+      worst: x.items.toSorted((p, q) => sevRank(p.severity) - sevRank(q.severity))[0].severity,
     }));
-    return { lanes: [...new Set(b.map((x) => x.lane))].sort(), buckets: b };
+    return { lanes: new Set(b.map((x) => x.lane)).toSorted(), buckets: b };
   }, [filtered]);
 
   const bucketByKey = useMemo(() => new Map(buckets.map((b) => [b.key, b])), [buckets]);
@@ -341,7 +341,7 @@ export const OpsTimeline = () => {
           <DetailModalBody>
             <DetailModalSection title="Events at this time">
               <ul className="ot-list">
-                {[...sel.items].sort((a, b) => sevRank(a.severity) - sevRank(b.severity)).map((e) => {
+                {sel.items.toSorted((a, b) => sevRank(a.severity) - sevRank(b.severity)).map((e) => {
                   const l = linkFor(e);
                   return (
                     <li key={`${e.kind}-${e.id}`}>

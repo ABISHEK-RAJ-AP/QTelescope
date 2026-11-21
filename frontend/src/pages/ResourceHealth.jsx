@@ -85,7 +85,7 @@ function StateBar({ counts, total }) {
 function QubitDrawerBody({ backend, qubit, explain, history }) {
   const { resolved } = useTheme();
   const t = getChartTheme(resolved === 'dark');
-  const hist = useMemo(() => [...(history || [])].reverse(), [history]);
+  const hist = useMemo(() => (history || []).toReversed(), [history]);
   const option = useMemo(() => ({
     grid: { left: 48, right: 16, top: 28, bottom: 28 },
     legend: { data: ['T1', 'T2'], textStyle: { color: t.textColor }, top: 0 },

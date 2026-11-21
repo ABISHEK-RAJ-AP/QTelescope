@@ -17,6 +17,7 @@ export function Toggle({
       <input
         id={inputId}
         type="checkbox"
+        switch
         role="switch"
         checked={!!checked}
         disabled={disabled}

@@ -254,7 +254,7 @@ function DashboardHomeInner() {
   }, [cohRows, theme, t1Crit, resolved]);
 
   const queueRows = useMemo(
-    () => (d.queues || []).slice().sort((a, b) => (Number(b.pending_jobs) || 0) - (Number(a.pending_jobs) || 0)),
+    () => (d.queues || []).toSorted((a, b) => (Number(b.pending_jobs) || 0) - (Number(a.pending_jobs) || 0)),
     [d.queues],
   );
   const queueOption = useMemo(() => {
@@ -562,7 +562,7 @@ function DashboardHomeInner() {
               style={{ height: Math.min(320, Math.max(240, alertPressureRows.length * 32 + 56)), width: '100%' }}
               onEvents={{
                 click: (p) => {
-                  const row = [...alertPressureRows].reverse()[p.dataIndex];
+                  const row = alertPressureRows.toReversed()[p.dataIndex];
                   if (row?.id) navigate(buildBackendDetailsPath(row.id));
                 },
               }}

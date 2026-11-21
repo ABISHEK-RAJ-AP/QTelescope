@@ -65,7 +65,13 @@ export function TelemetryWindowControl({ hours, onChange }) {
             aria-label="Custom lookback hours (1–720)"
             onChange={(e) => setCustomDraft(e.target.value)}
             onBlur={applyCustom}
-            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); applyCustom(); } }}
+            onKeyDown={(e) => {
+              if (e.isComposing || e.nativeEvent?.isComposing || e.keyCode === 229) return;
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                applyCustom();
+              }
+            }}
           />
           <span style={{ color: 'var(--text-muted)' }}>h</span>
         </span>

@@ -5,7 +5,7 @@ export function distributionStats(values) {
     .filter((x) => x != null && Number.isFinite(Number(x)))
     .map(Number);
   if (!v.length) return { min: null, max: null, median: null, n: 0 };
-  const sorted = [...v].sort((a, b) => a - b);
+  const sorted = v.toSorted((a, b) => a - b);
   const min = sorted[0];
   const max = sorted[sorted.length - 1];
   const mid = Math.floor(sorted.length / 2);

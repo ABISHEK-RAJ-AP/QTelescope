@@ -32,6 +32,22 @@ export default defineConfig({
       testMatch: /telescope-ui-audit-capture\.spec\.ts/,
       use: { browserName: 'chromium', baseURL: telescope },
     },
+    {
+      name: 'launch-film',
+      testMatch: /launch-film-capture\.spec\.ts/,
+      use: { browserName: 'chromium', baseURL: telescope, viewport: { width: 1920, height: 1080 } },
+    },
+    {
+      name: 'launch-film-v2',
+      testMatch: /launch-film-v2-capture\.spec\.ts/,
+      use: { browserName: 'chromium', baseURL: telescope, viewport: { width: 1920, height: 1080 } },
+    },
+    {
+      name: 'launch-film-v2-scroll',
+      testMatch: /launch-film-v2-scroll\.spec\.ts/,
+      timeout: 900_000,
+      use: { browserName: 'chromium', baseURL: telescope, viewport: { width: 1920, height: 1080 } },
+    },
   ],
   metadata: { e2eApiUrl: api },
 });
