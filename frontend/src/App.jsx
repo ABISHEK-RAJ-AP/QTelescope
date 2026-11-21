@@ -91,9 +91,11 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
 
   const [collapsed, setCollapsed] = useState(() => {
     try {
-      return localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === '1';
+      const stored = localStorage.getItem(SIDEBAR_COLLAPSE_KEY);
+      if (stored === null) return true;
+      return stored === '1';
     } catch {
-      return false;
+      return true;
     }
   });
   const [hoverExpand, setHoverExpand] = useState(false);
@@ -126,9 +128,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
   const [commandOpen, setCommandOpen] = useState(false);
 
   useCommandPaletteShortcut(() => setCommandOpen(true));
-  const [expandedBranches, setExpandedBranches] = useState(
-    () => new Set(['alerts', 'admin']),
-  );
+  const [expandedBranches, setExpandedBranches] = useState(() => new Set());
   const canConfigure = canManageFleet(currentUser);
   const tourSteps = useMemo(
     () => filterConsoleTourSteps(currentUser, canSeeNavItem),
@@ -743,7 +743,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
         >
           <div className="sidebar-header__stack">
             <QtTeleScopeMark
-              size={effectiveCollapsed ? 26 : 28}
+              size={effectiveCollapsed ? 30 : 34}
               className={`sidebar-logo-mark${effectiveCollapsed ? ' sidebar-logo-mark--icon-only' : ''}`}
               decorative
             />

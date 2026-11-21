@@ -246,48 +246,39 @@ html.dark .cdac-footer-mark__img--dark,
 
 .public-footer-compact {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.public-footer-compact__brand {
-  display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem;
-  text-align: center;
+  gap: 0.625rem 1rem;
 }
 
-@media (min-width: 640px) {
-  .public-footer-compact__brand {
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 1rem;
-    text-align: left;
-  }
+.public-footer-compact__logo {
+  flex-shrink: 0;
 }
 
 .public-footer-compact__copy {
-  color: #525252;
+  flex: 1 1 12rem;
+  min-width: min(100%, 16rem);
+  color: var(--text-secondary);
   line-height: 1.45;
-  max-width: 36rem;
 }
 
 .dark .public-footer-compact__copy {
-  color: #a3a3a3;
+  color: var(--text-muted);
 }
 
 .public-footer-compact__nav {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  gap: 0.5rem 0.75rem;
+  flex: 1 1 100%;
   justify-content: center;
-  gap: 0.5rem 1rem;
 }
 
-@media (min-width: 640px) {
+@media (min-width: 768px) {
   .public-footer-compact__nav {
+    flex: 0 1 auto;
     justify-content: flex-end;
+    margin-left: auto;
   }
 }

@@ -47,6 +47,8 @@ html.dark .qt-brand-lockup__img--dark {
 .reg-stage__logo-mark {
   --qt-logo-h: 44px;
   max-width: 240px;
+  align-self: center;
+  margin-inline: auto;
 }
 
 .auth-cert-card__logo-mark {
@@ -56,7 +58,7 @@ html.dark .qt-brand-lockup__img--dark {
 }
 
 .sidebar-logo-mark:not(.sidebar-logo-mark--icon-only) {
-  --qt-logo-h: 28px;
+  --qt-logo-h: 34px;
   max-width: 100%;
   width: auto;
 }
@@ -66,9 +68,9 @@ html.dark .qt-brand-lockup__img--dark {
 }
 
 .sidebar-logo-mark--icon-only {
-  --qt-logo-h: 26px;
-  width: 28px;
-  max-width: 28px;
+  --qt-logo-h: 30px;
+  width: 32px;
+  max-width: 32px;
   margin: 0 auto;
   overflow: hidden;
   display: flex;
