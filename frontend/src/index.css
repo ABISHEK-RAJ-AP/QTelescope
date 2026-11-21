@@ -709,7 +709,7 @@ pre,
   position: sticky;
   top: 0;
   z-index: 40;
-  overflow: hidden;
+  overflow: visible;
   flex-shrink: 0;
 }
 

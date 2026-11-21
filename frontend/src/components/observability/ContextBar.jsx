@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../services/api';
 import { TimeRangeSelector } from './TimeRangeSelector.jsx';
+import { InfoTooltip } from './InfoTooltip.jsx';
 
 /**
  * Scope strip: backend + optional lookback, synced to URL via useAppScope in parent.
@@ -17,6 +18,7 @@ export function ContextBar({
   alertId,
   readOnly = false,
   hint,
+  scopeHelp,
   children,
 }) {
   const [backends, setBackends] = useState(backendsProp || []);
@@ -37,7 +39,14 @@ export function ContextBar({
     <div className="context-bar card page-panel" role="region" aria-label="View context">
       {showBackend && (
         <label className="context-bar__field outline-field">
-          <span>Backend</span>
+          <span className="qt-title-with-help context-bar__label">
+            <span>Backend</span>
+            {scopeHelp ? (
+              <InfoTooltip label="Stream scope" align="start">
+                {scopeHelp}
+              </InfoTooltip>
+            ) : null}
+          </span>
           <select
             className="input-control"
             value={backend || ''}

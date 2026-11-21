@@ -353,12 +353,15 @@ export const LiveTelemetry = () => {
     [chrono, isDark, theme.axisLine, theme.splitColor, theme.textColor, tickGaps, xLabels],
   );
 
+  const scopeHelp =
+    'All backends: fleet-wide SSE aggregates (~5s refresh). One backend: KPIs, modality strip, and charts follow that machine; ?backend=… in the URL; changing scope reconnects the stream.';
+
   const scopeBar = (
     <ContextBar
       backend={scopeBackend}
       backends={backends}
       onBackendChange={setBackend}
-      hint={scopeBackend ? 'Scoped stream — KPIs and charts follow this backend.' : 'Fleet stream — aggregates every ~5s.'}
+      scopeHelp={scopeHelp}
     />
   );
 

@@ -42,6 +42,12 @@
   overflow: hidden;
 }
 
+.op-notice-bell__panel--portaled {
+  position: fixed;
+  top: auto;
+  right: auto;
+}
+
 .op-notice-bell__head {
   display: flex;
   align-items: center;

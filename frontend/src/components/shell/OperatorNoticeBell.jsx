@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
@@ -54,7 +55,10 @@ function actionIcon(label) {
 export function OperatorNoticeBell({ className = '' }) {
   const navigate = useNavigate();
   const rootRef = useRef(null);
+  const triggerRef = useRef(null);
+  const panelRef = useRef(null);
   const [open, setOpen] = useState(false);
+  const [panelPos, setPanelPos] = useState(null);
   const [notices, setNotices] = useState(() => getActiveOperatorNotices());
   const [unread, setUnread] = useState(() => unreadOperatorNoticeCount());
 
@@ -75,32 +79,69 @@ export function OperatorNoticeBell({ className = '' }) {
     };
   }, [refresh]);
 
-  useEffect(() => {
-    if (!open) return undefined;
+  const repositionPanel = useCallback(() => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const margin = 8;
+    const width = Math.min(424, window.innerWidth - margin * 2);
+    setPanelPos({
+      top: r.bottom + margin,
+      left: Math.max(margin, Math.min(r.right - width, window.innerWidth - width - margin)),
+      width,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPanelPos(null);
+      return undefined;
+    }
     markOperatorNoticesSeen();
     refresh();
+    repositionPanel();
+    const onResize = () => repositionPanel();
+    window.addEventListener('resize', onResize, { passive: true });
+    window.addEventListener('scroll', onResize, { passive: true, capture: true });
+    return () => {
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('scroll', onResize, true);
+    };
+  }, [open, refresh, repositionPanel]);
+
+  useEffect(() => {
+    if (!open) return undefined;
     const onDoc = (e) => {
-      if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
+      const root = rootRef.current;
+      const panel = panelRef.current;
+      if (root?.contains(e.target) || panel?.contains(e.target)) return;
+      setOpen(false);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Escape') setOpen(false);
     };
     document.addEventListener('mousedown', onDoc);
-    return () => document.removeEventListener('mousedown', onDoc);
-  }, [open, refresh]);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
 
-  return (
-    <div className={`op-notice-bell ${className}`.trim()} ref={rootRef}>
-      <button
-        type="button"
-        className="btn btn-secondary op-notice-bell__trigger"
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}
-        onClick={() => setOpen((v) => !v)}
-      >
-        <Bell size={15} aria-hidden />
-        {unread > 0 ? <span className="op-notice-bell__badge">{unread > 9 ? '9+' : unread}</span> : null}
-      </button>
-      {open ? (
-        <div className="op-notice-bell__panel" role="dialog" aria-label="Operator notifications">
+  const panel = open && panelPos ? (
+        <div
+          ref={panelRef}
+          className="op-notice-bell__panel op-notice-bell__panel--portaled"
+          role="dialog"
+          aria-label="Operator notifications"
+          style={{
+            position: 'fixed',
+            top: panelPos.top,
+            left: panelPos.left,
+            width: panelPos.width,
+            zIndex: 10900,
+          }}
+        >
           <header className="op-notice-bell__head">
             <span className="op-notice-bell__head-title">
               <Bell size={16} aria-hidden />
@@ -200,7 +241,31 @@ export function OperatorNoticeBell({ className = '' }) {
             </footer>
           ) : null}
         </div>
-      ) : null}
+  ) : null;
+
+  return (
+    <div className={`op-notice-bell ${className}`.trim()} ref={rootRef}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className="btn btn-secondary op-notice-bell__trigger"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}
+        onClick={() => {
+          setOpen((v) => {
+            const next = !v;
+            if (next) {
+              requestAnimationFrame(() => repositionPanel());
+            }
+            return next;
+          });
+        }}
+      >
+        <Bell size={15} aria-hidden />
+        {unread > 0 ? <span className="op-notice-bell__badge">{unread > 9 ? '9+' : unread}</span> : null}
+      </button>
+      {panel && typeof document !== 'undefined' ? createPortal(panel, document.body) : null}
     </div>
   );
 }
