@@ -240,7 +240,7 @@ export const ReportsPage = () => {
 
         {history.length > 0 && (
           <div className="rp-preview">
-            <div className="rp-label">Exports this session</div>
+            <div className="rp-label">Recent exports (saved in this browser)</div>
             <div className="table-container">
               <table className="custom-table">
                 <thead><tr><th>Time (IST)</th><th>Report</th><th>Scope</th><th>Format</th><th>Rows</th><th>Size</th><th>Result</th></tr></thead>
@@ -258,6 +258,7 @@ export const ReportsPage = () => {
         <h3 id="rp-ev-h" className="rp-h">Evidence snapshots</h3>
         <p className="rp-desc rp-desc--compact">
           Tamper-evident ZIP packages with manifest and package SHA-256 hashes. Fleet or single-backend scope — verify downloads before archival.
+          Snapshots stay on the server after API restarts; environment JSON import lives under Environment.
         </p>
         <div className="rp-snaprow">
           <label className="rp-label">Scope
