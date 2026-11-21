@@ -1766,7 +1766,10 @@ label.outline-field.outline-field {
   min-width: 0;
 }
 
-label.outline-field.outline-field > span:first-of-type {
+/* Legend chip — plain text span only; not tooltips, sr-only, or compound label rows */
+label.outline-field.outline-field > .outline-field__name,
+label.outline-field.outline-field > span.outline-field__name,
+label.outline-field.outline-field > span:first-of-type:not(.visually-hidden):not(.context-bar__label):not(.qt-title-with-help):not(.admin-people-scope-block__label):not(:has(.info-tooltip)) {
   position: absolute;
   top: 0;
   left: 10px;
@@ -1782,12 +1785,31 @@ label.outline-field.outline-field > span:first-of-type {
   z-index: 1;
 }
 
+label.outline-field.outline-field > .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+  transform: none;
+  left: auto;
+  top: auto;
+  background: transparent;
+  z-index: 0;
+}
+
 label.outline-field.outline-field:focus-within {
   border-color: var(--accent-cyan);
   box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
 }
 
-label.outline-field.outline-field:focus-within > span:first-of-type {
+label.outline-field.outline-field:focus-within > .outline-field__name,
+label.outline-field.outline-field:focus-within > span.outline-field__name,
+label.outline-field.outline-field:focus-within > span:first-of-type:not(.visually-hidden):not(.context-bar__label):not(.qt-title-with-help):not(.admin-people-scope-block__label):not(:has(.info-tooltip)) {
   color: var(--text-primary);
 }
 
@@ -1802,7 +1824,7 @@ label.outline-field.outline-field input {
   min-width: 7.25rem;
   max-width: 14rem;
   width: auto;
-  padding-top: 0;
+  padding-top: 4px;
   padding-bottom: 0;
   border-radius: 0;
 }

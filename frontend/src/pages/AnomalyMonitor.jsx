@@ -221,8 +221,8 @@ export const AnomalyMonitor = () => {
     return (
       <div className="page-stack">
         <ContextBar backend={scopeBackend} backends={backends} onBackendChange={setBackend}>
-          <label className="context-bar__field outline-field">
-            <span>Metric</span>
+          <label className="context-bar__field context-bar__field--boxed">
+            <span className="context-bar__label-text">Metric</span>
             <select className="input-control" value={metric} onChange={(e) => setMetric(e.target.value)} aria-label="Metric">
               {METRIC_KEYS.map((k) => <option key={k} value={k}>{METRICS[k].label}{METRICS[k].unit ? ` (${METRICS[k].unit})` : ''}</option>)}
             </select>
@@ -240,8 +240,8 @@ export const AnomalyMonitor = () => {
         backends={backends}
         onBackendChange={setBackend}
       >
-        <label className="context-bar__field outline-field">
-          <span>Metric</span>
+        <label className="context-bar__field context-bar__field--boxed">
+          <span className="context-bar__label-text">Metric</span>
           <select className="input-control" value={metric} onChange={(e) => setMetric(e.target.value)} aria-label="Metric">
             {METRIC_KEYS.map((k) => <option key={k} value={k}>{METRICS[k].label}{METRICS[k].unit ? ` (${METRICS[k].unit})` : ''}</option>)}
           </select>
