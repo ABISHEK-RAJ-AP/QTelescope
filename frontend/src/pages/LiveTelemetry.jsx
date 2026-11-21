@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { Radio } from 'lucide-react';
 import { formatISTTime } from '../utils/time';
-import { BASE_URL, fetchApi } from '../services/api';
+import { BASE_URL, api, fetchApi } from '../services/api';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { ContextBar } from '../components/observability/ContextBar.jsx';
+import { InsightModal } from '../components/observability/InsightModal.jsx';
 import { useAppScope } from '../hooks/useAppScope.js';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { baseTooltip, getChartTheme, getChartSemanticColors, getModalityChartPalette } from '../components/observability/chartTheme.js';
@@ -38,13 +39,23 @@ function tsMs(iso) {
 }
 
 export const LiveTelemetry = () => {
-  const { backend: scopeBackend } = useAppScope();
+  const { backend: scopeBackend, setBackend } = useAppScope();
   const { resolved } = useTheme();
   const isDark = resolved === 'dark';
+  const [backends, setBackends] = useState([]);
+  const [scopeHelpOpen, setScopeHelpOpen] = useState(false);
   const [streamLogs, setStreamLogs] = useState([]);
   const [isConnected, setIsConnected] = useState(true);
   const [reconnecting, setReconnecting] = useState(false);
   const [awaitingFirstEvent, setAwaitingFirstEvent] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.getBackends()
+      .then((list) => { if (!cancelled) setBackends(list || []); })
+      .catch(() => { if (!cancelled) setBackends([]); });
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     let eventSource;
@@ -129,7 +140,7 @@ export const LiveTelemetry = () => {
     return () => window.clearTimeout(t);
   }, [streamLogs.length]);
 
-  const chrono = useMemo(() => [...streamLogs].reverse(), [streamLogs]);
+  const chrono = useMemo(() => streamLogs.toReversed(), [streamLogs]);
 
   const modalityKeys = useMemo(() => {
     const set = new Set();
@@ -344,7 +355,27 @@ export const LiveTelemetry = () => {
     [chrono, isDark, theme.axisLine, theme.splitColor, theme.textColor, tickGaps, xLabels],
   );
 
-  if (!streamLogs.length && isConnected && awaitingFirstEvent) return <BoneyardSkeleton layout="grid" />;
+  const scopeBar = (
+    <ContextBar backend={scopeBackend} backends={backends} onBackendChange={setBackend}>
+      <button
+        type="button"
+        className="btn btn-secondary"
+        onClick={() => setScopeHelpOpen(true)}
+        aria-haspopup="dialog"
+      >
+        About stream scope
+      </button>
+    </ContextBar>
+  );
+
+  if (!streamLogs.length && isConnected && awaitingFirstEvent) {
+    return (
+      <div className="page-stack">
+        {scopeBar}
+        <BoneyardSkeleton layout="grid" />
+      </div>
+    );
+  }
 
   const latest = streamLogs[0] || {};
   const latestModality = latest.t1_by_modality || [];
@@ -358,18 +389,7 @@ export const LiveTelemetry = () => {
       data-qt-page-pending={awaitingFirstEvent && !streamLogs.length ? 'true' : 'false'}
       data-qt-charts-pending={chartsPending ? 'true' : 'false'}
     >
-      {scopeBackend ? (
-        <ContextBar
-          backend={scopeBackend}
-          readOnly
-          hint="SSE KPIs and charts are scoped to this backend. Clear backend in the URL for fleet-wide aggregates."
-        />
-      ) : null}
-      {!scopeBackend ? (
-        <p className="live-scope-note" role="note">
-          Fleet-wide aggregates across all backends. Pick a backend in the URL to scope this stream.
-        </p>
-      ) : null}
+      {scopeBar}
       {!isConnected && streamLogs.length === 0 && !reconnecting && (
         <EmptyState
           variant="panel"
@@ -519,6 +539,22 @@ export const LiveTelemetry = () => {
           />
         </ChartPanel>
       </div>
+
+      <InsightModal
+        open={scopeHelpOpen}
+        title="Live stream scope"
+        subtitle="Fleet aggregates vs one backend"
+        onClose={() => setScopeHelpOpen(false)}
+      >
+        <p>
+          Use the <strong>Backend</strong> control above. <strong>All backends</strong> keeps fleet-wide
+          aggregates on the SSE feed (~5s refresh). Choose one backend to scope KPIs, modality strips, and charts
+          to that machine; the URL stores <code>?backend=…</code> so links stay scoped.
+        </p>
+        <p className="page-hint" style={{ marginBottom: 0 }}>
+          Scope changes reconnect the live stream automatically.
+        </p>
+      </InsightModal>
     </div>
   );
 };

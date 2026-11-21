@@ -58,7 +58,7 @@ html.dark .qt-brand-lockup__img--dark {
 }
 
 .sidebar-logo-mark:not(.sidebar-logo-mark--icon-only) {
-  --qt-logo-h: 40px;
+  --qt-logo-h: 48px;
   max-width: 100%;
   width: auto;
 }
@@ -68,23 +68,27 @@ html.dark .qt-brand-lockup__img--dark {
 }
 
 .sidebar-logo-mark--icon-only {
-  --qt-logo-h: 34px;
-  width: 36px;
-  max-width: 36px;
+  --qt-logo-h: 48px;
+  --qt-logo-icon-crop: 58%;
+  width: calc(var(--qt-logo-h) * 1.02);
+  max-width: calc(var(--qt-logo-h) * 1.02);
+  height: var(--qt-logo-h);
   margin: 0 auto;
   overflow: hidden;
   display: flex;
+  align-items: center;
   justify-content: flex-start;
+  flex-shrink: 0;
 }
 
-.sidebar-logo-mark--icon-only .qt-brand-lockup__img,
+/* Lockup is ~3:1 — clip right segment so collapse shows Q mark only (not “-TeleScope”). */
+.sidebar-logo-mark--icon-only .qt-brand-lockup__img--light,
+.sidebar-logo-mark--icon-only .qt-brand-lockup__img--dark,
 .sidebar-logo-mark--icon-only.qt-brand-lockup__img {
-  height: 26px;
+  height: var(--qt-logo-h);
   width: auto;
-  min-width: 52px;
   max-width: none;
-  object-fit: cover;
-  object-position: left center;
+  clip-path: inset(0 var(--qt-logo-icon-crop) 0 0);
 }
 
 .sidebar-collapsed:not(.sidebar-hover-expanded) .sidebar-header {
