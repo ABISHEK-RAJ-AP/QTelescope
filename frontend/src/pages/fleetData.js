@@ -1,4 +1,5 @@
 import { fetchApi } from '../services/api';
+import { sortCopy } from '../lib/sortCopy.js';
 
 /** /alerts defaults to limit=100 — that truncation is why the sidebar (100) and
  *  server aggregate (106) disagreed. 500 is the API max. */
@@ -57,8 +58,8 @@ export function groupAlerts(alerts) {
     if (a.detected_at > g.latest) g.latest = a.detected_at;
     m.set(k, g);
   });
-  return m.values().toSorted(
-    (x, y) => sevRank(x.severity) - sevRank(y.severity) || y.count - x.count,
+  return sortCopy([...m.values()], (x, y) =>
+    sevRank(x.severity) - sevRank(y.severity) || y.count - x.count,
   );
 }
 

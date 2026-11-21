@@ -22,6 +22,7 @@ import { SevBadge, StatusBadge } from './opsShared.jsx';
 import { dropAlertsCoveredByIncidents, sevRank, toMs } from './opsHelpers.js';
 import { SortableTh, ViewModeToggle } from '../components/observability/DataViewToolbar.jsx';
 import { ListPager } from '../components/observability/ListPager.jsx';
+import { sortCopy } from '../lib/sortCopy.js';
 import './OpsTimeline.css';
 
 const LIMIT = 120; // server cap 200; smaller = faster swim-lane chart
@@ -129,7 +130,7 @@ export const OpsTimeline = () => {
       ...x,
       worst: x.items.toSorted((p, q) => sevRank(p.severity) - sevRank(q.severity))[0].severity,
     }));
-    return { lanes: new Set(b.map((x) => x.lane)).toSorted(), buckets: b };
+    return { lanes: sortCopy([...new Set(b.map((x) => x.lane))]), buckets: b };
   }, [filtered]);
 
   const bucketByKey = useMemo(() => new Map(buckets.map((b) => [b.key, b])), [buckets]);

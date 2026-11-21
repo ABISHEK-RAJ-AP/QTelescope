@@ -32,6 +32,7 @@ import { formatActivity, formatIST } from '../utils/time';
 import { SevBadge, StatusBadge } from './opsShared.jsx';
 import { dropAlertsCoveredByIncidents, sevRank, toMs, timelineTo, healthTo, qubitOf } from './opsHelpers.js';
 import { notifyError, notifyOperatorNotice, notifySuccess } from '../lib/toast.js';
+import { sortCopy } from '../lib/sortCopy.js';
 import { usePermissions } from '../hooks/usePermissions.js';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { getChartSemanticColors } from '../components/observability/chartTheme.js';
@@ -274,7 +275,10 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
     }
   }, [error, alerts.length, incidents.length]);
 
-  const backends = useMemo(() => new Set(alerts.map((a) => a.backend_id).filter(Boolean)).toSorted(), [alerts]);
+  const backends = useMemo(
+    () => sortCopy([...new Set(alerts.map((a) => a.backend_id).filter(Boolean))]),
+    [alerts],
+  );
 
   const orphanBackends = useMemo(() => {
     if (!registryIds?.size) return [];

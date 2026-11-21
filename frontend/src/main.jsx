@@ -1,3 +1,5 @@
+import { installImmutableSortPolyfill } from './lib/sortCopy.js';
+installImmutableSortPolyfill();
 import './lib/passiveListenersPatch.js';
 import './lib/devPerformanceGuard.js';
 import { StrictMode } from 'react';
