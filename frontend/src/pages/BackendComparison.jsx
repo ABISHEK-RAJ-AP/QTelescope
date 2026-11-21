@@ -625,9 +625,9 @@ export const BackendComparison = () => {
           </section>
 
           <section className="card page-panel bc-pairs">
-            <div className="bc-pairs-head">
+            <div className="bc-pairs-head qt-title-with-help">
               <h3 className="page-section-title">Pair deltas (A − B, qubit medians)</h3>
-              <InfoTooltip label="Metrics and router (advisory)">
+              <InfoTooltip label="Metrics and router (advisory)" align="start">
                 <dl className="bc-defs-dl">
                   <dt>F_limit</dt>
                   <dd>Coherence fidelity bound in [0, 1].</dd>

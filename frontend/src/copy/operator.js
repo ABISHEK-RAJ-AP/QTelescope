@@ -64,7 +64,7 @@ export const COPY = {
       'Enter the six-digit code from your email to finish creating your account.',
     registerClosed: 'Registration is managed by your organisation administrator.',
     registerApprovalNote:
-      'After email verification, an organisation or platform administrator must approve your account before the first sign-in. Access and role are set during that review in Administration → Access & approvals.',
+      'After email verification, an organisation or platform administrator must approve your account before the first sign-in. Role is assigned during that review under Configure → Members.',
     accessIntroFleet:
       'Fleet-wide view of pending registrations, invitations, and account status across all organisations.',
     accessIntroOrg:

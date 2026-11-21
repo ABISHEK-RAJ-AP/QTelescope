@@ -106,8 +106,13 @@
 .admin-people-tabs-wrap {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
+  min-height: 2rem;
+}
+
+.admin-people-tabs-wrap .info-tooltip {
+  align-self: center;
 }
 
 .admin-people-scope-block {

@@ -17,7 +17,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-width: 0;
   min-height: var(--cs-head-min-height);
   padding: var(--cs-head-pad-y) 4px;
@@ -39,11 +39,19 @@
 .collapsible-section__toggle .qt-title-with-help,
 .collapsible-section__title-cluster {
   align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.collapsible-section__title-cluster .collapsible-section__title {
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .collapsible-section__title-cluster .badge {
   flex-shrink: 0;
-  margin-left: 2px;
+  align-self: center;
+  line-height: 1.2;
 }
 
 .collapsible-section__actions {

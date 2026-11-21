@@ -121,7 +121,7 @@ export function permissionsForRole(role) {
 
 export function listPermissionsForRole(role) {
   if (FULL_ACCESS_ROLES.has(role)) return ['* (all capabilities)'];
-  return [...permissionsForRole(role)].sort((a, b) => a.localeCompare(b));
+  return permissionsForRole(role).toSorted((a, b) => a.localeCompare(b));
 }
 
 export function roleHasCapability(role, permission) {
@@ -218,7 +218,7 @@ export function visibleAdminNav(user) {
     (canManageFleet(user) ? { value: 'collectors', label: 'Collectors' } : null),
     (can(user, 'platform:read') || canManageFleet(user) ? { value: 'logs', label: 'Audit log' } : null),
     ((can(user, 'alert_rules:read') || can(user, 'alert_rules:manage')) ? { value: 'rules', label: 'Alert rules' } : null),
-    (can(user, 'users:read') ? { value: 'access', label: 'People & access' } : null),
+    (can(user, 'users:read') ? { value: 'access', label: 'Members' } : null),
   ].filter(Boolean);
 }
 

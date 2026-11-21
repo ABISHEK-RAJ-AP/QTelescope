@@ -203,7 +203,7 @@ export function resolvePageContext(state) {
         description = 'Collection schedules, last run, and failure queue.';
       } else if (sub === 'access' || sub === 'users') {
         description =
-          'Approve registrations, manage the member directory, invite users, and assign roles. Scope follows your organisation filter or fleet-wide access for platform administrators.';
+          'Approval queue, member directory, invitations, and roles. Scope follows organisation filter or fleet-wide view for platform administrators.';
       } else if (sub === 'logs') {
         description = 'Audit and application log search.';
       } else {

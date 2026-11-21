@@ -30,7 +30,7 @@ const USER_SORTS = [
 ];
 const ACCOUNT_STATUS_LABEL = {
   active: 'Active',
-  pending_admin: 'Pending',
+  pending_admin: 'Pending approval',
   rejected: 'Rejected',
   suspended: 'Suspended',
 };
@@ -61,7 +61,7 @@ const DIRECTORY_TAB_HELP =
 
 function PeopleTabBar({ tab, onTab, pendingCount }) {
   const items = [
-    { id: 'queue', label: 'Queue', badge: pendingCount || null },
+    { id: 'queue', label: 'Approvals', badge: pendingCount || null },
     { id: 'directory', label: 'Directory' },
   ];
   return (
@@ -82,7 +82,7 @@ function PeopleTabBar({ tab, onTab, pendingCount }) {
         ))}
       </div>
       <InfoTooltip
-        label={tab === 'queue' ? 'Queue' : 'Directory'}
+        label={tab === 'queue' ? 'Approvals' : 'Directory'}
         align="start"
       >
         {tab === 'queue' ? QUEUE_TAB_HELP : DIRECTORY_TAB_HELP}
@@ -105,7 +105,7 @@ function PendingCard({ user, roleOptions, canEdit, busy, onRole, onApprove, onRe
           <p className="admin-access-card__meta">{user.email || user.username}</p>
           {user.org ? <p className="admin-access-card__org" title={user.org}>{user.org}</p> : null}
         </div>
-        <span className="badge badge-warning">Pending</span>
+        <span className="badge badge-warning">Pending approval</span>
       </header>
       {user.created_at ? (
         <p className="admin-people-muted">Submitted {formatISTTime(user.created_at)}</p>
@@ -265,7 +265,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
         `${u.username} ${u.full_name || ''} ${u.email || ''} ${u.role || ''} ${u.org || ''}`.toLowerCase().includes(q)
       ));
     }
-    return [...list].sort((a, b) => {
+    return list.toSorted((a, b) => {
       if (sortKey === 'mfa') {
         return Number(Boolean(b.mfa_enabled)) - Number(Boolean(a.mfa_enabled))
           || String(a.username).localeCompare(String(b.username));
@@ -485,7 +485,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
         <>
           <CollapsibleSection
             id="admin-pending-h"
-            title="Pending approval"
+            title="Approval queue"
             defaultOpen={pending.length > 0}
             className="card admin-people-panel"
             help={COPY.auth.accessPendingSubtitle}
