@@ -66,4 +66,19 @@
   --font-weight-medium: 500;
   --font-weight-semibold: 600;
   --font-weight-bold: 700;
+
+  /* Viewport breakpoints (structural media queries only) */
+  --bp-xs: 380px;
+  --bp-sm: 640px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+  --bp-xl: 1280px;
+  --bp-2xl: 1536px;
+  --bp-shell-mobile: 900px;
+
+  /* Fluid page chrome — scales between phone and wide desktop */
+  --ds-page-pad-inline: clamp(12px, 2.8vw, 28px);
+  --ds-page-pad-block: clamp(12px, 2.2vw, 24px);
+  --ds-page-pad-bottom: clamp(24px, 3.5vw, 48px);
+  --ds-page-max: min(1680px, 100%);
 }

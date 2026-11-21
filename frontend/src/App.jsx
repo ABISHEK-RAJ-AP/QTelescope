@@ -2,7 +2,7 @@ import React, { Suspense, useState, useEffect, useRef, useMemo, useCallback } fr
 import {
   LayoutDashboard, Cpu, Activity, CheckCircle2,
   FileText, Settings, LogOut, AlertTriangle, PlaySquare,
-  Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, Server, GitCompare,
+  Sun, Moon, ChevronLeft, ChevronRight, ChevronDown, Server, GitCompare, Menu, X,
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { buildAppPath, parseAppPath, isLegacyAppPath } from './appNav.js';
@@ -51,7 +51,7 @@ import { ProductTour } from './components/onboarding/ProductTour.jsx';
 import { ConfirmDialog } from './components/observability/ConfirmDialog.jsx';
 import { QtQuickActionDock } from './components/quick-actions/QtQuickActionDock.jsx';
 import { OperatorNoticeBell } from './components/shell/OperatorNoticeBell.jsx';
-import { readDensity } from './utils/uiPreferences.js';
+import { DENSITY_EVENT, DENSITY_KEY, readDensity } from './utils/uiPreferences.js';
 import { OnScreenKeyboard } from './components/shell/OnScreenKeyboard.jsx';
 import { filterConsoleTourSteps } from './lib/consoleTour.js';
 import { consumeConsoleTourPending, shouldRunOnboarding } from './lib/onboardingState.js';
@@ -100,6 +100,11 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
   });
   const [hoverExpand, setHoverExpand] = useState(false);
   const [density, setDensity] = useState(readDensity);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [mobileShell, setMobileShell] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia('(max-width: 899px)').matches;
+  });
 
   // Sidebar Head Topics
   const [mainTopic, setMainTopic] = useState('home');
@@ -157,6 +162,44 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
       navigate({ pathname: location.pathname, search: '' }, { replace: true });
     }
   }, [location.search, location.pathname, navigate]);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 899px)');
+    const onMq = () => {
+      setMobileShell(mq.matches);
+      if (!mq.matches) setMobileNavOpen(false);
+    };
+    onMq();
+    mq.addEventListener('change', onMq);
+    return () => mq.removeEventListener('change', onMq);
+  }, []);
+
+  useEffect(() => {
+    document.body.classList.toggle('shell-mobile-nav-open', mobileNavOpen);
+    return () => document.body.classList.remove('shell-mobile-nav-open');
+  }, [mobileNavOpen]);
+
+  useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const syncDensity = () => setDensity(readDensity());
+    const onDensityEvent = (e) => {
+      const mode = e?.detail?.mode;
+      if (mode === 'compact' || mode === 'comfortable') setDensity(mode);
+      else syncDensity();
+    };
+    const onStorage = (e) => {
+      if (e.key === DENSITY_KEY) syncDensity();
+    };
+    window.addEventListener(DENSITY_EVENT, onDensityEvent);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener(DENSITY_EVENT, onDensityEvent);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
 
   useEffect(() => {
     if (consumeConsoleTourPending(currentUser?.username)) {
@@ -298,7 +341,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
   };
 
   const tourSidebarOpen = productTourOpen;
-  const effectiveCollapsed = collapsed && !hoverExpand && !tourSidebarOpen;
+  const effectiveCollapsed = collapsed && !hoverExpand && !tourSidebarOpen && !(mobileShell && mobileNavOpen);
 
   const handleSelectBackend = (id) => {
     go({
@@ -707,7 +750,10 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
                 type="button"
                 key={child.value}
                 className={`nav-sub-item ${resolveChildActive(item, child) ? 'active' : ''}`}
-                onClick={() => go(resolveChildGo(item, child))}
+                onClick={() => {
+                  go(resolveChildGo(item, child));
+                  if (mobileShell) setMobileNavOpen(false);
+                }}
               >
                 {child.label}
               </button>
@@ -726,11 +772,20 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
     <div className="app-shell">
       <A11yPreheader />
     <div className="app-container">
+      {mobileNavOpen ? (
+        <button
+          type="button"
+          className="sidebar-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setMobileNavOpen(false)}
+        />
+      ) : null}
       <aside
-        className={`sidebar${collapsed && !tourSidebarOpen ? ' sidebar-collapsed' : ''}${hoverExpand && collapsed && !tourSidebarOpen ? ' sidebar-hover-expanded' : ''}`}
-        onMouseEnter={() => { if (collapsed) setHoverExpand(true); }}
+        id="console-sidebar"
+        className={`sidebar${collapsed && !tourSidebarOpen ? ' sidebar-collapsed' : ''}${hoverExpand && collapsed && !tourSidebarOpen ? ' sidebar-hover-expanded' : ''}${mobileNavOpen ? ' sidebar--mobile-open' : ''}`}
+        onMouseEnter={() => { if (collapsed && !mobileShell) setHoverExpand(true); }}
         onMouseLeave={() => setHoverExpand(false)}
-        onFocusCapture={() => { if (collapsed) setHoverExpand(true); }}
+        onFocusCapture={() => { if (collapsed && !mobileShell) setHoverExpand(true); }}
         onBlurCapture={(e) => {
           if (!e.currentTarget.contains(e.relatedTarget)) setHoverExpand(false);
         }}
@@ -750,7 +805,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
           </div>
         </Link>
 
-        <nav className="sidebar-nav" data-tour="sidebar-nav">
+        <nav className="sidebar-nav" id="console-sidebar-nav" data-tour="sidebar-nav">
           {navGroups.map((group, idx) => (
             <div key={group.label || `nav-console-${idx}`}>
               {group.label && !effectiveCollapsed ? (
@@ -815,6 +870,16 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
         className={`main-content${collapsed ? ' main-content--collapsed' : ''}${hoverExpand && collapsed ? ' main-content--hover-expanded' : ''}`}
       >
         <header className="app-page-head">
+          <button
+            type="button"
+            className="btn btn-secondary btn-icon-only app-page-head__menu qt-pressable"
+            aria-expanded={mobileNavOpen}
+            aria-controls="console-sidebar-nav"
+            onClick={() => setMobileNavOpen((open) => !open)}
+          >
+            <span className="visually-hidden">{mobileNavOpen ? 'Close menu' : 'Open menu'}</span>
+            {mobileNavOpen ? <X size={18} aria-hidden /> : <Menu size={18} aria-hidden />}
+          </button>
           <PageHeader
             embedded
             breadcrumbs={headerBreadcrumbs}

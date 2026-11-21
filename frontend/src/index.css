@@ -11,6 +11,7 @@
 @import "./styles/ops-antislop.css";
 @import "./styles/motion-feedback.css";
 @import "./styles/surface-rhythm.css";
+@import "./styles/responsive-global.css";
 @import "./components/ui/item.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -1053,23 +1054,17 @@ pre,
 }
 
 .page-container {
-  padding: var(--ds-space-lg) var(--ds-space-lg) var(--ds-space-2xl);
   flex: 1;
-  max-width: 1680px;
   width: 100%;
   margin: 0 auto;
   min-width: 0;
   scroll-margin-top: calc(var(--a11y-preheader-height, 32px) + 64px);
 }
 
-/* Global resolution — common VM / laptop viewports (1366×768, 1280×720) */
+/* Global resolution — laptop / VM height tiers */
 @media (max-width: 1366px) {
-  .page-container {
-    padding: 14px 16px 28px;
-    max-width: 100%;
-  }
   .app-page-head {
-    padding: 0 14px;
+    padding-inline: 14px;
   }
   .page-container--comfortable .chart-panel__body:not(:has(.chart-panel__stage)) {
     min-height: 220px;
@@ -1077,18 +1072,8 @@ pre,
 }
 
 @media (max-width: 1100px) {
-  .page-container {
-    padding: 12px 12px 24px;
-  }
   .fo-grid2 {
     grid-template-columns: 1fr;
-  }
-}
-
-@media (min-width: 1920px) {
-  .page-container {
-    max-width: 1840px;
-    padding: 24px 28px 48px;
   }
 }
 

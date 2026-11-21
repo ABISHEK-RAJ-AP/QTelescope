@@ -1,0 +1,157 @@
+/**
+ * Global responsive shell — viewport tiers + intrinsic containment.
+ * Structural shifts use --bp-*; grids use auto-fill / container queries where possible.
+ */
+
+/* Prevent horizontal bleed without clipping focus rings in main scroll */
+html {
+  overflow-x: clip;
+}
+
+#root,
+.app-container {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+}
+
+.main-content :where(img, video, canvas, svg):not([width]):not(.lucide) {
+  max-width: 100%;
+  height: auto;
+}
+
+.main-content :where(table) {
+  max-width: 100%;
+}
+
+/* Fluid page container (replaces fixed padding ladders) */
+.page-container {
+  padding: var(--ds-page-pad-block) var(--ds-page-pad-inline) var(--ds-page-pad-bottom);
+  max-width: var(--ds-page-max);
+}
+
+@media (min-width: 1920px) {
+  :root {
+    --ds-page-pad-inline: 28px;
+    --ds-page-pad-block: 24px;
+    --ds-page-pad-bottom: 48px;
+    --ds-page-max: 1840px;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-page-head {
+    padding-inline: max(10px, env(safe-area-inset-left)) max(10px, env(safe-area-inset-right));
+    gap: 8px;
+  }
+
+  .app-page-head .page-header__title {
+    font-size: clamp(1.125rem, 4.5vw, 1.5rem);
+  }
+
+  .page-container {
+    padding-inline: max(var(--ds-page-pad-inline), env(safe-area-inset-left))
+      max(var(--ds-page-pad-inline), env(safe-area-inset-right));
+  }
+}
+
+/* —— Mobile shell: off-canvas nav, full-width content —— */
+.app-page-head__menu {
+  display: none;
+  flex-shrink: 0;
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .app-page-head__menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 75;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: color-mix(in srgb, #0f172a 48%, transparent);
+    cursor: pointer;
+  }
+
+  .dark .sidebar-backdrop {
+    background: color-mix(in srgb, #000 55%, transparent);
+  }
+
+  .sidebar {
+    width: min(280px, calc(100vw - 3rem));
+    min-width: 0;
+    transform: translateX(-105%);
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+    z-index: 80;
+    box-shadow: none;
+  }
+
+  .sidebar.sidebar-collapsed {
+    width: min(280px, calc(100vw - 3rem));
+    min-width: 0;
+  }
+
+  .sidebar--mobile-open {
+    transform: translateX(0);
+    box-shadow: 12px 0 40px rgba(15, 23, 42, 0.22);
+  }
+
+  .main-content,
+  .main-content--collapsed,
+  .main-content--hover-expanded {
+    margin-left: 0 !important;
+  }
+
+  body.shell-mobile-nav-open {
+    overflow: hidden;
+  }
+}
+
+@media (min-width: 900px) {
+  .sidebar-backdrop {
+    display: none !important;
+  }
+
+  .sidebar--mobile-open {
+    transform: none;
+  }
+}
+
+/* Fleet cards — respond to section width, not only viewport MQ */
+.fo-fleet-cards {
+  container-type: inline-size;
+  container-name: fleet-cards;
+}
+
+@container fleet-cards (max-width: 520px) {
+  .fo-fleet-cards__grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .fo-fleet-cards__head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fo-fleet-cards__head-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@container fleet-cards (max-width: 380px) {
+  .fo-fleet-card__back-actions--pair {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,6 +1,7 @@
 /** UI prefs (localStorage MVP — no backend preference API). */
 
 export const DENSITY_KEY = 'qtelescope_density';
+export const DENSITY_EVENT = 'qtelescope-density-changed';
 
 export function readDensity() {
   try {
@@ -13,8 +14,10 @@ export function readDensity() {
 }
 
 export function writeDensity(mode) {
+  const next = mode === 'compact' ? 'compact' : 'comfortable';
   try {
-    localStorage.setItem(DENSITY_KEY, mode);
+    localStorage.setItem(DENSITY_KEY, next);
+    window.dispatchEvent(new CustomEvent(DENSITY_EVENT, { detail: { mode: next } }));
   } catch {
     /* ignore */
   }
