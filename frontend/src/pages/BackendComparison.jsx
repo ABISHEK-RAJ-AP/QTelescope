@@ -61,7 +61,7 @@ const stateColors = () => getFleetStateChartColors();
 const DIST_METRICS = [
   { id: 't1', label: 'T1', unit: 'µs', key: 't1', sensitive: true, log: true, positive: true },
   { id: 't2', label: 'T2', unit: 'µs', key: 't2', sensitive: true, log: true, positive: true },
-  { id: 'ro', label: 'Readout error', unit: '', key: 'readout_error', positive: true, rate: true },
+  { id: 'ro', label: 'Readout error', unit: '', key: 'readout_error', positive: true, rate: true, log: true },
   { id: 'fl', label: 'F_limit', unit: '', key: 'F_limit', sensitive: true },
   { id: 'eta', label: 'η_cal', unit: 'ratio', key: 'eta_cal', sensitive: true, log: true, positive: true, dimensionless: true },
   { id: 'cx', label: 'C_exec', unit: 'probability', key: 'C_exec', dimensionless: true },
@@ -165,6 +165,16 @@ function distStats(b, m) {
   return stats(vals);
 }
 
+/** Per-qubit medians for vector bars — matches the comparison table, not backend-level means. */
+function vectorMedian(b, key, { positive = false, transform } = {}) {
+  const vals = (b.qubits || [])
+    .map((q) => num(q[key]))
+    .filter((x) => x != null && (!positive || x > 0));
+  const med = stats(vals)?.med;
+  if (med == null) return null;
+  return transform ? transform(med) : med;
+}
+
 const axisBase = (t) => ({ axisLabel: { color: t.textColor }, nameTextStyle: { color: t.textColor }, axisLine: { lineStyle: { color: t.axisLine } }, splitLine: { lineStyle: { color: t.splitColor } } });
 
 function BoxChart({ rows, metric, dark }) {
@@ -180,7 +190,13 @@ function BoxChart({ rows, metric, dark }) {
       },
     },
     xAxis: { type: 'category', data: rows.map((r) => r.short), ...axisBase(t), axisLabel: { color: t.textColor, interval: 0 } },
-    yAxis: { type: metric.log ? 'log' : 'value', name: metric.unit, ...axisBase(t), scale: !metric.log },
+    yAxis: {
+      type: metric.log ? 'log' : 'value',
+      name: metric.unit,
+      ...axisBase(t),
+      scale: metric.log,
+      min: metric.log ? undefined : 0,
+    },
     series: [{
       type: 'boxplot',
       data: rows.map((r) => ({ value: [r.s.min, r.s.q1, r.s.med, r.s.q3, r.s.max], itemStyle: { color: 'transparent', borderColor: r.color, borderWidth: 2 } })),
@@ -189,7 +205,7 @@ function BoxChart({ rows, metric, dark }) {
   return <QtECharts option={option} style={{ height: 320, width: '100%' }} notMerge />;
 }
 
-function BarChart({ rows, dark, stacked, unit, log, yMin, yMax }) {
+function BarChart({ rows, dark, stacked, unit, log, yMin, yMax, baselineZero = false }) {
   const t = getChartTheme(dark);
   const option = useMemo(() => ({
     grid: { left: 48, right: 12, top: stacked ? 28 : 12, bottom: 40 },
@@ -199,13 +215,13 @@ function BarChart({ rows, dark, stacked, unit, log, yMin, yMax }) {
     yAxis: {
       type: log ? 'log' : 'value',
       name: unit,
-      min: yMin,
+      min: yMin ?? (baselineZero && !log ? 0 : undefined),
       max: yMax,
       ...axisBase(t),
-      scale: !log,
+      scale: log,
     },
     series: rows.series.map((s) => ({ ...s, type: 'bar', barMaxWidth: 36, stack: stacked ? 'x' : undefined })),
-  }), [rows, dark, stacked, unit, log, yMin, yMax, t]);
+  }), [rows, dark, stacked, unit, log, yMin, yMax, baselineZero, t]);
   return <QtECharts option={option} style={{ height: 320, width: '100%' }} notMerge />;
 }
 
@@ -350,8 +366,10 @@ export const BackendComparison = () => {
         series: [{
           name: spec.label,
           data: g.list.map((r) => {
-            const raw = num(r.vector?.[spec.vectorKey]);
-            const v = spec.transform ? spec.transform(raw) : raw;
+            const v = vectorMedian(r, spec.vectorKey, {
+              positive: spec.vectorKey === 'eta_cal',
+              transform: spec.transform,
+            });
             return v == null ? null : { value: v, itemStyle: { color: r.color } };
           }),
         }],
@@ -486,27 +504,6 @@ export const BackendComparison = () => {
             )}
             {busy && <span className="page-hint">updating…</span>}
           </div>
-          {rowsWithGaps.length > 0 && (
-            <section className="bc-feed-gaps" aria-label="Telemetry feed gaps">
-              <h3 className="bc-feed-gaps__title">Incomplete provider feeds</h3>
-              <ul className="bc-feed-gaps__list">
-                {rowsWithGaps.map((r) => (
-                  <li key={r.backend_id} className="bc-feed-gaps__backend">
-                    <span className="bc-feed-gaps__name">{r.short}</span>
-                    {r.data_source_label ? (
-                      <span className="bc-feed-gaps__source">{r.data_source_label}</span>
-                    ) : null}
-                    <ul className="bc-feed-gaps__gaps">
-                      {r.metric_gaps.map((gap) => (
-                        <li key={gap}>{gap}</li>
-                      ))}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
           <section className="bc-grid">
             {DIST_METRICS.map((m) => distGroups(m).map((g) => {
               const plotted = g.list.map((r) => ({ ...r, s: distStats(r, m) })).filter((r) => r.s);
@@ -534,10 +531,10 @@ export const BackendComparison = () => {
                 title={`Vector · ${vg.spec.label}${vg.title ? ` · ${vg.title}` : ''}`}
                 question={
                   vg.spec.splitModality
-                    ? 'Backend-level mean η_cal — plot per modality only; do not rank trapped-ion vs superconducting.'
+                    ? 'Per-qubit median η_cal — same basis as the table; plot per modality only.'
                     : vg.spec.id === 'vfl'
-                      ? 'Mean 1 − F_limit so small coherence gaps are visible (not cross-modality rank).'
-                      : 'Backend-level mean from health vector (dimensionless; not cross-modality rank).'
+                      ? 'Per-qubit median 1 − F_limit (not cross-modality rank).'
+                      : 'Per-qubit median from health vector — matches comparison table medians.'
                 }
                 sourceKind="derived"
                 minHeight={320}
@@ -547,8 +544,14 @@ export const BackendComparison = () => {
                 tableAlternative={(
                   <table className="custom-table custom-table--dense"><thead><tr><th>Backend</th><th>{vg.spec.label}</th></tr></thead>
                     <tbody>{vg.list.map((r) => {
-                      const raw = num(r.vector?.[vg.spec.vectorKey]);
-                      const display = vg.spec.tableFmt ? vg.spec.tableFmt(raw) : fmt(raw, { key: vg.spec.vectorKey });
+                      const med = vectorMedian(r, vg.spec.vectorKey, {
+                        positive: vg.spec.vectorKey === 'eta_cal',
+                      });
+                      const display = med == null
+                        ? null
+                        : (vg.spec.tableFmt
+                          ? vg.spec.tableFmt(med)
+                          : fmt(vg.spec.transform ? vg.spec.transform(med) : med, { key: vg.spec.vectorKey }));
                       return <tr key={r.backend_id}><td>{r.name}</td><td>{display ?? 'missing'}</td></tr>;
                     })}</tbody></table>
                 )}
@@ -559,6 +562,7 @@ export const BackendComparison = () => {
                   unit={vg.spec.unit || ''}
                   log={vg.spec.log}
                   yMax={vg.spec.yMax}
+                  baselineZero={!vg.spec.log && vg.spec.id !== 'vfl'}
                 />
               </ChartPanel>
             ))}
@@ -622,7 +626,7 @@ export const BackendComparison = () => {
 
           <section className="card page-panel bc-pairs">
             <div className="bc-pairs-head">
-              <h3 className="page-section-title">Pair deltas (A − B)</h3>
+              <h3 className="page-section-title">Pair deltas (A − B, qubit medians)</h3>
               <InfoTooltip label="Metrics and router (advisory)">
                 <dl className="bc-defs-dl">
                   <dt>F_limit</dt>
@@ -656,8 +660,8 @@ export const BackendComparison = () => {
                       {comparable.map((p) => (
                         <tr key={`${p.backend_a}-${p.backend_b}`}>
                           <td>{meta[p.backend_a]?.backend_name || p.backend_a} vs {meta[p.backend_b]?.backend_name || p.backend_b}</td>
-                          {['F_limit', 't1_mean_us', 't2_mean_us'].map((k) => (
-                            <td key={k}>{fmt(num(p.delta?.[k])) ?? <span className="bc-missing">—</span>}</td>
+                          {['F_limit', 't1_median_us', 't2_median_us'].map((k) => (
+                            <td key={k}>{fmt(num(p.delta?.[k]), { key: k.startsWith('F') ? 'F_limit' : 't1' }) ?? <span className="bc-missing">—</span>}</td>
                           ))}
                         </tr>
                       ))}
@@ -667,6 +671,32 @@ export const BackendComparison = () => {
               );
             })()}
           </section>
+
+          {rowsWithGaps.length > 0 && (
+            <section className="bc-feed-gaps bc-feed-gaps--page-end" aria-label="Telemetry feed gaps">
+              <h3 className="bc-feed-gaps__title">Incomplete provider feeds</h3>
+              <p className="bc-feed-gaps__lead">
+                Selected backends with missing ISA or fidelity fields — charts above may omit C_exec and η_cal where noted.
+              </p>
+              <ul className="bc-feed-gaps__list">
+                {rowsWithGaps.map((r) => (
+                  <li key={r.backend_id} className="bc-feed-gaps__backend">
+                    <div className="bc-feed-gaps__head">
+                      <span className="bc-feed-gaps__name">{r.short}</span>
+                      {r.data_source_label ? (
+                        <span className="bc-feed-gaps__source">{r.data_source_label}</span>
+                      ) : null}
+                    </div>
+                    <ul className="bc-feed-gaps__gaps">
+                      {r.metric_gaps.map((gap) => (
+                        <li key={gap}>{gap}</li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </>
       )}
     </div>

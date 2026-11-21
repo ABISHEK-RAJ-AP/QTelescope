@@ -1,6 +1,7 @@
 """Load enabled alert rules and resolve thresholds (fleet rules + modality floors)."""
 from __future__ import annotations
 
+import math
 from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
@@ -52,6 +53,26 @@ def effective_thresholds(
     }
 
 
+def _coherence_rule_usable(modality: Optional[str], metric: str, value: float, default: float) -> float:
+    """Reject migrated fleet rules that are orders-of-magnitude wrong for this modality."""
+    mod = normalize_modality(modality)
+    v, d = float(value), float(default)
+    if not (math.isfinite(v) and math.isfinite(d) and d > 0):
+        return d
+    ratio = v / d
+    # ponytail: single guard for bad T1/T2 copies — upgrade path is Admin → Alert rules per backend
+    bands = {
+        "simulator": (0.05, 20.0),
+        "superconducting": (0.05, 50.0),
+        "trapped_ion": (0.2, 5.0),
+        "neutral_atom": (0.2, 5.0),
+    }
+    lo, hi = bands.get(mod, (0.01, 100.0))
+    if ratio < lo or ratio > hi:
+        return d
+    return v
+
+
 def coherence_thresholds(
     rules: Dict[str, AlertRuleModel],
     modality: Optional[str],
@@ -59,8 +80,12 @@ def coherence_thresholds(
     prof = modality_profile(modality)
     t1_default = float(prof["t1_crit_us"])
     t2_default = float(prof["t2_crit_us"])
-    t1_crit = rule_threshold(rules, "T1", t1_default)
-    t2_crit = rule_threshold(rules, "T2", t2_default)
+    t1_crit = _coherence_rule_usable(
+        modality, "T1", rule_threshold(rules, "T1", t1_default), t1_default
+    )
+    t2_crit = _coherence_rule_usable(
+        modality, "T2", rule_threshold(rules, "T2", t2_default), t2_default
+    )
     return {
         "t1_crit_us": t1_crit,
         "t2_crit_us": t2_crit,

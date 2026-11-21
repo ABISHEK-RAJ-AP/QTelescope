@@ -1,6 +1,8 @@
 """Modality-aware backend comparison — advisory only."""
 from __future__ import annotations
 
+import math
+import statistics
 from typing import Any, Dict, List, Optional
 
 from app.analytics.health_vector import C_EXEC_MIN, DELTA_TH, ETA_GREEN, ETA_YELLOW, T_GATE_US
@@ -16,6 +18,7 @@ ROUTING_GATES = {
     "c_exec_min": C_EXEC_MIN,
     "delta_cal_yellow_min": DELTA_TH,
     "t_gate_us": T_GATE_US,
+    "t_gate_note": "Reference 50 ns when gate telemetry missing; otherwise mean 1Q duration from latest gates",
     "t1_crit_source": "per-backend alert rules (Admin → Alert rules)",
 }
 
@@ -33,6 +36,27 @@ def _delta(a: Optional[float], b: Optional[float]) -> Optional[float]:
     if a is None or b is None:
         return None
     return float(a) - float(b)
+
+
+def _median(values: List[float]) -> Optional[float]:
+    if not values:
+        return None
+    return float(statistics.median(values))
+
+
+def _qubit_median(backend_row: dict, key: str) -> Optional[float]:
+    vals: List[float] = []
+    for q in backend_row.get("qubits") or []:
+        v = q.get(key)
+        if v is None:
+            continue
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(f):
+            vals.append(f)
+    return _median(vals)
 
 
 def build_comparison(
@@ -75,13 +99,22 @@ def build_comparison(
                     "same_modality": mod_match,
                     "ranking_allowed": mod_match,
                     "delta": {
-                        "F_limit": _delta(va.get("F_limit"), vb.get("F_limit")),
-                        "eta_cal": _delta(va.get("eta_cal"), vb.get("eta_cal")),
-                        "delta_cal": _delta(va.get("delta_cal"), vb.get("delta_cal")),
-                        "C_exec": _delta(va.get("C_exec"), vb.get("C_exec")),
+                        "F_limit": _delta(_qubit_median(a, "F_limit"), _qubit_median(b, "F_limit")),
+                        "eta_cal": _delta(_qubit_median(a, "eta_cal"), _qubit_median(b, "eta_cal")),
+                        "delta_cal": _delta(_qubit_median(a, "delta_cal"), _qubit_median(b, "delta_cal")),
+                        "C_exec": _delta(_qubit_median(a, "C_exec"), _qubit_median(b, "C_exec")),
+                        "t1_median_us": _delta(
+                            _qubit_median(a, "t1"),
+                            _qubit_median(b, "t1"),
+                        ),
+                        "t2_median_us": _delta(
+                            _qubit_median(a, "t2"),
+                            _qubit_median(b, "t2"),
+                        ),
                         "t1_mean_us": _delta(ca.get("t1_mean"), cb.get("t1_mean")),
                         "t2_mean_us": _delta(ca.get("t2_mean"), cb.get("t2_mean")),
                     },
+                    "delta_basis": "qubit_medians",
                 }
             )
 

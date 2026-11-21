@@ -46,6 +46,22 @@ def test_effective_thresholds_superconducting_vs_ion():
     eff_sc = effective_thresholds({}, "superconducting")
     eff_ion = effective_thresholds({}, "trapped_ion")
     assert eff_sc["t1_crit_us"] == 40.0
-    assert eff_ion["t1_crit_us"] > 100_000
+    assert eff_ion["t1_crit_us"] >  100_000
     assert eff_sc["t1_t2_from_backend_rules"] is False
     assert eff_ion["t1_t2_from_backend_rules"] is False
+
+
+def test_simulator_ignores_ion_scale_migrated_t1_rule():
+    from types import SimpleNamespace
+
+    rules = {"T1": SimpleNamespace(threshold_value=500_000.0, severity="CRITICAL")}
+    coh = coherence_thresholds(rules, "simulator")
+    assert coh["t1_crit_us"] == 5.0
+
+
+def test_ion_ignores_superconducting_migrated_t1_rule():
+    from types import SimpleNamespace
+
+    rules = {"T1": SimpleNamespace(threshold_value=40.0, severity="CRITICAL")}
+    coh = coherence_thresholds(rules, "trapped_ion")
+    assert coh["t1_crit_us"] > 100_000
