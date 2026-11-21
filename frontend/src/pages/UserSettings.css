@@ -388,7 +388,7 @@
   padding: 12px;
   border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--accent-cyan) 35%, var(--border-color));
-  background: #fff;
+  background: var(--bg-card);
   text-align: center;
 }
 

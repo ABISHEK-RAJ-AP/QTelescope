@@ -9,7 +9,7 @@ import { useTheme } from '../components/ui/ThemeProvider';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
-import { getChartTheme, baseTooltip } from '../components/observability/chartTheme.js';
+import { getChartTheme, baseTooltip, getChartSemanticColors, getChartInkColor } from '../components/observability/chartTheme.js';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { formatISTTime } from '../utils/time';
@@ -144,17 +144,20 @@ export const EnvironmentPage = () => {
       yAxis: { type: 'category', data: coverageHeat.ys, axisLabel: { color: t.textColor, width: 110, overflow: 'truncate' }, axisLine: { lineStyle: { color: t.axisLine } } },
       visualMap: {
         type: 'piecewise', orient: 'horizontal', left: 'center', bottom: 0, textStyle: { color: t.textColor },
-        pieces: [
-          { value: 0, label: '— none', color: '#64748b' },
-          { value: 1, label: '✓ imported', color: '#38bdf8' },
-          { value: 2, label: '◔ derived', color: '#fbbf24' },
-        ],
+        pieces: (() => {
+          const sem = getChartSemanticColors();
+          return [
+            { value: 0, label: '— none', color: sem.unknown },
+            { value: 1, label: '✓ imported', color: sem.accent },
+            { value: 2, label: '◔ derived', color: sem.warn },
+          ];
+        })(),
         dimension: 2,
       },
       series: [{
         type: 'heatmap',
         data: coverageHeat.data,
-        label: { show: backendIds.length * channels.length <= 40, formatter: (p) => ['—', '✓', '◔'][p.data[2]], color: '#0b1220', fontSize: 10 },
+        label: { show: backendIds.length * channels.length <= 40, formatter: (p) => ['—', '✓', '◔'][p.data[2]], color: getChartInkColor(), fontSize: 10 },
         itemStyle: { borderColor: t.splitColor, borderWidth: 1 },
       }],
     };

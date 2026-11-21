@@ -228,7 +228,7 @@
 .ops-cal__cell:hover { border-color: var(--accent-cyan); }
 .ops-cal__cell.is-today { border-color: var(--accent-cyan); }
 .ops-cal__cell.is-selected { box-shadow: 0 0 0 2px var(--accent-cyan); }
-.ops-cal__cell.is-crit { background: color-mix(in srgb, var(--accent-rose, #e11d48) 8%, var(--bg-card)); }
+.ops-cal__cell.is-crit { background: color-mix(in srgb, var(--accent-rose) 8%, var(--bg-card)); }
 .ops-cal__day { display: block; font-size: 12px; font-weight: 700; margin-bottom: 4px; }
 .ops-cal__pill {
   display: block;
@@ -241,8 +241,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.ops-cal__pill--alert { background: color-mix(in srgb, var(--accent-amber, #d97706) 16%, transparent); }
-.ops-cal__pill--incident { background: color-mix(in srgb, var(--accent-cyan, #0891b2) 16%, transparent); }
+.ops-cal__pill--alert { background: color-mix(in srgb, var(--accent-amber) 16%, transparent); }
+.ops-cal__pill--incident { background: color-mix(in srgb, var(--accent-cyan) 16%, transparent); }
 .ops-cal__more { display: block; font-size: 10px; color: var(--text-muted); margin-top: 2px; }
 
 .ops-cal__side {

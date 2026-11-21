@@ -255,7 +255,7 @@
   background: color-mix(in srgb, var(--bg-card) 88%, transparent);
   color: var(--text-primary);
   cursor: pointer;
-  box-shadow: 0 1px 0 color-mix(in srgb, #fff 6%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--ds-on-solid) 6%, transparent);
 }
 
 .al-icon-btn:hover {

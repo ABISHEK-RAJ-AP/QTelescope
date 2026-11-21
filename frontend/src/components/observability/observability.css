@@ -1061,11 +1061,11 @@
 
 /* Alert badges sidebar */
 .sidebar-alert-badge--critical {
-  background: #e11d48;
+  background: var(--ds-status-critical);
 }
 
 .sidebar-alert-badge--warn {
-  background: #d97706;
+  background: var(--ds-status-warn);
   font-size: 9px;
   padding: 2px 5px;
 }

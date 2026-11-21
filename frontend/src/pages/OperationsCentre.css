@@ -238,12 +238,12 @@
 
 .oc-qubit--red {
   background: var(--accent-rose);
-  color: #fff;
+  color: var(--ds-on-solid);
 }
 
 .oc-qubit--yellow {
   background: var(--accent-amber);
-  color: #1c1408;
+  color: var(--text-primary);
 }
 
 .oc-facts {

@@ -57,6 +57,6 @@
 .drift-stat-val-amber {
   font-size: 18px;
   font-weight: 700;
-  color: #d97706;
+  color: var(--ds-status-warn);
   margin-top: 4px;
 }

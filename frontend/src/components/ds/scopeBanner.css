@@ -14,7 +14,7 @@
 }
 
 .scope-banner--info {
-  border-color: color-mix(in srgb, var(--accent-blue, #3b82f6) 25%, var(--border-color));
+  border-color: color-mix(in srgb, var(--accent-blue) 25%, var(--border-color));
 }
 
 .scope-banner--warn {

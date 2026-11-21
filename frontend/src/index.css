@@ -40,6 +40,11 @@
   --accent-emerald: #059669;
   --accent-amber: #d97706;
   --accent-rose: #e11d48;
+  --bg-app: var(--background);
+  --border-subtle: var(--border-color);
+  --surface: var(--bg-card);
+  --ds-chart-ink: #0b1220;
+  --ds-on-solid: #ffffff;
   --font-sans: 'IBM Plex Sans', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
 }
@@ -73,6 +78,7 @@
   --ds-status-critical: var(--accent-rose);
   --ds-status-info: var(--accent-blue);
   --ds-status-unknown: var(--text-muted);
+  --ds-chart-ink: #f1f5f9;
 }
 
 * {

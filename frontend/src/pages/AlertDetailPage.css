@@ -131,7 +131,7 @@
 }
 
 .al-detail__metric-verdict.is-breach {
-  color: var(--accent-rose, #f43f5e);
+  color: var(--accent-rose);
 }
 
 .al-detail__metric-nums {
@@ -162,7 +162,7 @@
 }
 
 .al-detail__metric-val.is-bad {
-  color: var(--accent-rose, #f43f5e);
+  color: var(--accent-rose);
 }
 
 .al-detail__metric-bar {
@@ -186,7 +186,7 @@
   top: -3px;
   width: 2px;
   height: 16px;
-  background: var(--accent-rose, #f43f5e);
+  background: var(--accent-rose);
   border-radius: 1px;
   transform: translateX(-1px);
 }

@@ -14,7 +14,7 @@
   inset: 0;
   border: 0;
   cursor: pointer;
-  background: color-mix(in srgb, var(--bg-app, #020617) 42%, transparent);
+  background: color-mix(in srgb, var(--bg-app) 42%, transparent);
   backdrop-filter: blur(8px);
 }
 

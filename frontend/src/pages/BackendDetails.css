@@ -301,7 +301,7 @@
   font-size: 11px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: #0b1220;
+  color: var(--ds-chart-ink);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -325,7 +325,7 @@
   right: 2px;
   width: 5px;
   height: 5px;
-  background: #0b1220;
+  background: var(--ds-chart-ink);
 }
 .bd-cell[data-s='YELLOW']::after { border-radius: 50%; }
 .bd-cell[data-s='RED']::after { transform: rotate(45deg); }

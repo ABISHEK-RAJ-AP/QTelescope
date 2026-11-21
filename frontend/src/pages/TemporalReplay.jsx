@@ -10,7 +10,7 @@ import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { ContextBar } from '../components/observability/ContextBar.jsx';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
-import { getChartTheme, baseTooltip, getChartSemanticColors } from '../components/observability/chartTheme.js';
+import { getChartTheme, baseTooltip, getChartSemanticColors, getChartInkColor } from '../components/observability/chartTheme.js';
 import { useAppScope } from '../hooks/useAppScope.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { formatISTTime } from '../utils/time';
@@ -162,7 +162,7 @@ export const TemporalReplay = () => {
       series: [{
         type: 'heatmap',
         data: frames.flatMap((f, x) => coverage(f).map((v, y) => [x, y, v])),
-        label: { show: frames.length <= 40, color: '#0b1220', formatter: (p) => MARK[p.data[2]] },
+        label: { show: frames.length <= 40, color: getChartInkColor(), formatter: (p) => MARK[p.data[2]] },
         itemStyle: { borderColor: th.splitColor, borderWidth: 1 },
         markLine: cursor ? { symbol: 'none', silent: true, data: [{ xAxis: cursor, lineStyle: { color: sem.accent, width: 2 } }] } : undefined,
       }],

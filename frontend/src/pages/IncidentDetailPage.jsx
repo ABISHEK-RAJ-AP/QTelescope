@@ -22,6 +22,7 @@ import {
 } from '../lib/incidentUi.js';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
 import { COPY } from '../copy/operator.js';
+import { getSeverityChartColors } from '../components/observability/chartTheme.js';
 import { timelineTo } from './opsHelpers.js';
 import './IncidentDetailPage.css';
 
@@ -61,7 +62,7 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
   const alerts = inc?.alerts || [];
   const activeAlerts = alerts.filter((a) => a.status === 'ACTIVE').length;
   const sortedAlerts = useMemo(
-    () => [...alerts].sort((a, b) => sevRank(a.severity) - sevRank(b.severity)),
+    () => alerts.toSorted((a, b) => sevRank(a.severity) - sevRank(b.severity)),
     [alerts],
   );
   const alertPages = Math.max(1, Math.ceil(sortedAlerts.length / ALERT_PAGE));
@@ -80,7 +81,10 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
         radius: ['42%', '70%'],
         label: { fontSize: 11 },
         data,
-        color: ['#f43f5e', '#f59e0b', '#38bdf8'],
+        color: (() => {
+          const s = getSeverityChartColors();
+          return [s.CRITICAL, s.WARNING, s.INFO];
+        })(),
       }],
     };
   }, [alerts]);

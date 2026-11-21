@@ -79,7 +79,7 @@
   font-variant-numeric: tabular-nums;
   min-width: 3.25rem;
   text-align: center;
-  color: var(--text-muted, #6b7280);
+  color: var(--text-muted);
 }
 
 .fo-fleet-cards__carousel {
@@ -298,7 +298,7 @@
   position: relative;
   z-index: 2;
   background: var(--accent-cyan);
-  color: #fff;
+  color: var(--ds-on-solid);
   border: 1px solid transparent;
   border-radius: calc(var(--ds-radius-card) - 4px);
   font-weight: 600;
@@ -306,7 +306,7 @@
 
 .fo-fleet-card__cta:hover {
   filter: brightness(1.06);
-  color: #fff;
+  color: var(--ds-on-solid);
 }
 
 .fo-fleet-card__back-title {
@@ -555,12 +555,12 @@
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   line-height: 1;
-  color: var(--ds-primary, #172554);
+  color: var(--ds-primary);
   letter-spacing: -0.02em;
 }
 
 .dark .fo-kpi-tile__value {
-  color: #93c5fd;
+  color: var(--accent-cyan);
 }
 
 .fo-kpi-tile__value .animated-number {

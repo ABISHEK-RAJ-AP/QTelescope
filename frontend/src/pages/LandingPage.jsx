@@ -156,7 +156,7 @@ export function LandingPage() {
   }, [])
 
   return (
-    <div className="relative min-h-screen flex flex-col justify-between bg-[#f8fafc] text-neutral-900 dark:bg-[#070a0f] dark:text-neutral-100 transition-colors duration-200" data-qt-public="landing">
+    <div className="relative min-h-screen flex flex-col justify-between bg-[var(--bg-dark)] text-neutral-900 dark:text-neutral-100 transition-colors duration-200" data-qt-public="landing">
       <QuantumBackground />
       <LandingChrome />
 
