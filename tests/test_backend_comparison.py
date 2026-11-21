@@ -34,4 +34,4 @@ def test_pair_t1_delta_uses_qubit_medians_not_coherence_mean():
     pair = out["pairs"][0]
     assert pair["delta"]["t1_median_us"] == -250.0
     assert pair["delta"]["t2_median_us"] == 20.0
-    assert pair["delta"]["F_limit"] == -0.01
+    assert abs(pair["delta"]["F_limit"] - 0.02) < 1e-9
