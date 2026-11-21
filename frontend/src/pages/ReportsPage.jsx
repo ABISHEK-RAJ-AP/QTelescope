@@ -17,7 +17,16 @@ import {
 } from '../components/observability/DetailModalLayout.jsx';
 import { EmptyState, TableEmpty } from '../components/observability/EmptyState.jsx';
 import { usePageActions } from '../context/PageActionsContext.jsx';
+import {
+  appendExportHistory,
+  loadReportsSession,
+  parseExportHistory,
+  reportColumnLabel,
+  saveReportsSession,
+} from '../lib/reportsSession.js';
 import './ReportsPage.css';
+
+const storedPrefs = loadReportsSession();
 
 const REPORTS = [
   { type: 'backend_monitoring', title: 'Backend inventory', body: 'Operational status, qubit counts, provider, quantum volume.', fields: 'backend_id, name, provider, type, qubits, status, QV', scopeKey: (r) => r.backend_id },
@@ -39,22 +48,6 @@ const FORMATS = [
 
 const kb = (n) => (n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`);
 const short = (h) => (h ? `${h.slice(0, 10)}…${h.slice(-4)}` : '—');
-const previewColLabel = (key) =>
-  ({
-    alert_id: 'Alert ID',
-    backend_id: 'Backend',
-    resource_type: 'Resource kind',
-    resource_id: 'Resource ID',
-    rule_type: 'Rule / metric',
-    summary: 'Operator summary',
-    detected_at: 'Detected (IST)',
-    backend_name: 'Backend name',
-    calibration_id: 'Calibration ID',
-    age_hours: 'Age (hours)',
-    freshness: 'Freshness',
-    timestamp: 'Snapshot (IST)',
-    quantum_volume: 'Quantum volume',
-  }[key] || key.replace(/_/g, ' '));
 
 export const ReportsPage = () => {
   const { setActions, clearActions } = usePageActions();
@@ -64,14 +57,14 @@ export const ReportsPage = () => {
   const [snapshots, setSnapshots] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(null);
 
-  const [type, setType] = useState('alerts');
-  const [scope, setScope] = useState('');
-  const [format, setFormat] = useState('csv');
+  const [type, setType] = useState(storedPrefs.reportType || 'alerts');
+  const [scope, setScope] = useState(storedPrefs.scope || '');
+  const [format, setFormat] = useState(storedPrefs.format || 'csv');
   const [exp, setExp] = useState({ state: 'idle' });
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState(() => parseExportHistory(storedPrefs.exportHistory));
 
-  const [snapScope, setSnapScope] = useState('');
-  const [snapLabel, setSnapLabel] = useState('');
+  const [snapScope, setSnapScope] = useState(storedPrefs.snapScope || '');
+  const [snapLabel, setSnapLabel] = useState(storedPrefs.snapLabel || '');
   const [snapBusy, setSnapBusy] = useState(false);
   const [manifest, setManifest] = useState(null); // {snap, state, body}
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -97,6 +90,16 @@ export const ReportsPage = () => {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    saveReportsSession({
+      reportType: type,
+      scope,
+      format,
+      snapScope,
+      snapLabel,
+    });
+  }, [type, scope, format, snapScope, snapLabel]);
   useEffect(() => {
     setActions(<RefreshButton onClick={() => load(true)} lastRefreshAt={lastRefresh} label="Refresh reports data" />);
     return () => clearActions();
@@ -122,7 +125,8 @@ export const ReportsPage = () => {
       rows: meta.rows,
       size: meta.size,
     };
-    setHistory((h) => [entry, ...h].slice(0, 8));
+    const saved = appendExportHistory({ ...entry, at: entry.at.toISOString() });
+    setHistory(parseExportHistory(saved.exportHistory));
     setExp({ state: 'ok', ...entry });
     notifySuccess(`Exported ${meta.rows ?? '—'} rows (${entry.format}).`);
   };
@@ -144,6 +148,7 @@ export const ReportsPage = () => {
         include_alerts: true, include_incidents: true, include_calibration: true, include_qubit_summary: true,
       });
       notifySuccess(`Snapshot ${rec.snapshot_id} created · SHA-256 ${short(rec.package_sha256)}`);
+      invalidateApiGetCache('/reports');
       setSnapshots(await api.listEvidenceSnapshots());
       setSnapLabel('');
     } catch (e) {
@@ -227,7 +232,7 @@ export const ReportsPage = () => {
             : rows.length === 0 ? <EmptyState variant="inline" compact align="start" title="No rows" message={scope ? `No ${report.title.toLowerCase()} rows for ${scope}.` : 'No rows for this report type yet.'} />
               : (
                 <div className="table-container">
-                  <table className="custom-table"><thead><tr>{previewCols.map((c) => <th key={c}>{c}</th>)}</tr></thead>
+                  <table className="custom-table"><thead><tr>{previewCols.map((c) => <th key={c}>{reportColumnLabel(c)}</th>)}</tr></thead>
                     <tbody>{rows.slice(0, 5).map((r, i) => <tr key={i}>{previewCols.map((c) => <td key={c}>{String(r[c] ?? '—')}</td>)}</tr>)}</tbody></table>
                 </div>
               )}

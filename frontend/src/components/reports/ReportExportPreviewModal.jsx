@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useId, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, Loader2, X } from 'lucide-react';
 import { fetchApi, fetchReportExport } from '../../services/api';
-import { rowsToCsv } from '../../lib/csvExport.js';
 import { notifyError } from '../../lib/toast.js';
+import { reportColumnLabel } from '../../lib/reportsSession.js';
 import './ReportExportPreviewModal.css';
 
 /**
@@ -98,23 +98,31 @@ export function ReportExportPreviewModal({
         const text = await res.text();
         saveBlob(`${reportType}_${scopeLabel}_${stamp}.html`, text, 'text/html');
         onExported?.({ rows: preview?.row_count ?? rowCount, size: text.length, format: 'HTML' });
+      } else if (format === 'csv') {
+        const q = new URLSearchParams({ report_type: reportType, format: 'csv' });
+        if (scope) q.set('backend_id', scope);
+        const res = await fetchReportExport(q.toString());
+        const text = await res.text();
+        const rows = Math.max(0, text.trim().split('\n').length - 1);
+        saveBlob(`${reportType}_${scopeLabel}_${stamp}.csv`, text, 'text/csv');
+        onExported?.({ rows, size: text.length, format: 'CSV' });
       } else {
         const q = new URLSearchParams({ report_type: reportType, format: 'json' });
         if (scope) q.set('backend_id', scope);
         const fresh = await fetchApi(`/reports/export?${q.toString()}`);
         const out = fresh?.records || [];
-        if (!out.length) throw new Error('No records for this scope — nothing to export.');
-        const text = format === 'csv'
-          ? rowsToCsv(out)
-          : JSON.stringify({
-            kind: reportType,
-            scope: scopeLabel,
-            exported_at: new Date().toISOString(),
-            aggregates: fresh.aggregates,
-            records: out,
-          }, null, 2);
-        saveBlob(`${reportType}_${scopeLabel}_${stamp}.${format}`, text, format === 'csv' ? 'text/csv' : 'application/json');
-        onExported?.({ rows: out.length, size: text.length, format: format.toUpperCase() });
+        const text = JSON.stringify({
+          kind: reportType,
+          title: fresh?.title,
+          scope: fresh?.scope ?? scopeLabel,
+          exported_at: fresh?.exported_at || new Date().toISOString(),
+          fieldnames: fresh?.fieldnames,
+          aggregates: fresh?.aggregates,
+          row_count: fresh?.row_count ?? out.length,
+          records: out,
+        }, null, 2);
+        saveBlob(`${reportType}_${scopeLabel}_${stamp}.json`, text, 'application/json');
+        onExported?.({ rows: out.length, size: text.length, format: 'JSON' });
       }
       onClose();
     } catch (e) {
@@ -170,7 +178,7 @@ export function ReportExportPreviewModal({
           {!loading && !preview?.error && format !== 'html' && preview?.records && (
             <div className="table-container rp-preview-modal__table">
               <table className="custom-table">
-                <thead><tr>{previewCols.map((c) => <th key={c}>{c}</th>)}</tr></thead>
+                <thead><tr>{previewCols.map((c) => <th key={c}>{reportColumnLabel(c)}</th>)}</tr></thead>
                 <tbody>
                   {preview.records.length === 0 ? (
                     <tr><td colSpan={Math.max(previewCols.length, 1)}>No rows in preview slice.</td></tr>
@@ -196,7 +204,7 @@ export function ReportExportPreviewModal({
             type="button"
             className="btn btn-primary"
             onClick={runExport}
-            disabled={exporting || loading || (format !== 'html' && rowCount === 0)}
+            disabled={exporting || loading || rowCount == null}
           >
             {exporting ? <><Loader2 size={14} className="rp-spin" /> Exporting…</> : <><Download size={14} /> Download export</>}
           </button>

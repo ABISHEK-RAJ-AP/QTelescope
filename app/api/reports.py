@@ -272,9 +272,13 @@ def export_report(
             return {
                 "kind": report_type,
                 "title": title,
+                "subtitle": subtitle,
                 "scope": scope_label,
+                "fieldnames": fieldnames,
+                "exported_at": datetime.datetime.now(IST).isoformat(),
                 "aggregates": ReportGenerator.compute_aggregates(report_type, scoped),
                 "records": scoped,
+                "row_count": len(scoped),
             }
         if format in ("html", "pdf"):
             html_content = ReportGenerator.generate_html_report(
