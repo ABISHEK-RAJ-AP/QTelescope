@@ -1,6 +1,7 @@
 /* Cert Studio–style liquid-glass quick action dock (bottom-right FAB stack) */
 
 .qts-quick-dock-root {
+  interpolate-size: allow-keywords;
   --qts-dock-pill-h: 48px;
   --qts-surface: rgba(255, 255, 255, 0.52);
   --qts-hairline: rgba(255, 255, 255, 0.22);
@@ -135,14 +136,15 @@
   visibility: hidden;
   pointer-events: none;
   transform: translateY(14px) scale(0.96);
-  max-height: 0;
+  block-size: 0;
+  overflow: hidden;
   padding-top: 0;
   padding-bottom: 0;
   margin: 0;
   transition:
     opacity 0.26s ease,
     transform 0.32s cubic-bezier(0.22, 1.18, 0.36, 1),
-    max-height 0.32s ease,
+    block-size 0.32s ease,
     visibility 0s linear 0.32s;
 }
 
@@ -151,28 +153,39 @@
   visibility: visible;
   pointer-events: auto;
   transform: translateY(0) scale(1);
-  max-height: min(52vh, 400px);
+  block-size: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   padding: 6px 10px 6px 6px;
   margin: -6px -10px -6px -6px;
   transition:
     opacity 0.22s ease,
     transform 0.36s cubic-bezier(0.22, 1.28, 0.36, 1),
-    max-height 0.36s ease,
+    block-size 0.36s ease,
     visibility 0s;
 }
 
 .qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action {
+  --qts-dock-stagger: 0.03s;
   animation: qts-dock-action-in 0.44s cubic-bezier(0.22, 1.28, 0.36, 1) backwards;
 }
 
-.qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action:nth-child(1) { animation-delay: 0.04s; }
-.qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action:nth-child(2) { animation-delay: 0.07s; }
-.qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action:nth-child(3) { animation-delay: 0.1s; }
-.qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action:nth-child(4) { animation-delay: 0.13s; }
-.qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action:nth-child(5) { animation-delay: 0.16s; }
-.qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action:nth-child(6) { animation-delay: 0.19s; }
-.qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action:nth-child(7) { animation-delay: 0.22s; }
-.qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action:nth-child(8) { animation-delay: 0.25s; }
+@supports (animation-delay: calc(sibling-index() * 0.1s)) {
+  .qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action {
+    animation-delay: calc(0.01s + sibling-index() * var(--qts-dock-stagger));
+  }
+}
+
+@supports not (animation-delay: calc(sibling-index() * 0.1s)) {
+  .qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action:nth-child(1) { animation-delay: 0.04s; }
+  .qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action:nth-child(2) { animation-delay: 0.07s; }
+  .qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action:nth-child(3) { animation-delay: 0.1s; }
+  .qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action:nth-child(4) { animation-delay: 0.13s; }
+  .qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action:nth-child(5) { animation-delay: 0.16s; }
+  .qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action:nth-child(6) { animation-delay: 0.19s; }
+  .qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action:nth-child(7) { animation-delay: 0.22s; }
+  .qts-quick-dock .ceg-admin-dock__actions--open .ceg-admin-dock__action:nth-child(8) { animation-delay: 0.25s; }
+}
 
 @keyframes qts-dock-action-in {
   from {
@@ -439,6 +452,10 @@ body._access_pause_anim .qts-quick-dock__panel {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .qts-quick-dock .ceg-admin-dock__actions {
+    transition: none !important;
+  }
+
   .qts-quick-dock .ceg-admin-dock__toggle:hover,
   .qts-quick-dock .ceg-admin-dock__action:hover {
     transform: none;

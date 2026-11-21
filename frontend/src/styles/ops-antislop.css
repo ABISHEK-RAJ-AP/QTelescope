@@ -979,15 +979,29 @@ select.auth-field--invalid {
 
 /* List stagger (opt-in) */
 .qt-stagger > * {
+  --qt-stagger-step: 30ms;
   animation: qt-row-in var(--ds-motion-row) ease-out both;
 }
-.qt-stagger > *:nth-child(1) { animation-delay: 0ms; }
-.qt-stagger > *:nth-child(2) { animation-delay: 30ms; }
-.qt-stagger > *:nth-child(3) { animation-delay: 60ms; }
-.qt-stagger > *:nth-child(4) { animation-delay: 90ms; }
-.qt-stagger > *:nth-child(5) { animation-delay: 120ms; }
-.qt-stagger > *:nth-child(6) { animation-delay: 150ms; }
-.qt-stagger > *:nth-child(n+7) { animation-delay: 180ms; }
+
+@supports (animation-delay: calc(sibling-index() * 0.1s)) {
+  .qt-stagger > * {
+    animation-delay: calc((sibling-index() - 1) * var(--qt-stagger-step));
+  }
+
+  .qt-stagger > *:nth-child(n + 7) {
+    animation-delay: 180ms;
+  }
+}
+
+@supports not (animation-delay: calc(sibling-index() * 0.1s)) {
+  .qt-stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .qt-stagger > *:nth-child(2) { animation-delay: 30ms; }
+  .qt-stagger > *:nth-child(3) { animation-delay: 60ms; }
+  .qt-stagger > *:nth-child(4) { animation-delay: 90ms; }
+  .qt-stagger > *:nth-child(5) { animation-delay: 120ms; }
+  .qt-stagger > *:nth-child(6) { animation-delay: 150ms; }
+  .qt-stagger > *:nth-child(n + 7) { animation-delay: 180ms; }
+}
 
 @keyframes qt-row-in {
   from {
