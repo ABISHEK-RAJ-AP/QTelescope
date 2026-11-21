@@ -246,11 +246,12 @@ pre,
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 3px;
+  gap: 0;
   min-width: 0;
   width: 100%;
   min-height: 0;
   flex: 1;
+  overflow: hidden;
 }
 
 .sidebar-collapsed:not(.sidebar-hover-expanded) .sidebar-header__stack {

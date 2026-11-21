@@ -7,7 +7,6 @@ import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
 import { ContextBar } from '../components/observability/ContextBar.jsx';
-import { InsightModal } from '../components/observability/InsightModal.jsx';
 import { useAppScope } from '../hooks/useAppScope.js';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { baseTooltip, getChartTheme, getChartSemanticColors, getModalityChartPalette } from '../components/observability/chartTheme.js';
@@ -43,7 +42,6 @@ export const LiveTelemetry = () => {
   const { resolved } = useTheme();
   const isDark = resolved === 'dark';
   const [backends, setBackends] = useState([]);
-  const [scopeHelpOpen, setScopeHelpOpen] = useState(false);
   const [streamLogs, setStreamLogs] = useState([]);
   const [isConnected, setIsConnected] = useState(true);
   const [reconnecting, setReconnecting] = useState(false);
@@ -356,16 +354,12 @@ export const LiveTelemetry = () => {
   );
 
   const scopeBar = (
-    <ContextBar backend={scopeBackend} backends={backends} onBackendChange={setBackend}>
-      <button
-        type="button"
-        className="btn btn-secondary"
-        onClick={() => setScopeHelpOpen(true)}
-        aria-haspopup="dialog"
-      >
-        About stream scope
-      </button>
-    </ContextBar>
+    <ContextBar
+      backend={scopeBackend}
+      backends={backends}
+      onBackendChange={setBackend}
+      hint={scopeBackend ? 'Scoped stream — KPIs and charts follow this backend.' : 'Fleet stream — aggregates every ~5s.'}
+    />
   );
 
   if (!streamLogs.length && isConnected && awaitingFirstEvent) {
@@ -540,21 +534,6 @@ export const LiveTelemetry = () => {
         </ChartPanel>
       </div>
 
-      <InsightModal
-        open={scopeHelpOpen}
-        title="Live stream scope"
-        subtitle="Fleet aggregates vs one backend"
-        onClose={() => setScopeHelpOpen(false)}
-      >
-        <p>
-          Use the <strong>Backend</strong> control above. <strong>All backends</strong> keeps fleet-wide
-          aggregates on the SSE feed (~5s refresh). Choose one backend to scope KPIs, modality strips, and charts
-          to that machine; the URL stores <code>?backend=…</code> so links stay scoped.
-        </p>
-        <p className="page-hint" style={{ marginBottom: 0 }}>
-          Scope changes reconnect the live stream automatically.
-        </p>
-      </InsightModal>
     </div>
   );
 };
