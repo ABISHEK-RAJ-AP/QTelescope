@@ -95,6 +95,15 @@ def test_pending_admin_blocks_login(client, monkeypatch):
     assert login.status_code == 403
 
 
+def test_mock_data_forces_screen_delivery_mode(monkeypatch):
+    monkeypatch.setenv("ENABLE_MOCK_DATA", "true")
+    monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
+    monkeypatch.setenv("SMTP_FROM", "noreply@example.com")
+    from app.core.mail_delivery import registration_otp_delivery
+
+    assert registration_otp_delivery() == "screen"
+
+
 def test_screen_delivery_when_forced_despite_smtp_env(client, monkeypatch):
     monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
     monkeypatch.setenv("SMTP_FROM", "noreply@example.com")

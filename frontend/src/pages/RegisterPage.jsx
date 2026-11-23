@@ -318,7 +318,7 @@ export function RegisterPage() {
         setScreenOtp('');
         notifyWarn(
           res?.message
-            || 'This deployment cannot show a verification code here. Contact your platform administrator.',
+            || 'No verification code was returned. Set ENABLE_MOCK_DATA=true or REGISTRATION_OTP_DELIVERY=screen, then restart the API.',
         );
       } else {
         setScreenOtp('');

@@ -4,11 +4,17 @@ from __future__ import annotations
 import os
 from typing import List
 
+from app.core.config import settings
 from app.core.env_profile import env_flag, is_production_profile
 
 
 def registration_screen_otp_exposed() -> bool:
     """Return plaintext OTP in API JSON (dev/demo). Off in production unless explicitly enabled."""
+    if settings.ENABLE_MOCK_DATA:
+        return True
+    raw = os.getenv("REGISTRATION_OTP_DELIVERY") or ""
+    if str(raw).strip().lower() == "screen":
+        return True
     return env_flag("REGISTRATION_SCREEN_OTP", default=not is_production_profile())
 
 _DEFAULT_ORGS = (

@@ -410,7 +410,13 @@ def register_send_otp(req: RegisterRequest, request: Request):
         "otp_session_id": session_id,
         "expires_in_seconds": ttl,
     }
-    if delivery_mode == "email" and registration_smtp_ready():
+    # ENABLE_MOCK_DATA / REGISTRATION_OTP_DELIVERY=screen never use SMTP for registration OTP.
+    use_email = (
+        delivery_mode == "email"
+        and registration_smtp_ready()
+        and not settings.ENABLE_MOCK_DATA
+    )
+    if use_email:
         ok, err = deliver_registration_otp(
             to_email=email,
             username=username,
@@ -432,10 +438,7 @@ def register_send_otp(req: RegisterRequest, request: Request):
             )
         out["delivery"] = "screen"
         out["screen_otp"] = otp_code
-        out["message"] = (
-            "Enter the verification code shown in the notification "
-            "(SMTP not configured or screen delivery forced on this deployment)."
-        )
+        out["message"] = "Enter the verification code shown in the toast and the box below."
     return out
 
 

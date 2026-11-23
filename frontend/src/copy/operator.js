@@ -77,7 +77,7 @@ export const COPY = {
       'Rejected registrations remain for audit. Re-open to return an account to the pending queue.',
     registerOtpSubtitle: 'Enter the verification code to finish creating your account.',
     registerOtpHintScreen:
-      'Email is not configured here — use the verification code from the toast notification and the box below.',
+      'Demo mode: your verification code appears in the toast (top right) and in the box below.',
     registerOtpScreenCodeLabel: 'Your verification code',
     registerOtpHintEmail: 'Enter the 6-digit code we sent to your email address.',
     forgotSubtitle: 'Enter your username. For security, the response does not indicate whether an account exists.',

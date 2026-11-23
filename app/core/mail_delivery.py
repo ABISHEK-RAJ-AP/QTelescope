@@ -29,6 +29,9 @@ def registration_otp_delivery() -> str:
         return "screen"
     if mode == "email":
         return "email"
+    # Lab / demo: always show OTP in UI + toast — never pretend email was sent.
+    if settings.ENABLE_MOCK_DATA:
+        return "screen"
     return "email" if registration_smtp_ready() else "screen"
 
 
