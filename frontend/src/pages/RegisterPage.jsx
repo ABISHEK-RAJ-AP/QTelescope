@@ -4,6 +4,7 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  Check,
   Landmark,
   GraduationCap,
   Building2,
@@ -60,15 +61,45 @@ function normOrg(s) {
   return (s || '').trim().toLowerCase();
 }
 
-function OtpInput({ value, onChange, disabled, invalid }) {
-  const digits = (value || '').padEnd(6, ' ').split('').slice(0, 6);
+function OtpInput({ value, onChange, disabled, invalid, matched, showMatchHint }) {
+  const raw = value || '';
+  const len = raw.length;
+  const complete = len >= 6;
+  const digits = raw.padEnd(6, ' ').split('').slice(0, 6);
+  const rowClass = [
+    'auth-otp-row',
+    'reg-otp-input-row',
+    invalid ? 'auth-otp-row--invalid' : '',
+    complete ? 'auth-otp-row--complete' : '',
+    matched && complete ? 'auth-otp-row--match' : '',
+    showMatchHint && complete && !matched ? 'auth-otp-row--mismatch' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
-    <div className={`auth-otp-row${invalid ? ' auth-otp-row--invalid' : ''}`}>
-      {digits.map((ch, i) => (
-        <span key={i} className={`auth-otp-cell${ch.trim() ? ' auth-otp-cell--filled' : ''}`} aria-hidden>
-          {ch.trim() || '·'}
+    <div className={rowClass}>
+      {digits.map((ch, i) => {
+        const filled = Boolean(ch.trim());
+        const active = !complete && i === len;
+        const cellClass = [
+          'auth-otp-cell',
+          filled ? 'auth-otp-cell--filled' : '',
+          active ? 'auth-otp-cell--active' : '',
+        ]
+          .filter(Boolean)
+          .join(' ');
+        return (
+          <span key={i} className={cellClass} aria-hidden>
+            {filled ? ch : active ? '' : '·'}
+          </span>
+        );
+      })}
+      {matched && complete ? (
+        <span className="reg-otp-input-row__tick" aria-hidden>
+          <Check className="reg-otp-input-row__tick-icon" strokeWidth={2.75} />
         </span>
-      ))}
+      ) : null}
       <input
         id="reg-otp"
         type="text"
@@ -115,6 +146,23 @@ export function RegisterPage() {
   const [screenOtp, setScreenOtp] = useState('')
   const [orgDialog, setOrgDialog] = useState(null)
 
+  const otpComplete = otpCode.trim().length >= 6;
+  const otpMatchesScreen = Boolean(
+    screenOtp && otpComplete && otpCode.trim() === String(screenOtp).replace(/\s/g, ''),
+  );
+  const otpShowMatchHint = otpDelivery === 'screen' && Boolean(screenOtp);
+
+  useEffect(() => {
+    document.body.classList.add('qt-auth-route');
+    return () => document.body.classList.remove('qt-auth-route');
+  }, []);
+
+  useEffect(() => {
+    if (flowStep !== 'otp' || !screenOtp.trim()) return;
+    const t = window.setTimeout(() => notifyRegistrationOtp(screenOtp), 0);
+    return () => window.clearTimeout(t);
+  }, [flowStep, screenOtp]);
+
   const selectedType = useMemo(
     () => ORG_TYPES.find((t) => t.id === selectedTypeId) || null,
     [selectedTypeId],
@@ -140,6 +188,9 @@ export function RegisterPage() {
         setRegistrationOpen(reg?.allow_public_registration !== false);
         setRequiresAdminApproval(Boolean(reg?.require_admin_approval));
         setRegisteredOrgs(reg?.registered_orgs || []);
+        if (reg?.otp_delivery === 'screen' || reg?.otp_delivery === 'email') {
+          setOtpDelivery(reg.otp_delivery);
+        }
       })
       .catch(() => { if (!cancelled) setRegistrationOpen(true) })
       .finally(() => { if (!cancelled) setPolicyLoading(false) })
@@ -258,17 +309,20 @@ export function RegisterPage() {
       setOtpDelivery(res.delivery || 'email')
       setFlowStep('otp')
       setOtpCode('')
-      if (res.delivery === 'screen') {
-        if (res.screen_otp) {
-          setScreenOtp(String(res.screen_otp))
-          notifyRegistrationOtp(res.screen_otp)
-        } else {
-          setScreenOtp('')
-          notifyWarn(res?.message || 'Check your email for the code, or contact your administrator.')
-        }
+      if (res.screen_otp) {
+        const code = String(res.screen_otp).replace(/\s/g, '');
+        setScreenOtp(code);
+        setOtpDelivery('screen');
+        notifyRegistrationOtp(code);
+      } else if (res.delivery === 'screen') {
+        setScreenOtp('');
+        notifyWarn(
+          res?.message
+            || 'This deployment cannot show a verification code here. Contact your platform administrator.',
+        );
       } else {
-        setScreenOtp('')
-        dismissRegistrationOtpToast()
+        setScreenOtp('');
+        dismissRegistrationOtpToast();
       }
     } catch (err) {
       setError(err?.message || 'Registration failed.')
@@ -570,10 +624,34 @@ export function RegisterPage() {
                       onChange={(v) => { setOtpCode(v); setFieldErrors((f) => ({ ...f, otp: undefined })); }}
                       disabled={busy}
                       invalid={Boolean(fieldErrors.otp)}
+                      matched={otpMatchesScreen}
+                      showMatchHint={otpShowMatchHint}
                     />
                   </Field>
+                  {fieldErrors.otp ? (
+                    <p className="auth-inline-alert auth-inline-alert--error reg-otp-inline-alert" role="alert">
+                      {fieldErrors.otp}
+                    </p>
+                  ) : null}
+                  {!fieldErrors.otp && !error && otpMatchesScreen ? (
+                    <p className="auth-inline-alert auth-inline-alert--success reg-otp-inline-alert" role="status">
+                      <Check className="reg-otp-inline-alert__icon" strokeWidth={2.5} aria-hidden />
+                      Code matches — you can confirm.
+                    </p>
+                  ) : null}
+                  {!fieldErrors.otp && !error && otpShowMatchHint && otpComplete && !otpMatchesScreen ? (
+                    <p className="auth-inline-alert auth-inline-alert--error reg-otp-inline-alert" role="status">
+                      Digits do not match the verification code above.
+                    </p>
+                  ) : null}
+                  {!fieldErrors.otp && !error && otpComplete && !otpShowMatchHint ? (
+                    <p className="auth-inline-alert auth-inline-alert--success reg-otp-inline-alert" role="status">
+                      <Check className="reg-otp-inline-alert__icon" strokeWidth={2.5} aria-hidden />
+                      Six digits entered — confirm when ready.
+                    </p>
+                  ) : null}
                 </div>
-                {error ? <p className="auth-field-error" role="alert">{error}</p> : null}
+                {error ? <p className="auth-inline-alert auth-inline-alert--error reg-otp-inline-alert" role="alert">{error}</p> : null}
                 <div className="reg-flow-nav">
                   <button type="button" className="reg-flow-nav__back" disabled={busy} onClick={() => { setFlowStep('account'); setError(''); }}>
                     Back

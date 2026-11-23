@@ -249,7 +249,7 @@ class AuthStatusResponse(BaseModel):
 @router.get("/config-status", response_model=AuthStatusResponse)
 def get_config_status():
     from app.core.ldap_auth import ldap_public_status
-    from app.core.mail_delivery import registration_smtp_ready
+    from app.core.mail_delivery import registration_otp_delivery, registration_smtp_ready
     from app.core.registration_policy import (
         public_registration_allowed,
         registration_org_options,
@@ -275,7 +275,7 @@ def get_config_status():
 
 @router.get("/registration-options")
 def get_registration_options():
-    from app.core.mail_delivery import registration_smtp_ready
+    from app.core.mail_delivery import registration_otp_delivery, registration_smtp_ready
     from app.core.registration_policy import (
         public_registration_allowed,
         registered_organisation_names,
@@ -288,7 +288,7 @@ def get_registration_options():
         "require_admin_approval": registration_requires_admin_approval(),
         "org_options": registration_org_options(),
         "registered_orgs": registered_organisation_names(),
-        "otp_delivery": "email" if registration_smtp_ready() else "screen",
+        "otp_delivery": registration_otp_delivery(),
     }
 
 
@@ -370,10 +370,14 @@ def _registration_success_message(*, pending_admin: bool) -> str:
 
 @router.post("/register/send-otp")
 def register_send_otp(req: RegisterRequest, request: Request):
-    from app.core.mail_delivery import deliver_registration_otp, registration_smtp_ready
+    from app.core.mail_delivery import (
+        deliver_registration_otp,
+        registration_otp_delivery,
+        registration_smtp_ready,
+    )
     from app.core.registration_flow import validate_new_account_fields
     from app.core.registration_otp import issue_registration_otp
-    from app.core.registration_policy import public_registration_allowed
+    from app.core.registration_policy import public_registration_allowed, registration_screen_otp_exposed
 
     if not public_registration_allowed():
         raise HTTPException(
@@ -400,15 +404,13 @@ def register_send_otp(req: RegisterRequest, request: Request):
         "password_hash": _hash_password(req.password),
     }
     session_id, otp_code, ttl = issue_registration_otp(email=email, payload=payload)
-    delivery = "email"
+    delivery_mode = registration_otp_delivery()
     out: Dict[str, Any] = {
         "status": "SUCCESS",
         "otp_session_id": session_id,
-        "delivery": delivery,
         "expires_in_seconds": ttl,
-        "message": "Enter the verification code sent to your email.",
     }
-    if registration_smtp_ready():
+    if delivery_mode == "email" and registration_smtp_ready():
         ok, err = deliver_registration_otp(
             to_email=email,
             username=username,
@@ -417,14 +419,23 @@ def register_send_otp(req: RegisterRequest, request: Request):
         )
         if not ok:
             raise HTTPException(status_code=503, detail=err or "Unable to send verification email.")
+        out["delivery"] = "email"
+        out["message"] = "Enter the verification code sent to your email."
     else:
-        delivery = "screen"
-        out["delivery"] = delivery
-        out["message"] = "Enter the verification code shown in the notification (SMTP not configured on this deployment)."
-        if not is_production_profile():
-            out["screen_otp"] = otp_code
-
-    out["delivery"] = delivery
+        if not registration_screen_otp_exposed():
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Registration email is not configured on this deployment. "
+                    "Contact your platform administrator."
+                ),
+            )
+        out["delivery"] = "screen"
+        out["screen_otp"] = otp_code
+        out["message"] = (
+            "Enter the verification code shown in the notification "
+            "(SMTP not configured or screen delivery forced on this deployment)."
+        )
     return out
 
 

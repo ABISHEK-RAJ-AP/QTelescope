@@ -95,6 +95,27 @@ def test_pending_admin_blocks_login(client, monkeypatch):
     assert login.status_code == 403
 
 
+def test_screen_delivery_when_forced_despite_smtp_env(client, monkeypatch):
+    monkeypatch.setenv("SMTP_HOST", "smtp.example.com")
+    monkeypatch.setenv("SMTP_FROM", "noreply@example.com")
+    monkeypatch.setenv("REGISTRATION_OTP_DELIVERY", "screen")
+    cid, code = _captcha(client)
+    payload = {
+        "username": "screenforce",
+        "password": "secret12",
+        "email": "screenforce@example.com",
+        "org": "C-DAC",
+        "role": "Operator",
+        "captcha_id": cid,
+        "captcha_code": code,
+    }
+    send = client.post("/api/v1/auth/register/send-otp", json=payload)
+    assert send.status_code == 200
+    body = send.json()
+    assert body["delivery"] == "screen"
+    assert body.get("screen_otp")
+
+
 def test_consume_registration_otp_unit():
     sid, otp, _ = issue_registration_otp(
         email="u@example.com",

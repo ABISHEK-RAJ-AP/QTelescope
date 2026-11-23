@@ -107,22 +107,28 @@ const REGISTER_OTP_TOAST_ID = 'register-otp-screen';
 
 /** Screen / demo OTP delivery during public registration (SMTP off). */
 export function notifyRegistrationOtp(code, opts = {}) {
-  const digits = String(code || '').trim();
+  const digits = String(code || '').replace(/\s/g, '').trim();
   if (!digits) return;
-  toast(
-    createElement(SimpleToastBody, {
-      variant: 'info',
-      app: 'Registration',
-      title: 'Verification code',
-      body: digits,
-      showMeta: false,
-    }),
-    {
-      ...simpleToastOpts('info', { toastId: REGISTER_OTP_TOAST_ID, ...opts }),
-      autoClose: opts.autoClose ?? 60_000,
-      closeOnClick: false,
-    },
-  );
+  const content = createElement(SimpleToastBody, {
+    variant: 'info',
+    app: 'Registration',
+    title: 'Verification code',
+    body: digits,
+    showMeta: false,
+  });
+  const toastOptions = {
+    ...simpleToastOpts('info', { toastId: REGISTER_OTP_TOAST_ID, ...opts }),
+    autoClose: opts.autoClose ?? 60_000,
+    closeOnClick: false,
+  };
+  if (toast.isActive?.(REGISTER_OTP_TOAST_ID)) {
+    toast.update(REGISTER_OTP_TOAST_ID, {
+      render: content,
+      ...toastOptions,
+    });
+    return;
+  }
+  toast(content, toastOptions);
 }
 
 export function dismissRegistrationOtpToast() {

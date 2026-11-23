@@ -6,6 +6,11 @@ from typing import List
 
 from app.core.env_profile import env_flag, is_production_profile
 
+
+def registration_screen_otp_exposed() -> bool:
+    """Return plaintext OTP in API JSON (dev/demo). Off in production unless explicitly enabled."""
+    return env_flag("REGISTRATION_SCREEN_OTP", default=not is_production_profile())
+
 _DEFAULT_ORGS = (
     "C-DAC",
     "C-DAC Pune",

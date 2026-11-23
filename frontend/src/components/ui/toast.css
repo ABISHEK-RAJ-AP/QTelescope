@@ -27,6 +27,11 @@
   bottom: auto !important;
 }
 
+/* Login / register — no ops preheader; keep OTP toast in view */
+body.qt-auth-route .qts-toast-root.Toastify__toast-container--top-right {
+  top: max(16px, env(safe-area-inset-top)) !important;
+}
+
 @media (max-width: 720px) {
   .qts-toast-root.Toastify__toast-container--top-right {
     left: max(12px, env(safe-area-inset-left)) !important;

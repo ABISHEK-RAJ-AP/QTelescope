@@ -795,6 +795,16 @@
   border-radius: 12px;
   border: 1px dashed color-mix(in srgb, var(--reg-accent) 55%, var(--reg-border));
   background: color-mix(in srgb, var(--reg-accent) 8%, var(--reg-surface));
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.25s ease;
+}
+
+.reg-otp-screen-code:hover {
+  border-color: color-mix(in srgb, var(--reg-accent) 72%, var(--reg-border));
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--reg-accent) 14%, transparent);
+  transform: translateY(-1px);
 }
 
 .reg-otp-screen-code__label {
@@ -823,6 +833,23 @@
   gap: 0.5rem;
 }
 
+.reg-otp-input-row {
+  position: relative;
+  padding: 0.35rem 0.25rem;
+  border-radius: 14px;
+  transition: box-shadow 0.25s ease, background 0.25s ease;
+}
+
+.reg-otp-input-row:hover:not(.auth-otp-row--invalid) .auth-otp-cell {
+  border-color: color-mix(in srgb, var(--reg-accent) 38%, var(--reg-border));
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--reg-accent) 10%, transparent);
+}
+
+.reg-otp-input-row:focus-within {
+  background: color-mix(in srgb, var(--reg-accent) 6%, var(--reg-surface));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--reg-accent) 18%, transparent);
+}
+
 .reg-otp-panel .auth-otp-cell {
   border-radius: 10px;
   font-size: 1.25rem;
@@ -831,11 +858,103 @@
   transition:
     border-color 0.2s ease,
     transform 0.2s ease,
-    box-shadow 0.2s ease;
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.reg-otp-panel .auth-otp-cell--active {
+  border-color: color-mix(in srgb, var(--reg-accent) 72%, var(--reg-border));
+  background: color-mix(in srgb, var(--reg-accent) 10%, var(--reg-surface));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--reg-accent) 22%, transparent);
+  animation: reg-otp-cell-pulse 1.4s ease-in-out infinite;
+}
+
+.reg-otp-panel .auth-otp-cell--active:empty::after {
+  content: '';
+  display: block;
+  width: 2px;
+  height: 1.25rem;
+  margin: 0 auto;
+  background: var(--reg-accent);
+  animation: reg-otp-caret 1s step-end infinite;
+}
+
+@keyframes reg-otp-cell-pulse {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes reg-otp-caret {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
 }
 
 .reg-otp-panel .auth-otp-cell--filled {
   box-shadow: 0 2px 8px color-mix(in srgb, var(--reg-accent) 18%, transparent);
+}
+
+.reg-otp-input-row.auth-otp-row--complete .auth-otp-cell--filled {
+  border-color: color-mix(in srgb, #16a34a 42%, var(--reg-border));
+  background: color-mix(in srgb, #16a34a 6%, var(--reg-surface));
+}
+
+.reg-otp-input-row.auth-otp-row--match .auth-otp-cell--filled {
+  border-color: color-mix(in srgb, #16a34a 58%, var(--reg-border));
+  background: color-mix(in srgb, #16a34a 12%, var(--reg-surface));
+  box-shadow: 0 2px 12px color-mix(in srgb, #16a34a 22%, transparent);
+}
+
+.reg-otp-input-row.auth-otp-row--mismatch .auth-otp-cell--filled {
+  border-color: color-mix(in srgb, var(--ds-status-critical, #dc2626) 50%, var(--reg-border));
+}
+
+.reg-otp-input-row__tick {
+  position: absolute;
+  right: -0.15rem;
+  top: 50%;
+  translate: 100% -50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #16a34a 45%, var(--reg-border));
+  background: color-mix(in srgb, #16a34a 14%, var(--reg-surface));
+  color: #16a34a;
+  animation: auth-success-pulse 420ms ease-out;
+  pointer-events: none;
+}
+
+.reg-otp-input-row__tick-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.reg-otp-inline-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.65rem auto 0;
+  max-width: 22rem;
+  text-align: left;
+}
+
+.reg-otp-inline-alert__icon {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
 }
 
 .reg-otp-panel .auth-outline-field {

@@ -1,6 +1,7 @@
 """Password-reset email via stdlib SMTP (optional; required for prod delivery)."""
 from __future__ import annotations
 
+import os
 import logging
 import smtplib
 import ssl
@@ -19,6 +20,16 @@ def password_reset_smtp_ready() -> bool:
 
 def registration_smtp_ready() -> bool:
     return password_reset_smtp_ready()
+
+
+def registration_otp_delivery() -> str:
+    """How registration OTP is delivered: auto (default), email, or screen."""
+    mode = (os.getenv("REGISTRATION_OTP_DELIVERY") or "auto").strip().lower()
+    if mode == "screen":
+        return "screen"
+    if mode == "email":
+        return "email"
+    return "email" if registration_smtp_ready() else "screen"
 
 
 def password_reset_public_url() -> str:
