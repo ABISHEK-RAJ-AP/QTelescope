@@ -429,7 +429,7 @@ def register_send_otp(req: RegisterRequest, request: Request):
         out["message"] = "Enter the verification code sent to your email."
     else:
         out["delivery"] = "screen"
-        out["message"] = "Enter the verification code shown in the toast and the box below."
+        out["message"] = "Enter the verification code from the toast notification."
         if registration_screen_otp_exposed():
             out["screen_otp"] = otp_code
         elif not registration_smtp_ready():

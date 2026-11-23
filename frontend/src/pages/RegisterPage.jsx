@@ -595,28 +595,13 @@ export function RegisterPage() {
                       )}
                   </p>
                   {otpDelivery === 'screen' && screenOtp ? (
-                    <div className="reg-otp-screen-code" role="status" aria-live="polite">
-                      <span className="reg-otp-screen-code__label">{COPY.auth.registerOtpScreenCodeLabel}</span>
-                      <code className="reg-otp-screen-code__value">{screenOtp}</code>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn--sm reg-otp-screen-code__copy"
-                        onClick={() => {
-                          const code = screenOtp.replace(/\s/g, '');
-                          navigator.clipboard?.writeText(code).catch(() => {});
-                          notifyRegistrationOtp(code, { autoClose: 8000 });
-                        }}
-                      >
-                        Copy code
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn--sm"
-                        onClick={() => notifyRegistrationOtp(screenOtp)}
-                      >
-                        Show in toast again
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      className="reg-otp-toast-again btn btn-ghost btn--sm"
+                      onClick={() => notifyRegistrationOtp(screenOtp)}
+                    >
+                      {COPY.auth.registerOtpToastAgain}
+                    </button>
                   ) : null}
                   <Field label="Verification code" forId="reg-otp" hint={fieldErrors.otp}>
                     <OtpInput
@@ -641,7 +626,7 @@ export function RegisterPage() {
                   ) : null}
                   {!fieldErrors.otp && !error && otpShowMatchHint && otpComplete && !otpMatchesScreen ? (
                     <p className="auth-inline-alert auth-inline-alert--error reg-otp-inline-alert" role="status">
-                      Digits do not match the verification code above.
+                      Digits do not match the code in the notification.
                     </p>
                   ) : null}
                   {!fieldErrors.otp && !error && otpComplete && !otpShowMatchHint ? (

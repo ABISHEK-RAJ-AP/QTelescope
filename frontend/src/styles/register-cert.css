@@ -774,9 +774,20 @@
 }
 
 .reg-otp-panel .auth-otp-panel__lead {
-  margin-bottom: 1.15rem;
+  margin-bottom: 0.65rem;
   font-size: 0.875rem;
   line-height: 1.5;
+}
+
+.reg-otp-toast-again {
+  display: block;
+  margin: 0 auto 0.85rem;
+  font-size: 0.8125rem;
+  color: var(--reg-muted);
+}
+
+.reg-otp-toast-again:hover {
+  color: var(--reg-accent);
 }
 
 .reg-otp-panel__email {
