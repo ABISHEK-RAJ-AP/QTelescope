@@ -428,17 +428,18 @@ def register_send_otp(req: RegisterRequest, request: Request):
         out["delivery"] = "email"
         out["message"] = "Enter the verification code sent to your email."
     else:
-        if not registration_screen_otp_exposed():
+        out["delivery"] = "screen"
+        out["message"] = "Enter the verification code shown in the toast and the box below."
+        if registration_screen_otp_exposed():
+            out["screen_otp"] = otp_code
+        elif not registration_smtp_ready():
             raise HTTPException(
                 status_code=503,
                 detail=(
-                    "Registration email is not configured on this deployment. "
-                    "Contact your platform administrator."
+                    "Registration email is not configured and screen OTP is disabled "
+                    "(set SMTP_* or unset REGISTRATION_HIDE_SCREEN_OTP)."
                 ),
             )
-        out["delivery"] = "screen"
-        out["screen_otp"] = otp_code
-        out["message"] = "Enter the verification code shown in the toast and the box below."
     return out
 
 

@@ -9,13 +9,16 @@ from app.core.env_profile import env_flag, is_production_profile
 
 
 def registration_screen_otp_exposed() -> bool:
-    """Return plaintext OTP in API JSON (dev/demo). Off in production unless explicitly enabled."""
+    """Whether register/send-otp may include screen_otp in JSON when not emailing."""
+    if env_flag("REGISTRATION_HIDE_SCREEN_OTP", default=False):
+        return False
     if settings.ENABLE_MOCK_DATA:
         return True
     raw = os.getenv("REGISTRATION_OTP_DELIVERY") or ""
     if str(raw).strip().lower() == "screen":
         return True
-    return env_flag("REGISTRATION_SCREEN_OTP", default=not is_production_profile())
+    # Default on: without SMTP the UI cannot work unless the code is returned.
+    return env_flag("REGISTRATION_SCREEN_OTP", default=True)
 
 _DEFAULT_ORGS = (
     "C-DAC",
