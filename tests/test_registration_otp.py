@@ -55,8 +55,10 @@ def test_otp_round_trip_create_active_account(client):
         "/api/v1/auth/register/confirm",
         json={"otp_session_id": session_id, "otp_code": body["screen_otp"]},
     )
+    confirm_body = confirm.json()
     assert confirm.status_code == 200
-    assert confirm.json().get("account_status") == "active"
+    assert confirm_body.get("account_status") == "active"
+    assert confirm_body.get("user", {}).get("token")
 
     users = user_store.load_all_users()
     assert "otpuser1" in users

@@ -236,8 +236,8 @@ export function RegisterPage() {
     const full = (fullOrg || '').trim();
     if (full && registeredSet.has(normOrg(full))) {
       setOrgDialog({
-        title: 'Organisation already registered',
-        body: 'This organisation already has console accounts. Contact its platform administrator for an invitation.',
+        title: 'Organisation already on Q-TeleScope',
+        body: `“${full}” already has console accounts. Contact that organisation’s administrator for an invitation — do not self-register again for this branch.`,
         confirm: 'Understood',
       });
       return true;
@@ -253,7 +253,7 @@ export function RegisterPage() {
     if (orgFieldErrors._org) next.org = orgFieldErrors._org;
     delete next._org;
     if (orgValue && registeredSet.has(normOrg(orgValue))) {
-      next.org = 'This organisation is already registered.';
+      next.org = 'This organisation already has accounts — contact its administrator for an invitation.';
     }
     setFieldErrors(next);
     return Object.keys(next).length === 0;
@@ -348,9 +348,24 @@ export function RegisterPage() {
       })
       if (res?.status === 'SUCCESS') {
         dismissRegistrationOtpToast()
-        markOnboardingPending(username.trim())
+        const name = username.trim()
+        if (res.pending_admin_approval) {
+          markOnboardingPending(name)
+          setSuccess(res?.message || 'Registration submitted for approval.')
+          setTimeout(() => navigate('/login'), 2200)
+          return
+        }
+        markOnboardingPending(name)
+        const sessionUser = res?.session?.user || res?.user
+        if (sessionUser?.token) {
+          try {
+            localStorage.setItem('quantum_user', JSON.stringify(sessionUser))
+          } catch { /* ignore */ }
+          navigate('/app/onboarding', { replace: true })
+          return
+        }
         setSuccess(res?.message || 'Account created.')
-        setTimeout(() => navigate('/login'), res?.pending_admin_approval ? 2400 : 1400)
+        setTimeout(() => navigate('/login'), 1200)
       }
     } catch (err) {
       setError(err?.message || 'Verification failed.')
@@ -618,22 +633,13 @@ export function RegisterPage() {
                       {fieldErrors.otp}
                     </p>
                   ) : null}
-                  {!fieldErrors.otp && !error && otpMatchesScreen ? (
-                    <p className="auth-inline-alert auth-inline-alert--success reg-otp-inline-alert" role="status">
-                      <Check className="reg-otp-inline-alert__icon" strokeWidth={2.5} aria-hidden />
-                      Code matches — you can confirm.
-                    </p>
-                  ) : null}
                   {!fieldErrors.otp && !error && otpShowMatchHint && otpComplete && !otpMatchesScreen ? (
                     <p className="auth-inline-alert auth-inline-alert--error reg-otp-inline-alert" role="status">
                       Digits do not match the code in the notification.
                     </p>
                   ) : null}
-                  {!fieldErrors.otp && !error && otpComplete && !otpShowMatchHint ? (
-                    <p className="auth-inline-alert auth-inline-alert--success reg-otp-inline-alert" role="status">
-                      <Check className="reg-otp-inline-alert__icon" strokeWidth={2.5} aria-hidden />
-                      Six digits entered — confirm when ready.
-                    </p>
+                  {otpComplete && otpMatchesScreen ? (
+                    <p className="sr-only" role="status">Verification code accepted.</p>
                   ) : null}
                 </div>
                 {error ? <p className="auth-inline-alert auth-inline-alert--error reg-otp-inline-alert" role="alert">{error}</p> : null}

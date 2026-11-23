@@ -22,7 +22,10 @@ def assert_org_open_for_self_registration(org: str) -> None:
     if any(existing.casefold() == key for existing in registered_organisation_names()):
         raise HTTPException(
             status_code=409,
-            detail="This organisation already has console accounts. Ask your organisation administrator for an invitation.",
+            detail=(
+                f'"{name}" already has console accounts. '
+                "Contact that organisation's administrator for an invitation instead of registering again."
+            ),
         )
 
 

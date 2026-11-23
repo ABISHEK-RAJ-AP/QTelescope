@@ -362,10 +362,7 @@ def _registration_success_message(*, pending_admin: bool) -> str:
             "Registration received. Your account is pending administrator approval. "
             "You can sign in after an admin approves your request in Administration → Access & approvals."
         )
-    return (
-        "Account created. Sign in with your username and password. "
-        "Your organisation admin can change your role in Admin → Users & roles."
-    )
+    return "Account created. You can continue into onboarding."
 
 
 @router.post("/register/send-otp")
@@ -473,13 +470,31 @@ def register_confirm(body: RegisterConfirmRequest, request: Request):
             raise HTTPException(status_code=409, detail="Username already registered.")
         user_store.upsert_user(username, record)
 
-    return {
+    out: Dict[str, Any] = {
         "status": "SUCCESS",
         "pending_admin_approval": pending,
         "account_status": status,
         "message": _registration_success_message(pending_admin=pending),
         "user": {"username": username, "role": record["role"], "email": record["email"]},
     }
+    if not pending:
+        session = _maybe_mfa_or_session(
+            username,
+            record["role"],
+            {
+                "email": record["email"],
+                "full_name": record.get("full_name") or username,
+                "org": record.get("org") or "C-DAC",
+            },
+        )
+        if session.get("status") == "SUCCESS" and session.get("user"):
+            out["user"] = session["user"]
+            out["session"] = session
+        elif session.get("status") == "MFA_REQUIRED":
+            out["mfa_required"] = True
+            out["mfa_token"] = session.get("mfa_token")
+            out["message"] = "Account created. Complete authenticator sign-in to continue."
+    return out
 
 
 @router.post("/register")

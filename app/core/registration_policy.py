@@ -45,12 +45,14 @@ def public_registration_allowed() -> bool:
 def registration_requires_admin_approval() -> bool:
     """
     After email OTP, new accounts may await administrator approval before sign-in.
-    Production: on by default. Lab/demo: off unless REGISTRATION_REQUIRES_ADMIN_APPROVAL is set.
+    Off by default; set REGISTRATION_REQUIRES_ADMIN_APPROVAL=true for gated rollouts.
     """
+    if settings.ENABLE_MOCK_DATA:
+        return False
     raw = os.getenv("REGISTRATION_REQUIRES_ADMIN_APPROVAL")
     if raw is not None and str(raw).strip() != "":
         return env_flag("REGISTRATION_REQUIRES_ADMIN_APPROVAL", default=True)
-    return is_production_profile()
+    return False
 
 
 def registered_organisation_names() -> List[str]:
