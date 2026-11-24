@@ -100,6 +100,16 @@ def test_forgot_password_hides_existence(monkeypatch):
     assert "account exists" in missing.json()["message"].lower() or "reset" in missing.json()["message"].lower()
 
 
+def test_username_remind_hides_existence(monkeypatch):
+    client = _client(monkeypatch)
+    missing = client.post(
+        "/api/v1/auth/username/remind",
+        json={"email": "nobody@example.com", "captcha_id": "cap", "captcha_code": "ABCD"},
+    )
+    assert missing.status_code == 200
+    assert "username" in missing.json()["message"].lower()
+
+
 def test_password_reset_and_login(monkeypatch):
     client = _client(monkeypatch)
     uname = f"pw_{uuid.uuid4().hex[:8]}"

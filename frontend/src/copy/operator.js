@@ -82,7 +82,12 @@ export const COPY = {
     registerOtpToastAgain: 'Show code in notification again',
     registerOtpScreenCodeLabel: 'Your verification code',
     registerOtpHintEmail: 'Enter the 6-digit code we sent to your email address.',
-    forgotSubtitle: 'Enter your username. For security, the response does not indicate whether an account exists.',
+    forgotSubtitle:
+      'Enter your username or account email. For security, the response does not reveal whether an account exists.',
+    forgotUsernameSubtitle:
+      'Enter the email address used when you registered or were invited. If it matches an account, we email your sign-in username.',
+    forgotUsernameSuccess:
+      'If an account exists for that email, we sent your sign-in username.',
     resetSubtitle: 'Enter your reset token and set a new password.',
     mfaHint: 'Requires a TOTP authenticator app (6-digit code at sign-in). SMS is not used.',
   },

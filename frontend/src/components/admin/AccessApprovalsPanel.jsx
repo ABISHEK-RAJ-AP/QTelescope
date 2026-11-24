@@ -10,7 +10,7 @@ import {
 } from '@/lib/permissions.js';
 import { RoleMatrix } from '@/components/admin/RoleMatrix.jsx';
 import { Button } from '@/components/ui/Button';
-import { Field, fieldClass } from '@/components/AuthShell';
+import { Field, fieldClass, selectFieldClass } from '@/components/AuthShell';
 import { EmptyState, TableEmpty } from '@/components/observability/EmptyState.jsx';
 import { ConfirmDialog } from '@/components/observability/ConfirmDialog.jsx';
 import { CollapsibleSection } from '@/components/observability/CollapsibleSection.jsx';
@@ -97,21 +97,26 @@ function PendingCard({ user, roleOptions, canEdit, busy, onRole, onApprove, onRe
     setDraftRole(user.role || 'Operator');
   }, [user.role]);
 
+  const metaLine = [user.email, user.org].filter(Boolean).join(' · ');
+
   return (
     <article className="admin-access-card">
       <header className="admin-access-card__head">
-        <div>
+        <div className="admin-access-card__identity">
           <h4 className="admin-access-card__name">{user.full_name || user.username}</h4>
-          <p className="admin-access-card__meta">{user.email || user.username}</p>
-          {user.org ? <p className="admin-access-card__org" title={user.org}>{user.org}</p> : null}
+          {metaLine ? (
+            <p className="admin-access-card__meta" title={metaLine}>{metaLine}</p>
+          ) : (
+            <p className="admin-access-card__meta">{user.username}</p>
+          )}
         </div>
         <span className="badge badge-warning">Pending approval</span>
       </header>
       {user.created_at ? (
-        <p className="admin-people-muted">Submitted {formatISTTime(user.created_at)}</p>
+        <p className="admin-access-card__submitted">Submitted {formatISTTime(user.created_at)}</p>
       ) : null}
       {canEdit ? (
-        <div className="admin-access-card__actions">
+        <div className="admin-access-card__actions admin-access-card__actions--inline">
           <label className="outline-field admin-access-card__role">
             <span>Role</span>
             <select
@@ -716,7 +721,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
                 <Field label="Role" forId="inv-role">
                   <select
                     id="inv-role"
-                    className={fieldClass}
+                    className={selectFieldClass}
                     value={invite.role}
                     onChange={(e) => setInvite((s) => ({ ...s, role: e.target.value }))}
                   >
@@ -732,7 +737,7 @@ export function AccessApprovalsPanel({ canEdit, onNotice }) {
                 <Field label="Organisation" forId="inv-org-pick">
                   <select
                     id="inv-org-pick"
-                    className={`${fieldClass}${inviteFieldErr.org ? ' auth-field--invalid qt-shake' : ''}`}
+                    className={`${selectFieldClass}${inviteFieldErr.org ? ' auth-field--invalid qt-shake' : ''}`}
                     value={inviteOrgPick}
                     onChange={(e) => setInviteOrgPick(e.target.value)}
                     required

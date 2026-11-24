@@ -589,13 +589,39 @@ select.auth-field--invalid {
 }
 
 .auth-outline-field__control,
-.auth-outline-field input,
-.auth-outline-field select {
+.auth-outline-field input {
   border: 0 !important;
   box-shadow: none !important;
   background-color: transparent !important;
   min-width: 0;
   width: 100%;
+}
+
+.auth-outline-field select:not(.auth-select-control) {
+  border: 0 !important;
+  box-shadow: none !important;
+  background-color: transparent !important;
+  min-width: 0;
+  width: 100%;
+}
+
+.auth-outline-field select.auth-select-control {
+  border: 0 !important;
+  box-shadow: none !important;
+  background-color: var(--bg-card) !important;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 28px !important;
+  padding-left: 8px !important;
+  height: 2.5rem;
+  min-height: 2.5rem;
+  color-scheme: light;
+  cursor: pointer;
+}
+
+.dark .auth-outline-field select.auth-select-control {
+  color-scheme: dark;
 }
 
 .auth-outline-field__control:focus,

@@ -8,7 +8,7 @@ import { api } from '@/services/api'
 import { COPY } from '@/copy/operator.js'
 
 export function ForgotPasswordPage() {
-  const [username, setUsername] = useState('')
+  const [identity, setIdentity] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -23,8 +23,9 @@ export function ForgotPasswordPage() {
     setMessage('')
     setError('')
     setDevToken('')
-    if (!username.trim()) {
-      setError('Enter a username.')
+    const raw = identity.trim()
+    if (!raw) {
+      setError('Enter your username or account email.')
       setBusy(false)
       return
     }
@@ -33,12 +34,17 @@ export function ForgotPasswordPage() {
       setBusy(false)
       return
     }
+    const payload = {
+      captcha_id: captchaId,
+      captcha_code: captchaCode.trim(),
+    }
+    if (raw.includes('@')) {
+      payload.email = raw.toLowerCase()
+    } else {
+      payload.username = raw
+    }
     try {
-      const res = await api.forgotPassword({
-        username: username.trim(),
-        captcha_id: captchaId,
-        captcha_code: captchaCode.trim(),
-      })
+      const res = await api.forgotPassword(payload)
       setMessage(res?.message || 'If an account exists for that identity, a reset link was issued.')
       if (res?.dev_reset_token) setDevToken(res.dev_reset_token)
     } catch (err) {
@@ -59,18 +65,22 @@ export function ForgotPasswordPage() {
           <Link to="/login" className="font-semibold text-[var(--accent)] hover:opacity-90">
             Back to sign in
           </Link>
+          {' · '}
+          <Link to="/forgot-username" className="font-semibold text-[var(--accent)] hover:opacity-90">
+            Forgot username
+          </Link>
         </p>
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-        <Field label="Username" forId="forgot-username">
+        <Field label="Username or email" forId="forgot-identity" hint="Use the email on your account if you do not remember your username.">
           <input
-            id="forgot-username"
+            id="forgot-identity"
             type="text"
             autoComplete="username"
             required
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            value={identity}
+            onChange={(e) => setIdentity(e.target.value)}
             className={fieldClass}
           />
         </Field>

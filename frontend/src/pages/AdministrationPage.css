@@ -458,10 +458,31 @@
   overflow-wrap: anywhere;
 }
 
+.admin-access-card__identity {
+  flex: 1;
+  min-width: 0;
+}
+
 .admin-access-card__actions {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.admin-access-card__actions--inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 12px;
+}
+
+.admin-access-card__actions--inline .admin-access-card__role {
+  flex: 1 1 11rem;
+  min-width: 9rem;
+}
+
+.admin-access-card__actions--inline .admin-access-card__btns {
+  margin-left: auto;
 }
 
 .admin-access-card__role {
@@ -472,6 +493,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
 }
 
 .admin-access-invite__form {
@@ -1058,6 +1080,17 @@
 .admin-section-nav { border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
 .admin-section-nav__item:focus-visible, .admin-input-toggle-btn:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; }
 .admin-pad { padding: 14px 16px; margin: 0; }
+
+.admin-log-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 12px 0 4px;
+  margin-top: 8px;
+  border-top: 1px solid var(--border-color);
+}
 .admin-toolbar-card { padding: 14px 16px !important; display: flex; flex-direction: column; gap: 10px; }
 .admin-toolbar-card__row { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
 .admin-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }

@@ -1215,11 +1215,16 @@ function AdminAuditLog() {
           </tbody>
         </table>
       </div>
-      {rows.length > LOG_PAGE && (
-        <div className="admin-pad">
+      <div className="admin-log-footer">
+        <span className="admin-sub" role="status">
+          {rows.length === 0
+            ? (busy ? 'Loading…' : 'No rows')
+            : `Showing ${(logPg - 1) * LOG_PAGE + 1}–${Math.min(logPg * LOG_PAGE, rows.length)} of ${rows.length}`}
+        </span>
+        {rows.length > 0 && logPages > 1 ? (
           <ListPager page={logPg} pages={logPages} onPage={setLogPage} />
-        </div>
-      )}
+        ) : null}
+      </div>
     </div>
   );
 }

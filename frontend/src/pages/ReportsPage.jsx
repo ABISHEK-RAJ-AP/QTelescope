@@ -256,10 +256,14 @@ export const ReportsPage = () => {
 
       <section className="card rp-card" aria-labelledby="rp-ev-h" data-tour="page-evidence">
         <h3 id="rp-ev-h" className="rp-h">Evidence snapshots</h3>
-        <p className="rp-desc rp-desc--compact">
-          Tamper-evident ZIP packages with manifest and package SHA-256 hashes. Fleet or single-backend scope — verify downloads before archival.
-          Snapshots stay on the server after API restarts; environment JSON import lives under Environment.
-        </p>
+        <div className="rp-desc-block">
+          <p className="rp-desc rp-desc--compact">
+            Tamper-evident ZIP bundles include a manifest and SHA-256 checksums for the package and manifest. Verify downloads before archival.
+          </p>
+          <p className="rp-desc rp-desc--compact rp-desc--secondary">
+            Snapshots remain on the server after API restarts. JSON environment import is under Administration → Environment.
+          </p>
+        </div>
         <div className="rp-snaprow">
           <label className="rp-label">Scope
             <select className="input-control" value={snapScope} onChange={(e) => setSnapScope(e.target.value)}>

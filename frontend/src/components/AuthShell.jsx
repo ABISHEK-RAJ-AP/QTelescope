@@ -126,4 +126,8 @@ export function Field({ label, forId, children, hint, className = '' }) {
 export const fieldClass =
   'auth-outline-field__control flex h-10 w-full min-w-0 bg-transparent px-1 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none'
 
+/** Native selects inside outline fields need solid surface + chevron (not bg-transparent). */
+export const selectFieldClass =
+  'auth-outline-field__control auth-select-control input-control w-full min-w-0 text-sm font-medium'
+
 export default AuthShell

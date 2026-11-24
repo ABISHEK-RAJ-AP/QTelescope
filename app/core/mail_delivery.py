@@ -97,6 +97,27 @@ def deliver_password_reset(*, username: str, to_email: str, token: str) -> Tuple
     return ok, err
 
 
+def deliver_username_remind(*, to_email: str, username: str) -> Tuple[bool, Optional[str]]:
+    to_email = (to_email or "").strip()
+    if not to_email:
+        return False, "recipient email missing"
+
+    msg = EmailMessage()
+    msg["Subject"] = "Q-TeleScope sign-in username"
+    msg["From"] = settings.SMTP_FROM.strip()
+    msg["To"] = to_email
+    msg.set_content(
+        f"Your Q-TeleScope sign-in username is:\n\n  {username}\n\n"
+        "Use this username on the sign-in page. "
+        "If you need a new password, use “Forgot password” and enter this username or this email address.\n\n"
+        "If you did not request this, ignore this message."
+    )
+    ok, err = _send_smtp_message(msg)
+    if not ok:
+        _log.warning("username remind SMTP failed for %s: %s", username, err)
+    return ok, err
+
+
 def deliver_registration_otp(*, to_email: str, username: str, code: str, ttl_minutes: int) -> Tuple[bool, Optional[str]]:
     to_email = (to_email or "").strip()
     if not to_email:

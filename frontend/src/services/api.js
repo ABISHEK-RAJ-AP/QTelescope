@@ -215,6 +215,7 @@ export const api = {
   login: (credentials) => fetchApi('/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
   loginMfa: (payload) => fetchApi('/auth/login/mfa', { method: 'POST', body: JSON.stringify(payload) }),
   forgotPassword: (payload) => fetchApi('/auth/password/forgot', { method: 'POST', body: JSON.stringify(payload) }),
+  remindUsername: (payload) => fetchApi('/auth/username/remind', { method: 'POST', body: JSON.stringify(payload) }),
   resetPassword: (payload) => fetchApi('/auth/password/reset', { method: 'POST', body: JSON.stringify(payload) }),
   changePassword: (payload) => fetchApi('/users/me/password', { method: 'POST', body: JSON.stringify(payload) }),
   getMe: () => fetchApi('/auth/me'),

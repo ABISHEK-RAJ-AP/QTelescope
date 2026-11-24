@@ -16,7 +16,7 @@ import { PageRelatedLink, PageRelatedNav } from '../components/observability/Pag
 import { baseTooltip, getChartTheme, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { BACKEND_WORKSPACE_TABS } from '../lib/investigationLinks.js';
 import { STATES, STATE_GLYPH, STATE_TIER, ageMinutes, formatAge, isStale, lineageOf, median, modalityName, num, providerName, scopeSearch, useProviderLineage } from './backendUtils.js';
-import { BackendRegistryIdChip, BackendStatusStrip, Sparkline, StateBar, TelemetryCoverageHint } from './backendCommon.jsx';
+import { backendRegistryHoverTitle, BackendStatusStrip, Sparkline, StateBar, TelemetryCoverageHint } from './backendCommon.jsx';
 import { formatEnumLabel } from '../lib/displayLabels.js';
 import { ListPager } from '../components/observability/ListPager.jsx';
 import { unableToLoad, unableToLoadLabel } from '../constants/messages.js';
@@ -253,7 +253,10 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
               </nav>
             ) : null}
             <h2 className="sr-only">{formatBackendTitle(backend)}</h2>
-            <p className="bd-meta">
+            <p
+              className="bd-meta"
+              title={backendRegistryHoverTitle(formatBackendTitle(backend), backend.backend_id)}
+            >
               {providerName(backend.provider_id)} · {modalityName(backend.qpu_modality)} · {backend.qubit_count} qubits
               {backend.quantum_volume ? ` · QV ${backend.quantum_volume}` : ''}{backend.clops ? ` · CLOPS ${backend.clops}` : ''}
               {hv?.counts?.UNKNOWN > 0 ? (
@@ -262,7 +265,6 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
                   totalCount={backend.qubit_count ?? hv.qubit_count}
                 />
               ) : null}
-              <BackendRegistryIdChip backendId={backend.backend_id} className="bd-meta__id" />
             </p>
             <BackendStatusStrip
               operationalStatus={backend.operational_status}
@@ -526,22 +528,22 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
         )}
 
         {activeTab === 'connectivity' && (
-          <div className="bd-connect-grid">
-            <section className="card bd-panel" aria-label="Connectivity">
-              <h3>Coupling map</h3>
+          <div className="bd-connect-stack">
+            <section className="card bd-panel bd-connect-summary" aria-label="Connectivity">
+              <div className="bd-connect-summary__head">
+                <h3>Coupling map</h3>
+                <Link className="btn btn-secondary btn--sm" to={link('/app/telemetry/topology')}>Open topology map</Link>
+              </div>
               {conn.length === 0 ? (
                 <EmptyState variant="inline" compact title={secErr('connectivity') ? unableToLoadLabel('coupling edges') : 'No coupling edges'} message={backend.topology_type === 'all_to_all' ? 'All-to-all topology: every qubit pair is coupled, edges are not stored.' : 'The registry has no edges for this backend.'} />
               ) : (
-                <dl className="bd-props">
-                  <dt>Topology</dt><dd>{label(backend.topology_type || '—')}</dd>
-                  <dt>Edges</dt><dd className="bd-num">{conn.length}</dd>
-                  <dt>Qubits with links</dt><dd className="bd-num">{degs.length} of {backend.qubit_count}{unlinked ? ` (${unlinked} unlinked)` : ''}</dd>
-                  <dt>Degree (avg / max)</dt><dd className="bd-num">{num(degs.reduce((a, b) => a + b, 0) / (degs.length || 1), 2)} / {degs.length ? Math.max(...degs) : 0}</dd>
-                </dl>
+                <ul className="bd-connect-kpis" aria-label="Coupling statistics">
+                  <li><span className="bd-connect-kpis__k">Topology</span><span className="bd-connect-kpis__v">{label(backend.topology_type || '—')}</span></li>
+                  <li><span className="bd-connect-kpis__k">Edges</span><span className="bd-connect-kpis__v bd-num">{conn.length}</span></li>
+                  <li><span className="bd-connect-kpis__k">Qubits with links</span><span className="bd-connect-kpis__v bd-num">{degs.length} / {backend.qubit_count}{unlinked ? ` · ${unlinked} unlinked` : ''}</span></li>
+                  <li><span className="bd-connect-kpis__k">Degree (avg / max)</span><span className="bd-connect-kpis__v bd-num">{num(degs.reduce((a, b) => a + b, 0) / (degs.length || 1), 2)} / {degs.length ? Math.max(...degs) : 0}</span></li>
+                </ul>
               )}
-              <div className="bd-cta link-row">
-                <Link className="btn btn-primary" to={link('/app/telemetry/topology')}>Open topology map</Link>
-              </div>
             </section>
             <section className="card bd-panel" aria-label="Qubit health and coupling context">
               <h3>Qubit health on this backend</h3>

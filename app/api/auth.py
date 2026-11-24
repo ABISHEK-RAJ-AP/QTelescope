@@ -210,6 +210,12 @@ class ForgotPasswordRequest(BaseModel):
     captcha_code: str = ""
 
 
+class UsernameRemindRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=256)
+    captcha_id: str = ""
+    captcha_code: str = ""
+
+
 class ResetPasswordRequest(BaseModel):
     token: str = Field(min_length=8)
     new_password: str = Field(min_length=6)
@@ -648,6 +654,33 @@ def forgot_password(req: ForgotPasswordRequest, request: Request):
         else:
             payload["dev_reset_token"] = token
     return payload
+
+
+_USERNAME_REMIND_MSG = "If an account exists for that email, we sent your sign-in username."
+
+
+@router.post("/username/remind")
+def remind_username(req: UsernameRemindRequest, request: Request):
+    from app.core.env_profile import is_production_profile
+    from app.core.mail_delivery import deliver_username_remind, smtp_configured
+
+    check_auth_rate_limit(request, "password_forgot")
+    _consume_captcha(req.captcha_id, req.captcha_code)
+    email = (req.email or "").strip().lower()
+    found = None
+    users = user_store.load_all_users()
+    for uname, rec in users.items():
+        if (rec.get("email") or "").strip().lower() == email:
+            found = uname
+            break
+    if found and smtp_configured():
+        rec = users.get(found) or {}
+        to_email = (rec.get("email") or "").strip()
+        if to_email:
+            deliver_username_remind(username=found, to_email=to_email)
+    elif found and not is_production_profile():
+        pass
+    return {"status": "SUCCESS", "message": _USERNAME_REMIND_MSG}
 
 
 @router.post("/password/reset")

@@ -1,6 +1,6 @@
 import React, { useId, useMemo, useState } from 'react'
 import { Search } from 'lucide-react'
-import { Field, fieldClass } from '@/components/AuthShell'
+import { Field, fieldClass, selectFieldClass } from '@/components/AuthShell'
 import { filterMasterOptions, visibleOrgFields } from '@/data/registerOrgHierarchy'
 
 function SearchableMaster({ field, value, onChange, invalid, disabled }) {
@@ -58,7 +58,7 @@ export function RegisterOrgFields({
             <Field key={field.id} label={field.label} forId={`reg-org-${field.id}`} hint={err}>
               <select
                 id={`reg-org-${field.id}`}
-                className={`${fieldClass} reg-org-select${err ? ' auth-field--invalid qt-shake' : ''}`}
+                className={`${selectFieldClass} reg-org-select${err ? ' auth-field--invalid qt-shake' : ''}`}
                 value={value}
                 disabled={disabled}
                 required={field.required}

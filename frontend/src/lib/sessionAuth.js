@@ -22,6 +22,7 @@ const AUTH_PUBLIC_PREFIXES = [
   '/auth/captcha',
   '/auth/verify-captcha',
   '/auth/password/forgot',
+  '/auth/username/remind',
   '/auth/password/reset',
   '/auth/logout',
 ];

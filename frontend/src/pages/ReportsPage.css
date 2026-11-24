@@ -46,7 +46,26 @@
 .rp-fmt:disabled { opacity: .45; cursor: not-allowed; }
 .rp-status { font-size: var(--font-size-helper, 0.9375rem); min-height: 24px; }
 .rp-status__idle { color: var(--text-muted); }
-.rp-desc--compact { max-width: 52rem; font-size: var(--font-size-body, 1.0625rem); }
+.rp-desc-block {
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rp-desc--compact {
+  max-width: none;
+  font-size: var(--font-size-helper, 0.9375rem);
+  line-height: 1.5;
+  margin: 0;
+  color: var(--text-secondary);
+  text-wrap: pretty;
+}
+
+.rp-desc--secondary {
+  color: var(--text-muted);
+  font-size: var(--font-size-helper, 0.875rem);
+}
 .rp-ok, .rp-err { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
 .rp-ok { color: var(--accent-emerald); }
 .rp-err { color: var(--accent-rose); }

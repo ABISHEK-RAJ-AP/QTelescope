@@ -177,6 +177,10 @@ export function LoginPage({ onLoginSuccess }) {
             <Link to="/forgot-password" className="font-semibold text-[var(--accent)] hover:opacity-90">
               Forgot password
             </Link>
+            {' · '}
+            <Link to="/forgot-username" className="font-semibold text-[var(--accent)] hover:opacity-90">
+              Forgot username
+            </Link>
             {registrationOpen ? (
               <>
                 {' · '}
