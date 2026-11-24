@@ -1,7 +1,7 @@
 import React from 'react';
 import { ExternalLink } from 'lucide-react';
 import { DetailDrawer } from '../observability/DetailDrawer.jsx';
-import { BackendRegistryIdChip, BackendStatusStrip, StateBar } from '../../pages/backendCommon.jsx';
+import { backendRegistryHoverTitle, BackendStatusStrip, StateBar } from '../../pages/backendCommon.jsx';
 import { formatAge, isStale, STALE_MIN } from '../../pages/backendUtils.js';
 
 /** Read-only backend context; preserves inventory filters vs full navigation. */
@@ -15,7 +15,7 @@ export function BackendPreviewDrawer({ row, onClose, onOpenWorkspace }) {
     <DetailDrawer
       open={Boolean(row)}
       title={row.name}
-      headerAside={<BackendRegistryIdChip backendId={row.id} />}
+      titleTooltip={backendRegistryHoverTitle(row.name, row.id)}
       onClose={onClose}
       size="md"
       tourId="backend-preview-drawer"

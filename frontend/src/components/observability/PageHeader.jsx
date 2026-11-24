@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
 import { InfoTooltip } from './InfoTooltip.jsx';
-import { BackendRegistryIdChip } from '../../pages/backendCommon.jsx';
+import { backendRegistryHoverTitle } from '../../pages/backendCommon.jsx';
 
 function splitBreadcrumbs(breadcrumbs, title) {
   const interactive = breadcrumbs.filter((c) => c.href || c.onClick);
@@ -50,13 +50,17 @@ export function PageHeader({
         <div className="page-header__main">
           {kicker && <p className="page-header__kicker">{kicker}</p>}
           <h1 className="page-header__title">
-            <span className="page-header__title-text">{title}</span>
+            <span
+              className="page-header__title-text"
+              title={backendId ? backendRegistryHoverTitle(title, backendId) : undefined}
+            >
+              {title}
+            </span>
             {description ? (
               <InfoTooltip label={`About ${title}`} align="start" className="page-header__title-help">
                 {description}
               </InfoTooltip>
             ) : null}
-            {backendId ? <BackendRegistryIdChip backendId={backendId} className="page-header__id-chip" /> : null}
           </h1>
           {description && !embedded ? <p className="page-header__desc">{description}</p> : null}
           {lastUpdated ? (

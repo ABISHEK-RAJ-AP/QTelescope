@@ -10,7 +10,7 @@ import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { STATES, ageMinutes, formatAge, isStale, lineageOf, modalityName, providerName, useProviderLineage, STALE_MIN, KNOWN_PROVIDER_IDS } from './backendUtils.js';
-import { BackendRegistryIdChip, StateBar, StatusText } from './backendCommon.jsx';
+import { backendRegistryHoverTitle, StateBar, StatusText } from './backendCommon.jsx';
 import { AddBackendWizard } from './AddBackendWizard.jsx';
 import { BackendPreviewDrawer } from '../components/backends/BackendPreviewDrawer.jsx';
 import { MetricCard } from '../components/ds/MetricCard.jsx';
@@ -190,8 +190,15 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
       case 'name':
         return (
           <span className="bk-name-cell">
-            <button type="button" className="bk-link" onClick={(e) => { e.stopPropagation(); openPreview(r.id); }} aria-label={`Preview ${r.name}`}>{r.name}</button>
-            <BackendRegistryIdChip backendId={r.id} className="bk-name-cell__id" />
+            <button
+              type="button"
+              className="bk-link"
+              title={backendRegistryHoverTitle(r.name, r.id)}
+              onClick={(e) => { e.stopPropagation(); openPreview(r.id); }}
+              aria-label={`Preview ${r.name}`}
+            >
+              {r.name}
+            </button>
           </span>
         );
       case 'owner':
@@ -338,8 +345,7 @@ export const BackendInventory = ({ onSelectBackend, isAdmin = false }) => {
                 <button type="button" className="bk-card__hit" onClick={() => openPreview(r.id)} aria-label={`Preview ${r.name}`}>
                   <header className="bk-card__head">
                     <div className="bk-card__title-row">
-                      <div className="bk-card__title">{r.name}</div>
-                      <BackendRegistryIdChip backendId={r.id} className="bk-card__id-chip" />
+                      <div className="bk-card__title" title={backendRegistryHoverTitle(r.name, r.id)}>{r.name}</div>
                     </div>
                     <StatusText status={r.status} />
                   </header>

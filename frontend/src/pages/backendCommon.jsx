@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { AlertTriangle, Hash } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { useTheme } from '../components/ui/ThemeProvider';
@@ -9,26 +9,13 @@ import { formatEnumLabel, formatOperationalStatus } from '../lib/displayLabels.j
 import { COPY } from '../copy/operator.js';
 import './BackendInventory.css';
 
-/** Registry id — hover or focus shows full technical id; not primary chrome. */
-export function BackendRegistryIdChip({ backendId, className = '', onCopy }) {
+/** Native tooltip on titles — registry id on hover, no separate hash control. */
+export function backendRegistryHoverTitle(displayLabel, backendId) {
   const id = String(backendId || '').trim();
-  if (!id) return null;
-  const copy = (e) => {
-    e?.stopPropagation?.();
-    if (onCopy) { onCopy(id); return; }
-  void navigator.clipboard?.writeText(id).catch(() => {});
-  };
-  return (
-    <button
-      type="button"
-      className={`bk-id-chip${className ? ` ${className}` : ''}`}
-      title={`Registry ID: ${id}`}
-      aria-label={`Registry ID ${id}. Activate to copy.`}
-      onClick={copy}
-    >
-      <Hash size={14} strokeWidth={2.25} aria-hidden />
-    </button>
-  );
+  if (!id) return displayLabel ? String(displayLabel) : undefined;
+  const label = String(displayLabel || '').trim();
+  if (!label || label === id) return `Registry ID: ${id}`;
+  return `${label} — registry ID: ${id}`;
 }
 
 const LINEAGE_COPY = {

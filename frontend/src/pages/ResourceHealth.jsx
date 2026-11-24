@@ -19,7 +19,7 @@ import { usePageActions } from '../context/PageActionsContext.jsx';
 import { formatBackendTitle, formatModalityLabel } from '../lib/displayLabels.js';
 import { STATE_TIER } from './backendUtils.js';
 import { mergeScopeSearch } from '../lib/appScopeQuery.js';
-import { BackendRegistryIdChip, TelemetryCoverageCallout } from './backendCommon.jsx';
+import { backendRegistryHoverTitle, TelemetryCoverageCallout } from './backendCommon.jsx';
 import './ResourceHealth.css';
 
 const STATES = ['GREEN', 'YELLOW', 'RED', 'UNKNOWN'];
@@ -359,7 +359,12 @@ export const ResourceHealth = () => {
               <button key={b.backend_id} type="button" className="hv-backend" aria-pressed={active?.backend_id === b.backend_id}
                 onClick={() => selectBackend(b.backend_id)}>
                 <div>
-                  <div className="hv-backend__name">{formatBackendTitle(b)}</div>
+                  <div
+                    className="hv-backend__name"
+                    title={backendRegistryHoverTitle(formatBackendTitle(b), b.backend_id)}
+                  >
+                    {formatBackendTitle(b)}
+                  </div>
                   <div className="hv-backend__id">{formatModalityLabel(b.qpu_modality)}</div>
                 </div>
                 <div>
@@ -378,8 +383,12 @@ export const ResourceHealth = () => {
           <div className="hv-toolbar">
             <div className="hv-toolbar__row hv-toolbar__row--title">
               <div className="hv-toolbar__title">
-                <strong className="hv-toolbar__name">{formatBackendTitle(active)}</strong>
-                <BackendRegistryIdChip backendId={active.backend_id} />
+                <strong
+                  className="hv-toolbar__name"
+                  title={backendRegistryHoverTitle(formatBackendTitle(active), active.backend_id)}
+                >
+                  {formatBackendTitle(active)}
+                </strong>
                 <button type="button" className="hv-toolbar__link fs-link" onClick={() => nav({ pathname: buildBackendDetailsPath(active.backend_id), search: `?backend=${encodeURIComponent(active.backend_id)}` })}>Backend details</button>
               </div>
               <span className="hv-toolbar__count">{shown} / {qubits.length} qubits</span>
