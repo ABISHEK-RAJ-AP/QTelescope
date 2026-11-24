@@ -5,7 +5,7 @@ import os
 from typing import Any, Dict, Optional, Tuple
 
 from app.core.config import read_env_val
-from app.providers.catalog import BY_ID, catalog_by_id, stored_configured, upsert_stored
+from app.providers.catalog import BY_ID, catalog_by_id, stored_configured, stored_secret_token, upsert_stored
 from app.providers.ibm_adapter import IBMProviderAdapter
 from app.providers.ionq_adapter import IonQProviderAdapter
 from app.providers.onprem_adapter import OnPremiseProviderAdapter
@@ -35,9 +35,11 @@ def env_token_for(provider_id: str) -> str:
     if not spec:
         return ""
     key = spec.get("env_key")
-    if not key:
-        return ""
-    return (read_env_val(key, "") or os.getenv(key, "")).strip()
+    if key:
+        from_env = (read_env_val(key, "") or os.getenv(key, "")).strip()
+        if from_env:
+            return from_env
+    return stored_secret_token(normalize_provider_id(provider_id))
 
 
 def resolve_token(provider_id: str, submitted: Optional[str]) -> str:

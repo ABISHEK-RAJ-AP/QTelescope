@@ -318,6 +318,7 @@ def save_provider_credentials(
 
     validate_live_credentials(prov, token, url)
     persist_live_env(prov, token, url)
+    upsert_stored(prov, token or None, url or None, data.extra)
     for key, val in env_keys_to_persist(prov, token, url):
         _update_env_file(key, val)
 

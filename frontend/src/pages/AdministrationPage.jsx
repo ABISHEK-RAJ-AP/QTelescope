@@ -742,9 +742,10 @@ function Rules({ canEdit }) {
   const open = (r) => {
     if (!selectedBackend) return;
     setFormErr(null);
+    const createBaseline = { ...EMPTY_RULE, backend_id: selectedBackend };
     setEditing(r
       ? { mode: 'edit', orig: r, form: { ...r, threshold_value: String(r.threshold_value), description: r.description || '' } }
-      : { mode: 'create', orig: EMPTY_RULE, form: { ...EMPTY_RULE, backend_id: selectedBackend } });
+      : { mode: 'create', orig: createBaseline, form: { ...createBaseline } });
   };
   const validate = (f, mode) => {
     const e = {};
@@ -756,8 +757,13 @@ function Rules({ canEdit }) {
     else if (Number(f.threshold_value) < 0) e.threshold_value = 'Must be ≥ 0';
     return e;
   };
-  const isDirty = editing && JSON.stringify({ ...editing.form, threshold_value: String(editing.form.threshold_value) })
-    !== JSON.stringify({ ...editing.orig, threshold_value: String(editing.orig.threshold_value), description: editing.orig.description || '' });
+  const ruleFormSnapshot = (f) => JSON.stringify({
+    ...f,
+    threshold_value: String(f.threshold_value ?? ''),
+    description: f.description || '',
+    rule_id: f.rule_id || '',
+  });
+  const isDirty = editing && ruleFormSnapshot(editing.form) !== ruleFormSnapshot(editing.orig);
   const errs = editing ? validate(editing.form, editing.mode) : {};
   const setF = (p) => setEditing((s) => ({ ...s, form: { ...s.form, ...p } }));
 

@@ -7,24 +7,28 @@ cd "$ROOT"
 # shellcheck source=scripts/vm-demo-env.sh
 source "${ROOT}/scripts/vm-demo-env.sh"
 
-echo "==> git pull"
-git fetch origin main
-VM_SCRIPTS=(
-  scripts/vm-demo-env.sh
-  scripts/vm-demo-restart.sh
-  scripts/vm-update-from-git.sh
-  scripts/vm-postgres-migrate.sh
-  scripts/migrate_sqlite_to_postgres.py
-)
-if ! git diff --quiet -- "${VM_SCRIPTS[@]}" 2>/dev/null; then
-  echo "==> discarding local edits on VM migration scripts (git stash if you need them)"
-  git checkout -- "${VM_SCRIPTS[@]}" 2>/dev/null || true
+if [[ -d "${ROOT}/.git" ]]; then
+  echo "==> git pull"
+  git fetch origin main
+  VM_SCRIPTS=(
+    scripts/vm-demo-env.sh
+    scripts/vm-demo-restart.sh
+    scripts/vm-update-from-git.sh
+    scripts/vm-postgres-migrate.sh
+    scripts/migrate_sqlite_to_postgres.py
+  )
+  if ! git diff --quiet -- "${VM_SCRIPTS[@]}" 2>/dev/null; then
+    echo "==> discarding local edits on VM migration scripts (git stash if you need them)"
+    git checkout -- "${VM_SCRIPTS[@]}" 2>/dev/null || true
+  fi
+  git pull --ff-only origin main || {
+    echo "WARN: ff-only pull failed; resolve conflicts manually" >&2
+    echo "Tip: git stash push -m 'vm local' && git pull --ff-only origin main" >&2
+    exit 1
+  }
+else
+  echo "==> No .git — skipping pull (VM zip bundle)"
 fi
-git pull --ff-only origin main || {
-  echo "WARN: ff-only pull failed; resolve conflicts manually" >&2
-  echo "Tip: git stash push -m 'vm local' && git pull --ff-only origin main" >&2
-  exit 1
-}
 
 echo "==> demo .env (mock data + bootstrap accounts)"
 apply_vm_demo_env "$ROOT"

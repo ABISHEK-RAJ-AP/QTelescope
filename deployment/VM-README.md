@@ -1,6 +1,6 @@
 # Q-TeleScope VM deployment bundle
 
-Offline-friendly package: FastAPI backend, prebuilt React UI, nginx site template, SQLite by default (PostgreSQL optional).
+Offline-friendly package: FastAPI backend, prebuilt React UI, nginx site template. **Default stack: PostgreSQL + Redis** (SQLite lab-only).
 
 ## System requirements
 
@@ -37,7 +37,8 @@ The script asks for:
 
 - Public URL (for CORS and password-reset links)
 - UI listen port (default `4173`)
-- SQLite vs PostgreSQL
+- PostgreSQL (default) vs SQLite (not recommended)
+- Redis cache auto-setup
 - Demo/event profile vs production-hardened profile
 - Bootstrap admin passwords (or auto-generated)
 - Optional SMTP (registration OTP + password reset by email)
@@ -85,7 +86,9 @@ PUBLIC_APP_URL=https://your-public-host
 REGISTRATION_OTP_DELIVERY=auto
 ```
 
-With `ENABLE_MOCK_DATA=false` and SMTP set, registration OTP is sent by email instead of on-screen toast.
+With `REGISTRATION_OTP_DELIVERY=auto` (default in `setup.sh`): OTP is **emailed** when `SMTP_HOST` and `SMTP_FROM` are set; otherwise the **toast / screen** flow is used (production event without SMTP).
+
+Force on-screen OTP even when SMTP exists: `REGISTRATION_OTP_DELIVERY=screen`.
 
 ## Security notes for internet-facing VMs
 

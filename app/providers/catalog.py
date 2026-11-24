@@ -246,21 +246,72 @@ def _ensure_data_dir() -> None:
     os.makedirs(DATA_DIR, exist_ok=True)
 
 
+_TOKEN_ENC_FIELD = "token_enc"
+
+
+def _seal_credential(value: str) -> str:
+    from app.core import secret_box
+
+    plain = (value or "").strip()
+    if not plain:
+        return ""
+    return secret_box.seal_plaintext(plain)
+
+
+def _open_credential(value: str) -> str:
+    from app.core import secret_box
+
+    raw = (value or "").strip()
+    if not raw:
+        return ""
+    if raw.startswith("gAAAA"):
+        try:
+            return secret_box.open_ciphertext(raw)
+        except Exception:
+            return ""
+    return raw
+
+
+def _migrate_plaintext_tokens(store: Dict[str, Any]) -> bool:
+    changed = False
+    for _pid, row in list(store.items()):
+        if not isinstance(row, dict):
+            continue
+        plain = row.pop("token", None)
+        if plain and not row.get(_TOKEN_ENC_FIELD):
+            row[_TOKEN_ENC_FIELD] = _seal_credential(str(plain))
+            changed = True
+    return changed
+
+
 def load_stored() -> Dict[str, Any]:
     if not os.path.exists(CREDS_PATH):
         return {}
     try:
         with open(CREDS_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
-        return data if isinstance(data, dict) else {}
+        if not isinstance(data, dict):
+            return {}
+        if _migrate_plaintext_tokens(data):
+            save_stored(data)
+        return data
     except (OSError, json.JSONDecodeError):
         return {}
 
 
 def save_stored(store: Dict[str, Any]) -> None:
     _ensure_data_dir()
-    with open(CREDS_PATH, "w", encoding="utf-8") as f:
+    tmp = CREDS_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(store, f, indent=2)
+    os.replace(tmp, CREDS_PATH)
+
+
+def stored_secret_token(provider_id: str) -> str:
+    """Provider API token for collectors — never expose via HTTP."""
+    row = load_stored().get(provider_id) or {}
+    enc = row.get(_TOKEN_ENC_FIELD) or row.get("token") or ""
+    return _open_credential(str(enc)) if enc else ""
 
 
 def upsert_stored(provider_id: str, token: Optional[str], endpoint_url: Optional[str], extra: Optional[Dict[str, Any]]) -> None:
@@ -268,8 +319,14 @@ def upsert_stored(provider_id: str, token: Optional[str], endpoint_url: Optional
     prev = store.get(provider_id) or {}
     prev_extra = prev.get("extra") if isinstance(prev.get("extra"), dict) else {}
     merged_extra = {**prev_extra, **(extra or {})}
+    if token:
+        token_enc = _seal_credential(token)
+    else:
+        token_enc = prev.get(_TOKEN_ENC_FIELD) or ""
+        if not token_enc and prev.get("token"):
+            token_enc = _seal_credential(str(prev.get("token")))
     store[provider_id] = {
-        "token": token if token else prev.get("token", ""),
+        _TOKEN_ENC_FIELD: token_enc,
         "endpoint_url": endpoint_url if endpoint_url else prev.get("endpoint_url", ""),
         "extra": merged_extra,
         "updated_at": datetime.now(timezone.utc).isoformat(),
@@ -279,7 +336,7 @@ def upsert_stored(provider_id: str, token: Optional[str], endpoint_url: Optional
 
 def stored_configured(provider_id: str) -> bool:
     row = load_stored().get(provider_id) or {}
-    return bool(row.get("token") or row.get("endpoint_url"))
+    return bool(stored_secret_token(provider_id) or row.get("endpoint_url"))
 
 
 def public_extra(provider_id: str, fields: List[Dict[str, Any]]) -> Dict[str, str]:
@@ -293,8 +350,11 @@ def public_extra(provider_id: str, fields: List[Dict[str, Any]]) -> Dict[str, st
         src = field.get("in")
         if src == "endpoint_url" and row.get("endpoint_url"):
             out[key] = row["endpoint_url"]
-        elif src == "token" and key != "token" and row.get("token"):
-            out[key] = row["token"]
+        elif src == "token":
+            continue
         elif key in extra:
-            out[key] = str(extra[key])
+            val = str(extra[key])
+            if field.get("secret"):
+                continue
+            out[key] = val
     return out

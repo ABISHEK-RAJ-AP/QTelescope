@@ -4,10 +4,16 @@
 security-audit/
 .vendor/skills-upstream/
 
+# graphify knowledge graph (local; rebuild scripts/graphify-rebuild-all.sh)
+graphify-out/
+**/graphify-out/
+
 # Environment & Secrets (NEVER COMMIT .env)
 .env
 .env.*
+video_v2/captures/external/.env.external-capture
 !.env.example
+!deployment/.env.vm.template
 !.env.production.example
 *.env
 backend/.env
@@ -96,6 +102,7 @@ quantum_monitoring.db
 data/registered_users.json
 data/custom_roles.json
 data/provider_credentials.json
+data/user_mfa.json
 data/environment_telemetry.json
 data/*.tmp
 data/qtelescope.db

@@ -8,11 +8,15 @@ source "${ROOT}/scripts/vm-demo-env.sh"
 # shellcheck source=scripts/vm-event-public-demo.sh
 source "${ROOT}/scripts/vm-event-public-demo.sh"
 
-echo "==> git pull"
-git pull --ff-only origin main || {
-  echo "WARN: ff-only pull failed" >&2
-  exit 1
-}
+if [[ -d "${ROOT}/.git" ]]; then
+  echo "==> git pull"
+  git pull --ff-only origin main || {
+    echo "WARN: ff-only pull failed" >&2
+    exit 1
+  }
+else
+  echo "==> No .git — skipping pull (VM zip bundle)"
+fi
 
 origin="$(grep -m1 '^PUBLIC_APP_URL=' "${ROOT}/.env" 2>/dev/null | cut -d= -f2- || true)"
 if [[ -z "$origin" ]]; then

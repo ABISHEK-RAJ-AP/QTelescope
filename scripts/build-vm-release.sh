@@ -23,6 +23,10 @@ RSYNC_EX=(
   --exclude='*.log'
   --exclude='.pgdata'
   --exclude='.redis-data'
+  --exclude='*.md'
+  --exclude='.cursor'
+  --exclude='.agents'
+  --exclude='graphify-out'
 )
 
 echo "==> Frontend production build"
@@ -34,8 +38,12 @@ fi
 test -f "$ROOT/frontend/dist/index.html" || { echo "FAIL: frontend/dist/index.html missing" >&2; exit 1; }
 
 echo "==> Backend smoke tests"
-python3 -m pytest tests/test_registration_org_owner.py tests/test_self_registration.py \
-  tests/test_public_registration.py -q --tb=no
+python3 -m pytest \
+  tests/test_registration_org_owner.py \
+  tests/test_self_registration.py \
+  tests/test_public_registration.py \
+  tests/test_provider_credential_storage.py \
+  -q --tb=line
 
 mkdir -p "$DEST"
 for d in app alembic config deployment; do
@@ -48,7 +56,6 @@ rsync "${RSYNC_EX[@]}" \
   --exclude='*.config.js' \
   --exclude='package-lock.json' \
   "$ROOT/frontend/" "$DEST/frontend/" 2>/dev/null || true
-# Include dist + package manifest for optional rebuild
 rsync -a "$ROOT/frontend/dist/" "$DEST/frontend/dist/"
 for f in package.json vite.config.js index.html; do
   [[ -f "$ROOT/frontend/$f" ]] && cp "$ROOT/frontend/$f" "$DEST/frontend/"
@@ -59,16 +66,39 @@ touch "$DEST/data/.gitkeep"
 [[ -f "$ROOT/data/governance_reservations.json" ]] && cp "$ROOT/data/governance_reservations.json" "$DEST/data/" 2>/dev/null || true
 
 mkdir -p "$DEST/scripts/lib"
-for f in setup-nginx-host.sh vm-event-public-demo.sh vm-event-restart.sh vm-demo-env.sh \
-  vm-vapt-restart.sh verify-stack.sh diagnose-demo-stack.sh seed_demo_fleet.py \
-  refresh_demo_fleet.py migrate_sqlite_to_postgres.py backup_sqlite.sh run-backend.sh; do
+VM_SCRIPTS=(
+  setup-nginx-host.sh
+  vm-event-public-demo.sh
+  vm-event-restart.sh
+  vm-demo-env.sh
+  vm-demo-restart.sh
+  vm-demo-trim.sh
+  vm-vapt-restart.sh
+  verify-stack.sh
+  diagnose-demo-stack.sh
+  seed_demo_fleet.py
+  refresh_demo_fleet.py
+  migrate_sqlite_to_postgres.py
+  backup_sqlite.sh
+  run-backend.sh
+  vm-ensure-redis-cache.sh
+  vm-pin-postgres-env.sh
+  vm-postgres-autosetup.sh
+  vm-postgres-migrate.sh
+  vm-db-optimize.sh
+  vm-telemetry-trim.sh
+)
+for f in "${VM_SCRIPTS[@]}"; do
   [[ -f "$ROOT/scripts/$f" ]] && cp "$ROOT/scripts/$f" "$DEST/scripts/"
 done
-[[ -d "$ROOT/scripts/lib" ]] && rsync "${RSYNC_EX[@]}" "$ROOT/scripts/lib/" "$DEST/scripts/lib/"
+[[ -d "$ROOT/scripts/lib" ]] && rsync -a "${RSYNC_EX[@]}" "$ROOT/scripts/lib/" "$DEST/scripts/lib/"
+chmod +x "$DEST/scripts/"*.sh 2>/dev/null || true
+chmod +x "$DEST/scripts/"*.py 2>/dev/null || true
 
 for f in alembic.ini LICENSE .env.example; do
   [[ -f "$ROOT/$f" ]] && cp "$ROOT/$f" "$DEST/"
 done
+[[ -f "$ROOT/deployment/.env.vm.template" ]] && cp "$ROOT/deployment/.env.vm.template" "$DEST/.env.vm.template"
 
 cp "$ROOT/deployment/VM-README.md" "$DEST/README.md"
 cp "$ROOT/deployment/vm-setup.sh" "$DEST/setup.sh"
@@ -78,23 +108,29 @@ cat >"$DEST/VERSION.txt" <<EOF
 Q-TeleScope VM bundle
 Git: $REV
 Built: $(date -Iseconds)
+Stack: PostgreSQL + Redis (default); prebuilt UI; no source markdown/agents.
 EOF
 
-# Strip stray markdown / agent files
 find "$DEST" -type f \( -name 'SKILL.md' -o -name 'AGENTS.md' -o -name 'CLAUDE.md' \) -delete 2>/dev/null || true
 find "$DEST" -type d \( -name '.cursor' -o -name '.agents' -o -name 'graphify-out' \) -prune -exec rm -rf {} + 2>/dev/null || true
 
 python3 - "$STAGE/$NAME" "$OUT" <<'PY'
 import os, sys, zipfile
 src_root, out_path = sys.argv[1], sys.argv[2]
-skip_dirs = {".cursor", ".agents", ".planning", "graphify-out", "node_modules", ".venv", "venv", "__pycache__"}
+skip_dirs = {
+    ".cursor", ".agents", ".planning", "graphify-out", "node_modules", ".venv", "venv",
+    "__pycache__", "docs", "papers", "experiments", "tools", ".git",
+}
+skip_names = {"SKILL.md", "AGENTS.md", "CLAUDE.md", "VERIFICATION.md", "SKILL_CATALOG.md"}
 with zipfile.ZipFile(out_path, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
     for dirpath, dirnames, filenames in os.walk(src_root):
         dirnames[:] = [d for d in dirnames if d not in skip_dirs]
         for fn in filenames:
+            if fn in skip_names:
+                continue
             if fn.endswith((".md", ".MD")) and fn not in ("README.md",):
                 continue
-            if fn in ("SKILL.md", "AGENTS.md", "CLAUDE.md"):
+            if fn.endswith((".mdc", ".jsonl")) and "agent" in dirpath.lower():
                 continue
             full = os.path.join(dirpath, fn)
             arc = os.path.relpath(full, os.path.dirname(src_root))
@@ -104,3 +140,4 @@ PY
 rm -rf "$STAGE"
 echo "Created: $OUT"
 du -h "$OUT"
+ls -la "$OUT"
