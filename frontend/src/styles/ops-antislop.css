@@ -624,6 +624,18 @@ select.auth-field--invalid {
   color-scheme: dark;
 }
 
+/* Console selects — avoid transparent native menus flashing black */
+.main-content label.outline-field > select.input-control,
+.main-content .admin-access-card select.input-control {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.dark .main-content label.outline-field > select.input-control,
+.dark .main-content .admin-access-card select.input-control {
+  color-scheme: dark;
+}
+
 .auth-outline-field__control:focus,
 .auth-outline-field input:focus,
 .auth-outline-field select:focus {

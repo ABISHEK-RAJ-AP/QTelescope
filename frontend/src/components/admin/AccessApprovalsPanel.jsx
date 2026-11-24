@@ -97,32 +97,27 @@ function PendingCard({ user, roleOptions, canEdit, busy, onRole, onApprove, onRe
     setDraftRole(user.role || 'Operator');
   }, [user.role]);
 
-  const metaLine = [user.email, user.org].filter(Boolean).join(' · ');
+  const metaLine = [user.email, user.org].filter(Boolean).join(' · ') || user.username;
 
   return (
-    <article className="admin-access-card">
-      <header className="admin-access-card__head">
-        <div className="admin-access-card__identity">
-          <h4 className="admin-access-card__name">{user.full_name || user.username}</h4>
-          {metaLine ? (
-            <p className="admin-access-card__meta" title={metaLine}>{metaLine}</p>
-          ) : (
-            <p className="admin-access-card__meta">{user.username}</p>
-          )}
-        </div>
-        <span className="badge badge-warning">Pending approval</span>
-      </header>
+    <article className="admin-access-card admin-access-card--pending">
+      <h4 className="admin-access-card__name">{user.full_name || user.username}</h4>
+      <span className="badge badge-warning admin-access-card__badge">Pending approval</span>
+      <p className="admin-access-card__meta-line" title={metaLine}>{metaLine}</p>
       {user.created_at ? (
         <p className="admin-access-card__submitted">Submitted {formatISTTime(user.created_at)}</p>
-      ) : null}
+      ) : (
+        <p className="admin-access-card__submitted admin-access-card__submitted--empty" aria-hidden />
+      )}
       {canEdit ? (
-        <div className="admin-access-card__actions admin-access-card__actions--inline">
-          <label className="outline-field admin-access-card__role">
-            <span>Role</span>
+        <footer className="admin-access-card__footer">
+          <label className="admin-access-card__role-row">
+            <span className="admin-access-card__role-label">Role</span>
             <select
-              className="input-control"
+              className="input-control admin-access-card__role-select"
               value={draftRole}
               disabled={busy}
+              aria-label="Assign role before approval"
               onChange={(e) => onRole(user.username, e.target.value)}
             >
               {roleOptions.map((r) => (
@@ -140,7 +135,7 @@ function PendingCard({ user, roleOptions, canEdit, busy, onRole, onApprove, onRe
               Reject
             </button>
           </div>
-        </div>
+        </footer>
       ) : null}
     </article>
   );

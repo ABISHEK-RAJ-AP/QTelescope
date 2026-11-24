@@ -49,6 +49,7 @@ html.dark .qt-brand-lockup__img--dark {
   max-width: 240px;
   align-self: center;
   margin-inline: auto;
+  margin-bottom: 0.35rem;
 }
 
 .auth-cert-card__logo-mark {

@@ -437,6 +437,85 @@
   background: var(--bg-card-hover);
 }
 
+.admin-access-card--pending {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "name badge"
+    "meta meta"
+    "submitted submitted"
+    "footer footer";
+  gap: 4px 10px;
+  align-items: center;
+}
+
+.admin-access-card--pending .admin-access-card__name {
+  grid-area: name;
+  margin: 0;
+}
+
+.admin-access-card--pending .admin-access-card__badge {
+  grid-area: badge;
+  justify-self: end;
+  align-self: start;
+  white-space: nowrap;
+}
+
+.admin-access-card--pending .admin-access-card__meta-line {
+  grid-area: meta;
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.admin-access-card--pending .admin-access-card__submitted {
+  grid-area: submitted;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.admin-access-card--pending .admin-access-card__submitted--empty {
+  display: none;
+}
+
+.admin-access-card--pending .admin-access-card__footer {
+  grid-area: footer;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.admin-access-card__role-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.admin-access-card__role-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.admin-access-card__role-select {
+  flex: 1 1 10rem;
+  min-width: 9rem;
+  max-width: 16rem;
+}
+
 .admin-access-card__head {
   display: flex;
   justify-content: space-between;
@@ -458,35 +537,22 @@
   overflow-wrap: anywhere;
 }
 
-.admin-access-card__identity {
-  flex: 1;
-  min-width: 0;
-}
-
 .admin-access-card__actions {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.admin-access-card__actions--inline {
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 10px 12px;
-}
-
-.admin-access-card__actions--inline .admin-access-card__role {
-  flex: 1 1 11rem;
-  min-width: 9rem;
-}
-
-.admin-access-card__actions--inline .admin-access-card__btns {
-  margin-left: auto;
-}
-
 .admin-access-card__role {
   margin: 0;
+}
+
+.admin-access-card--pending .admin-access-card__btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
 }
 
 .admin-access-card__btns {
@@ -494,6 +560,22 @@
   flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+}
+
+@media (max-width: 520px) {
+  .admin-access-card--pending .admin-access-card__footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-access-card--pending .admin-access-card__btns {
+    margin-left: 0;
+    justify-content: flex-end;
+  }
+
+  .admin-access-card__role-select {
+    max-width: none;
+  }
 }
 
 .admin-access-invite__form {
