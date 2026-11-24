@@ -55,6 +55,15 @@ def registration_requires_admin_approval() -> bool:
     return False
 
 
+def org_has_console_accounts(org: str) -> bool:
+    """True when any user record already uses this organisation string (case-insensitive)."""
+    name = (org or "").strip()
+    if not name:
+        return False
+    key = name.casefold()
+    return any(existing.casefold() == key for existing in registered_organisation_names())
+
+
 def registered_organisation_names() -> List[str]:
     """Distinct org strings already present in the user directory (case-insensitive dedupe)."""
     from app.core import user_store

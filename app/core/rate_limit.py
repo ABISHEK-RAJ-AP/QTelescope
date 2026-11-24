@@ -33,10 +33,16 @@ def _limits() -> tuple[int, int]:
 
 
 def _client_key(request: Request) -> str:
-    # Never trust X-Forwarded-For / X-Real-IP here — clients can spoof them.
-    # Peer address comes from the TCP socket (or the reverse proxy's real client).
-    if request.client and request.client.host:
-        return request.client.host
+    # Default: socket peer only (anti-spoof when API is directly reachable).
+    peer = request.client.host if request.client and request.client.host else ""
+    if os.getenv("TRUSTED_PROXY_RATE_LIMIT", "").lower() in ("1", "true", "yes"):
+        # nginx sets X-Real-IP; honor only when uvicorn sees a local reverse proxy peer.
+        if peer in ("127.0.0.1", "::1", "localhost"):
+            real = (request.headers.get("x-real-ip") or "").strip()
+            if real:
+                return real
+    if peer:
+        return peer
     return "unknown"
 
 

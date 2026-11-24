@@ -12,6 +12,8 @@ echo "==> Frontend nginx (port ${NGINX_PORT:-4173})"
 FORCE_FREE_PORT=1 "${ROOT}/scripts/setup-nginx-host.sh"
 
 echo ""
+echo "Public event (register + onboarding, hardened): scripts/vm-event-public-demo.sh <https-origin>"
+echo ""
 echo "VAPT .env must include (edit then restart uvicorn):"
 echo "  ENVIRONMENT=production"
 echo "  ENABLE_MOCK_DATA=false"

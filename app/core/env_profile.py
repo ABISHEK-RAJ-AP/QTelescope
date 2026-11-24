@@ -23,3 +23,11 @@ def env_flag_prod_default_true(name: str) -> bool:
     if raw is None or str(raw).strip() == "":
         return is_production_profile()
     return str(raw).lower().strip() in ("1", "true", "yes", "on")
+
+
+def event_public_demo_enabled() -> bool:
+    """
+    Internet-facing event booth: production hardening + self-service register/onboarding.
+    Must be explicit — never implied by other flags.
+    """
+    return env_flag("EVENT_PUBLIC_DEMO", default=False)

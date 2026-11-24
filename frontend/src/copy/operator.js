@@ -53,11 +53,12 @@ export const COPY = {
     serviceUnavailable: 'Sign-in is temporarily unavailable. Try again in a moment.',
     captchaUnavailable: 'Could not load the security image. Try again.',
     signInDirectory: 'This deployment accepts organization directory credentials.',
-    registerSubtitle: 'Select organisation type, enter your details, then verify email.',
+    registerSubtitle:
+      'Register a new organisation on Q-TeleScope. You become the organisation administrator; invite operators and researchers after onboarding.',
     registerTypeAside:
-      'Select the organisation category that applies to you. Government and academic paths collect ministry, department, branch, and facility details in structured masters.',
-    registerOrgStepSubtitle: 'Complete the organisation masters for your selected category.',
-    registerAccountStepSubtitle: 'Username, email, and password for sign-in.',
+      'Select the organisation category that applies to you. Government and academic paths collect ministry, department, branch, and facility details in structured masters. If your organisation already uses Q-TeleScope, ask your administrator for an invitation instead of registering again.',
+    registerOrgStepSubtitle: 'Complete the organisation masters for your selected category (must be new to Q-TeleScope).',
+    registerAccountStepSubtitle: 'Organisation administrator account — username, email, and password.',
     registerOrgAside: 'Select ministry, department, branch, and facility for your category.',
     registerAccountAside: 'Create your sign-in credentials. We will send a verification code to your email.',
     registerOtpAside:

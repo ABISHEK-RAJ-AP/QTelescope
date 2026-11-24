@@ -62,9 +62,11 @@ def test_otp_round_trip_create_active_account(client):
 
     users = user_store.load_all_users()
     assert "otpuser1" in users
+    assert users["otpuser1"]["role"] == "OrgAdmin"
 
 
 def test_pending_admin_blocks_login(client, monkeypatch):
+    monkeypatch.setenv("ENABLE_MOCK_DATA", "false")
     monkeypatch.setenv("REGISTRATION_REQUIRES_ADMIN_APPROVAL", "true")
     cid, code = _captcha(client)
     payload = {

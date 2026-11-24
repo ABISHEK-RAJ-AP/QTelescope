@@ -49,6 +49,8 @@ What to use **on the VM/CI** vs defer. This app is **FastAPI + SQLAlchemy + Bear
 
 ```bash
 ./scripts/vm-update-from-git.sh
+# Public booth (register + onboarding):
+# ./scripts/vm-event-public-demo.sh 'https://YOUR_HOST'
 ./scripts/run-gitleaks.sh || true
 ./scripts/scan-default-secrets.sh
 ```

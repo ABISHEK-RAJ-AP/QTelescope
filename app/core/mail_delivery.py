@@ -1,4 +1,4 @@
-"""Password-reset email via stdlib SMTP (optional; required for prod delivery)."""
+"""Transactional email via stdlib SMTP (password reset + registration OTP)."""
 from __future__ import annotations
 
 import os
@@ -14,12 +14,16 @@ from app.core.config import settings
 _log = logging.getLogger("app.mail")
 
 
-def password_reset_smtp_ready() -> bool:
+def smtp_configured() -> bool:
     return bool((settings.SMTP_HOST or "").strip() and (settings.SMTP_FROM or "").strip())
 
 
+def password_reset_smtp_ready() -> bool:
+    return smtp_configured()
+
+
 def registration_smtp_ready() -> bool:
-    return password_reset_smtp_ready()
+    return smtp_configured()
 
 
 def registration_otp_delivery() -> str:
@@ -29,7 +33,6 @@ def registration_otp_delivery() -> str:
         return "screen"
     if mode == "email":
         return "email"
-    # Lab / demo: always show OTP in UI + toast — never pretend email was sent.
     if settings.ENABLE_MOCK_DATA:
         return "screen"
     return "email" if registration_smtp_ready() else "screen"
@@ -46,10 +49,34 @@ def build_reset_link(token: str) -> str:
     return f"{base}/reset-password?token={quote(token, safe='')}"
 
 
-def deliver_password_reset(*, username: str, to_email: str, token: str) -> Tuple[bool, Optional[str]]:
-    """Send reset mail. Returns (ok, error_message)."""
-    if not password_reset_smtp_ready():
+def _send_smtp_message(msg: EmailMessage) -> Tuple[bool, Optional[str]]:
+    if not smtp_configured():
         return False, "SMTP not configured"
+    host = settings.SMTP_HOST.strip()
+    port = int(settings.SMTP_PORT or 587)
+    user = (settings.SMTP_USER or "").strip()
+    password = settings.SMTP_PASSWORD or ""
+    use_tls = bool(settings.SMTP_USE_TLS)
+    try:
+        if use_tls and port == 465:
+            with smtplib.SMTP_SSL(host, port, context=ssl.create_default_context(), timeout=30) as smtp:
+                if user:
+                    smtp.login(user, password)
+                smtp.send_message(msg)
+        else:
+            with smtplib.SMTP(host, port, timeout=30) as smtp:
+                if use_tls:
+                    smtp.starttls(context=ssl.create_default_context())
+                if user:
+                    smtp.login(user, password)
+                smtp.send_message(msg)
+    except Exception as exc:
+        _log.warning("SMTP send failed: %s", exc)
+        return False, str(exc)
+    return True, None
+
+
+def deliver_password_reset(*, username: str, to_email: str, token: str) -> Tuple[bool, Optional[str]]:
     to_email = (to_email or "").strip()
     if not to_email:
         return False, "recipient email missing"
@@ -64,36 +91,13 @@ def deliver_password_reset(*, username: str, to_email: str, token: str) -> Tuple
         f"Open this link within 15 minutes:\n{link}\n\n"
         "If you did not request this, ignore this message."
     )
-
-    host = settings.SMTP_HOST.strip()
-    port = int(settings.SMTP_PORT or 587)
-    user = (settings.SMTP_USER or "").strip()
-    password = settings.SMTP_PASSWORD or ""
-    use_tls = bool(settings.SMTP_USE_TLS)
-
-    try:
-        if use_tls and port == 465:
-            with smtplib.SMTP_SSL(host, port, context=ssl.create_default_context(), timeout=30) as smtp:
-                if user:
-                    smtp.login(user, password)
-                smtp.send_message(msg)
-        else:
-            with smtplib.SMTP(host, port, timeout=30) as smtp:
-                if use_tls:
-                    smtp.starttls(context=ssl.create_default_context())
-                if user:
-                    smtp.login(user, password)
-                smtp.send_message(msg)
-    except Exception as exc:
-        _log.warning("password reset SMTP failed for %s: %s", username, exc)
-        return False, str(exc)
-    return True, None
+    ok, err = _send_smtp_message(msg)
+    if not ok:
+        _log.warning("password reset SMTP failed for %s: %s", username, err)
+    return ok, err
 
 
 def deliver_registration_otp(*, to_email: str, username: str, code: str, ttl_minutes: int) -> Tuple[bool, Optional[str]]:
-    """Send registration verification OTP. Returns (ok, error_message)."""
-    if not registration_smtp_ready():
-        return False, "SMTP not configured"
     to_email = (to_email or "").strip()
     if not to_email:
         return False, "recipient email missing"
@@ -103,32 +107,12 @@ def deliver_registration_otp(*, to_email: str, username: str, code: str, ttl_min
     msg["From"] = settings.SMTP_FROM.strip()
     msg["To"] = to_email
     msg.set_content(
-        f"Verification code for Q-TeleScope registration ({username}):\n\n"
+        f"Verification code for Q-TeleScope organisation registration ({username}):\n\n"
         f"  {code}\n\n"
         f"This code expires in {ttl_minutes} minutes.\n"
         "If you did not request console access, ignore this message."
     )
-
-    host = settings.SMTP_HOST.strip()
-    port = int(settings.SMTP_PORT or 587)
-    user = (settings.SMTP_USER or "").strip()
-    password = settings.SMTP_PASSWORD or ""
-    use_tls = bool(settings.SMTP_USE_TLS)
-
-    try:
-        if use_tls and port == 465:
-            with smtplib.SMTP_SSL(host, port, context=ssl.create_default_context(), timeout=30) as smtp:
-                if user:
-                    smtp.login(user, password)
-                smtp.send_message(msg)
-        else:
-            with smtplib.SMTP(host, port, timeout=30) as smtp:
-                if use_tls:
-                    smtp.starttls(context=ssl.create_default_context())
-                if user:
-                    smtp.login(user, password)
-                smtp.send_message(msg)
-    except Exception as exc:
-        _log.warning("registration OTP SMTP failed for %s: %s", username, exc)
-        return False, str(exc)
-    return True, None
+    ok, err = _send_smtp_message(msg)
+    if not ok:
+        _log.warning("registration OTP SMTP failed for %s: %s", username, err)
+    return ok, err

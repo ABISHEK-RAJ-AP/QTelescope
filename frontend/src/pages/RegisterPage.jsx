@@ -299,7 +299,6 @@ export function RegisterPage() {
         full_name: fullName.trim() || username.trim(),
         email: email.trim(),
         org: orgValue,
-        role: 'Operator',
         password,
         captcha_id: captchaId,
         captcha_code: captchaCode.trim(),

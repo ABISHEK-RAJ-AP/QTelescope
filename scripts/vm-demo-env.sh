@@ -3,6 +3,10 @@
 apply_vm_demo_env() {
   local ROOT="${1:?repo root}"
   local envf="${ROOT}/.env"
+  if grep -qE '^ENVIRONMENT=(prod|production)' "$envf" 2>/dev/null \
+    && ! grep -qE '^EVENT_PUBLIC_DEMO=true' "$envf" 2>/dev/null; then
+    echo "WARN: production .env + vm-demo-env uses default quantum2026 — use vm-event-public-demo.sh or VAPT checklist" >&2
+  fi
 
   upsert_env() {
     local key="$1" val="$2"
@@ -60,8 +64,25 @@ PY
     fi
   }
 
+  local event_mode=0
+  if grep -qE '^EVENT_PUBLIC_DEMO=(1|true|yes|on)$' "$envf" 2>/dev/null; then
+    event_mode=1
+  fi
+
   ensure_secret_key
   ensure_sqlite_if_no_postgres
+  if [[ "$event_mode" -eq 1 ]]; then
+  if [[ -f "${ROOT}/scripts/vm-ensure-redis-cache.sh" ]]; then
+    # shellcheck source=scripts/vm-ensure-redis-cache.sh
+    source "${ROOT}/scripts/vm-ensure-redis-cache.sh"
+    ensure_redis_cache "$ROOT"
+  else
+    upsert_env CACHE_ENABLED true
+    upsert_env REDIS_URL ""
+  fi
+    echo "EVENT_PUBLIC_DEMO: skipped lab bootstrap overrides (passwords/hybrid)" >&2
+    return 0
+  fi
   upsert_env ENABLE_MOCK_DATA true
   upsert_env BLOCK_DEFAULT_BOOTSTRAP_CREDENTIALS false
   # Hybrid demo: Rigetti QCS ISA on a timer; IBM/IonQ/C-DAC stay simulated.
@@ -72,6 +93,7 @@ PY
   upsert_env BOOTSTRAP_DISCOVERY_ON_EMPTY true
   upsert_env RIGETTI_ISA_CACHE_SECONDS 45
   upsert_env ALLOW_PUBLIC_REGISTRATION true
+  upsert_env REGISTRATION_OTP_DELIVERY screen
   if [[ -f "${ROOT}/scripts/vm-ensure-redis-cache.sh" ]]; then
     # shellcheck source=scripts/vm-ensure-redis-cache.sh
     source "${ROOT}/scripts/vm-ensure-redis-cache.sh"

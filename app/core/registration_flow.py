@@ -7,19 +7,18 @@ from fastapi import HTTPException
 
 from app.core.config import settings
 from app.core.identity import bound_password, normalize_email, normalize_username
-from app.core.self_registration import resolve_self_registration_role
+from app.core.self_registration import reject_client_requested_privileged_role, resolve_org_owner_registration_role
 from app.core import user_store
 
 
 def assert_org_open_for_self_registration(org: str) -> None:
     """Block when an organisation name already exists in the user directory."""
-    from app.core.registration_policy import registered_organisation_names
+    from app.core.registration_policy import org_has_console_accounts
 
     name = (org or "").strip()
     if not name:
         return
-    key = name.casefold()
-    if any(existing.casefold() == key for existing in registered_organisation_names()):
+    if org_has_console_accounts(name):
         raise HTTPException(
             status_code=409,
             detail=(
@@ -34,6 +33,7 @@ def validate_new_account_fields(
     username: str,
     email: str,
     password: str,
+    org: str,
     role: str | None,
 ) -> Tuple[str, str, str]:
     u = normalize_username(username)
@@ -41,13 +41,9 @@ def validate_new_account_fields(
     bound_password(password)
     if u in (settings.ADMIN_USERNAME, settings.USER_USERNAME, settings.SUPERADMIN_USERNAME):
         raise HTTPException(status_code=409, detail="That username is reserved.")
-    requested_role = (role or "").strip()
-    if requested_role in ("Admin", "SuperAdmin", "PlatformAdmin", "SecurityAdmin", "QuantumOpsAdmin", "OrgAdmin"):
-        raise HTTPException(
-            status_code=403,
-            detail="Administrator accounts cannot be self-registered. Ask your organisation admin to invite you.",
-        )
-    resolved = resolve_self_registration_role(role)
+    reject_client_requested_privileged_role(role)
+    org_name = (org or "").strip() or "C-DAC"
+    resolved = resolve_org_owner_registration_role(org=org_name)
     users = user_store.load_all_users()
     if u in users:
         raise HTTPException(status_code=409, detail="Username already registered.")

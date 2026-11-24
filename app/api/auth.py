@@ -283,12 +283,16 @@ def get_registration_options():
         registration_requires_admin_approval,
     )
 
+    from app.core.self_registration import SELF_REGISTER_ORG_OWNER_ROLE
+
     return {
         "allow_public_registration": public_registration_allowed(),
         "require_admin_approval": registration_requires_admin_approval(),
         "org_options": registration_org_options(),
         "registered_orgs": registered_organisation_names(),
         "otp_delivery": registration_otp_delivery(),
+        "self_registration_scope": "new_organisation_only",
+        "self_registration_role": SELF_REGISTER_ORG_OWNER_ROLE,
     }
 
 
@@ -386,17 +390,19 @@ def register_send_otp(req: RegisterRequest, request: Request):
     from app.core.registration_flow import assert_org_open_for_self_registration
 
     assert_org_open_for_self_registration((req.org or "").strip())
+    org_name = (req.org or "C-DAC").strip()
     username, email, role = validate_new_account_fields(
         username=req.username,
         email=req.email,
         password=req.password,
+        org=org_name,
         role=req.role,
     )
     payload = {
         "username": username,
         "email": email,
         "full_name": (req.full_name or username).strip(),
-        "org": (req.org or "C-DAC").strip(),
+        "org": org_name,
         "role": role,
         "password_hash": _hash_password(req.password),
     }
@@ -452,6 +458,11 @@ def register_confirm(body: RegisterConfirmRequest, request: Request):
     payload = consume_registration_otp(body.otp_session_id, body.otp_code)
     if not payload:
         raise HTTPException(status_code=400, detail="Verification code is invalid or expired.")
+    from app.core.registration_flow import assert_org_open_for_self_registration
+    from app.core.self_registration import resolve_org_owner_registration_role
+
+    org_name = (payload.get("org") or "C-DAC").strip()
+    assert_org_open_for_self_registration(org_name)
     username = payload["username"]
     pending = registration_requires_admin_approval()
     status = "pending_admin" if pending else "active"
@@ -459,8 +470,8 @@ def register_confirm(body: RegisterConfirmRequest, request: Request):
         username=username,
         email=payload["email"],
         full_name=payload.get("full_name") or username,
-        org=payload.get("org") or "C-DAC",
-        role=payload.get("role") or "Operator",
+        org=org_name,
+        role=resolve_org_owner_registration_role(org=org_name),
         password_hash=payload["password_hash"],
         account_status=status,
     )
