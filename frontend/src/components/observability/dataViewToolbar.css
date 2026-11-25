@@ -132,12 +132,26 @@
 
 .dvt-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr));
-  gap: 14px;
-  padding: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 16px;
+  padding: 16px;
   align-items: stretch;
   justify-content: start;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+@container dvt-panel (min-width: 72rem) {
+  .dvt-grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  }
+}
+
+@container dvt-panel (max-width: 36rem) {
+  .dvt-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .dvt-card {
   display: flex;
@@ -186,11 +200,13 @@
   flex: 1;
 }
 .dvt-card__title {
-  font-size: var(--font-size-card-title);
+  font-size: var(--font-size-card-title, 1rem);
   font-weight: var(--font-weight-bold);
   color: var(--text-primary);
   margin: 0;
-  overflow-wrap: anywhere;
+  line-height: 1.35;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 .dvt-card__meta {
   font-size: var(--font-size-helper);
@@ -251,7 +267,13 @@ button.dvt-card__title.tm-rowbtn:hover {
   text-decoration: underline;
 }
 
-.dvt-panel { padding: 0; overflow: hidden; }
+.dvt-panel {
+  padding: 0;
+  overflow: hidden;
+  min-width: 0;
+  container-type: inline-size;
+  container-name: dvt-panel;
+}
 .dvt-panel__title {
   margin: 0;
   padding: 14px 16px 0;

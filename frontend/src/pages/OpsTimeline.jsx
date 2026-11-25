@@ -23,6 +23,8 @@ import { dropAlertsCoveredByIncidents, sevRank, toMs } from './opsHelpers.js';
 import { SortableTh, ViewModeToggle } from '../components/observability/DataViewToolbar.jsx';
 import { ListPager } from '../components/observability/ListPager.jsx';
 import { sortCopy } from '../lib/sortCopy.js';
+import { backendNameForId, kindLabel, timelineEventHeadline } from '../lib/opsTimelineDisplay.js';
+import { OpsTimelineEventCard } from './OpsTimelineEventCard.jsx';
 import './OpsTimeline.css';
 
 const LIMIT = 120; // server cap 200; smaller = faster swim-lane chart
@@ -55,6 +57,16 @@ export const OpsTimeline = () => {
   const [sort, setSort] = useState({ key: 'at', dir: 'desc' });
   const [backends, setBackends] = useState([]);
   const [chartMount, setChartMount] = useState(false);
+  const [flippedIds, setFlippedIds] = useState(() => new Set());
+
+  const flipKey = (e) => `${e.kind}:${e.id}`;
+  const toggleFlip = (e) => setFlippedIds((prev) => {
+    const next = new Set(prev);
+    const k = flipKey(e);
+    if (next.has(k)) next.delete(k);
+    else next.add(k);
+    return next;
+  });
 
   const load = useCallback(({ force = false } = {}) => {
     const path = `/operations/timeline?limit=${LIMIT}`;
@@ -106,22 +118,26 @@ export const OpsTimeline = () => {
       let c = 0;
       if (sort.key === 'severity') c = sevRank(a.severity) - sevRank(b.severity);
       else if (sort.key === 'kind') c = String(a.kind).localeCompare(String(b.kind));
-      else if (sort.key === 'backend') c = String(a.backend_id || '').localeCompare(String(b.backend_id || ''));
+      else if (sort.key === 'backend') {
+        c = backendNameForId(a.backend_id, backends).localeCompare(backendNameForId(b.backend_id, backends));
+      }
       else c = (toMs(a.at) ?? 0) - (toMs(b.at) ?? 0);
       return c * mul;
     });
     return list;
-  }, [filtered, sort]);
+  }, [filtered, sort, backends]);
 
   const eventPages = Math.max(1, Math.ceil(sorted.length / ROWS));
   const eventPage = Math.min(page, eventPages);
   const pageEvents = sorted.slice((eventPage - 1) * ROWS, eventPage * ROWS);
 
+  const laneForEvent = useCallback((e) => `${backendNameForId(e.backend_id, backends)} · ${kindLabel(e.kind)}`, [backends]);
+
   // lanes = backend · kind; events at identical timestamp share a bucket (batch detections)
   const { lanes, buckets } = useMemo(() => {
     const map = new Map();
     filtered.forEach((e) => {
-      const lane = `${e.backend_id || 'fleet'} · ${e.kind.replace('_', ' ')}`;
+      const lane = laneForEvent(e);
       const key = `${lane}|${e.at}`;
       if (!map.has(key)) map.set(key, { key, lane, kind: e.kind, at: e.at, ms: toMs(e.at), items: [] });
       map.get(key).items.push(e);
@@ -131,7 +147,12 @@ export const OpsTimeline = () => {
       worst: x.items.toSorted((p, q) => sevRank(p.severity) - sevRank(q.severity))[0].severity,
     }));
     return { lanes: sortCopy([...new Set(b.map((x) => x.lane))]), buckets: b };
-  }, [filtered]);
+  }, [filtered, laneForEvent]);
+
+  const chartGridLeft = useMemo(() => {
+    const longest = lanes.reduce((m, l) => Math.max(m, String(l).length), 12);
+    return Math.min(280, Math.max(128, Math.ceil(longest * 7.2)));
+  }, [lanes]);
 
   const bucketByKey = useMemo(() => new Map(buckets.map((b) => [b.key, b])), [buckets]);
   const sel = selected ? bucketByKey.get(selected) : null;
@@ -149,17 +170,30 @@ export const OpsTimeline = () => {
     const sevColor = getSeverityChartColors();
     const sem = getChartSemanticColors();
     return {
-    grid: { left: 230, right: 28, top: 16, bottom: 56 },
+    grid: { left: chartGridLeft, right: 24, top: 20, bottom: 56, containLabel: false },
     tooltip: {
       ...baseTooltip(isDark), trigger: 'item',
       formatter: (p) => {
         const b = p.data.bucket;
-        return `<b>${b.lane}</b><br/>${formatIST(b.at)}<br/>${b.items.length} event(s) · worst ${b.worst}<br/><i>Click for details</i>`;
+        return `<b>${b.lane}</b><br/>${formatIST(b.at)} (IST)<br/>${b.items.length} event(s) · worst ${b.worst}<br/><i>Click for details</i>`;
       },
     },
-    dataZoom: [{ type: 'inside' }, { type: 'slider', height: 18, bottom: 8, textStyle: { color: t.textColor } }],
-    xAxis: { type: 'time', ...span, axisLabel: { color: t.textColor }, axisLine: { lineStyle: { color: t.axisLine } }, splitLine: { lineStyle: { color: t.splitColor } } },
-    yAxis: { type: 'category', data: lanes, inverse: true, axisLabel: { color: t.textColor, width: 210, overflow: 'truncate' }, axisLine: { lineStyle: { color: t.axisLine } }, splitLine: { show: true, lineStyle: { color: t.splitColor } } },
+    dataZoom: [{ type: 'inside' }, { type: 'slider', height: 20, bottom: 8, textStyle: { color: t.textColor, fontSize: 12 } }],
+    xAxis: {
+      type: 'time',
+      ...span,
+      axisLabel: { color: t.textColor, fontSize: 12, hideOverlap: true },
+      axisLine: { lineStyle: { color: t.axisLine } },
+      splitLine: { lineStyle: { color: t.splitColor } },
+    },
+    yAxis: {
+      type: 'category',
+      data: lanes,
+      inverse: true,
+      axisLabel: { color: t.textColor, width: chartGridLeft - 16, overflow: 'truncate', fontSize: 12, lineHeight: 16 },
+      axisLine: { lineStyle: { color: t.axisLine } },
+      splitLine: { show: true, lineStyle: { color: t.splitColor } },
+    },
     series: [{
       type: 'scatter',
       data: buckets.map((b) => ({
@@ -172,7 +206,7 @@ export const OpsTimeline = () => {
       markLine: atMs ? { silent: true, symbol: 'none', lineStyle: { color: sem.info, type: 'dashed' }, label: { formatter: 'focus', color: t.textColor }, data: [{ xAxis: atMs }] } : undefined,
     }],
   };
-  }, [buckets, lanes, selected, atMs, isDark, t, span]);
+  }, [buckets, lanes, selected, atMs, isDark, t, span, chartGridLeft]);
 
   const toggleKind = (k) => setKinds((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; });
   const clearAt = () => setSp((p) => { const n = new URLSearchParams(p); n.delete('at'); return n; }, { replace: true });
@@ -189,6 +223,12 @@ export const OpsTimeline = () => {
 
   const state = events.length === 0 ? 'empty' : filtered.length === 0 ? 'empty' : 'ready';
   const kindCounts = KINDS.map((k) => [k, events.filter((e) => e.kind === k).length]);
+  const countLabel = [
+    `${filtered.length} matching`,
+    `${events.length} loaded`,
+    ...(eventPages > 1 ? [`page ${eventPage} of ${eventPages}`] : []),
+  ].join(' · ');
+  const chartProvenance = `Swim-lane plots all ${filtered.length} matching events in the loaded window (up to ${LIMIT}). The list below shows ${ROWS} events per page. Event-type counts are for the loaded window, not the current filter.`;
 
   return (
     <div className="page-stack ops-tl">
@@ -200,7 +240,7 @@ export const OpsTimeline = () => {
         onSearchChange={setQuery}
         searchPlaceholder="Search title, id…"
         searchLabel="Search events"
-        count={`${filtered.length} of ${events.length} events`}
+        count={countLabel}
         actions={(
           <>
             {atMs && (
@@ -213,19 +253,19 @@ export const OpsTimeline = () => {
           </>
         )}
       >
-        <label className="ot-filter-field outline-field">
+        <label className="ot-filter-field ot-filter-field--backend outline-field">
           <span>Backend</span>
-          <select className="input-control" value={scopeBackend || ''} onChange={(e) => setBackend(e.target.value)} aria-label="Backend scope">
+          <select className="input-control ot-backend-select" value={scopeBackend || ''} onChange={(e) => setBackend(e.target.value)} aria-label="Backend scope">
             <option value="">All backends</option>
             {backends.map((b) => (
               <option key={b.backend_id} value={b.backend_id}>{b.backend_name || b.backend_id}</option>
             ))}
           </select>
         </label>
-        <div className="ot-kinds" role="group" aria-label="Event types">
+        <div className="ot-kinds" role="group" aria-label="Event types (counts in loaded window)">
           {kindCounts.map(([k, n]) => (
-            <button key={k} type="button" className="ot-chip" aria-pressed={kinds.has(k)} onClick={() => toggleKind(k)}>
-              <span className={`ot-glyph ot-glyph--${k}`} aria-hidden /> {k.replace('_', ' ')} ({n})
+            <button key={k} type="button" className="ot-chip" aria-pressed={kinds.has(k)} onClick={() => toggleKind(k)} title="Count in loaded window, not filtered">
+              <span className={`ot-glyph ot-glyph--${k}`} aria-hidden /> {kindLabel(k)} ({n})
             </button>
           ))}
         </div>
@@ -253,6 +293,7 @@ export const OpsTimeline = () => {
         help="One lane per backend and event type. Marker shape = type (circle alert, diamond incident, triangle collector failure); colour = worst severity in the marker; size = events at the same instant. Click a marker for details."
         sourceKind="live"
         asOf={lastRefresh?.toISOString()}
+        provenanceDetail={chartProvenance}
         state={state}
         emptyTitle={events.length === 0 ? 'Timeline empty' : 'No matching events'}
         emptyMessage={events.length === 0 ? 'No alerts, incidents, or collector events on record.' : 'Filters exclude all events. Reset filters to view all.'}
@@ -271,25 +312,21 @@ export const OpsTimeline = () => {
       </ChartPanel>
       <section className="card ot-table dvt-panel" aria-label="Events">
         {layout === 'grid' ? (
-          <div className="dvt-grid">
+          <div className="dvt-grid ot-events-grid">
             {sorted.length === 0 ? (
               <div style={{ gridColumn: '1 / -1', padding: '8px 14px' }}><TableEmpty as="block" title={events.length === 0 ? 'Timeline empty' : 'No matching events'} message={events.length === 0 ? 'Nothing recorded yet.' : 'Adjust filters.'} /></div>
             ) : pageEvents.map((e) => {
-              const key = `${e.backend_id || 'fleet'} · ${e.kind.replace('_', ' ')}|${e.at}`;
+              const key = `${laneForEvent(e)}|${e.at}`;
               return (
-                <article key={`${e.kind}-${e.id}`} className="dvt-card" data-selected={selected === key || undefined}>
-                  <header className="dvt-card__head">
-                    <div>
-                      <h4 className="dvt-card__title">{e.title || e.summary || e.kind}</h4>
-                      <p className="dvt-card__meta">{formatIST(e.at, false)} · {e.backend_id || 'fleet'}</p>
-                    </div>
-                    <SevBadge severity={e.severity} />
-                  </header>
-                  <p className="dvt-card__body">{e.kind.replace('_', ' ')}{e.status ? ` · ${e.status}` : ''}</p>
-                  <footer className="dvt-card__foot">
-                    <button type="button" className="btn btn-secondary btn--xs" onClick={() => setSelected(key)}>Details</button>
-                  </footer>
-                </article>
+                <OpsTimelineEventCard
+                  key={flipKey(e)}
+                  event={e}
+                  backends={backends}
+                  flipped={flippedIds.has(flipKey(e))}
+                  onFlip={() => toggleFlip(e)}
+                  onDetails={() => setSelected(key)}
+                  selected={selected === key}
+                />
               );
             })}
           </div>
@@ -311,14 +348,14 @@ export const OpsTimeline = () => {
                 {sorted.length === 0 ? (
                   <TableEmpty colSpan={7} title={events.length === 0 ? 'Timeline empty' : 'No matching events'} message={events.length === 0 ? 'Nothing recorded yet.' : 'Adjust filters.'} />
                 ) : pageEvents.map((e) => {
-                  const key = `${e.backend_id || 'fleet'} · ${e.kind.replace('_', ' ')}|${e.at}`;
+                  const key = `${laneForEvent(e)}|${e.at}`;
                   return (
                     <tr key={`${e.kind}-${e.id}`} className={selected === key ? 'ot-row--sel' : undefined}>
                       <td className="ot-nowrap">{formatIST(e.at, false)}</td>
-                      <td>{e.kind.replace('_', ' ')}</td>
+                      <td>{kindLabel(e.kind)}</td>
                       <td><SevBadge severity={e.severity} /></td>
-                      <td>{e.title || e.summary || 'N/A'}</td>
-                      <td>{e.backend_id || 'N/A'}</td>
+                      <td className="ot-title-cell">{timelineEventHeadline(e, backends)}</td>
+                      <td>{backendNameForId(e.backend_id, backends)}</td>
                       <td>{e.status ? <StatusBadge status={e.status} /> : 'N/A'}</td>
                       <td><button type="button" className="btn btn-secondary btn--xs" onClick={() => setSelected(key)}>Details</button></td>
                     </tr>
@@ -328,7 +365,12 @@ export const OpsTimeline = () => {
             </table>
           </div>
         )}
-        <ListPager page={eventPage} pages={eventPages} onPage={setPage} />
+        <div className="ot-pager-wrap">
+          {sorted.length > ROWS ? (
+            <p className="ot-pager-hint">{`Showing ${(eventPage - 1) * ROWS + 1}–${Math.min(eventPage * ROWS, sorted.length)} of ${sorted.length} matching events`}</p>
+          ) : null}
+          <ListPager page={eventPage} pages={eventPages} onPage={setPage} />
+        </div>
       </section>
 
       <DetailDrawer
@@ -347,7 +389,7 @@ export const OpsTimeline = () => {
                   return (
                     <li key={`${e.kind}-${e.id}`}>
                       <div className="ot-list__head"><SevBadge severity={e.severity} />{e.status && <StatusBadge status={e.status} />}</div>
-                      <div>{e.title}</div>
+                      <div>{timelineEventHeadline(e, backends)}</div>
                       <div className="ot-list__id">{e.id}</div>
                       {l && <button type="button" className="fs-link" onClick={() => nav(l.to)}>{l.label}</button>}
                     </li>
