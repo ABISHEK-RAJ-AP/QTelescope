@@ -279,37 +279,6 @@ button.bk-chip:focus-visible, .bk-link:focus-visible, .bk-th:focus-visible { out
   gap: 6px 8px;
   max-width: 100%;
 }
-.bk-name-cell__id { flex-shrink: 0; }
-
-.bk-id-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  width: 1.75rem;
-  min-width: 1.75rem;
-  min-height: 1.75rem;
-  padding: 0;
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  background: var(--bg-card-hover);
-  color: var(--text-muted);
-  font-size: var(--font-size-micro-label, 0.75rem);
-  font-weight: 600;
-  line-height: 1;
-  cursor: pointer;
-  flex-shrink: 0;
-  vertical-align: middle;
-}
-.bk-id-chip:hover,
-.bk-id-chip:focus-visible {
-  color: var(--accent-cyan);
-  border-color: color-mix(in srgb, var(--accent-cyan) 45%, var(--border-color));
-}
-.bk-id-chip:focus-visible {
-  outline: 2px solid var(--accent-cyan);
-  outline-offset: 2px;
-}
 .bk-tag--source {
   color: var(--text-secondary);
   border-style: dashed;
@@ -523,7 +492,6 @@ button.bk-chip:focus-visible, .bk-link:focus-visible, .bk-th:focus-visible { out
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.bk-card__id-chip { flex-shrink: 0; }
 .bk-card__tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
 .bk-tag {
   font-size: var(--font-size-micro-label, 0.75rem);

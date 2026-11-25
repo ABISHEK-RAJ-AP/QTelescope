@@ -7,13 +7,16 @@ Curated skills/rules for Cursor on this repo. Upstream clones live under `.vendo
 | Source | Path | Use when |
 | --- | --- | --- |
 | **Skill router** | `.cursor/rules/skill-router.mdc` | Always — pick the right skill before coding |
-| [Karpathy guidelines](https://github.com/forrestchang/andrej-karpathy-skills) | `.cursor/rules/karpathy-guidelines.mdc` | Always — think first, small diffs |
+| [Karpathy guidelines](https://github.com/forrestchang/andrej-karpathy-skills) | `.cursor/rules/karpathy-guidelines.mdc` + `.agents/skills/karpathy-guidelines/` | Always — think first, small diffs |
+| [condom](https://github.com/murphyaidanbusiness-ux/condom) | `.agents/skills/condom/` → `.cursor/skills/condom` | Pre-ship security + legal/compliance audit (vibecoded apps) |
+| [mattpocock/skills](https://github.com/mattpocock/skills) (39 skills) | `~/.cursor/skills/` (personal; vendor `.vendor/skills-upstream/mattpocock-skills`) | Engineering workflow: `tdd`, `triage`, `to-spec`, `code-review`, … — run `setup-matt-pocock-skills` once per repo |
 | [Dashboard design](https://github.com/abdiraimov-otabek/dashboard-design-skill) | `.cursor/skills/dashboard-design/` | KPIs, charts, filters, wordless ops dashboards |
 | [Awesome dashboard](https://github.com/shinwood/awesome-dashboard-skill) | `.cursor/skills/awesome-dashboard-skill/` | Single-file HTML/ECharts bento prototypes |
 | [Cloudflare security-audit](https://github.com/cloudflare/security-audit-skill) | `.cursor/skills/security-audit/` | Full security audit / pen-test |
 | [obra/superpowers](https://github.com/obra/superpowers) (subset) | `.cursor/skills/using-superpowers`, `test-driven-development`, `systematic-debugging`, `writing-plans`, `verification-before-completion` | Non-trivial features / debug |
 | [UI UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) | `.cursor/skills/ui-ux-pro-max/` | UI polish, design system, density |
 | [impeccable](https://github.com/pbakaus/impeccable) | `.agents/skills/impeccable` → `.cursor/skills/impeccable` | Operate/Persuade craft floor, critique/audit/polish |
+| [motion-design](https://github.com/LottieFiles/motion-design-skill) | `.agents/skills/motion-design` → `.cursor/skills/motion-design` | UI motion: timing, easing, choreography; refresh `./scripts/install-motion-design-skill.sh` |
 | [Anthropic frontend-design](https://github.com/anthropics/skills) | `.cursor/skills/frontend-design` | Distinctive new UI direction (pair with DESIGN.md) |
 | [interface-design](https://github.com/Dammyjay93/interface-design) | `.cursor/skills/interface-design` | Product/dashboard craft (not marketing) |
 | [responsive-craft](https://github.com/kylezantos/responsive-craft) | `.cursor/skills/responsive-craft` | Intrinsic → CQ → MQ responsive |
@@ -32,6 +35,8 @@ Curated skills/rules for Cursor on this repo. Upstream clones live under `.vendo
 | [brag](https://github.com/latent-spaces/brag) | `.cursor/skills/brag/` | Optional launch / promo video from repo |
 | [untangle-codebase](https://github.com/caldoai/skills/tree/main/skills/untangle-codebase) | `.cursor/skills/untangle-codebase/` | User-invoked whole-codebase structural refactor |
 | **RPH hunt kit** (`gtia_hunt_kit.zip` 2026-11-13) | `.cursor/skills/{claim-ladder,novelty-siege,simulation-validity,dedup-gate}/` + `.cursor/agents/paper-*` | Recombinant paper hunt; master `docs/PAPER_HUNT_MASTER_PROMPT.md` |
+| [Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify) | `.agents/skills/graphify/` → `.cursor/skills/graphify` | Architecture / call-flow questions — `graphify query` when `graphify-out/` exists; see root `AGENTS.md` |
+| [Modern Web Guidance](https://github.com/GoogleChrome/modern-web-guidance-src) | `.agents/skills/modern-web-guidance/` | Client HTML/CSS/JS — search/retrieve before polyfills; `legacy-scan` for deterministic legacy patterns. Install/update: `npx modern-web-guidance@latest install` · opt out telemetry: `DISABLE_TELEMETRY=1` |
 
 Full categorization (install vs defer: Lenis, whiteboard, taste-skill, EUI, …): [`SKILL_CATALOG.md`](./SKILL_CATALOG.md).
 
@@ -77,7 +82,27 @@ mkdir -p .vendor/skills-upstream
 git clone --depth 1 https://github.com/abdiraimov-otabek/dashboard-design-skill.git .vendor/skills-upstream/dashboard-design-skill
 git clone --depth 1 https://github.com/shinwood/awesome-dashboard-skill.git .vendor/skills-upstream/awesome-dashboard-skill
 git clone --depth 1 https://github.com/darkroomengineering/lenis.git .vendor/skills-upstream/lenis   # reference only
+git clone --depth 1 https://github.com/murphyaidanbusiness-ux/condom.git .vendor/skills-upstream/condom
+git clone --depth 1 https://github.com/mattpocock/skills.git .vendor/skills-upstream/mattpocock-skills
+git clone --depth 1 https://github.com/Graphify-Labs/graphify.git .vendor/skills-upstream/graphify
+./scripts/install-graphify-skill.sh && ./scripts/link-agent-skills-to-cursor.sh
 ./scripts/refresh-agent-skills.sh
+```
+
+### Graphify CLI (ponytail: optional until you build a graph)
+
+```bash
+# one of:
+uv tool install graphifyy
+# pip install graphifyy
+
+# first graph (code-only = AST, no API key):
+cd /path/to/Quantum_Monitoring-main && graphify . --no-viz   # or ask agent: /graphify .
+
+# later sessions: graphify update .   # incremental after edits
+
+# Full TeleScope stack (AST, merged query graph at repo root):
+./scripts/graphify-rebuild-all.sh
 ```
 
 ## P0 programme status (perf + security)

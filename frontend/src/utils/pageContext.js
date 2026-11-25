@@ -181,7 +181,7 @@ export function resolvePageContext(state) {
       breadcrumbs.push({ label: 'Account' });
       breadcrumbs.push({ label: 'Settings' });
       title = 'Account settings';
-      description = 'Profile, security, notifications, and workspace preferences.';
+      description = 'Manage your account and personalize your workspace.';
       break;
     case 'design':
       breadcrumbs.push({ label: 'Design gallery' });

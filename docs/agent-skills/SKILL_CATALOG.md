@@ -14,6 +14,7 @@ Verdict per upstream repo the team considered. **Install** = copied/symlinked un
 | [Dammyjay93/interface-design](https://github.com/Dammyjay93/interface-design) | **Install** | `.agents/skills/interface-design` | Product UI craft |
 | [kylezantos/responsive-craft](https://github.com/kylezantos/responsive-craft) | **Install** | `.agents/skills/responsive-craft` | Responsive audit/build |
 | [educlopez/ui-craft](https://github.com/educlopez/ui-craft) | **Install** | `.agents/skills/ui-craft` | Product craft restraint |
+| [LottieFiles/motion-design-skill](https://github.com/LottieFiles/motion-design-skill) | **Install** | `.agents/skills/motion-design` | Animations, transitions, micro-interactions; pair `impeccable` on `/app/*` (restraint) — [`install-motion-design-skill.sh`](../../scripts/install-motion-design-skill.sh) |
 | [dominikmartn/hue](https://github.com/dominikmartn/hue) | **Install** | `.agents/skills/hue` | Brand → design-skill generator |
 | [nateherkai/scroll-craft](https://github.com/nateherkai/scroll-craft) | **Install (marketing only)** | `.agents/skills/scroll-craft` | Scroll landings — never `/app/*` |
 | [alirezarezvani/claude-skills](https://github.com/alirezarezvani/claude-skills) `epic-design` | **Install (marketing only)** | `.agents/skills/epic-design` | Cinematic landings — never `/app/*` |
@@ -22,10 +23,13 @@ Verdict per upstream repo the team considered. **Install** = copied/symlinked un
 | [cloudflare/security-audit-skill](https://github.com/cloudflare/security-audit-skill) | **Install** (prior) | `.cursor/skills/security-audit/` | Security passes |
 | [latent-spaces/brag](https://github.com/latent-spaces/brag) | **Install** (prior) | `.cursor/skills/brag/` | Optional promo video |
 | [caldoai/skills](https://github.com/caldoai/skills) `untangle-codebase` | **Install** | `.cursor/skills/untangle-codebase/` | User-invoked structural refactor; ask Comments/Tests first |
-| Karpathy guidelines | **Rule** | `.cursor/rules/karpathy-guidelines.mdc` | Always |
+| Karpathy guidelines | **Rule + skill** | `.cursor/rules/karpathy-guidelines.mdc`, `.agents/skills/karpathy-guidelines/` | Always |
+| [murphyaidanbusiness-ux/condom](https://github.com/murphyaidanbusiness-ux/condom) | **Install** | `.agents/skills/condom/` | Pre-launch security/compliance on user's own app |
+| [mattpocock/skills](https://github.com/mattpocock/skills) | **Personal install** (39) | `~/.cursor/skills/<name>/`; vendor `.vendor/skills-upstream/mattpocock-skills/` | TDD, triage, specs, PR workflow — not committed in-repo |
 | Skill router | **Rule** | `.cursor/rules/skill-router.mdc` | Pick skills before coding |
 | [jakubkrehel/skills](https://github.com/jakubkrehel/skills) (interfaces.dev) | **Install** | `.cursor/skills/better-*`, `interface-review`, `explain-interface`, `build-design`, `break`, `state-machine`, `variant`, `teardown`, `afk` | Cross-discipline UI review; refresh `./scripts/install-interfaces-skills.sh` |
 | UX interaction laws (project) | **Install** | `.cursor/skills/ux-interaction-laws/` | HCI baseline on top of interfaces.dev — see table in SKILL.md |
+| [Graphify-Labs/graphify](https://github.com/Graphify-Labs/graphify) | **Install** (skill + vendor) | `.agents/skills/graphify/` · `.vendor/skills-upstream/graphify/` | Codebase knowledge graph — query before grep; `graphify-out/` gitignored — [`install-graphify-skill.sh`](../../scripts/install-graphify-skill.sh) |
 
 Details: [`INTERFACES_DEV.md`](./INTERFACES_DEV.md).
 

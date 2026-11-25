@@ -14,4 +14,9 @@ rm -rf "$ROOT/.cursor/skills/dashboard-design" "$ROOT/.cursor/skills/awesome-das
 cp -a "$UP/dashboard-design-skill/skills/dashboard-design" "$ROOT/.cursor/skills/dashboard-design"
 rsync -a --exclude='.git' "$UP/awesome-dashboard-skill/" "$ROOT/.cursor/skills/awesome-dashboard-skill/"
 
+if [[ -d "$UP/graphify/.git" ]]; then
+  git -C "$UP/graphify" pull --ff-only
+  "$ROOT/scripts/install-graphify-skill.sh"
+fi
+
 echo "OK: dashboard-design + awesome-dashboard-skill refreshed in .cursor/skills/"

@@ -11,6 +11,7 @@ export function EmptyState({
   variant = 'default',
   compact = false,
   align = 'center',
+  className: classNameProp,
 }) {
   const className = [
     'obs-empty',
@@ -18,6 +19,7 @@ export function EmptyState({
     variant === 'inline' ? 'obs-empty--inline' : '',
     compact ? 'obs-empty--compact' : '',
     align === 'start' ? 'obs-empty--align-start' : '',
+    classNameProp,
   ].filter(Boolean).join(' ');
 
   return (
@@ -36,7 +38,7 @@ export function EmptyState({
 const emptyInlineProps = (props) => ({
   variant: 'inline',
   compact: true,
-  align: 'start',
+  align: props.align ?? 'start',
   title: props.title,
   message: props.message,
   hint: props.hint,
@@ -51,8 +53,15 @@ export function TableEmpty({
   hint,
   action,
   as = 'row',
+  align = 'start',
+  centered = false,
 }) {
-  const body = <EmptyState {...emptyInlineProps({ title, message, hint, action })} />;
+  const body = (
+    <EmptyState
+      {...emptyInlineProps({ title, message, hint, action, align: centered ? 'center' : align })}
+      className={centered ? 'obs-empty--table-centered' : undefined}
+    />
+  );
 
   if (as === 'block') {
     return <div className="obs-table-empty-block">{body}</div>;

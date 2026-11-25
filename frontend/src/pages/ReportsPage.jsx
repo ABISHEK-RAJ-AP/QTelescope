@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Download, FileText, Copy, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { notifyError, notifySuccess } from '../lib/toast.js';
 import { unableToLoad } from '../constants/messages.js';
@@ -43,7 +44,7 @@ const REPORTS = [
 const FORMATS = [
   { id: 'csv', label: 'CSV', hint: 'Spreadsheet-ready' },
   { id: 'json', label: 'JSON', hint: 'Machine-readable' },
-  { id: 'html', label: 'HTML', hint: 'Printable header/footer + charts' },
+  { id: 'html', label: 'HTML', hint: 'Print layout with header, footer, and charts' },
 ];
 
 const kb = (n) => (n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} KB`);
@@ -256,28 +257,30 @@ export const ReportsPage = () => {
 
       <section className="card rp-card" aria-labelledby="rp-ev-h" data-tour="page-evidence">
         <h3 id="rp-ev-h" className="rp-h">Evidence snapshots</h3>
-        <div className="rp-desc-block">
+        <div className="rp-desc-block rp-evidence-intro">
           <p className="rp-desc rp-desc--compact">
-            Tamper-evident ZIP bundles include a manifest and SHA-256 checksums for the package and manifest. Verify downloads before archival.
+            Generate tamper-evident evidence bundles with SHA-256 checksums for the package and manifest. Verify downloads before archival.
           </p>
           <p className="rp-desc rp-desc--compact rp-desc--secondary">
-            Snapshots remain on the server after API restarts. JSON environment import is under Administration → Environment.
+            Snapshots persist across API restarts. JSON environment import is under{' '}
+            <Link to="/app/resources/environment" className="rp-inline-link">Resources → Environment</Link>.
           </p>
         </div>
-        <div className="rp-snaprow">
+        <div className="rp-snap-form">
           <label className="rp-label">Scope
             <select className="input-control" value={snapScope} onChange={(e) => setSnapScope(e.target.value)}>
               <option value="">Fleet (all backends)</option>
               {backends.map((b) => <option key={b.backend_id} value={b.backend_id}>{b.backend_name || b.backend_id}</option>)}
             </select>
           </label>
-          <label className="rp-label rp-grow">Label (optional)
+          <label className="rp-label">Label (optional)
             <input className="input-control" value={snapLabel} onChange={(e) => setSnapLabel(e.target.value)} placeholder="e.g. Pre-maintenance state" />
           </label>
-          <button type="button" className="btn btn-primary" disabled={snapBusy} onClick={createSnapshot}>
+          <button type="button" className="btn btn-primary rp-snap-submit" disabled={snapBusy} onClick={createSnapshot}>
             {snapBusy ? <><Loader2 size={14} className="rp-spin" /> Building…</> : 'Generate snapshot'}
           </button>
         </div>
+        <div className="rp-table-shell">
         <div className="table-container">
           <table className="custom-table">
             <thead><tr><th>Created (IST)</th><th>Label</th><th>Scope</th><th>Period</th><th>By</th><th>Manifest SHA-256</th><th>Package SHA-256</th><th>Actions</th></tr></thead>
@@ -285,7 +288,12 @@ export const ReportsPage = () => {
               {snapshots == null ? (
                 <TableEmpty colSpan={8} title="History unavailable" message={`${unableToLoad('evidence history', 'Use Refresh.')}`} />
               ) : snapshots.length === 0 ? (
-                <TableEmpty colSpan={8} title="No snapshots" message="Generate a snapshot above; entries appear here with checksums." />
+                <TableEmpty
+                  colSpan={8}
+                  centered
+                  title="No snapshots yet"
+                  message="Generate your first evidence snapshot to view and verify its checksums here."
+                />
               ) : snapshots.map((s) => (
                 <tr key={s.snapshot_id}>
                   <td className="rp-nowrap">{formatIST(s.created_at, false)}</td>
@@ -303,6 +311,7 @@ export const ReportsPage = () => {
               ))}
             </tbody>
           </table>
+        </div>
         </div>
       </section>
 

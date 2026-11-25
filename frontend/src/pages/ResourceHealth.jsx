@@ -259,7 +259,7 @@ export const ResourceHealth = () => {
     const pts = (s) => qubits.filter((q) => q.state === s && q.t1 > 0 && q.readout_error != null)
       .map((q) => ({ value: [q.t1, q.readout_error], qubit: q.qubit_index, state: q.state, status: q.status }));
     return {
-      grid: { left: 56, right: 16, top: 28, bottom: 40 },
+      grid: { left: 48, right: 12, top: 36, bottom: 36, containLabel: true },
       legend: { data: ['GREEN', 'YELLOW', 'RED'], textStyle: { color: th.textColor }, top: 0 },
       tooltip: itemTooltip(resolved === 'dark', (p) => formatQubitHealthTooltip(
         { qubit_index: p.data.qubit, state: p.data.state, value: p.value },
@@ -294,9 +294,9 @@ export const ResourceHealth = () => {
     const releasing = q.status === 'QUARANTINED';
     if (releasing) {
       setConfirmDlg({
-        title: `Release Q${q.qubit_index}?`,
-        body: `Clears advisory quarantine on ${active.backend_id}. Platform DB only.`,
-        confirm: 'Release quarantine',
+        title: `Release advisory quarantine · Q${q.qubit_index}?`,
+        body: `Clears the advisory quarantine for this backend (${active.backend_id}) in the platform database only. Vendor schedulers and hardware routing are unchanged.`,
+        confirm: 'Release advisory quarantine',
         onConfirm: async () => {
           setBusy(true);
           try { await api.releaseQubit(active.backend_id, q.qubit_index); load(); selectQubit(q.qubit_index); } finally { setBusy(false); setConfirmDlg(null); }
@@ -305,9 +305,9 @@ export const ResourceHealth = () => {
       return;
     }
     setConfirmDlg({
-      title: `Quarantine Q${q.qubit_index}?`,
-      body: `Advisory quarantine on ${active.backend_id}. Platform DB only — does not change the vendor scheduler.`,
-      confirm: 'Quarantine',
+      title: `Advisory quarantine · Q${q.qubit_index}?`,
+      body: `Records an advisory quarantine for this backend (${active.backend_id}) in the platform database only. Vendor schedulers and hardware routing are unchanged.`,
+      confirm: 'Apply advisory quarantine',
       danger: true,
       onConfirm: async () => {
         setBusy(true);

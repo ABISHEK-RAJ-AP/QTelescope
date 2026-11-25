@@ -6,7 +6,7 @@ import { PublicMarketingFooter } from '@/components/marketing/PublicMarketingFoo
 import { useTheme } from '@/components/ui/ThemeProvider';
 import { QtTeleScopeMark } from '@/components/brand/QtTeleScopeMark.jsx';
 
-export const STEP_LABELS = ['Overview', 'Connect', 'Inventory', 'Console'];
+export const STEP_LABELS = ['Overview', 'Connect', 'Discover', 'Launch'];
 export const STEP_IDS = ['welcome', 'connect', 'analyze', 'features'];
 
 export function OnboardingMarketingHeader({ currentUser, onExit, stepIndex, onStepChange, maxReachableIndex }) {
@@ -52,6 +52,7 @@ export function OnboardingMarketingHeader({ currentUser, onExit, stepIndex, onSt
         </div>
       </div>
 
+      <div className="onboarding-stepper-wrap">
       <ol className="onboarding-dot-stepper" aria-label="Setup steps">
         {STEP_LABELS.map((label, i) => {
           const active = i === stepIndex;
@@ -78,6 +79,7 @@ export function OnboardingMarketingHeader({ currentUser, onExit, stepIndex, onSt
           );
         })}
       </ol>
+      </div>
     </header>
   );
 }
@@ -85,7 +87,7 @@ export function OnboardingMarketingHeader({ currentUser, onExit, stepIndex, onSt
 export function OnboardingShell({ children, footer, currentUser, onExit, stepIndex, onStepChange, maxReachableIndex }) {
   return (
     <div className="onboarding-shell onboarding-shell--marketing relative flex min-h-dvh flex-col text-neutral-900 dark:text-neutral-100">
-      <QuantumBackground />
+      <QuantumBackground className="quantum-bg--onboarding" />
       <OnboardingMarketingHeader
         currentUser={currentUser}
         onExit={onExit}

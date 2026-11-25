@@ -17,3 +17,10 @@ def index_exists(name: str) -> bool:
             if idx.get("name") == name:
                 return True
     return False
+
+
+def drop_column_server_default(table: str, column: str) -> None:
+    """Remove a column default after backfill. SQLite has no ALTER COLUMN DROP DEFAULT."""
+    if op.get_bind().dialect.name == "sqlite":
+        return
+    op.alter_column(table, column, server_default=None)

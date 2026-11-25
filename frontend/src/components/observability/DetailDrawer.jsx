@@ -6,6 +6,7 @@ import { X } from 'lucide-react';
 export function DetailDrawer({
   open,
   title,
+  titleTooltip,
   subtitle,
   headerAside,
   onClose,
@@ -65,7 +66,7 @@ export function DetailDrawer({
         <header className="detail-drawer__head">
           <div className="detail-drawer__head-row">
             <div className="detail-drawer__titles">
-              <h2 id="detail-drawer-title" className="detail-drawer__title">{title}</h2>
+              <h2 id="detail-drawer-title" className="detail-drawer__title" title={titleTooltip || undefined}>{title}</h2>
               {subtitle ? <p className="detail-drawer__subtitle">{subtitle}</p> : null}
             </div>
             {headerAside ? <div className="detail-drawer__aside">{headerAside}</div> : null}

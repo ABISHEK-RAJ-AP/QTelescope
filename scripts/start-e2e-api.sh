@@ -10,4 +10,4 @@ export PERSIST_API_SESSIONS=true
 export REQUIRE_API_AUTH=true
 export ENFORCE_RBAC=true
 export PYTHONPATH=.
-exec python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+exec "${PYTHON:-python3}" -m uvicorn app.main:app --host 127.0.0.1 --port 8000

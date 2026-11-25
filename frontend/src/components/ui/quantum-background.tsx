@@ -55,10 +55,18 @@ export function QuantumBackground({ className = "" }: QuantumBackgroundProps) {
             ctx.scale(dpr, dpr);
         };
 
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const isOnboardingBg = className.includes("quantum-bg--onboarding");
+
         const initParticles = () => {
             particles.length = 0;
             // Scale particle density with screen area: generous density for 14" laptop up to 4K
-            const targetCount = Math.max(300, Math.min(500, Math.floor((width * height) / 4000)));
+            const areaFactor = Math.floor((width * height) / 4000);
+            const targetCount = reduceMotion
+                ? Math.min(60, areaFactor)
+                : isOnboardingBg
+                    ? Math.max(140, Math.min(260, areaFactor))
+                    : Math.max(300, Math.min(500, areaFactor));
 
             for (let i = 0; i < targetCount; i++) {
                 const x = Math.random() * width;
@@ -99,7 +107,7 @@ export function QuantumBackground({ className = "" }: QuantumBackgroundProps) {
         window.addEventListener("mousemove", onMouseMove, { passive: true });
         window.addEventListener("mouseleave", onMouseLeave);
 
-        const loop = () => {
+        const drawFrame = (animate: boolean) => {
             ctx.clearRect(0, 0, width, height);
 
             const isDark = document.documentElement.classList.contains("dark");
@@ -112,22 +120,24 @@ export function QuantumBackground({ className = "" }: QuantumBackgroundProps) {
             for (let i = 0; i < particles.length; i++) {
                 const p = particles[i];
 
-                p.x += p.vx;
-                p.y += p.vy;
+                if (animate) {
+                    p.x += p.vx;
+                    p.y += p.vy;
 
-                // Bounce smoothly off viewport edges
-                if (p.x < 0 || p.x > width) p.vx *= -1;
-                if (p.y < 0 || p.y > height) p.vy *= -1;
+                    // Bounce smoothly off viewport edges
+                    if (p.x < 0 || p.x > width) p.vx *= -1;
+                    if (p.y < 0 || p.y > height) p.vy *= -1;
 
-                // Mouse interactivity: gentle elastic repulsion
-                const dx = p.x - pointer.x;
-                const dy = p.y - pointer.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
+                    // Mouse interactivity: gentle elastic repulsion
+                    const dx = p.x - pointer.x;
+                    const dy = p.y - pointer.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
 
-                if (dist < pointer.radius && dist > 0) {
-                    const force = (pointer.radius - dist) / pointer.radius;
-                    p.x += (dx / dist) * force * 3.5;
-                    p.y += (dy / dist) * force * 3.5;
+                    if (dist < pointer.radius && dist > 0) {
+                        const force = (pointer.radius - dist) / pointer.radius;
+                        p.x += (dx / dist) * force * 3.5;
+                        p.y += (dy / dist) * force * 3.5;
+                    }
                 }
 
                 // Particle color based on theme
@@ -165,10 +175,18 @@ export function QuantumBackground({ className = "" }: QuantumBackgroundProps) {
                 }
             }
 
+        };
+
+        const loop = () => {
+            drawFrame(true);
             animId = requestAnimationFrame(loop);
         };
 
-        loop();
+        if (reduceMotion) {
+            drawFrame(false);
+        } else {
+            loop();
+        }
 
         return () => {
             cancelAnimationFrame(animId);
@@ -176,7 +194,7 @@ export function QuantumBackground({ className = "" }: QuantumBackgroundProps) {
             window.removeEventListener("mousemove", onMouseMove);
             window.removeEventListener("mouseleave", onMouseLeave);
         };
-    }, []);
+    }, [className]);
 
     return (
         <canvas

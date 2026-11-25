@@ -51,7 +51,7 @@ import { ProductTour } from './components/onboarding/ProductTour.jsx';
 import { ConfirmDialog } from './components/observability/ConfirmDialog.jsx';
 import { QtQuickActionDock } from './components/quick-actions/QtQuickActionDock.jsx';
 import { OperatorNoticeBell } from './components/shell/OperatorNoticeBell.jsx';
-import { DENSITY_EVENT, DENSITY_KEY, readDensity } from './utils/uiPreferences.js';
+import { DENSITY_EVENT, DENSITY_KEY, readDensity, writeDensity } from './utils/uiPreferences.js';
 import { OnScreenKeyboard } from './components/shell/OnScreenKeyboard.jsx';
 import { filterConsoleTourSteps } from './lib/consoleTour.js';
 import { consumeConsoleTourPending, shouldRunOnboarding } from './lib/onboardingState.js';
@@ -63,6 +63,7 @@ import { COPY } from './copy/operator.js';
 import { AccessDenied, ConsoleErrorBoundary, NotFoundPage } from './components/shell/RouteStatus.jsx';
 import { QtFilmReadyWatcher } from './components/shell/QtFilmReadyWatcher.jsx';
 import { landingPathForRole } from './lib/permissions.js';
+import { cacheWorkspacePrefs, readCachedAlertsView, readCachedLandingPath } from './lib/userLandingPrefs.js';
 import { resolveDefaultBackendId, backendExists } from './lib/defaultBackend.js';
 
 function skeletonFor(topic, backendSubTab) {
@@ -115,7 +116,8 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
   const [telemetrySubTab, setTelemetrySubTab] = useState('live');
   const [executionSubTab, setExecutionSubTab] = useState('jobs');
   const [resourceSubTab, setResourceSubTab] = useState('health');
-  const [alertsView, setAlertsView] = useState('alerts');
+  const [alertsView, setAlertsView] = useState(() => readCachedAlertsView());
+  const [consoleHomePath, setConsoleHomePath] = useState('/app/overview');
   const [operationsSubTab, setOperationsSubTab] = useState('centre');
   const [investigateSubTab, setInvestigateSubTab] = useState('timeline');
   const [adminSubTab, setAdminSubTab] = useState('hub');
@@ -207,6 +209,29 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
     }
   }, [currentUser?.username]);
 
+  useEffect(() => {
+    if (!currentUser?.username) return undefined;
+    let cancelled = false;
+    const fallback = landingPathForRole(currentUser?.role) || '/app/overview';
+    setConsoleHomePath(readCachedLandingPath(fallback));
+    api.getUserPreferences()
+      .then((p) => {
+        if (cancelled) return;
+        cacheWorkspacePrefs(p || {});
+        setConsoleHomePath(readCachedLandingPath(fallback));
+        const av = p?.default_alerts_view;
+        if (av === 'incidents' || av === 'alerts') setAlertsView(av);
+        if (p?.theme === 'light' || p?.theme === 'dark' || p?.theme === 'system') {
+          setTheme(p.theme);
+        }
+        if (p?.display_density === 'compact' || p?.display_density === 'comfortable') {
+          writeDensity(p.display_density);
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [currentUser?.username, currentUser?.role, setTheme]);
+
   const navStateRef = useRef({
     mainTopic,
     backendSubTab,
@@ -262,7 +287,10 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
     setTelemetrySubTab(parsed.telemetrySubTab);
     setExecutionSubTab(parsed.executionSubTab);
     setResourceSubTab(parsed.resourceSubTab);
-    setAlertsView(parsed.alertsView);
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    const bareAlertsRoute =
+      parsed.mainTopic === 'alerts' && pathParts.length === 2 && pathParts[1] === 'alerts';
+    setAlertsView(bareAlertsRoute ? readCachedAlertsView() : parsed.alertsView);
     setOperationsSubTab(parsed.operationsSubTab);
     setInvestigateSubTab(parsed.investigateSubTab);
     setAdminSubTab(parsed.adminSubTab);
@@ -791,7 +819,7 @@ function AppShell({ currentUser, onLogout, onUserUpdate, sessionBooting = false 
         }}
       >
         <Link
-          to={landingPathForRole(currentUser?.role) || '/app/overview'}
+          to={consoleHomePath}
           className="sidebar-header"
           title="Console home"
           aria-label="Console home"

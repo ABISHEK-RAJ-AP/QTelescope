@@ -20,7 +20,7 @@ def test_onboarding_drops_signal_map_step():
     assert "Signal map" not in flow
     assert "Signal map" not in chrome
     assert "onboarding-analysis__orb" not in flow
-    assert "Skip keys" in flow
+    assert "Skip for now" in flow
 
 
 def test_register_marks_onboarding_pending():

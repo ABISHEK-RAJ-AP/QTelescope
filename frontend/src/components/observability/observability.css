@@ -123,10 +123,6 @@
   line-height: var(--line-height-heading, 1.25);
 }
 
-.page-header__id-chip {
-  flex-shrink: 0;
-}
-
 .page-header__desc {
   margin: 4px 0 0;
   font-size: var(--font-size-helper);
@@ -799,6 +795,25 @@ label.outline-field.context-bar__backend-field {
   padding: 12px 14px;
   width: 100%;
   box-sizing: border-box;
+}
+
+.obs-empty--table-centered {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  width: 100%;
+  padding: 32px 24px;
+  box-sizing: border-box;
+}
+
+.obs-empty--table-centered .obs-empty__text {
+  align-items: center;
+  text-align: center;
+}
+
+.obs-table-empty-row:has(.obs-empty--table-centered) td {
+  padding: 0 !important;
 }
 
 /* Detail modal (centered; legacy class names detail-drawer*) */

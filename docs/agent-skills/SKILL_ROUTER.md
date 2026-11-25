@@ -13,7 +13,9 @@ Before non-trivial implementation, **read and follow** the matching skill under 
 | --- | --- | --- |
 | Always | Any change | `.cursor/rules/karpathy-guidelines.mdc` — assumptions, smallest diff, verify |
 | Efficiency | Any feature | `using-superpowers` — workflow; `writing-plans` if multi-step |
+| Codebase map / architecture / call flow / cross-module trace | `graphify-out/graph.json` exists, or user `/graphify`, or "how does X connect to Y?" | `graphify` — **query first** (`graphify query`); build with `/graphify .` once; then `graphify update .` after code edits (AST, ponytail) |
 | Frontend UI, density, a11y, ops chrome | `frontend/**`, observability components | **Operate stack:** `impeccable` (Operate mode + craft-floor) · `interface-design` · `ui-ux-pro-max` (search) · `responsive-craft` · `ux-interaction-laws` · `mounir-ux-website` · `better-*` · **antislop** + `antislop-ui` + `docs/product/DESIGN.md` (DESIGN wins over skill palette guesses) |
+| HTML/CSS/client JS (platform APIs, a11y, perf) | modals, forms, layout, CWV, legacy JS patterns | `modern-web-guidance` — `npx modern-web-guidance@latest search/retrieve` before ad-hoc libs; `legacy-scan frontend --json` for audits |
 | New distinctive surface / aesthetic direction | greenfield page, visual world | `frontend-design` then `impeccable`; keep IBM Plex + cyan unless redesigning DESIGN.md |
 | Product UI craft (dashboards, settings, tools) | `/app/*` polish / hierarchy | `interface-design` + `ui-craft` (ops restraint — no marketing chrome) |
 | Responsive / breakpoints / sticky shell | mobile nav, tables, clamp, container queries | `responsive-craft` (intrinsic → CQ → MQ) |

@@ -20,6 +20,7 @@ import {
 } from '../lib/permissions.js';
 import { ListPager } from '../components/observability/ListPager.jsx';
 import { summarizeOperatorError } from '../utils/operatorFault.js';
+import { notifyError, notifySuccess } from '../lib/toast.js';
 import './AdministrationPage.css';
 
 const TEST_RULE_ID = /^e2e_rule_/i;
@@ -64,6 +65,12 @@ function Notice({ note }) {
   return <div className={`admin-notice admin-notice--${note.type}`} role={note.type === 'error' ? 'alert' : 'status'}>{note.text}</div>;
 }
 
+function adminToast(note) {
+  if (!note?.text) return;
+  if (note.type === 'error') notifyError(note.text);
+  else notifySuccess(note.text);
+}
+
 function mqttBadgeClass(status) {
   if (status === 'LIVE' || status === 'CONNECTING') return 'badge-online';
   if (status === 'DISABLED' || status === 'NEEDS_CLIENT') return 'badge-info';
@@ -74,7 +81,7 @@ function mqttBadgeClass(status) {
 function Integrations({ providers, health, verification, setVerification, canEdit, reload, navigate }) {
   const [drafts, setDrafts] = useState({});
   const [reveal, setReveal] = useState({});
-  const [fb, setFb] = useState({});
+  const [savingId, setSavingId] = useState(null);
   const [verifying, setVerifying] = useState(false);
   const [discovering, setDiscovering] = useState(false);
   const [discovery, setDiscovery] = useState(null);
@@ -92,15 +99,31 @@ function Integrations({ providers, health, verification, setVerification, canEdi
 
   const runVerify = async () => {
     setVerifying(true);
-    try { setVerification((await api.getAdapterVerification()).results || []); setFb((f) => ({ ...f, _v: { type: 'success', text: 'Verification complete.' } })); }
-    catch (e) { setFb((f) => ({ ...f, _v: { type: 'error', text: `Verification failed: ${errText(e)}` } })); }
-    finally { setVerifying(false); }
+    try {
+      setVerification((await api.getAdapterVerification()).results || []);
+      adminToast({ type: 'success', text: 'Verification complete.' });
+    } catch (e) {
+      adminToast({ type: 'error', text: `Verification failed: ${errText(e)}` });
+    } finally {
+      setVerifying(false);
+    }
   };
   const runDiscovery = async () => {
-    setDiscovering(true); setDiscovery(null);
-    try { setDiscovery(await api.triggerAutoDiscovery()); await reload(); }
-    catch (e) { setDiscovery({ error: errText(e) }); }
-    finally { setDiscovering(false); }
+    setDiscovering(true);
+    setDiscovery(null);
+    try {
+      const d = await api.triggerAutoDiscovery();
+      setDiscovery(d);
+      adminToast({
+        type: 'success',
+        text: `Auto-discovery finished — ${d?.total_backends_discovered ?? 0} backend(s) synchronized.`,
+      });
+      await reload();
+    } catch (e) {
+      adminToast({ type: 'error', text: `Discovery failed: ${errText(e)}` });
+    } finally {
+      setDiscovering(false);
+    }
   };
 
   const fieldVal = (p, f) => {
@@ -130,21 +153,24 @@ function Integrations({ providers, health, verification, setVerification, canEdi
     return e;
   };
   const cancel = (p) => setDrafts((d) => { const n = { ...d }; delete n[p.id]; return n; });
+
   const save = async (p) => {
     const d = drafts[p.id] || {};
     setConfirm(null);
-    setFb((f) => ({ ...f, [p.id]: { type: 'info', text: 'Saving…' } }));
+    setSavingId(p.id);
     try {
       const res = await api.saveCredentials(p.id, {
         token: d.token || undefined,
         endpoint_url: d.endpoint_url || p.endpoint_url || p.public_fields?.endpoint_url || undefined,
         extra: d.extra,
       });
-      cancel(p); // drop secret from memory
-      setFb((f) => ({ ...f, [p.id]: { type: 'success', text: res.message || 'Saved.' } }));
+      cancel(p);
+      adminToast({ type: 'success', text: res.message || 'Credentials saved.' });
       await reload();
     } catch (e) {
-      setFb((f) => ({ ...f, [p.id]: { type: 'error', text: errText(e) } }));
+      adminToast({ type: 'error', text: errText(e) });
+    } finally {
+      setSavingId(null);
     }
   };
 
@@ -180,11 +206,7 @@ function Integrations({ providers, health, verification, setVerification, canEdi
             </button>
           </div>
         </div>
-        <Notice note={fb._v} />
-        {discovery && (
-          discovery.error
-            ? <Notice note={{ type: 'error', text: `Discovery failed: ${discovery.error}` }} />
-            : (
+        {discovery && !discovery.error && (
               <div className="admin-discovery-results">
                 <div className="admin-discovery-status-line"><CheckCircle2 size={16} /> {discovery.total_backends_discovered || 0} backend(s) synchronized</div>
                 <div className="admin-discovery-grid">
@@ -196,7 +218,6 @@ function Integrations({ providers, health, verification, setVerification, canEdi
                   ))}
                 </div>
               </div>
-            )
         )}
       </div>
 
@@ -279,7 +300,7 @@ function Integrations({ providers, health, verification, setVerification, canEdi
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={!canEdit || !dirty(editProvider) || Object.keys(errors(editProvider)).length > 0 || fb[editProvider.id]?.text === 'Saving…'}
+                disabled={!canEdit || !dirty(editProvider) || Object.keys(errors(editProvider)).length > 0 || savingId === editProvider.id}
                 onClick={() => setConfirm(editProvider.id)}
               >
                 <Save size={14} /> Save credentials
@@ -325,7 +346,6 @@ function Integrations({ providers, health, verification, setVerification, canEdi
                 );
               })}
             </div>
-            <Notice note={fb[editProvider.id]} />
           </form>
         </Modal>
       )}
@@ -365,8 +385,6 @@ function Modal({ title, children, footer, onClose }) {
 function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }) {
   const [dlqDetail, setDlqDetail] = useState(null);
   const [edits, setEdits] = useState({}); // category -> {interval, enabled}
-  const [fb, setFb] = useState({});
-  const [runNote, setRunNote] = useState(null);
   const [running, setRunning] = useState(false);
   const [purgingDlq, setPurgingDlq] = useState(false);
   const [collectorConfirm, setCollectorConfirm] = useState(null);
@@ -406,13 +424,15 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
 
   const runCollectionNow = async () => {
     setRunning(true);
-    setRunNote(null);
     try {
       const r = await api.runCollection();
-      setRunNote({ type: 'success', text: `Collection finished — ${r?.total_backends_discovered ?? 0} backend(s) across providers.` });
+      adminToast({
+        type: 'success',
+        text: `Collection finished — ${r?.total_backends_discovered ?? 0} backend(s) across providers.`,
+      });
       await reload();
     } catch (e) {
-      setRunNote({ type: 'error', text: errText(e) });
+      adminToast({ type: 'error', text: errText(e) });
     } finally {
       setRunning(false);
     }
@@ -422,10 +442,10 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
     setPurgingDlq(true);
     try {
       const r = await api.purgeCollectorDlq();
-      setRunNote({ type: 'success', text: `DLQ cleared (${r?.entries_removed ?? 0} entries).` });
+      adminToast({ type: 'success', text: `DLQ cleared (${r?.entries_removed ?? 0} entries).` });
       await reload();
     } catch (e) {
-      setRunNote({ type: 'error', text: errText(e) });
+      adminToast({ type: 'error', text: errText(e) });
     } finally {
       setPurgingDlq(false);
     }
@@ -441,9 +461,9 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
     try {
       await api.updateSchedule({ category: s.category, interval_seconds: Number(c.interval), enabled: c.enabled });
       setEdits((e) => { const n = { ...e }; delete n[s.category]; return n; });
-      setFb((f) => ({ ...f, [s.category]: { type: 'success', text: 'Saved' } }));
+      adminToast({ type: 'success', text: `${s.category} schedule saved.` });
       await reload();
-    } catch (e) { setFb((f) => ({ ...f, [s.category]: { type: 'error', text: errText(e) } })); }
+    } catch (e) { adminToast({ type: 'error', text: errText(e) }); }
   };
 
   const onEnabledChange = (s, v) => {
@@ -474,7 +494,6 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
             {running ? 'Collecting…' : 'Run collection now'}
           </button>
         </div>
-        <Notice note={runNote} />
         <div className="table-container" style={{ border: 'none' }}>
           <table className="custom-table admin-table">
             <thead><tr><th>Category</th><th>Interval (s)</th><th>Enabled</th><th>Last run</th><th>Status</th></tr></thead>
@@ -506,7 +525,6 @@ function Collectors({ schedules, health, dlq, mqtt, scheduler, canEdit, reload }
                     <td className="admin-sub">{fmtTime(last)}</td>
                     <td className="admin-sub">
                       {isDirty(s) && !err ? <span className="admin-dirty">Pending…</span> : null}
-                      <Notice note={fb[s.category]} />
                     </td>
                   </tr>
                 );
@@ -700,7 +718,6 @@ function Rules({ canEdit }) {
   const [discardAsk, setDiscardAsk] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formErr, setFormErr] = useState(null);
-  const [note, setNote] = useState(null);
   const reason = canEdit ? undefined : 'Admin role required';
 
   const reloadRules = useCallback(async (backendId) => {
@@ -780,19 +797,23 @@ function Rules({ canEdit }) {
         const { rule_id, ...rest } = body;
         await api.updateAlertRule(rule_id, rest);
       }
-      setNote({ type: 'success', text: `Rule ${editing.mode === 'create' ? 'created' : 'updated'}.` });
+      adminToast({ type: 'success', text: `Rule ${editing.mode === 'create' ? 'created' : 'updated'}.` });
       setEditing(null);
       await reloadRules(selectedBackend);
-    } catch (er) { setFormErr(errText(er)); } finally { setSaving(false); }
+    } catch (er) {
+      const msg = errText(er);
+      setFormErr(msg);
+      adminToast({ type: 'error', text: msg });
+    } finally { setSaving(false); }
   };
   const toggle = async (r) => {
-    try { await api.updateAlertRule(r.rule_id, { enabled: !r.enabled }); setNote({ type: 'success', text: `${r.rule_id} ${r.enabled ? 'disabled' : 'enabled'}.` }); await reloadRules(selectedBackend); }
-    catch (er) { setNote({ type: 'error', text: `Toggle failed: ${errText(er)}` }); }
+    try { await api.updateAlertRule(r.rule_id, { enabled: !r.enabled }); adminToast({ type: 'success', text: `${r.rule_id} ${r.enabled ? 'disabled' : 'enabled'}.` }); await reloadRules(selectedBackend); }
+    catch (er) { adminToast({ type: 'error', text: `Toggle failed: ${errText(er)}` }); }
   };
   const doDelete = async () => {
     const id = deleting; setDeleting(null);
-    try { await api.deleteAlertRule(id); setNote({ type: 'success', text: `Rule ${id} deleted.` }); await reloadRules(selectedBackend); }
-    catch (er) { setNote({ type: 'error', text: `Delete failed: ${errText(er)}` }); }
+    try { await api.deleteAlertRule(id); adminToast({ type: 'success', text: `Rule ${id} deleted.` }); await reloadRules(selectedBackend); }
+    catch (er) { adminToast({ type: 'error', text: `Delete failed: ${errText(er)}` }); }
   };
 
   const doCopyRules = async () => {
@@ -800,11 +821,11 @@ function Rules({ canEdit }) {
     setCopyAsk(false);
     try {
       const res = await api.copyAlertRules({ source_backend_id: copyFrom, target_backend_id: selectedBackend, replace: true });
-      setNote({ type: 'success', text: `Copied ${res.rules_copied ?? 0} rule(s) to this backend.` });
+      adminToast({ type: 'success', text: `Copied ${res.rules_copied ?? 0} rule(s) to this backend.` });
       setCopyFrom('');
       await reloadRules(selectedBackend);
     } catch (er) {
-      setNote({ type: 'error', text: `Copy failed: ${errText(er)}` });
+      adminToast({ type: 'error', text: `Copy failed: ${errText(er)}` });
     }
   };
 
@@ -812,10 +833,10 @@ function Rules({ canEdit }) {
     setResetAsk(false);
     try {
       const res = await api.resetAlertRules(selectedBackend);
-      setNote({ type: 'success', text: `Reset ${res.rules_reset ?? 0} default rule(s).` });
+      adminToast({ type: 'success', text: `Reset ${res.rules_reset ?? 0} default rule(s).` });
       await reloadRules(selectedBackend);
     } catch (er) {
-      setNote({ type: 'error', text: `Reset failed: ${errText(er)}` });
+      adminToast({ type: 'error', text: `Reset failed: ${errText(er)}` });
     }
   };
 
@@ -826,10 +847,10 @@ function Rules({ canEdit }) {
     try {
       const res = await Promise.allSettled(ids.map((id) => api.deleteAlertRule(id)));
       const ok = res.filter((r) => r.status === 'fulfilled').length;
-      setNote({ type: 'success', text: `Removed ${ok} test rule${ok === 1 ? '' : 's'}.` });
+      adminToast({ type: 'success', text: `Removed ${ok} test rule${ok === 1 ? '' : 's'}.` });
       await reloadRules(selectedBackend);
     } catch (er) {
-      setNote({ type: 'error', text: `Purge failed: ${errText(er)}` });
+      adminToast({ type: 'error', text: `Purge failed: ${errText(er)}` });
     } finally {
       setPurgingTest(false);
       setPurgeTestAsk(false);
@@ -871,7 +892,6 @@ function Rules({ canEdit }) {
           </div>
         </div>
         <div className="admin-pad" style={{ paddingTop: 0 }}>
-          <Notice note={note} />
           <div className="admin-rules-toolbar">
             <div className="admin-rules-toolbar__row">
               <label className="admin-field admin-rules-toolbar__backend">
@@ -1238,7 +1258,6 @@ function AdminAuditLog() {
 /* ------------------------------- Page ------------------------------- */
 export const AdministrationPage = ({ section = 'integrations', onNavigateSection }) => {
   const navigate = useNavigate();
-  const [accessNote, setAccessNote] = useState(null);
   const knownSection = new Set([...ADMIN_SECTIONS.map((s) => s.id), 'logs']);
   const active = section === 'hub' ? 'integrations' : (knownSection.has(section) ? section : 'integrations');
   const go = useCallback((id) => (onNavigateSection ? onNavigateSection(id) : navigate(`/app/admin/${id === 'hub' ? 'integrations' : id}`)), [onNavigateSection, navigate]);
@@ -1291,14 +1310,10 @@ export const AdministrationPage = ({ section = 'integrations', onNavigateSection
         }} />
       )}
       {data.miss.length > 0 && <Notice note={{ type: 'error', text: `Could not load ${data.miss.join(', ')}. Refresh the page or open Platform health.` }} />}
-      {accessNote ? <Notice note={accessNote} /> : null}
       {peopleSection && (
         <AccessApprovalsPanel
           canEdit={canEdit}
-          onNotice={(note) => {
-            setAccessNote(note);
-            if (note?.type === 'success') setTimeout(() => setAccessNote(null), 5000);
-          }}
+          onNotice={adminToast}
         />
       )}
       {active === 'integrations' && <Integrations navigate={navigate} providers={data.providers} health={data.health} verification={verification} setVerification={setVerification} canEdit={canEdit} reload={load} />}

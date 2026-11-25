@@ -55,6 +55,8 @@
 
 .landing-page .studio-feature-grid {
   padding-block: 4px;
+  padding-inline: 2px;
+  box-sizing: border-box;
 }
 
 .studio-feature-card__icon {
@@ -108,12 +110,16 @@
 }
 
 [data-theme='dark'] .studio-feature-card__shell {
-  background: color-mix(in srgb, var(--border) 40%, transparent);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--primary) 35%, var(--border)),
+    color-mix(in srgb, var(--primary) 12%, var(--border))
+  );
 }
 
 [data-theme='dark'] .studio-feature-card__body {
-  background: color-mix(in srgb, var(--surface) 88%, transparent);
-  border: 1px solid color-mix(in srgb, var(--border) 55%, transparent);
+  background: color-mix(in srgb, var(--surface) 94%, var(--primary-dark));
+  border-color: color-mix(in srgb, var(--primary) 18%, transparent);
 }
 
 /* Default: 1 col → 3 col (skip awkward 2-col orphan for tri cards) */
