@@ -45,10 +45,13 @@ if [[ "${LOCAL_TRIM_AGGRESSIVE:-0}" == "1" ]]; then
   upsert_env_key DEMO_TELEMETRY_CAP_PER_BACKEND 1200
   upsert_env_key DEMO_BACKEND_TELEMETRY_CAP 300
 else
-  upsert_env_key TELEMETRY_RETENTION_DAYS 14
-  upsert_env_key DEMO_RETENTION_DAYS 14
-  upsert_env_key DEMO_TELEMETRY_CAP_PER_BACKEND 2000
-  upsert_env_key DEMO_BACKEND_TELEMETRY_CAP 400
+  upsert_env_key TELEMETRY_RETENTION_DAYS 21
+  upsert_env_key DEMO_RETENTION_DAYS 21
+  upsert_env_key DEMO_TELEMETRY_CAP_PER_BACKEND 12000
+  upsert_env_key DEMO_BACKEND_TELEMETRY_CAP 800
+  upsert_env_key LOCAL_DEMO_HISTORY_DAYS "${LOCAL_DEMO_HISTORY_DAYS:-14}"
+  upsert_env_key LOCAL_DEMO_HISTORY_INTERVAL_HOURS "${LOCAL_DEMO_HISTORY_INTERVAL_HOURS:-3}"
+  upsert_env_key LOCAL_DEMO_HISTORY_QUBIT_CAP "${LOCAL_DEMO_HISTORY_QUBIT_CAP:-10000}"
 fi
 
 load_env_file "${ROOT}/.env"
@@ -80,6 +83,11 @@ fi
 echo "==> Demo fleet refresh (bounded mock telemetry if empty/stale)"
 if ! "$PY" "${ROOT}/scripts/refresh_demo_fleet.py" --force; then
   echo "WARN: demo refresh incomplete (e.g. optional mock backend missing) — continuing" >&2
+fi
+
+if [[ "${SKIP_TELEMETRY_ENRICH:-0}" != "1" && "${LOCAL_TRIM_AGGRESSIVE:-0}" != "1" ]]; then
+  echo "==> Backfill chart history (bounded mock telemetry)"
+  "$PY" "${ROOT}/scripts/enrich_local_demo_telemetry.py"
 fi
 
 stop_uvicorn_if_foreign() {
