@@ -513,6 +513,7 @@ export const BackendComparison = () => {
                   question={m.rate
                     ? 'Per-qubit measurement assignment error (probability 0–100%). Box = Q1–Q3, line = median, whiskers = min/max.'
                     : 'Per-qubit distribution: box = Q1–Q3, line = median, whiskers = min/max.'}
+                  provenanceDetail={missing.length > 0 ? `No series (gap, not zero): ${missing.map((r) => r.short).join(', ')}` : undefined}
                   sourceKind="derived" minHeight={320} state={plotted.length ? 'ready' : 'empty'}
                   emptyTitle="No measurements" emptyMessage="No per-qubit values for these backends."
                   tableAlternative={(
@@ -520,7 +521,6 @@ export const BackendComparison = () => {
                       <tbody>{g.list.map((r) => { const s = distStats(r, m); return <tr key={r.backend_id}><td>{r.name}</td><td>{fmt(s?.min, m) ?? 'missing'}</td><td>{fmt(s?.med, m) ?? 'missing'}</td><td>{fmt(s?.max, m) ?? 'missing'}</td><td>{s?.n ?? 0}</td></tr>; })}</tbody></table>
                   )}>
                   <BoxChart rows={plotted} metric={m} dark={dark} />
-                  {missing.length > 0 && <p className="page-hint bc-note">No series (gap, not zero): {missing.map((r) => r.short).join(', ')}</p>}
                 </ChartPanel>
               );
             }))}
@@ -577,13 +577,13 @@ export const BackendComparison = () => {
             </ChartPanel>
 
             <ChartPanel title="Queue depth" titleTo="/app/execution/queues" question="Pending jobs now." sourceKind="cached" minHeight={320}
+              provenanceDetail={queueData.length < queueRows.length ? `No data: ${queueRows.filter((q) => q.pending == null).map((q) => q.b.short).join(', ')}` : undefined}
               state={queueData.length ? 'ready' : 'empty'} emptyTitle="No measurements" emptyMessage="No queue snapshot for selected backends."
               tableAlternative={(
                 <table className="custom-table custom-table--dense"><thead><tr><th>Backend</th><th>Pending jobs</th></tr></thead>
                   <tbody>{queueRows.map(({ b, pending }) => <tr key={b.backend_id}><td>{b.name}</td><td>{pending ?? 'missing'}</td></tr>)}</tbody></table>
               )}>
               <BarChart rows={{ names: queueData.map((q) => q.b.short), series: [{ name: 'Pending', data: queueData.map((q) => ({ value: q.pending, itemStyle: { color: q.b.color } })) }] }} dark={dark} unit="jobs" />
-              {queueData.length < queueRows.length && <p className="page-hint bc-note">No data: {queueRows.filter((q) => q.pending == null).map((q) => q.b.short).join(', ')}</p>}
             </ChartPanel>
           </section>
 

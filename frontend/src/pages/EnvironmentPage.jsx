@@ -262,6 +262,8 @@ export const EnvironmentPage = () => {
             Coverage by backend and channel
             <InfoTooltip label="What each cell shows">
               Latest value, age, and source. Imported values came from a file or API push. Derived values come from calibration snapshots, not facility sensors.
+              Empty cells mean no sample (not a nominal reading). Stale: older than {STALE_HOURS} h.
+              Facility channels have no alert thresholds, so OK/breach is not shown.
             </InfoTooltip>
           </h3>
         </div>
@@ -297,9 +299,6 @@ export const EnvironmentPage = () => {
             </tbody>
           </table>
         </div>
-        <p className="page-hint" style={{ margin: '0 16px 14px' }}>
-          Empty cells indicate no sample (not a nominal reading). Stale: older than {STALE_HOURS} h. Facility channels have no alert thresholds, so OK/breach is not shown.
-        </p>
       </section>
 
       <ChartPanel

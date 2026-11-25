@@ -14,6 +14,7 @@ import {
   DetailModalRelated,
 } from '../components/observability/DetailModalLayout.jsx';
 import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
+import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
 import { buildBackendDetailsPath, buildDriftInvestigationLocation, buildTimelineInvestigationLocation } from '../lib/investigationLinks.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { Check, Circle, Clock, Minus } from 'lucide-react';
@@ -186,7 +187,12 @@ export const MetricsCoverage = () => {
 
       <section className="card page-panel">
         <div className="mc-matrix-head">
-          <h3 className="page-section-title" style={{ margin: 0 }}>Backend × metric</h3>
+          <h3 className="page-section-title mc-matrix-title" style={{ margin: 0 }}>
+            Backend × metric
+            <InfoTooltip label="Coverage matrix">
+              Click a cell for metric details. Stale requires calibration freshness on file; when freshness is unavailable fleet-wide, stale cells are not computed.
+            </InfoTooltip>
+          </h3>
           <span className="mc-legend">{ORDER.map((s) => <span key={s} title={STATE[s].help}><i className={`mc-cell mc-cell--${s}`}><StateMark id={s} /></i>{STATE[s].label}</span>)}</span>
         </div>
         <div className="mc-toolbar">
@@ -261,9 +267,6 @@ export const MetricsCoverage = () => {
             </tbody>
           </table>
         </div>
-        {Object.keys(fresh).length === 0 && (
-          <p className="page-hint" style={{ marginTop: 8 }}>Calibration freshness unavailable — stale cells not computed.</p>
-        )}
       </section>
 
       <DetailDrawer

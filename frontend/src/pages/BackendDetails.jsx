@@ -16,7 +16,17 @@ import { PageRelatedLink, PageRelatedNav } from '../components/observability/Pag
 import { baseTooltip, getChartTheme, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { BACKEND_WORKSPACE_TABS } from '../lib/investigationLinks.js';
 import { STATES, STATE_GLYPH, STATE_TIER, ageMinutes, formatAge, isStale, lineageOf, median, modalityName, num, providerName, scopeSearch, useProviderLineage } from './backendUtils.js';
-import { backendRegistryHoverTitle, BackendStatusStrip, Sparkline, StateBar, TelemetryCoverageHint } from './backendCommon.jsx';
+import {
+  backendRegistryHoverTitle,
+  BackendStatusStrip,
+  GATE_ERROR_PROVENANCE,
+  QUBIT_HEALTH_MINI_MAP_HELP,
+  QUBIT_MAP_LEGEND_HELP,
+  Sparkline,
+  StateBar,
+  TelemetryCoverageHint,
+} from './backendCommon.jsx';
+import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
 import { formatEnumLabel } from '../lib/displayLabels.js';
 import { ListPager } from '../components/observability/ListPager.jsx';
 import { unableToLoad, unableToLoadLabel } from '../constants/messages.js';
@@ -49,7 +59,7 @@ function histogram(values, bins = 16) {
   return { lo, w, counts, n: v.length, med: median(v) };
 }
 
-function GateHistogram({ title, values }) {
+function GateHistogram({ title, values, provenanceDetail = GATE_ERROR_PROVENANCE }) {
   const { resolved } = useTheme();
   const th = getChartTheme(resolved === 'dark');
   const h = useMemo(() => histogram(values), [values]);
@@ -73,6 +83,7 @@ function GateHistogram({ title, values }) {
     <ChartPanel
       title={title}
       question={h ? `Median ${(h.med * 100).toFixed(3)}% · ${h.n} qubits` : undefined}
+      provenanceDetail={provenanceDetail}
       sourceKind="derived"
       state={h && !flat ? 'ready' : 'empty'}
       emptyTitle={flat ? 'No spread across qubits' : 'No fidelity data'}
@@ -475,7 +486,13 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
           ) : (
             <>
               <section className="card bd-panel" aria-label="Qubit map">
-                <h3>Qubit map <Link className="bd-link" to={link('/app/resources/health')}>Open in Resource health</Link></h3>
+                <h3>
+                  <span className="bd-panel__title-group">
+                    Qubit map
+                    <Link className="bd-link" to={link('/app/resources/health')}>Open in Resource health</Link>
+                    <InfoTooltip label="Qubit map legend" align="start">{QUBIT_MAP_LEGEND_HELP}</InfoTooltip>
+                  </span>
+                </h3>
                 <div className="bd-hm bd-hm--workspace">
                   {qubitRows.map((q) => (
                     <Link key={q.qubit_index} className="bd-cell" data-s={q.state} to={link('/app/resources/health')}
@@ -485,7 +502,6 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
                 <div className="bd-legend">
                   {STATES.map((s) => <span key={s}>{STATE_GLYPH[s]} {STATE_TIER[s]}{s === 'YELLOW' ? ' (dot marker)' : s === 'RED' ? ' (diamond marker)' : s === 'UNKNOWN' ? ' (hatched)' : ''}</span>)}
                 </div>
-                {!hv && <p className="page-hint" style={{ marginTop: 8 }}>No health scoring available: all qubits shown as Unknown.</p>}
               </section>
 
               <section className="card" style={{ padding: 0 }}>
@@ -555,7 +571,6 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
               <GateHistogram title="1-qubit gate error distribution" values={err1} />
               <GateHistogram title="2-qubit gate error distribution" values={err2} />
             </div>
-            <p className="page-hint">Gate error shown as 1 − per-qubit fidelity from the health vector. Per-gate calibration tables are not available for this backend.</p>
             {d.calHist.length > 0 && (
               <section className="card" style={{ padding: 0 }}>
                 <div className="bk-tablewrap">
@@ -610,13 +625,17 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
               />
             ) : null}
             <section className="card bd-panel" aria-label="Qubit health and coupling context">
-              <h3>Qubit health on this backend</h3>
+              <h3>
+                <span className="bd-panel__title-group">
+                  Qubit health on this backend
+                  <InfoTooltip label="Health map on this backend" align="start">{QUBIT_HEALTH_MINI_MAP_HELP}</InfoTooltip>
+                </span>
+              </h3>
               {hv?.counts ? (
                 <>
                   <StateBar counts={hv.counts} label={backend.backend_name} />
                   {qubitRows.length > 0 && (
                     <>
-                      <p className="page-hint" style={{ margin: '12px 0 8px' }}>Health map — colour = state; open Qubits tab for full table.</p>
                       <div className="bd-hm bd-hm--compact">
                         {qubitRows.map((q) => (
                           <Link key={q.qubit_index} className="bd-cell" data-s={q.state} to={link('/app/resources/health')}

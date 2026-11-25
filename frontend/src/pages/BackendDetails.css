@@ -321,6 +321,14 @@
   flex-wrap: wrap;
 }
 .bd-panel h3 a { font-size: 12px; font-weight: 600; }
+.bd-panel__title-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  flex: 1;
+  min-width: 0;
+}
 .bd-link { color: var(--accent-cyan); text-decoration: none; font-weight: 600; }
 .bd-link:hover { text-decoration: underline; }
 .bd-link:focus-visible { outline: 2px solid var(--accent-cyan); outline-offset: 2px; }

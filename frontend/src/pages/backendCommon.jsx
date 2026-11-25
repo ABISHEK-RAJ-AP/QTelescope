@@ -89,6 +89,16 @@ export function StatusText({ status, showKey = false }) {
 /** Reachability vs data source vs routing — three different signals, one row. */
 const COVERAGE_HELP = 'Qubits lack T1/T2 in stored telemetry. Scored as Unknown — not a hardware failure.';
 
+/** Gate histograms on backend calibration tab — health vector proxy, not per-gate tables. */
+export const GATE_ERROR_PROVENANCE =
+  'Gate error = 1 − per-qubit fidelity from the health vector. Per-gate calibration tables are not available for this backend.';
+
+export const QUBIT_MAP_LEGEND_HELP =
+  'Cell colour = router health state (nominal, watch, degraded, unknown). Marker shapes in the legend distinguish watch and degraded. Without a health vector, all qubits render as unknown. Open Resource health for fleet scoring.';
+
+export const QUBIT_HEALTH_MINI_MAP_HELP =
+  'Colour = router health state; each cell links to Resource health. Use the Qubits tab for sortable table and filters.';
+
 /** Compact coherence coverage signal — icon + counts; detail in tooltip. */
 export function TelemetryCoverageHint({ unknownCount, totalCount, className = '' }) {
   const unknown = Number(unknownCount) || 0;

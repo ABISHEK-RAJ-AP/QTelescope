@@ -7,6 +7,7 @@ import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
+import { InfoTooltip } from '../components/observability/InfoTooltip.jsx';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { getChartTheme, baseTooltip, chartLabelStyle, getChartSemanticColors } from '../components/observability/chartTheme.js';
 import { formatISTTime } from '../utils/time';
@@ -352,8 +353,12 @@ export const PlatformHealth = () => {
 
       {(data?.ingestion_quality_latest || []).length > 0 && (
         <section className="card page-panel" data-tour="page-platform-quality">
-          <h3 className="chart-panel__title">Ingestion quality (latest cycle)</h3>
-          <p className="page-hint">Measured row counts from the collector — rejected/duplicate counts are not inferred.</p>
+          <h3 className="chart-panel__title ph-section-title">
+            Ingestion quality (latest cycle)
+            <InfoTooltip label="Ingestion quality table">
+              Measured row counts from the collector — rejected/duplicate counts are not inferred.
+            </InfoTooltip>
+          </h3>
           <table className="custom-table custom-table--dense">
             <thead>
               <tr>

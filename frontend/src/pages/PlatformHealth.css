@@ -5,6 +5,12 @@
   color: var(--text-primary);
 }
 
+.ph-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .ph-tiles {
   display: grid;
   gap: 12px;

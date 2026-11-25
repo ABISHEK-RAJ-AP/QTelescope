@@ -423,6 +423,19 @@ export const ResourceHealth = () => {
                     <li>RED: T1 below backend floor, environment CRITICAL, or any qubit RED</li>
                   </ul>
                   <p className="hv-model-tip__note">Advisory readiness — not vendor calibration or scheduler exclusion.</p>
+                  {hugeEta ? (
+                    <p className="hv-model-tip__note">
+                      η_cal is large here (T1 ≫ gate time, common for trapped ions). Router still uses this backend&apos;s alert-rule T1/T2 floors — treat high η_cal as context, not a cross-modality rank.
+                    </p>
+                  ) : null}
+                  {active.confidence !== 'high' ? (
+                    <p className="hv-model-tip__note">
+                      Scoring confidence is &quot;{active.confidence}&quot;: some inputs are missing
+                      {qubits.some((q) => q.missing_components?.length)
+                        ? ` (${[...new Set(qubits.flatMap((q) => q.missing_components || []))].join(', ')})`
+                        : ''}.
+                    </p>
+                  ) : null}
                 </div>
               </InfoTooltip>
             </div>
@@ -470,8 +483,6 @@ export const ResourceHealth = () => {
                   </>
                 ) : STATES.map((s) => <span key={s}><i style={{ background: stateColor(s) }} />{s} · {STATE_MEANING[s]}</span>)}
               </div>
-              {hugeEta && <p className="hv-note">η_cal is large here (T1 ≫ gate time, common for trapped ions). Router still uses this backend's alert-rule T1/T2 floors — treat high η_cal as context, not a cross-modality rank.</p>}
-              {active.confidence !== 'high' && <p className="hv-note">Scoring confidence is "{active.confidence}": some inputs are missing{qubits.some((q) => q.missing_components?.length) ? ` (${[...new Set(qubits.flatMap((q) => q.missing_components || []))].join(', ')})` : ''}.</p>}
             </>
           )}
         </div>
@@ -483,8 +494,9 @@ export const ResourceHealth = () => {
           sourceKind="derived"
           state={scatter.series.some((s) => s.data.length) ? 'ready' : 'empty'}
           emptyMessage="No qubits with both T1 and readout error."
+          provenanceDetail="Use the qubit map above — each cell opens the insight panel for that qubit."
           minHeight={320}
-          tableAlternative={<p className="page-hint">Use the qubit map; each cell opens the insight panel for that qubit.</p>}
+          tableAlternative="Use the qubit map above — each cell opens the insight panel for that qubit."
         >
           <QtECharts
             option={scatter}
