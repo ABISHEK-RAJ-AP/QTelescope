@@ -41,9 +41,13 @@ curl_ok "$API/backends/status-all" "backends/status-all"
 curl -sf -m 60 "$API/health/vector" >/dev/null || fail "health/vector timeout"
 echo "OK health/vector"
 
-echo "=== API (nginx :${NGINX_PORT}) ==="
-curl_ok "$NGINX_PROXY/auth/config-status" "nginx auth/config-status"
-curl_ok "$NGINX_PROXY/auth/captcha" "nginx captcha"
+if [[ "${LOCAL_SKIP_NGINX:-0}" == "1" ]] || ! curl -sf -m 2 -o /dev/null "http://127.0.0.1:${NGINX_PORT}/healthz" 2>/dev/null; then
+  echo "SKIP nginx :${NGINX_PORT} (local Vite dev or no nginx)"
+else
+  echo "=== API (nginx :${NGINX_PORT}) ==="
+  curl_ok "$NGINX_PROXY/auth/config-status" "nginx auth/config-status"
+  curl_ok "$NGINX_PROXY/auth/captcha" "nginx captcha"
+fi
 
 echo "=== API (Vite dev :5173) ==="
 if curl -sf -m 3 -o /dev/null "$PROXY/auth/captcha" 2>/dev/null; then
