@@ -20,6 +20,7 @@ echo "==> git pull ($BRANCH)"
 git fetch origin "$BRANCH"
 # Lab VMs often dirty scripts/vm-demo-env.sh; remote wins so --ff-only can proceed.
 VM_SCRIPTS=(
+  scripts/_dev-env.sh
   scripts/vm-demo-env.sh
   scripts/vm-demo-restart.sh
   scripts/vm-update-from-git.sh
