@@ -56,13 +56,15 @@ def build_replay_timeline(db: Session, backend_id: str, limit: int = 80) -> Dict
     if not backend:
         return {"error": "not_found"}
 
+    # Newest N samples, then chronological order for playback (asc limit alone returns stale tail).
     backend_rows = (
         db.query(BackendTelemetryModel)
         .filter(BackendTelemetryModel.backend_id == backend_id)
-        .order_by(BackendTelemetryModel.timestamp.asc())
+        .order_by(BackendTelemetryModel.timestamp.desc())
         .limit(limit)
         .all()
     )
+    backend_rows.reverse()
     if not backend_rows:
         return {
             "backend_id": backend_id,

@@ -4,7 +4,6 @@ import { ArrowLeft } from 'lucide-react';
 import { api } from '../services/api';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { ErrorState } from '../components/observability/ErrorState.jsx';
-import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { usePermissions } from '../hooks/usePermissions.js';
 import { unableToLoad } from '../constants/messages.js';
 import { formatIST } from '../utils/time';
@@ -20,13 +19,16 @@ import {
   formatDurationMs,
   buildIncidentTimeline,
 } from '../lib/incidentUi.js';
+import {
+  formatAlertMetricLabel,
+  formatObservedVsThreshold,
+} from '../lib/alertSemantics.js';
+import { formatBackendTitle } from '../lib/displayLabels.js';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
 import { COPY } from '../copy/operator.js';
-import { getSeverityChartColors } from '../components/observability/chartTheme.js';
 import { timelineTo } from './opsHelpers.js';
 import './IncidentDetailPage.css';
 
-const num = (v) => (v == null || !Number.isFinite(Number(v)) ? '—' : Number(v).toFixed(1));
 const ALERT_PAGE = 15;
 
 export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAlert }) {
@@ -69,26 +71,6 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
   const aPage = Math.min(alertPage, alertPages);
   const shownAlerts = sortedAlerts.slice((aPage - 1) * ALERT_PAGE, aPage * ALERT_PAGE);
 
-  const sevChart = useMemo(() => {
-    const counts = { CRITICAL: 0, WARNING: 0, INFO: 0 };
-    alerts.forEach((a) => { counts[a.severity] = (counts[a.severity] || 0) + 1; });
-    const data = Object.entries(counts).filter(([, n]) => n > 0).map(([name, value]) => ({ name, value }));
-    if (!data.length) return null;
-    return {
-      tooltip: { trigger: 'item' },
-      series: [{
-        type: 'pie',
-        radius: ['42%', '70%'],
-        label: { fontSize: 11 },
-        data,
-        color: (() => {
-          const s = getSeverityChartColors();
-          return [s.CRITICAL, s.WARNING, s.INFO];
-        })(),
-      }],
-    };
-  }, [alerts]);
-
   const run = async (fn, okMsg) => {
     setBusy(true);
     try {
@@ -107,9 +89,17 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
   if (error && !inc) return <ErrorState message={error} onRetry={load} />;
   if (!inc) return <ErrorState message="Incident not found." onRetry={onBack} />;
 
-  const dur = formatDurationMs(
-    new Date(inc.last_detected_at).getTime() - new Date(inc.first_detected_at).getTime(),
-  );
+  const firstMs = new Date(inc.first_detected_at).getTime();
+  const lastMs = new Date(inc.last_detected_at).getTime();
+  const detectionWindow = formatDurationMs(lastMs - firstMs);
+  const isOpen = inc.status !== 'RESOLVED';
+  const incidentAge = isOpen
+    ? formatDurationMs(Date.now() - firstMs)
+    : formatDurationMs((inc.resolved_at ? new Date(inc.resolved_at).getTime() : lastMs) - firstMs);
+  const backendTitle = formatBackendTitle({ backend_id: inc.backend_id });
+  const headline = backendLabel && backendLabel !== inc.backend_id
+    ? backendLabel
+    : `${backendTitle}${rule ? ` — ${rule}` : ''}`;
 
   return (
     <div className="inc-detail page-stack">
@@ -123,8 +113,13 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
       <header className="card inc-detail__hero">
         <div className="inc-detail__hero-top">
           <div>
-            <h2 className="inc-detail__title">{backendLabel || inc.backend_id}</h2>
-            <p className="page-hint">{rule} · {inc.backend_id}</p>
+            <p className="page-hint admin-mono">INCIDENT · {inc.incident_id}</p>
+            <h2 className="inc-detail__title">{headline}</h2>
+            <p className="page-hint">
+              {rule ? `Related conditions: ${rule}` : 'Correlated alerts on this backend'}
+              {' · '}
+              <span className="admin-mono">{inc.backend_id}</span>
+            </p>
           </div>
           <div className="inc-detail__badges">
             <SevBadge severity={inc.severity} />
@@ -134,33 +129,55 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
         <p className="inc-detail__summary">{inc.summary || 'Correlated alerts for this backend and rule.'}</p>
         <dl className="inc-detail__kpis">
           <div><dt>Alerts</dt><dd>{inc.alert_count} <span className="al-sub">({activeAlerts} active)</span></dd></div>
-          <div><dt>Duration</dt><dd>{dur}</dd></div>
-          <div><dt>Owner</dt><dd>{inc.owner || inc.acknowledged_by || 'No owner'}</dd></div>
-          <div><dt>Window</dt><dd>{formatIST(inc.first_detected_at, false)} → {formatIST(inc.last_detected_at, false)}</dd></div>
+          <div><dt>{isOpen ? 'Incident age' : 'Duration'}</dt><dd>{incidentAge}</dd></div>
+          <div><dt>Detection window</dt><dd className="al-nowrap" title="First to latest detection among linked alerts">{formatIST(inc.first_detected_at, false)} → {formatIST(inc.last_detected_at, false)} ({detectionWindow})</dd></div>
+          <div><dt>Owner</dt><dd>{inc.owner || inc.acknowledged_by || 'Unassigned'}</dd></div>
         </dl>
         <div className="inc-detail__actions">
           {inc.status === 'OPEN' && perms.canManageIncidents && (
             <button
               type="button"
-              className="btn btn-secondary"
+              className="btn btn-primary"
               disabled={busy}
               onClick={() => setDlg({
-                title: 'Acknowledge incident?',
-                body: inc.title,
-                confirm: 'Acknowledge',
-                input: 'Comment (optional)',
+                title: 'Acknowledge incident',
+                body: 'Confirm you have reviewed this incident. Acknowledgment does not resolve underlying alerts.',
+                confirm: 'Acknowledge incident',
+                input: 'Investigation note (optional)',
                 required: false,
                 defaultText: '',
                 onConfirm: (text) => run(
                   () => api.acknowledgeIncident(inc.incident_id, {
                     acknowledged_by: actorName,
+                    owner: actorName,
                     comment: (text || '').trim() || undefined,
                   }),
                   { app: 'Alerts', title: 'Acknowledged', body: 'Incident status updated.' },
                 ),
               })}
             >
-              Acknowledge
+              Acknowledge incident
+            </button>
+          )}
+          {inc.status !== 'RESOLVED' && !(inc.owner || inc.acknowledged_by) && perms.canManageIncidents && (
+            <button
+              type="button"
+              className="btn btn-secondary"
+              disabled={busy}
+              onClick={() => setDlg({
+                title: 'Assign owner',
+                body: `Assign responsibility for ${headline}.`,
+                confirm: 'Assign owner',
+                input: 'Owner username',
+                required: true,
+                defaultText: actorName,
+                onConfirm: (text) => run(
+                  () => api.assignIncident(inc.incident_id, (text || '').trim()),
+                  'Owner assigned.',
+                ),
+              })}
+            >
+              Assign owner
             </button>
           )}
           {inc.status === 'ACKNOWLEDGED' && perms.canManageIncidents && (
@@ -169,11 +186,12 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
           {inc.status !== 'RESOLVED' && perms.canResolveIncidents && (
             <button
               type="button"
-              className="btn btn-primary"
-              disabled={busy}
+              className="btn btn-secondary"
+              disabled={busy || !(inc.owner || inc.acknowledged_by)}
+              title={!(inc.owner || inc.acknowledged_by) ? 'Acknowledge or assign an owner first' : undefined}
               onClick={() => setDlg({
                 title: 'Resolve incident?',
-                body: 'Linked alerts are not auto-resolved.',
+                body: `Closes the incident record only. ${activeAlerts} linked alert(s) remain active unless resolved separately.`,
                 confirm: 'Resolve',
                 danger: true,
                 input: 'Resolution notes (optional)',
@@ -185,11 +203,11 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
               Resolve
             </button>
           )}
-          <button type="button" className="btn btn-secondary" onClick={() => nav(timelineTo({ backendId: inc.backend_id, at: inc.last_detected_at }))}>Timeline</button>
-          <button type="button" className="btn btn-secondary" onClick={() => nav(buildBackendDetailsPath(inc.backend_id, 'qubits'))}>Backend qubits</button>
-          <button type="button" className="btn btn-primary" onClick={() => setDiscOpen(true)}>
+          <button type="button" className="btn btn-secondary" onClick={() => setDiscOpen(true)}>
             Discussion ({(inc.comments || []).length})
           </button>
+          <button type="button" className="btn btn-secondary" onClick={() => nav(timelineTo({ backendId: inc.backend_id, at: inc.last_detected_at }))}>Timeline</button>
+          <button type="button" className="btn btn-secondary" onClick={() => nav(buildBackendDetailsPath(inc.backend_id, 'qubits'))}>Backend qubits</button>
         </div>
       </header>
 
@@ -208,8 +226,21 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
           </ol>
         </CollapsibleSection>
 
-        <CollapsibleSection id="inc-sev-h" title="Related alerts by severity" className="card inc-detail__panel" defaultOpen>
-          {sevChart ? <QtECharts option={sevChart} style={{ height: 200, width: '100%' }} /> : <p className="page-hint">No linked alerts loaded.</p>}
+        <CollapsibleSection id="inc-sev-h" title="Related alerts" className="card inc-detail__panel" defaultOpen>
+          {alerts.length === 0 ? (
+            <p className="page-hint">No linked alerts loaded.</p>
+          ) : (
+            <dl className="inc-detail__sev-summary">
+              <div><dt>Total</dt><dd>{alerts.length}</dd></div>
+              {['CRITICAL', 'WARNING', 'INFO'].map((s) => {
+                const n = alerts.filter((a) => a.severity === s).length;
+                if (!n) return null;
+                return (
+                  <div key={s}><dt><SevBadge severity={s} /></dt><dd>{n}</dd></div>
+                );
+              })}
+            </dl>
+          )}
         </CollapsibleSection>
       </div>
 
@@ -220,14 +251,15 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
               <tr>
                 <th>Severity</th>
                 <th>Resource</th>
+                <th>Metric</th>
                 <th>Status</th>
-                <th>Observed vs threshold</th>
+                <th>Signal</th>
                 <th>Detected</th>
               </tr>
             </thead>
             <tbody>
               {alerts.length === 0 ? (
-                <tr><td colSpan={5} className="page-hint">{COPY.incidents.noLinkedAlerts}</td></tr>
+                <tr><td colSpan={6} className="page-hint">{COPY.incidents.noLinkedAlerts}</td></tr>
               ) : shownAlerts.map((a) => (
                 <tr
                   key={a.alert_id}
@@ -238,9 +270,10 @@ export function IncidentDetailPage({ incidentId, currentUser, onBack, onOpenAler
                   onKeyDown={onOpenAlert ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpenAlert(a.alert_id); } } : undefined}
                 >
                   <td><SevBadge severity={a.severity} /></td>
-                  <td>{qubitOf(a) || a.resource_id}</td>
+                  <td>{qubitOf(a) || formatBackendTitle({ backend_id: a.backend_id || a.resource_id })}</td>
+                  <td>{formatAlertMetricLabel(a)}</td>
                   <td><StatusBadge status={a.status} /></td>
-                  <td>{num(a.current_value)} µs <span className="al-sub">vs {num(a.threshold_value)}</span></td>
+                  <td className="al-nowrap">{formatObservedVsThreshold(a)}</td>
                   <td className="al-nowrap">{formatIST(a.detected_at, false)}</td>
                 </tr>
               ))}

@@ -13,6 +13,7 @@ import { getChartTheme, baseTooltip, getChartSemanticColors, getCalibrationStatu
 import { buildBackendDetailsPath, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { modalityName } from './backendUtils.js';
+import { formatCalibrationAgeHours } from '../lib/formatCalibrationAge.js';
 import { DataPanelToolbar } from '../components/observability/DataViewToolbar.jsx';
 import { EnterpriseDataTable } from '../components/observability/EnterpriseDataTable.jsx';
 import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
@@ -40,51 +41,23 @@ const Badge = ({ status }) => {
   return <span className={`badge ${s.badge}`}>{label}</span>;
 };
 
-function CalFlipCard({ name, modality, status, ageLabel, calibrated, action, onOpen, onDrift }) {
-  const [open, setOpen] = useState(false);
-  const show = () => setOpen(true);
-  const hide = () => setOpen(false);
+function CalStaticCard({ name, modality, status, ageLabel, calibrated, action, onOpen, onDrift }) {
   return (
-    <article
-      className={`cs-flip${open ? ' is-open' : ''}`}
-      onMouseLeave={hide}
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget)) hide();
-      }}
-      aria-label={`${name}. Hover or focus the summary for calibration detail.`}
-    >
-      <div className="cs-flip__stage">
-        <div className="cs-flip__inner">
-          <div
-            className="cs-flip__face cs-flip__face--front"
-            onMouseEnter={show}
-            onFocus={show}
-            tabIndex={0}
-          >
-            <header className="cs-flip__head">
-              <h4 className="cs-flip__name">{name}</h4>
-              <Badge status={status} />
-            </header>
-            <p className="cs-flip__meta">{modality}</p>
-            <p className="cs-flip__age">{ageLabel}</p>
-          </div>
-          <div className="cs-flip__face cs-flip__face--back" onMouseEnter={show}>
-            <p className="cs-flip__back-title">{name}</p>
-            <dl className="cs-flip__stats">
-              <div><dt>Calibrated</dt><dd>{calibrated}</dd></div>
-              <div><dt>Next</dt><dd>{action}</dd></div>
-            </dl>
-            <button type="button" className="fs-link cs-flip__drift" onClick={onDrift}>Drift analysis</button>
-          </div>
-        </div>
-      </div>
-      <button
-        type="button"
-        className="btn btn-primary btn-sm cs-flip__cta"
-        onClick={onOpen}
-      >
-        Open calibration
-      </button>
+    <article className="cs-static-card" aria-label={`${name} calibration status`}>
+      <header className="cs-flip__head">
+        <h4 className="cs-flip__name">{name}</h4>
+        <Badge status={status} />
+      </header>
+      <p className="cs-flip__meta">{modality}</p>
+      <p className="cs-flip__age" title="Calibration age">{ageLabel}</p>
+      <dl className="cs-flip__stats cs-static-card__stats">
+        <div><dt>Last calibration (IST)</dt><dd>{calibrated}</dd></div>
+        <div><dt>Next action</dt><dd>{action}</dd></div>
+      </dl>
+      <footer className="cs-static-card__foot">
+        <button type="button" className="btn btn-secondary btn--sm" onClick={onDrift}>Drift analysis</button>
+        <button type="button" className="btn btn-primary btn--sm" onClick={onOpen}>Open calibration</button>
+      </footer>
     </article>
   );
 }
@@ -130,10 +103,10 @@ export const CalibrationStatus = () => {
       status,
       status_rank: STATUS_RANK[status] ?? 9,
       age: age ?? -1,
-      ageLabel: age != null ? `${age.toFixed(1)} h` : 'N/A',
+      ageLabel: formatCalibrationAgeHours(age),
       calibrated: c?.calibration_timestamp ? formatIST(c.calibration_timestamp) : 'N/A',
       action: (STATUS[status] || STATUS.None).action,
-      modality: (b.qpu_modality || 'unknown').replace('_', ' '),
+      modality: modalityName(b.qpu_modality),
       provider_id: b.provider_id,
     })),
     [ranked],
@@ -242,7 +215,7 @@ export const CalibrationStatus = () => {
       <section className="card page-panel dvt-panel">
         <DataPanelToolbar
           title="Per-backend status"
-          hint="Hover the summary for the snapshot time and next step. The button stays put."
+          hint="Snapshot freshness and next action are shown on each card (no flip required)."
           layout={layout}
           onLayoutChange={setLayout}
           countLabel={`${ranked.length} backend${ranked.length === 1 ? '' : 's'}`}
@@ -250,12 +223,12 @@ export const CalibrationStatus = () => {
         {layout === 'grid' ? (
           <div className="cs-flip-grid" aria-label="Calibration by backend">
             {ranked.map(({ b, c, age, status }) => (
-              <CalFlipCard
+              <CalStaticCard
                 key={b.backend_id}
                 name={b.backend_name || b.backend_id}
                 modality={modalityName(b.qpu_modality)}
                 status={status}
-                ageLabel={age != null ? `${age.toFixed(1)} h` : 'N/A'}
+                ageLabel={formatCalibrationAgeHours(age)}
                 calibrated={c?.calibration_timestamp ? formatIST(c.calibration_timestamp) : 'N/A'}
                 action={(STATUS[status] || STATUS.None).action}
                 onOpen={() => nav(buildBackendDetailsPath(b.backend_id, 'calibration'))}

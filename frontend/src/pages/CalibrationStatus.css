@@ -129,6 +129,29 @@
   margin-top: 8px;
 }
 
+.cs-static-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: var(--ds-surface-inset-y, 16px) var(--ds-surface-inset-x, 16px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--ds-surface-radius, 8px);
+  background: var(--bg-card);
+  min-height: 0;
+}
+
+.cs-static-card__stats {
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.cs-static-card__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
 .cs-flip-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));

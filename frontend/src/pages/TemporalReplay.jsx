@@ -13,7 +13,7 @@ import { ErrorState } from '../components/observability/ErrorState.jsx';
 import { getChartTheme, baseTooltip, getChartSemanticColors, getChartInkColor } from '../components/observability/chartTheme.js';
 import { useAppScope } from '../hooks/useAppScope.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
-import { formatISTTime } from '../utils/time';
+import { formatIST, formatISTChartTick, formatISTTime, parseDate } from '../utils/time';
 import { buildBackendDetailsPath } from '../lib/investigationLinks.js';
 import { ageHours, fmtNum, isStale, modalityOf, timelineLink } from './telemetryPageUtils.js';
 import { formatPendingJobs } from '../lib/queueWaitDisplay.js';
@@ -121,7 +121,17 @@ export const TemporalReplay = () => {
     return () => clearInterval(id);
   }, [playing, maxIdx, noMotion]);
 
-  const labels = useMemo(() => frames.map((f) => formatISTTime(f.at, false)), [frames]);
+  const replaySpanHours = useMemo(() => {
+    if (frames.length < 2) return 24;
+    const a = parseDate(frames[0].at)?.getTime();
+    const b = parseDate(frames[frames.length - 1].at)?.getTime();
+    if (a == null || b == null) return 24;
+    return Math.abs(b - a) / 3.6e6;
+  }, [frames]);
+  const labels = useMemo(
+    () => frames.map((f) => formatISTChartTick(f.at, replaySpanHours)),
+    [frames, replaySpanHours],
+  );
   const cursor = labels[index];
 
   const trendOption = useMemo(() => {
@@ -207,7 +217,9 @@ export const TemporalReplay = () => {
         <>
           {isStale(lastAt) && (
             <p className="tm-callout tm-callout--bad" role="status">
-              Stale replay data · last save {formatISTTime(lastAt)}. Collector may be paused.
+              Historical replay data is stale. Newest stored frame: {formatIST(lastAt)}
+              {frameAgeH != null ? ` (about ${fmtNum(frameAgeH, 1)} h old).` : '.'}
+              {' '}Collector may be paused, or ingestion lags live telemetry.
             </p>
           )}
           <div className="card tm-player" role="group" aria-label="Replay controls">
@@ -218,11 +230,12 @@ export const TemporalReplay = () => {
               title={noMotion ? 'Autoplay disabled by your reduced-motion setting. Use step buttons or the slider.' : undefined}
             >{playing ? <Pause size={16} /> : <Play size={16} />}</button>
             <button type="button" className="btn btn-secondary" onClick={() => { setPlaying(false); setIndex((i) => Math.min(maxIdx, i + 1)); }} aria-label="Next frame" disabled={index >= maxIdx}><SkipForward size={16} /></button>
+            <button type="button" className="btn btn-secondary btn--sm" onClick={() => { setPlaying(false); setIndex(maxIdx); }} disabled={index >= maxIdx}>Latest frame</button>
             <input id="replay-scrub" type="range" min={0} max={maxIdx} value={index} aria-label="Replay frame" aria-valuetext={`Frame ${index + 1} of ${frames.length}, ${frame?.at ? formatISTTime(frame.at) : ''}`}
               onChange={(e) => { setPlaying(false); setIndex(Number(e.target.value)); }} />
             <span className="page-hint" style={{ margin: 0, flex: '1 1 auto' }}>
               Frame {index + 1}/{frames.length}
-              {frame?.at ? ` · ${formatISTTime(frame.at)}` : ''}
+              {frame?.at ? ` · ${formatIST(frame.at, false)}` : ''}
               {lastAt ? (
                 <>
                   {' · '}

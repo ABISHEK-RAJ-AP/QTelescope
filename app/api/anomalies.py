@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
@@ -14,9 +16,12 @@ _METRIC_PATTERN = "^(t1|t2|readout_error)$"
 @router.get("/summary")
 def get_anomaly_summary(
     metric: str = Query("t1", pattern=_METRIC_PATTERN),
+    backend_id: Optional[str] = Query(None, min_length=1, max_length=128),
     db: Session = Depends(get_db),
 ):
-    return scan_fleet_anomalies(db, metric=metric)
+    if backend_id and not db.query(BackendModel).filter(BackendModel.backend_id == backend_id).first():
+        raise HTTPException(status_code=404, detail="Backend not found")
+    return scan_fleet_anomalies(db, metric=metric, backend_id=backend_id)
 
 
 @router.get("/{backend_id}/qubits/{qubit_index}")

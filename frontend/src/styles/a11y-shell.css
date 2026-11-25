@@ -39,24 +39,42 @@
 }
 
 .a11y-preheader__skip {
+  position: absolute;
+  left: 8px;
+  top: 4px;
   margin-right: auto;
-  padding: 0 12px;
-  height: var(--a11y-preheader-height);
+  padding: 4px 12px;
+  height: auto;
+  min-height: 24px;
   display: inline-flex;
   align-items: center;
   color: rgba(255, 255, 255, 0.92);
   font-size: 12px;
   font-weight: 600;
   text-decoration: none;
-  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid transparent;
+  border-radius: 6px;
   white-space: nowrap;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
 }
 
 .a11y-preheader__skip:hover,
 .a11y-preheader__skip:focus-visible {
+  clip: auto;
+  clip-path: none;
+  overflow: visible;
+  width: auto;
+  height: auto;
   color: #fde68a;
   background: rgba(255, 255, 255, 0.12);
-  outline: none;
+  border-color: rgba(255, 255, 255, 0.25);
+  outline: 2px solid #fde68a;
+  outline-offset: 2px;
+  z-index: 2;
 }
 
 .a11y-preheader__tools {

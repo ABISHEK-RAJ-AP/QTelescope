@@ -26,3 +26,12 @@ def test_max_severity():
     ]
     assert inc_svc._max_severity(alerts) == "CRITICAL"
     assert SEVERITY_RANK["CRITICAL"] > SEVERITY_RANK["WARNING"]
+
+
+def test_incident_title_humanizes_rule_codes():
+    class _A:
+        alert_type = "LOW_T2"
+
+    title = inc_svc._incident_title("ibm_brisbane", [_A(), _A()])
+    assert "Low T2" in title
+    assert "LOW_T2" not in title

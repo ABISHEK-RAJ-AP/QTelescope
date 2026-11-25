@@ -22,6 +22,7 @@ import { ListPager } from '../components/observability/ListPager.jsx';
 import { unableToLoad, unableToLoadLabel } from '../constants/messages.js';
 import { formatBackendTitle } from '../lib/displayLabels.js';
 import { formatWaitFromResolved, resolveWaitSeconds } from '../lib/queueWaitDisplay.js';
+import { CouplingGraphPreview } from '../components/backends/CouplingGraphPreview.jsx';
 import './BackendDetails.css';
 
 const TAB_LABEL = { overview: 'Overview', qubits: 'Qubits', calibration: 'Calibration', connectivity: 'Connectivity', execution: 'Execution' };
@@ -249,8 +250,11 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
   const calHistSorted = d.calHist.toSorted((a, b) => parseTs(b.calibration_timestamp) - parseTs(a.calibration_timestamp));
   const secErr = (name) => d.failed.includes(name);
 
+  const topologyHref = link('/app/telemetry/topology');
+
   return (
-    <div className="page-stack">
+    <div className="page-stack bd-workspace">
+      <div className="bd-workspace-shell">
       <header className="card bd-head">
         <div className="bd-head__top">
           <div className="bd-head__id">
@@ -262,7 +266,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
                 </PageRelatedLink>
               </nav>
             ) : null}
-            <h2 className="sr-only">{formatBackendTitle(backend)}</h2>
+            <h1 className="bd-title">{formatBackendTitle(backend)}</h1>
             <p
               className="bd-meta"
               title={backendRegistryHoverTitle(formatBackendTitle(backend), backend.backend_id)}
@@ -318,6 +322,16 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
               </dd>
             </div>
           ) : null}
+          <div>
+            <dt>Active alerts</dt>
+            <dd>
+              {activeAlerts.length ? (
+                <Link className="bd-facts__link" to={link('/app/alerts/events')}>{activeAlerts.length} open</Link>
+              ) : (
+                'None'
+              )}
+            </dd>
+          </div>
         </dl>
       </header>
 
@@ -325,7 +339,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
         <p className="bk-note" role="status">Partial data: {[...d.failed, ...(lineage.error ? ['adapter lineage'] : [])].join(', ')} could not load. Affected sections say so.</p>
       )}
 
-      <div className="bd-tabs" role="tablist" aria-label="Backend workspace">
+      <div className="bd-tabs bd-tabs--sticky" role="tablist" aria-label="Backend workspace">
         {BACKEND_WORKSPACE_TABS.map((tab) => (
           <button key={tab} type="button" role="tab" id={`bd-tab-${tab}`} aria-selected={activeTab === tab} aria-controls="bd-panel" tabIndex={activeTab === tab ? 0 : -1}
             className="bd-tab" onClick={() => onWorkspaceTabChange?.(tab)}
@@ -341,8 +355,9 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
           </button>
         ))}
       </div>
+      </div>
 
-      <div id="bd-panel" role="tabpanel" aria-labelledby={`bd-tab-${activeTab}`} className="page-stack">
+      <div id="bd-panel" role="tabpanel" aria-labelledby={`bd-tab-${activeTab}`} className="page-stack bd-workspace-body">
         {activeTab === 'overview' && (
           <>
             <section className="bk-kpis bd-overview-kpis" aria-label="Key metrics">
@@ -461,7 +476,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
             <>
               <section className="card bd-panel" aria-label="Qubit map">
                 <h3>Qubit map <Link className="bd-link" to={link('/app/resources/health')}>Open in Resource health</Link></h3>
-                <div className="bd-hm">
+                <div className="bd-hm bd-hm--workspace">
                   {qubitRows.map((q) => (
                     <Link key={q.qubit_index} className="bd-cell" data-s={q.state} to={link('/app/resources/health')}
                       title={`Q${q.qubit_index} · ${q.state} · T1 ${fmtDur(q.t1)}`} aria-label={`Qubit ${q.qubit_index}, ${q.state}`}>{q.qubit_index}</Link>
@@ -564,7 +579,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
             <section className="card bd-panel bd-connect-summary" aria-label="Connectivity">
               <div className="bd-connect-summary__head">
                 <h3>Coupling map</h3>
-                <Link className="btn btn-secondary btn--sm" to={link('/app/telemetry/topology')}>Open topology map</Link>
+                <Link className="btn btn-secondary btn--sm" to={topologyHref}>Open topology map</Link>
               </div>
               {conn.length === 0 ? (
                 logicalAllToAll || backend.topology_type === 'all_to_all' ? (
@@ -586,6 +601,14 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
                 </ul>
               )}
             </section>
+            {conn.length > 0 ? (
+              <CouplingGraphPreview
+                backendId={backend.backend_id}
+                edges={conn}
+                qubitRows={qubitRows}
+                topologyHref={topologyHref}
+              />
+            ) : null}
             <section className="card bd-panel" aria-label="Qubit health and coupling context">
               <h3>Qubit health on this backend</h3>
               {hv?.counts ? (

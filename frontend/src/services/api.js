@@ -362,7 +362,10 @@ export const api = {
   getBackendsStatusAll: () => fetchApi('/backends/status-all'),
   getBackendDetail: (id) => fetchApi(`/backends/${id}`),
   getBackendStatus: (id) => fetchApi(`/backends/${id}/status`),
-  getBackendTelemetry: (id) => fetchApi(`/backends/${id}/telemetry`),
+  getBackendTelemetry: (id, { limit } = {}) => {
+    const q = limit != null ? `?limit=${encodeURIComponent(limit)}` : '';
+    return fetchApi(`/backends/${id}/telemetry${q}`);
+  },
   getBackendConnectivity: (id) => fetchApi(`/backends/${id}/connectivity`),
   getBackendTopology: (id) => fetchApi(`/backends/${id}/topology`),
 
@@ -440,8 +443,11 @@ export const api = {
   getRetentionPolicy: () => fetchApi('/admin/retention/policy'),
   getSchedulerStatus: () => fetchApi('/admin/scheduler-status'),
 
-  getAnomalySummary: (metric = 't1') =>
-    fetchApi(`/anomalies/summary?metric=${encodeURIComponent(metric)}`),
+  getAnomalySummary: (metric = 't1', backendId) => {
+    const params = new URLSearchParams({ metric });
+    if (backendId) params.set('backend_id', backendId);
+    return fetchApi(`/anomalies/summary?${params}`);
+  },
   getQubitAnomalies: (backendId, qubitIndex, metric = 't1') =>
     fetchApi(`/anomalies/${backendId}/qubits/${qubitIndex}?metric=${encodeURIComponent(metric)}`),
 
@@ -469,6 +475,8 @@ export const api = {
   syncIncidents: () => fetchApi('/incidents/sync', { method: 'POST' }),
   acknowledgeIncident: (id, body) => fetchApi(`/incidents/${id}/acknowledge`, { method: 'POST', body: JSON.stringify(body || {}) }),
   investigateIncident: (id) => fetchApi(`/incidents/${id}/investigate`, { method: 'POST' }),
+  assignIncident: (id, owner) =>
+    fetchApi(`/incidents/${id}/assign`, { method: 'POST', body: JSON.stringify({ owner }) }),
   resolveIncident: (id, notes) => fetchApi(`/incidents/${id}/resolve`, { method: 'POST', body: JSON.stringify({ resolution_notes: notes || '' }) }),
   addIncidentComment: (id, text) =>
     fetchApi(`/incidents/${id}/comments`, { method: 'POST', body: JSON.stringify({ text }) }),
@@ -539,4 +547,17 @@ export const api = {
   getMetricCapabilities: () => fetchApi('/metrics/capabilities'),
   getMetricCoverage: () => fetchApi('/metrics/coverage'),
   getBackendMetricCoverage: (id) => fetchApi(`/metrics/coverage/${id}`),
+  async downloadMetricCoverageCsv() {
+    const res = await fetch(`${BASE_URL}/metrics/coverage/export?format=csv`, {
+      headers: sessionAuthHeaders(),
+    });
+    if (!res.ok) throw new Error(`Export failed (${res.status})`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'metrics-coverage.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  },
 };

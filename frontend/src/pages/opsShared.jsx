@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, AlertCircle, Info, CheckCircle2, Eye, Siren } from 'lucide-react';
+import { roleLabel } from '../lib/permissions.js';
 import './AlertsEvents.css';
 
 const SEV_ICON = { CRITICAL: AlertTriangle, WARNING: AlertCircle, INFO: Info };
@@ -35,5 +36,5 @@ export function StatusBadge({ status }) {
 /** RBAC role label on discussion threads (Cert Studio–style attribution). */
 export function RoleBadge({ role }) {
   if (!role) return null;
-  return <span className="rbac-role-badge">{role}</span>;
+  return <span className="rbac-role-badge">{roleLabel(role)}</span>;
 }

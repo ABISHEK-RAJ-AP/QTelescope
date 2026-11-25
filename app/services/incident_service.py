@@ -36,9 +36,33 @@ def _max_severity(alerts: List[AlertModel]) -> str:
     return best
 
 
+_RULE_LABELS = {
+    "LOW_T1": "Low T1",
+    "LOW_T2": "Low T2",
+    "STALE_CALIBRATION": "Stale calibration",
+    "HIGH_QUEUE": "High queue depth",
+    "HIGH_READOUT": "High readout error",
+    "BACKEND_OFFLINE": "Backend offline",
+}
+
+
+def _rule_label(alert_type: str) -> str:
+    if alert_type in _RULE_LABELS:
+        return _RULE_LABELS[alert_type]
+    parts = (alert_type or "").split("_")
+    out = []
+    for p in parts:
+        if not p:
+            continue
+        out.append(p[0].upper() + p[1:].lower() if len(p) > 3 else p)
+    return " ".join(out) or alert_type
+
+
 def _incident_title(backend_id: str, alerts: List[AlertModel]) -> str:
     types = sorted({a.alert_type for a in alerts})
-    return f"{backend_id} — {', '.join(types[:3])}" + ("…" if len(types) > 3 else "")
+    labels = [_rule_label(t) for t in types[:3]]
+    suffix = "…" if len(types) > 3 else ""
+    return f"{backend_id} — {', '.join(labels)}{suffix}"
 
 
 def sync_incidents_from_alerts_if_stale(db: Session, *, force: bool = False) -> int:

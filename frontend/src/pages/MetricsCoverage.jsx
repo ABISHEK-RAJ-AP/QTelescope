@@ -57,6 +57,7 @@ export const MetricsCoverage = () => {
   const nav = useNavigate();
   const lineage = useProviderLineage();
   const [registry, setRegistry] = useState([]);
+  const [metricGroups, setMetricGroups] = useState([]);
   const [coverage, setCoverage] = useState(null);
   const [caps, setCaps] = useState([]);
   const [fresh, setFresh] = useState({});
@@ -75,6 +76,7 @@ export const MetricsCoverage = () => {
       api.getCalibrations().catch(() => []),
     ]).then(([reg, cap, cov, calList]) => {
       setRegistry(reg.metrics || []);
+      setMetricGroups(reg.groups || []);
       setCaps(cap.providers || []);
       setCoverage(cov.backends || []);
       setFresh(Object.fromEntries((calList || []).map((c) => [c.backend_id, c.freshness_status])));
@@ -89,11 +91,20 @@ export const MetricsCoverage = () => {
   }, [load, lastRefresh, setActions, clearActions]);
 
   const regById = useMemo(() => Object.fromEntries(registry.map((m) => [m.metric_id, m])), [registry]);
+  const groupLabel = useMemo(
+    () => Object.fromEntries((metricGroups || []).map((g) => [g.id, g.label])),
+    [metricGroups],
+  );
+
   const metricCols = useMemo(() => {
     const seen = new Map();
     (coverage || []).forEach((b) => (b.metrics || []).forEach((m) => { if (!seen.has(m.metric_id)) seen.set(m.metric_id, m); }));
-    return [...seen.values()];
-  }, [coverage]);
+    const order = (metricGroups || []).flatMap((g) => g.metric_ids || []);
+    const rows = [...seen.values()];
+    if (!order.length) return rows;
+    const rank = new Map(order.map((id, i) => [id, i]));
+    return rows.toSorted((a, b) => (rank.get(a.metric_id) ?? 999) - (rank.get(b.metric_id) ?? 999));
+  }, [coverage, metricGroups]);
 
   const stateOf = useCallback((b, m) => {
     const raw = (b.metrics || []).find((x) => x.metric_id === m.metric_id);
@@ -183,8 +194,16 @@ export const MetricsCoverage = () => {
             <span className="sr-only">Search backends</span>
             <input type="search" value={backendQuery} onChange={(e) => setBackendQuery(e.target.value)} placeholder="Search backends" />
           </label>
+          <button type="button" className="btn btn-secondary btn--sm" onClick={() => api.downloadMetricCoverageCsv().catch((e) => setError(String(e.message || e)))}>
+            Export CSV
+          </button>
           {lastRefresh ? <span className="page-hint" style={{ margin: 0 }}>Evaluated {lastRefresh.toLocaleString()}</span> : null}
         </div>
+        {metricGroups.length > 0 ? (
+          <p className="page-hint mc-groups" style={{ margin: '0 0 12px' }}>
+            Metric groups: {metricGroups.map((g) => `${g.label} (${(g.metric_ids || []).length})`).join(' · ')}
+          </p>
+        ) : null}
         {fleetFindings.length > 0 && (
           <div className="mc-findings" role="status">
             <strong>Coverage findings</strong>
@@ -204,7 +223,15 @@ export const MetricsCoverage = () => {
               <tr>
                 <th scope="col" className="mc-sticky">Backend</th>
                 <th scope="col" title="Supported metrics with stored samples">Cov.</th>
-                {metricCols.map((m) => <th scope="col" key={m.metric_id} title={`${m.name} (${m.unit})`}><span className="mc-colhead">{METRIC_ABBR[m.metric_id] || m.name}</span></th>)}
+                {metricCols.map((m) => (
+                  <th
+                    scope="col"
+                    key={m.metric_id}
+                    title={`${m.name} (${m.unit})${m.group ? ` · ${groupLabel[m.group] || m.group}` : ''}`}
+                  >
+                    <span className="mc-colhead">{METRIC_ABBR[m.metric_id] || m.name}</span>
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -260,6 +287,7 @@ export const MetricsCoverage = () => {
             <DetailModalSection title="Details">
               <DetailModalDl>
                 <DetailModalRow label="Metric"><code>{open.m.metric_id}</code> · {open.m.unit} · scope {openRaw?.scope || open.m.scope}</DetailModalRow>
+                <DetailModalRow label="Group">{groupLabel[regById[open.m.metric_id]?.group] || regById[open.m.metric_id]?.group || '—'}</DetailModalRow>
                 <DetailModalRow label="Description">{regById[open.m.metric_id]?.description || 'Not in registry.'}</DetailModalRow>
                 <DetailModalRow label="Backend">{open.b.backend_id} · {(open.b.qpu_modality || 'unknown').replace('_', ' ')}</DetailModalRow>
                 {lineage?.[open.b.provider_id] === 'live' && (

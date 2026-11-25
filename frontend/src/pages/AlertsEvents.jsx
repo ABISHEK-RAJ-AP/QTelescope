@@ -49,7 +49,7 @@ import {
   isMetricThresholdAlert,
 } from '../lib/alertSemantics.js';
 import { formatMetricValue } from '../lib/formatMetricValue.js';
-import { formatBackendTitle } from '../lib/displayLabels.js';
+import { formatBackendTitle, formatRuleLabel } from '../lib/displayLabels.js';
 import './AlertsEvents.css';
 
 const FETCH_LIMIT = 500; // API max for /alerts
@@ -95,8 +95,7 @@ const STATUSES = ['ACTIVE', 'ACKNOWLEDGED', 'RESOLVED'];
 const num = (v, unit = 'µs') => formatMetricValue(v, { decimals: 1, unit, nullLabel: 'Not available' });
 
 function ruleTitle(type) {
-  const raw = String(type || '').replace(/_/g, ' ').toLowerCase();
-  return raw ? raw.charAt(0).toUpperCase() + raw.slice(1) : 'Alert';
+  return formatRuleLabel(type);
 }
 
 function groupAlerts(alerts, grouped) {
@@ -358,8 +357,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
   const filtersActive = sevF !== 'ALL' || statusF !== 'ACTIVE' || scopeBackend || debouncedQuery.trim();
   const listCountLabel = useMemo(() => {
     const n = filtered.length;
-    if (!filtersActive) return `${n} in view`;
-    return `${n} in view · filtered`;
+    return `${n} matching alerts`;
   }, [filtered.length, filtersActive]);
 
   const orphanNoticeBody = useMemo(() => {
@@ -887,12 +885,14 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
               className="al-toolbar filter-bar--inline"
               search={query}
               onSearchChange={setQuery}
-              searchPlaceholder="Search id, qubit, message…"
+              searchPlaceholder="Search alerts, backends, qubits, rules…"
               searchLabel="Search alerts"
               count={listCountLabel}
               actions={(
                 <>
-                  <button type="button" className="btn btn-secondary btn--xs" onClick={clearFilters}>Reset filters</button>
+                  {filtersActive ? (
+                    <button type="button" className="btn btn-secondary btn--xs" onClick={clearFilters}>Clear filters</button>
+                  ) : null}
                   <ViewModeToggle value={listLayout} onChange={setListLayout} />
                 </>
               )}
@@ -942,7 +942,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
             {listLayout === 'grid' ? (
               <div className="dvt-grid al-alert-grid">
                 {pageRows.length === 0 ? (
-                  <div style={{ gridColumn: '1 / -1' }}><TableEmpty as="block" title={alerts.length === 0 ? 'No alerts recorded' : 'No alerts match filters'} message={alerts.length === 0 ? 'No alerts in the store.' : `Filters exclude all ${alerts.length} stored alerts.`} action={alerts.length ? <button type="button" className="btn btn-secondary btn--xs" onClick={clearFilters}>Reset filters</button> : undefined} /></div>
+                  <div style={{ gridColumn: '1 / -1' }}><TableEmpty as="block" title={alerts.length === 0 ? 'No alerts recorded' : 'No alerts match filters'} message={alerts.length === 0 ? 'No alerts in the store.' : `Filters exclude all ${alerts.length} stored alerts.`} action={alerts.length ? <button type="button" className="btn btn-secondary btn--xs" onClick={clearFilters}>Clear filters</button> : undefined} /></div>
                 ) : pageRows.map((g) => {
                   const multi = grouped && g.count > 1;
                   const a = g.items[0];
@@ -1080,8 +1080,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                     ),
                   },
                 ]}
-                searchKeys={['alert_id', 'type', 'backend', 'status', 'qubit']}
-                searchPlaceholder="Search alerts…"
+                hideToolbar
                 pageSize={15}
                 initialSort={{ key: 'severity_rank', dir: 'asc' }}
                 ariaLabel="Alerts"
@@ -1112,7 +1111,7 @@ export const AlertsEvents = ({ view = 'alerts', onViewChange, onOpenIncident, on
                       colSpan={8}
                       title={alerts.length === 0 ? 'No alerts recorded' : 'No alerts match filters'}
                       message={alerts.length === 0 ? 'No alerts in the store.' : `Filters exclude all ${alerts.length} stored alerts.`}
-                      action={alerts.length ? <button type="button" className="btn btn-secondary btn--xs" onClick={clearFilters}>Reset filters</button> : undefined}
+                      action={alerts.length ? <button type="button" className="btn btn-secondary btn--xs" onClick={clearFilters}>Clear filters</button> : undefined}
                     />
                   ) : pageRows.map((g) => {
                     const multi = grouped && g.count > 1;

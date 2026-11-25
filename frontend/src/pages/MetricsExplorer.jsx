@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { api } from '../services/api';
-import { formatISTTime } from '../utils/time';
-import { parseDate } from '../utils/time';
+import { formatISTChartTick, formatISTTime, parseDate } from '../utils/time';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
@@ -11,7 +10,7 @@ import { EmptyState } from '../components/observability/EmptyState.jsx';
 import { RefreshButton } from '../components/ui/RefreshButton.jsx';
 import { usePageActions } from '../context/PageActionsContext.jsx';
 import { baseTooltip, getChartTheme, getChartSemanticColors } from '../components/observability/chartTheme.js';
-import { readTelemetryWindowHours, writeTelemetryWindowHours } from '../utils/telemetryWindow';
+import { readTelemetryWindowHours, telemetryLimitForHours, writeTelemetryWindowHours } from '../utils/telemetryWindow';
 import {
   EXPLORER_METRICS,
   deleteSavedQuery,
@@ -20,10 +19,21 @@ import {
 } from '../lib/metricsExplorerQueries.js';
 import './TelemetryPages.css';
 
-async function fetchMetricSeries(backendId, metricDef) {
+function seriesStats(values) {
+  const v = values.filter((x) => x != null && Number.isFinite(Number(x))).map(Number);
+  if (!v.length) return null;
+  return {
+    n: v.length,
+    min: Math.min(...v),
+    max: Math.max(...v),
+    mean: v.reduce((a, b) => a + b, 0) / v.length,
+  };
+}
+
+async function fetchMetricSeries(backendId, metricDef, limit) {
   if (!backendId || !metricDef) return [];
   if (metricDef.source === 'telemetry') {
-    const rows = await api.getBackendTelemetry(backendId);
+    const rows = await api.getBackendTelemetry(backendId, { limit });
     return (rows || []).map((r) => ({
       t: r.timestamp,
       v: r[metricDef.field] ?? null,
@@ -88,10 +98,11 @@ export const MetricsExplorer = () => {
 
   const loadSeries = useCallback(async () => {
     if (!selectedBackend) return;
+    const limit = telemetryLimitForHours(windowHours);
     try {
       const [a, b] = await Promise.all([
-        fetchMetricSeries(selectedBackend, metricDef),
-        compareBackend ? fetchMetricSeries(compareBackend, metricDef) : Promise.resolve([]),
+        fetchMetricSeries(selectedBackend, metricDef, limit),
+        compareBackend ? fetchMetricSeries(compareBackend, metricDef, limit) : Promise.resolve([]),
       ]);
       setSeriesA(a);
       setSeriesB(b);
@@ -100,7 +111,7 @@ export const MetricsExplorer = () => {
       setSeriesA([]);
       setSeriesB([]);
     }
-  }, [selectedBackend, compareBackend, metricDef]);
+  }, [selectedBackend, compareBackend, metricDef, windowHours]);
 
   useEffect(() => { loadBackends(); refreshSaved(); }, [loadBackends, refreshSaved]);
   useEffect(() => { loadSeries(); }, [loadSeries]);
@@ -117,12 +128,14 @@ export const MetricsExplorer = () => {
 
   const chartOption = useMemo(() => {
     const sem = getChartSemanticColors();
-    const labels = filteredA.map((p) => formatISTTime(p.t, false));
+    const labels = filteredA.map((p) => formatISTChartTick(p.t, windowHours));
+    const discrete = metricDef.id === 'pending_jobs' || metricDef.id === 'queued_jobs';
     const series = [
       {
         name: selectedBackend || 'Primary',
         type: 'line',
-        smooth: true,
+        smooth: false,
+        step: discrete ? 'end' : false,
         data: filteredA.map((p) => (p.v != null && Number.isFinite(Number(p.v)) ? Number(p.v) : null)),
         connectNulls: false,
         itemStyle: { color: sem.healthy },
@@ -132,7 +145,8 @@ export const MetricsExplorer = () => {
       series.push({
         name: compareBackend,
         type: 'line',
-        smooth: true,
+        smooth: false,
+        step: discrete ? 'end' : false,
         data: filteredB.map((p) => (p.v != null && Number.isFinite(Number(p.v)) ? Number(p.v) : null)),
         connectNulls: false,
         itemStyle: { color: sem.accent },
@@ -158,7 +172,12 @@ export const MetricsExplorer = () => {
       },
       series,
     };
-  }, [filteredA, filteredB, selectedBackend, compareBackend, isDark, theme, metricDef]);
+  }, [filteredA, filteredB, selectedBackend, compareBackend, isDark, theme, metricDef, windowHours]);
+
+  const statsPrimary = useMemo(
+    () => seriesStats(filteredA.map((p) => p.v)),
+    [filteredA],
+  );
 
   const applySaved = (q) => {
     if (!q) return;
@@ -195,7 +214,8 @@ export const MetricsExplorer = () => {
 
   return (
     <div className="page-stack" data-tour="page-metrics-explorer">
-      <section className="card page-panel" aria-label="Metrics explorer controls">
+      <section className="card page-panel" aria-label="Metrics explorer query">
+        <h3 className="page-section-title" style={{ marginTop: 0 }}>Query</h3>
         <div className="page-toolbar-unified" aria-label="Scope and metrics">
           <label className="outline-field">
             <span>Backend</span>
@@ -222,7 +242,7 @@ export const MetricsExplorer = () => {
             </select>
           </label>
           <label className="outline-field">
-            <span>Compare</span>
+            <span>Compare backend</span>
             <select className="input-control" value={compareBackend} onChange={(e) => setCompareBackend(e.target.value)} aria-label="Compare backend">
               <option value="">None</option>
               {backends.filter((b) => b.backend_id !== selectedBackend).map((b) => (
@@ -230,8 +250,14 @@ export const MetricsExplorer = () => {
               ))}
             </select>
           </label>
+        </div>
+      </section>
+
+      <section className="card page-panel" aria-label="Saved queries">
+        <h3 className="page-section-title" style={{ marginTop: 0 }}>Saved queries</h3>
+        <div className="page-toolbar-unified">
           <label className="outline-field">
-            <span>Saved</span>
+            <span>Saved queries</span>
             <select
               className="input-control"
               value=""
@@ -241,36 +267,29 @@ export const MetricsExplorer = () => {
                 applySaved(q);
               }}
             >
-              <option value="">Load…</option>
+              <option value="">Select saved query…</option>
               {saved.map((q) => (
                 <option key={q.id} value={q.id}>{q.name}</option>
               ))}
             </select>
           </label>
           <label className="outline-field">
-            <span>Name</span>
-            <input className="input-control" placeholder="Query name" aria-label="Save query as" value={saveName} onChange={(e) => setSaveName(e.target.value)} />
+            <span>Save as</span>
+            <input className="input-control" placeholder="Required name" aria-label="Save query as" value={saveName} onChange={(e) => setSaveName(e.target.value)} required />
           </label>
           <div className="ops-filter__actions">
-            <button type="button" className="btn btn-primary" disabled={!saveName.trim()} onClick={onSave}>Save</button>
-            {saved.length > 0 && (
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  const first = saved[0];
-                  if (first) {
-                    deleteSavedQuery(first.id);
-                    refreshSaved();
-                  }
-                }}
-              >
-                Delete latest
-              </button>
-            )}
+            <button type="button" className="btn btn-primary" disabled={!saveName.trim() || !selectedBackend} onClick={onSave}>Save query</button>
           </div>
         </div>
       </section>
+
+      {statsPrimary && (
+        <p className="page-hint" style={{ margin: 0 }}>
+          {filteredA.length} sample{filteredA.length === 1 ? '' : 's'} in {windowHours} h window
+          {statsPrimary ? ` · min ${statsPrimary.min.toFixed(2)} · max ${statsPrimary.max.toFixed(2)} · mean ${statsPrimary.mean.toFixed(2)}` : ''}
+          {asOf ? ` · latest ${asOf}` : ''}
+        </p>
+      )}
 
       <ChartPanel
         title={`${metricDef.label}${compareBackend ? ' · compare' : ''}`}

@@ -138,11 +138,11 @@ export const AnomalyMonitor = () => {
   const load = useCallback(() => {
     setLoading(true);
     setError(false);
-    Promise.all([api.getAnomalySummary(metric), api.getBackends().catch(() => [])])
+    Promise.all([api.getAnomalySummary(metric, scopeBackend || undefined), api.getBackends().catch(() => [])])
       .then(([d, b]) => { setData(d); setBackends(b || []); setLastRefresh(new Date()); })
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, [metric]);
+  }, [metric, scopeBackend]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
     setActions(<RefreshButton onClick={load} lastRefreshAt={lastRefresh} label="Refresh anomaly scan" />);
@@ -253,7 +253,7 @@ export const AnomalyMonitor = () => {
       {!error && (
         <>
           <div className="tm-kpis">
-            <div className="tm-kpi"><div className="tm-kpi__label">Series scanned</div><div className="tm-kpi__value">{Number.isFinite(data?.series_scanned) ? <AnimatedNumber value={data.series_scanned} /> : '—'}</div><div className="tm-kpi__sub">{data?.backends_scanned ?? '—'} backends</div></div>
+            <div className="tm-kpi"><div className="tm-kpi__label">Series scanned</div><div className="tm-kpi__value">{Number.isFinite(data?.series_scanned) ? <AnimatedNumber value={data.series_scanned} /> : '—'}</div><div className="tm-kpi__sub">{scopeBackend ? 'Selected backend' : `${data?.backends_scanned ?? '—'} backends`}</div></div>
             <div className="tm-kpi"><div className="tm-kpi__label">Anomalies</div><div className="tm-kpi__value" style={{ color: count('ANOMALY') ? 'var(--accent-rose)' : undefined }}><AnimatedNumber value={count('ANOMALY')} /></div><div className="tm-kpi__sub">in view</div></div>
             <div className="tm-kpi"><div className="tm-kpi__label">Warnings</div><div className="tm-kpi__value" style={{ color: count('WARNING') ? 'var(--accent-amber)' : undefined }}><AnimatedNumber value={count('WARNING')} /></div><div className="tm-kpi__sub">in view</div></div>
             <div className="tm-kpi"><div className="tm-kpi__label">Change points</div><div className="tm-kpi__value"><AnimatedNumber value={count('CHANGE_POINT')} /></div><div className="tm-kpi__sub">in view</div></div>
@@ -266,9 +266,9 @@ export const AnomalyMonitor = () => {
             sourceKind="cached"
             asOf={lastRefresh ? lastRefresh.toLocaleTimeString() : undefined}
             state={loading && !data ? 'loading' : hits.length ? 'ready' : 'empty'}
-            emptyTitle="No flags in scan"
-            emptyMessage={`${data?.series_scanned ?? 0} series scanned (${data?.insufficient_series ?? 0} too short for EWMA). None exceeded warning thresholds. See the watch list for highest |z| scores.`}
-            minHeight={320}
+            emptyTitle="No flagged anomalies"
+            emptyMessage={`Scanned ${data?.series_scanned ?? 0} series · insufficient history ${data?.insufficient_series ?? 0} · flagged ${hits.length}. None exceeded warning thresholds.`}
+            minHeight={hits.length ? 320 : 160}
             tableAlternative={<p className="page-hint">{hits.map((h) => `${h.backend_name || h.backend_id} Q${h.qubit_index}: ${h.status}`).join('; ')}</p>}
           >
             <QtECharts option={heat.option} style={{ height: Math.max(320, 120 + rows.length * 48), width: '100%' }} onEvents={{ click: onHeatClick }} />
@@ -286,7 +286,7 @@ export const AnomalyMonitor = () => {
                     <tr><th>Backend</th><th>Qubit</th><th>Latest</th><th>EWMA</th><th>|z|</th></tr>
                   </thead>
                   <tbody>
-                    {data.watch_list.map((w) => (
+                    {(data.watch_list || []).filter((w) => !scopeBackend || w.backend_id === scopeBackend).map((w) => (
                       <tr key={`${w.backend_id}-${w.qubit_index}`}>
                         <td>{w.backend_name || w.backend_id}</td>
                         <td>Q{w.qubit_index}</td>

@@ -50,6 +50,10 @@ class IncidentResolveBody(BaseModel):
     resolution_notes: str = ""
 
 
+class IncidentAssignBody(BaseModel):
+    owner: str = Field(..., min_length=1, max_length=120)
+
+
 def _load_incident(db: Session, incident_id: str) -> IncidentModel:
     inc = db.query(IncidentModel).filter(IncidentModel.incident_id == incident_id).first()
     if not inc:
@@ -154,7 +158,9 @@ def acknowledge_incident(
     inc.status = "ACKNOWLEDGED"
     inc.acknowledged_by = body.acknowledged_by or actor
     if body.owner:
-        inc.owner = body.owner
+        inc.owner = body.owner.strip()
+    elif not inc.owner:
+        inc.owner = body.acknowledged_by or actor
     db.commit()
     db.refresh(inc)
     record_audit(
@@ -191,6 +197,32 @@ def investigate_incident(
     return _serialize(db, inc, include_alerts=True)
 
 
+@router.post("/{incident_id}/assign", response_model=IncidentResponse)
+def assign_incident(
+    incident_id: str,
+    body: IncidentAssignBody,
+    db: Session = Depends(get_db),
+    role: str = Depends(require_permission("incidents:update")),
+    actor: str = Depends(get_current_username),
+):
+    inc = _load_incident(db, incident_id)
+    owner = (body.owner or "").strip()
+    if not owner:
+        raise HTTPException(status_code=400, detail="Owner is required")
+    inc.owner = owner
+    db.commit()
+    db.refresh(inc)
+    record_audit(
+        "incident.assign",
+        actor=actor,
+        role=role,
+        resource_type="incident",
+        resource_id=incident_id,
+        detail={"owner": owner},
+    )
+    return _serialize(db, inc, include_alerts=True)
+
+
 @router.post("/{incident_id}/resolve", response_model=IncidentResponse)
 def resolve_incident(
     incident_id: str,
@@ -200,6 +232,11 @@ def resolve_incident(
     actor: str = Depends(get_current_username),
 ):
     inc = _load_incident(db, incident_id)
+    if not (inc.owner or inc.acknowledged_by):
+        raise HTTPException(
+            status_code=400,
+            detail="Assign an owner or acknowledge the incident before resolving.",
+        )
     inc.status = "RESOLVED"
     inc.resolution_notes = body.resolution_notes or None
     inc.resolved_at = datetime.datetime.now(datetime.timezone.utc)

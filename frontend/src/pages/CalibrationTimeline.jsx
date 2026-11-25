@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { api } from '../services/api';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
-import { formatISTTime } from '../utils/time';
+import { formatIST, formatISTChartTick, formatISTTime } from '../utils/time';
 import { readTelemetryWindowHours, telemetryLimitForHours, writeTelemetryWindowHours } from '../utils/telemetryWindow';
 import { ContextBar } from '../components/observability/ContextBar.jsx';
 import { useAppScope } from '../hooks/useAppScope.js';
@@ -85,7 +85,7 @@ export const CalibrationTimeline = () => {
     const events = (payload?.calibration_events || []).filter((e) => inWindow(e.calibration_timestamp));
     if (!series.length && !events.length) return null;
 
-    const xData = series.map((p) => formatISTTime(p.observed_at, false));
+    const xData = series.map((p) => formatISTChartTick(p.observed_at, windowHours));
     const yData = series.map((p) => p.t1_mean_us);
 
     const markLines = events
@@ -118,12 +118,16 @@ export const CalibrationTimeline = () => {
         name: 'Mean T1',
         type: 'line',
         data: yData,
-        smooth: true,
+        smooth: false,
+        connectNulls: false,
         itemStyle: { color: sem.accent },
         markLine: markLines.length ? { symbol: 'none', data: markLines } : undefined,
       }],
     };
   }, [payload, isDark, theme, windowHours]);
+
+  const seriesCount = (payload?.t1_mean_series || []).length;
+  const chartHeightPx = Math.min(320, Math.max(200, seriesCount * 6 + 120));
 
   if (loading && !payload) return <BoneyardSkeleton layout="grid" />;
 
@@ -145,12 +149,12 @@ export const CalibrationTimeline = () => {
         state={option ? 'ready' : 'empty'}
         emptyTitle="Insufficient history"
         emptyMessage="Expand lookback or wait for more qubit telemetry samples."
-        minHeight={380}
+        minHeight={chartHeightPx}
         tableAlternative={option ? undefined : (
           <p className="page-hint">No T1 mean series or calibration markers in this window.</p>
         )}
       >
-        {option && <QtECharts option={option} style={{ height: 'min(420px, 50vh)', minHeight: 320, width: '100%' }} />}
+        {option && <QtECharts option={option} style={{ height: chartHeightPx, width: '100%' }} />}
       </ChartPanel>
 
       {backendId && modalityOf(backends, backendId) === 'trapped_ion' && (
@@ -199,9 +203,9 @@ export const CalibrationTimeline = () => {
                 <tbody>
                   {slice.map((e, i) => (
                     <tr key={`${e.calibration_timestamp}-${i}`}>
-                      <td>{e.calibration_timestamp ? formatISTTime(e.calibration_timestamp) : '—'}</td>
+                      <td>{e.calibration_timestamp ? formatIST(e.calibration_timestamp, false) : '—'}</td>
                       <td>{e.calibration_identifier || '—'}</td>
-                      <td>{e.freshness_status || '—'}</td>
+                      <td title="Freshness label at snapshot ingestion time">{e.freshness_status || '—'}</td>
                     </tr>
                   ))}
                 </tbody>

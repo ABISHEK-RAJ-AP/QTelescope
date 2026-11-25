@@ -336,8 +336,8 @@ export const JobMonitoring = () => {
         <ChartPanel
           title="Jobs by backend and status"
           titleTo="/app/execution/jobs"
-          question="Job volume and failure rate by backend."
-          sourceKind="cached" asOf={lastRefresh ? formatIST(lastRefresh) : undefined}
+          question="Job volume and failure rate by backend (same latest-200 loaded records as KPIs)."
+          sourceKind="derived" asOf={lastRefresh ? formatIST(lastRefresh) : undefined}
           state={stats.per.length ? 'ready' : 'empty'} emptyTitle="No jobs" minHeight={Math.max(200, stats.per.length * 44 + 60)}
           tableAlternative={(
             <table className="jm-alt">
@@ -451,8 +451,8 @@ export const JobMonitoring = () => {
           <EnterpriseDataTable
             rows={jobTableRows}
             columns={jobTableColumns}
-            searchKeys={['job_id', 'backend_id', 'backend_label', 'status', 'failure_reason']}
-            searchPlaceholder="Search jobs…"
+            hideToolbar
+            hideToolbarCount
             pageSize={15}
             initialSort={{ key: 'submitted_sort', dir: 'desc' }}
             ariaLabel="Jobs"

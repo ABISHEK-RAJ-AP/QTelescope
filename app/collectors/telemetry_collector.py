@@ -267,21 +267,33 @@ class TelemetryCollector:
             for new_alt in triggered:
                 self.db.add(new_alt)
 
-            if status_norm["operational"]:
-                for a in active_alerts:
-                    if (
-                        a.alert_type == "BACKEND_OFFLINE"
-                        and a.status == "ACTIVE"
-                        and (a.resource_id == backend_id or a.resource_id.startswith(f"{backend_id}_"))
-                    ):
-                        a.status = "RESOLVED"
-                        a.resolved_at = utcnow()
+            AlertEngine.resolve_recovered_alerts(
+                backend_id=backend_id,
+                operational=status_norm["operational"],
+                pending_jobs=status_norm["pending_jobs"],
+                calibration_freshness=freshness,
+                calibration_age_hours=age_hrs,
+                qubits_telemetry=qubits_norm,
+                open_alerts=active_alerts,
+                coherence=coh,
+                queue_threshold=float(eff["queue_jobs"]),
+                calibration_age_threshold=float(eff["calibration_age_hours"]),
+                readout_error_threshold=float(eff["readout_error"]),
+            )
+
+        try:
+            from app.services.alert_dedupe import dedupe_open_alerts
+
+            deduped = dedupe_open_alerts(self.db)
+        except Exception:
+            deduped = 0
 
         self.db.commit()
         self._last_cycle_stats = {
             "backends_processed": len(backends),
             "backend_telemetry_rows": len(backends),
             "calibration_snapshots": len(backends),
+            "alerts_deduped": deduped,
             "provider_id": prov_id,
         }
         try:

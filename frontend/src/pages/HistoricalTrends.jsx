@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { api } from '../services/api';
-import { formatISTTime } from '../utils/time';
+import { formatISTChartTick, formatISTTime } from '../utils/time';
+import { telemetryLimitForHours } from '../utils/telemetryWindow';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { ChartPanel } from '../components/observability/ChartPanel.jsx';
@@ -63,13 +64,14 @@ export const HistoricalTrends = () => {
 
   const loadHistory = useCallback(() => {
     if (!selectedBackend) return;
-    api.getBackendTelemetry(selectedBackend)
+    const limit = telemetryLimitForHours(windowHours);
+    api.getBackendTelemetry(selectedBackend, { limit })
       .then((h) => {
         setHistory(h);
         setLastRefresh(new Date());
       })
       .catch(() => setHistory([]));
-  }, [selectedBackend]);
+  }, [selectedBackend, windowHours]);
 
   useEffect(() => { loadBackends(); }, [loadBackends]);
 
@@ -94,7 +96,10 @@ export const HistoricalTrends = () => {
     });
   }, [history, windowHours]);
 
-  const xLabels = useMemo(() => filtered.map((h) => formatISTTime(h.timestamp, false)), [filtered]);
+  const xLabels = useMemo(
+    () => filtered.map((h) => formatISTChartTick(h.timestamp, windowHours)),
+    [filtered, windowHours],
+  );
   const asOf = filtered.length ? formatISTTime(filtered[filtered.length - 1].timestamp) : null;
   const queueStats = useMemo(() => seriesStats(filtered.map((h) => h.pending_jobs)), [filtered]);
   const waitStats = useMemo(() => seriesStats(filtered.map((h) => h.estimated_wait_time)), [filtered]);
@@ -122,8 +127,8 @@ export const HistoricalTrends = () => {
         {
           name: 'Pending Jobs',
           type: 'line',
-          smooth: true,
-          areaStyle: { opacity: 0.15 },
+          smooth: false,
+          step: 'end',
           data: filtered.map((h) => h.pending_jobs ?? null),
           connectNulls: false,
           itemStyle: { color: sem.healthy },
@@ -185,9 +190,16 @@ export const HistoricalTrends = () => {
           hours={windowHours}
           onHoursChange={setWindowHours}
           showTimeRange
-          timeRangeAffectsQuery={false}
+          timeRangeAffectsQuery
         />
       </div>
+
+      {hasHistory ? (
+        <p className="page-hint tm-coverage" style={{ margin: 0 }}>
+          Showing {filtered.length} samples in the last {windowHours} h (up to {telemetryLimitForHours(windowHours)} records from API).
+          {asOf ? ` Latest: ${asOf}.` : ''}
+        </p>
+      ) : null}
 
       {hasHistory && (
         <div className="tm-kpis">

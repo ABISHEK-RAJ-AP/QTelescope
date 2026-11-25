@@ -89,6 +89,7 @@ def backend_metric_coverage(db: Session, backend_id: str) -> Dict[str, Any]:
                 "name": meta["name"],
                 "unit": meta["unit"],
                 "scope": meta["scope"],
+                "group": meta.get("group"),
                 "state": state,
             }
         )

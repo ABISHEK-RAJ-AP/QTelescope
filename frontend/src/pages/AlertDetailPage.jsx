@@ -15,22 +15,31 @@ import { CollapsibleSection } from '../components/observability/CollapsibleSecti
 import { DiscussionModal } from '../components/observability/DiscussionModal.jsx';
 import { buildBackendDetailsPath, buildDriftInvestigationLocation, buildLogsExplorerLocation } from '../lib/investigationLinks.js';
 import { can, canManageFleet } from '../lib/permissions.js';
-import { isMetricThresholdAlert, NON_METRIC_ALERT_TYPES } from '../lib/alertSemantics.js';
-import { formatMetricValue } from '../lib/formatMetricValue.js';
+import {
+  getAlertSignalSpec,
+  isMetricThresholdAlert,
+  NON_METRIC_ALERT_TYPES,
+} from '../lib/alertSemantics.js';
 import './IncidentDetailPage.css';
 import './AlertDetailPage.css';
 
 function formatObserved(alert) {
+  const spec = getAlertSignalSpec(alert);
   if (NON_METRIC_ALERT_TYPES.has(alert.alert_type)) return 'N/A';
-  return `${num(alert.current_value)} µs`;
+  if (!isMetricThresholdAlert(alert)) return 'N/A';
+  const d = spec?.decimals ?? 1;
+  const u = spec?.unit ? ` ${spec.unit}` : ' µs';
+  return `${Number(alert.current_value).toFixed(d)}${u}`;
 }
 
 function formatThreshold(alert) {
-  if (NON_METRIC_ALERT_TYPES.has(alert.alert_type)) return 'N/A';
-  return `${num(alert.threshold_value)} µs`;
+  if (!isMetricThresholdAlert(alert)) return 'N/A';
+  const spec = getAlertSignalSpec(alert);
+  const d = spec?.decimals ?? 1;
+  const u = spec?.unit ? ` ${spec.unit}` : ' µs';
+  const bound = spec?.dir === 'above' ? 'max' : 'min';
+  return `${bound} ${Number(alert.threshold_value).toFixed(d)}${u}`;
 }
-
-const num = (v) => formatMetricValue(v, { decimals: 1, unit: 'µs' });
 
 function buildAlertTimeline(alert, comments) {
   const events = [];

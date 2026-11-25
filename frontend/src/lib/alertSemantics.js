@@ -1,4 +1,4 @@
-/** Non-metric alert types — do not show µs threshold breach UI. */
+/** Non-metric alert types — no numeric threshold comparison UI. */
 export const NON_METRIC_ALERT_TYPES = new Set([
   'BACKEND_OFFLINE',
   'BACKEND_UNAVAILABLE',
@@ -7,9 +7,40 @@ export const NON_METRIC_ALERT_TYPES = new Set([
   'COLLECTOR_STALE',
 ]);
 
-/** True when observed/threshold µs comparison is meaningful. */
+/** @typedef {{ unit: string, dir: 'below'|'above', label: string, decimals?: number }} AlertSignalSpec */
+
+/** @type {Record<string, AlertSignalSpec>} */
+const SIGNAL_BY_TYPE = {
+  LOW_T1: { unit: 'µs', dir: 'below', label: 'T1 coherence' },
+  LOW_T2: { unit: 'µs', dir: 'below', label: 'T2 coherence' },
+  STALE_CALIBRATION: { unit: 'h', dir: 'above', label: 'Calibration age' },
+  HIGH_QUEUE: { unit: 'jobs', dir: 'above', label: 'Pending jobs' },
+  HIGH_READOUT: { unit: '', dir: 'above', label: 'Readout error', decimals: 3 },
+};
+
+/** @returns {AlertSignalSpec | null} */
+export function getAlertSignalSpec(alert) {
+  if (!alert) return null;
+  const type = alert.alert_type;
+  if (SIGNAL_BY_TYPE[type]) return SIGNAL_BY_TYPE[type];
+  if (type === 'STALE_CALIBRATION' || alert.resource_type === 'CALIBRATION') {
+    return SIGNAL_BY_TYPE.STALE_CALIBRATION;
+  }
+  if (type === 'HIGH_QUEUE' || alert.resource_type === 'QUEUE') {
+    return SIGNAL_BY_TYPE.HIGH_QUEUE;
+  }
+  return null;
+}
+
+/** True when observed/threshold numeric comparison is meaningful for UI. */
 export function isMetricThresholdAlert(alert) {
   if (!alert || NON_METRIC_ALERT_TYPES.has(alert.alert_type)) return false;
+  const spec = getAlertSignalSpec(alert);
+  if (spec) {
+    const thr = Number(alert.threshold_value);
+    const obs = Number(alert.current_value);
+    return Number.isFinite(thr) && Number.isFinite(obs);
+  }
   if (alert.resource_type === 'BACKEND' && !String(alert.resource_id || '').toLowerCase().includes('q')) {
     return false;
   }
@@ -21,23 +52,62 @@ export function isMetricThresholdAlert(alert) {
 /** @deprecated alias */
 export const isMetricAlert = isMetricThresholdAlert;
 
+function fmtNum(v, decimals = 1) {
+  return Number(v).toFixed(decimals);
+}
+
+function boundWord(spec) {
+  return spec.dir === 'below' ? 'min' : 'max';
+}
+
+function formatValuePair(obs, thr, spec) {
+  const d = spec.decimals ?? 1;
+  const u = spec.unit ? ` ${spec.unit}` : '';
+  const ow = fmtNum(obs, d);
+  const tw = fmtNum(thr, d);
+  const bound = boundWord(spec);
+  return `${ow}${u} / ${bound} ${tw}${u}`;
+}
+
+/** Compact signal for tables (legacy alias shape preserved where possible). */
 export function formatObservedVsThreshold(alert) {
   if (!alert) return 'Not available';
+  const spec = getAlertSignalSpec(alert);
+  if (spec) {
+    const obs = Number(alert.current_value);
+    const thr = Number(alert.threshold_value);
+    if (!Number.isFinite(obs) || !Number.isFinite(thr)) return 'Not available';
+    return formatValuePair(obs, thr, spec);
+  }
   if (!isMetricThresholdAlert(alert)) return 'Not applicable';
   const obs = Number(alert.current_value);
   const thr = Number(alert.threshold_value);
-  return `${obs.toFixed(1)} µs vs ${thr.toFixed(1)}`;
+  return `${obs.toFixed(1)} µs / min ${thr.toFixed(1)} µs`;
 }
 
 /** Grouped row label (table / grid). */
 export function formatObservedVsThresholdGroup(g) {
   const a = g?.items?.[0];
   if (!a) return 'Not available';
-  if (!isMetricThresholdAlert(a)) return 'Not applicable';
+  const spec = getAlertSignalSpec(a);
+  if (!spec && !isMetricThresholdAlert(a)) return 'Not applicable';
   if (g.count > 1 && g.lo != null && g.hi != null) {
-    return `${Number(g.lo).toFixed(1)}–${Number(g.hi).toFixed(1)} µs`;
+    const d = spec?.decimals ?? 1;
+    const u = spec?.unit ? ` ${spec.unit}` : ' µs';
+    if (!spec) {
+      return `${Number(g.lo).toFixed(1)}–${Number(g.hi).toFixed(1)} µs`;
+    }
+    return `${fmtNum(g.lo, d)}–${fmtNum(g.hi, d)}${u}`;
   }
   return formatObservedVsThreshold(a);
+}
+
+/** Metric name for incident / detail tables. */
+export function formatAlertMetricLabel(alert) {
+  const spec = getAlertSignalSpec(alert);
+  if (spec) return spec.label;
+  if (NON_METRIC_ALERT_TYPES.has(alert?.alert_type)) return '—';
+  return alert?.alert_type?.replace(/_/g, ' ') || '—';
 }
 
 /** Canonical alert count definitions — keep Dashboard, Operate, and sidebar aligned. */

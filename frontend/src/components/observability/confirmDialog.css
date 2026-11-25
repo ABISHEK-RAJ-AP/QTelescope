@@ -28,7 +28,13 @@
 .confirm-dialog__body { margin: 0; font-size: 0.875rem; line-height: 1.5; color: var(--text-secondary); }
 .confirm-dialog__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
 .confirm-dialog__field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--text-muted); }
-.confirm-dialog__field textarea { width: 100%; resize: vertical; border-radius: 10px; }
+.confirm-dialog__field textarea {
+  width: 100%;
+  min-height: 6rem;
+  resize: vertical;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
 .confirm-dialog__confirm--danger {
   background: var(--accent-rose);
   border-color: transparent;

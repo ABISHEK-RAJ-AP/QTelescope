@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { Radio } from 'lucide-react';
 import { formatISTTime } from '../utils/time';
+import { modalityName } from './backendUtils.js';
 import { BASE_URL, api, fetchApi } from '../services/api';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { useTheme } from '../components/ui/ThemeProvider';
@@ -161,7 +162,7 @@ export const LiveTelemetry = () => {
 
   const formatModalityT1Log = (log) => {
     const parts = (log.t1_by_modality || [])
-      .map((m) => `${m.qpu_modality}:${fmtT1(m.t1_mean_us)}`)
+      .map((m) => `${modalityName(m.qpu_modality)}:${fmtT1(m.t1_mean_us)}`)
       .join(' · ');
     return parts || 'N/A';
   };
@@ -205,13 +206,6 @@ export const LiveTelemetry = () => {
             smooth: true,
             data: chrono.map((l) => l.pending_jobs ?? l.queued_jobs ?? 0),
             itemStyle: { color: sem.accent },
-          },
-          {
-            name: 'Running jobs',
-            type: 'line',
-            smooth: true,
-            data: chrono.map((l) => l.running_jobs ?? 0),
-            itemStyle: { color: sem.healthy },
           },
         ],
       };
@@ -432,7 +426,7 @@ export const LiveTelemetry = () => {
               latestModality.map((m) => (
                 <div key={m.qpu_modality}>
                   <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>
-                    {m.qpu_modality}
+                    {modalityName(m.qpu_modality)}
                   </div>
                   <div className="card-value" style={{ fontSize: 20 }}>
                     {fmtT1(m.t1_mean_us)}
@@ -466,20 +460,36 @@ export const LiveTelemetry = () => {
       <div className="live-layout">
         <div className="card page-panel">
           <h3 className="page-section-title">Platform refresh log</h3>
-          <div className="live-log">
-            {streamLogs.map((log, idx) => (
-              <div key={idx} className="telemetry-log-line">
-                [{formatISTTime(log.timestamp)}] alerts {log.active_alerts ?? 'N/A'} · pending{' '}
-                {log.pending_jobs ?? log.queued_jobs ?? 'N/A'} · T1 {formatModalityT1Log(log)}
-              </div>
-            ))}
+          <div className="table-container live-log-table">
+            <table className="custom-table custom-table--dense">
+              <thead>
+                <tr>
+                  <th scope="col">Time (IST)</th>
+                  <th scope="col" className="tm-num">Alerts</th>
+                  <th scope="col" className="tm-num">Pending</th>
+                  <th scope="col">Refresh</th>
+                  <th scope="col">T1 by modality</th>
+                </tr>
+              </thead>
+              <tbody>
+                {streamLogs.map((log, idx) => (
+                  <tr key={idx}>
+                    <td className="al-nowrap">{formatISTTime(log.timestamp || log.ui_tick_at, false)}</td>
+                    <td className="tm-num">{log.active_alerts ?? '—'}</td>
+                    <td className="tm-num">{log.pending_jobs ?? log.queued_jobs ?? '—'}</td>
+                    <td>Received</td>
+                    <td className="live-log-table__detail">{formatModalityT1Log(log)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 
         <ChartPanel
-          title="Alerts & queue depth"
+          title="Alerts & pending queue"
           titleTo="/app/alerts"
-          question="How are active alerts and pending/running jobs moving across platform refresh ticks?"
+          question="Active alerts and provider pending queue depth per refresh tick. Running job counts are on the KPI card (different magnitude)."
           sourceKind="cached"
           state={chrono.length > 0 ? 'ready' : 'empty'}
           emptyTitle="No refresh events"

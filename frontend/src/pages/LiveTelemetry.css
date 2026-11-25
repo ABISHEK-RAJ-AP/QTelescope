@@ -37,6 +37,18 @@
   .live-charts-row { grid-template-columns: 1fr; }
 }
 
+.live-log-table {
+  max-height: min(320px, 40vh);
+  overflow: auto;
+}
+
+.live-log-table__detail {
+  font-size: 12px;
+  color: var(--text-secondary);
+  max-width: 42ch;
+  overflow-wrap: anywhere;
+}
+
 .live-log {
   max-height: 320px;
   overflow: auto;

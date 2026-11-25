@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { QtECharts } from '../components/observability/QtECharts.jsx';
 import { api } from '../services/api';
 import { unableToLoad } from '../constants/messages.js';
-import { formatISTTime } from '../utils/time';
+import { formatISTChartTick, formatISTTime } from '../utils/time';
 import { useTheme } from '../components/ui/ThemeProvider';
 import { BoneyardSkeleton } from '../components/ui/Skeleton';
 import { readTelemetryWindowHours, telemetryLimitForHours, writeTelemetryWindowHours } from '../utils/telemetryWindow';
@@ -145,7 +145,7 @@ export const DriftAnalysis = () => {
 
   const chartOption = useMemo(() => {
     const sem = getChartSemanticColors();
-    const labels = (driftData?.timestamps || []).map((t) => formatISTTime(t, false));
+    const labels = (driftData?.timestamps || []).map((t) => formatISTChartTick(t, windowHours));
     return {
       backgroundColor: 'transparent',
       tooltip: {
@@ -182,11 +182,11 @@ export const DriftAnalysis = () => {
         axisLabel: { color: theme.textColor },
       },
       series: [
-        { name: 'Raw telemetry', type: 'line', smooth: true, data: driftData?.data_points || [], itemStyle: { color: sem.accent } },
-        { name: 'Rolling mean', type: 'line', smooth: true, lineStyle: { type: 'dashed' }, data: driftData?.rolling_mean || [], itemStyle: { color: sem.info } },
+        { name: 'Raw telemetry', type: 'line', smooth: false, data: driftData?.data_points || [], itemStyle: { color: sem.accent } },
+        { name: 'Rolling mean', type: 'line', smooth: false, lineStyle: { type: 'dashed', width: 2 }, data: driftData?.rolling_mean || [], itemStyle: { color: sem.info } },
       ],
     };
-  }, [driftData, isDark, theme]);
+  }, [driftData, isDark, theme, windowHours]);
 
   if (loading) return <BoneyardSkeleton layout="grid" />;
   if (!backends.length) {
@@ -238,8 +238,8 @@ export const DriftAnalysis = () => {
 
       <section className="card page-panel dvt-panel" aria-label="Fleet drift summary">
         <DataPanelToolbar
-          title="Fleet drift"
-          hint="One representative qubit per backend. Select a row to load the full series."
+          title={scopeBackend ? 'Selected backend drift' : 'Fleet drift'}
+          hint="One representative qubit per backend. Select a row to load the full series below."
           layout={layout}
           onLayoutChange={setLayout}
           countLabel={`${rankedSummaries.length} backend${rankedSummaries.length === 1 ? '' : 's'}`}
@@ -323,7 +323,7 @@ export const DriftAnalysis = () => {
           </div>
           <div className="drift-stat-box">
             <div className="drift-stat-label">Absolute Change (Δ)</div>
-            <div className="drift-stat-val-cyan">{driftData.delta?.toFixed(2) ?? 'N/A'}</div>
+            <div className="drift-stat-val-cyan">{driftData.delta != null ? fmtMetric(driftData.delta, metricApi) : 'N/A'}</div>
           </div>
           <div className="drift-stat-box">
             <div className="drift-stat-label">Percent Change (%Δ)</div>
@@ -336,9 +336,11 @@ export const DriftAnalysis = () => {
             <div className="drift-stat-val-amber">{fmtNum(driftData.rate_of_change, 2)}</div>
           </div>
           <div className="drift-stat-box">
-            <div className="drift-stat-label">Rolling Std Dev</div>
+            <div className="drift-stat-label">Rolling Std Dev ({METRICS[normMetric(metricApi)]?.unit || 'unit'})</div>
             <div style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>
-              {driftData.rolling_std?.length > 0 ? driftData.rolling_std[driftData.rolling_std.length - 1]?.toFixed(2) : 'N/A'}
+              {driftData.rolling_std?.length > 0
+                ? fmtMetric(driftData.rolling_std[driftData.rolling_std.length - 1], metricApi)
+                : 'N/A'}
             </div>
           </div>
         </div>

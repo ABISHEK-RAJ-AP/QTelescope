@@ -66,6 +66,23 @@ export function formatISTTime(dateInput, includeSeconds = true) {
   return `${timeStr} IST`;
 }
 
+/** Chart axis labels: include date when the visible window spans more than one day. */
+export function formatISTChartTick(dateInput, spanHours = 24) {
+  const d = parseDate(dateInput);
+  if (!d) return 'N/A';
+  if (spanHours > 24) {
+    return d.toLocaleString(LOCALE, {
+      timeZone: IST_TIMEZONE,
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  }
+  return formatISTTime(dateInput, false);
+}
+
 const ACTIVITY_STALE_MIN = 15;
 
 function relativeAgo(min) {

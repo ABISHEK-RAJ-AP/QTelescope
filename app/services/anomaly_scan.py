@@ -1,7 +1,7 @@
 """Fleet-wide anomaly scan over stored qubit telemetry."""
 from __future__ import annotations
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
@@ -29,12 +29,18 @@ def _series_for(db: Session, backend_id: str, qubit_index: int, metric: str, lim
 def scan_fleet_anomalies(
     db: Session,
     metric: str = "t1",
+    backend_id: Optional[str] = None,
     max_backends: int = 32,
     qubits_per_backend: int = 16,
 ) -> Dict[str, Any]:
     if metric not in METRICS:
         metric = "t1"
-    backends = db.query(BackendModel).limit(max_backends).all()
+    q = db.query(BackendModel)
+    if backend_id:
+        q = q.filter(BackendModel.backend_id == backend_id)
+    else:
+        q = q.limit(max_backends)
+    backends = q.all()
     hits: List[Dict[str, Any]] = []
     watch: List[Dict[str, Any]] = []
     scanned = 0
