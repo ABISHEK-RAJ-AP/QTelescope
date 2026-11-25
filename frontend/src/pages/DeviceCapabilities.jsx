@@ -195,8 +195,14 @@ export const DeviceCapabilities = () => {
                 </div>
                 <div className="dc-prop">
                   <span className="dc-prop__k">Duration unit</span>
-                  <span className="dc-prop__v">
-                    {sheet.duration_unit} × {sheet.duration_scale}
+                  <span
+                    className="dc-prop__v"
+                    title={sheet.duration_scale && sheet.duration_scale !== 1
+                      ? `Provider reports ${sheet.duration_unit}; stored values use scale ×${sheet.duration_scale} before µs display in tables.`
+                      : `Gate and coherence durations shown in microseconds (µs) unless noted.`}
+                  >
+                    {sheet.duration_unit === 'us' || sheet.duration_unit === 'µs' ? 'µs' : (sheet.duration_unit || 'µs')}
+                    {sheet.duration_scale && Number(sheet.duration_scale) !== 1 ? ` (×${sheet.duration_scale} native)` : ''}
                   </span>
                 </div>
                 <div className="dc-prop">

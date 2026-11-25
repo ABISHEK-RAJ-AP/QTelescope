@@ -169,6 +169,22 @@ export const HistoricalTrends = () => {
     };
   }, [filtered, isDark, theme, xLabels]);
 
+  const hasHistory = filtered.length > 0;
+  const coverageDetail = useMemo(() => {
+    if (!filtered.length) return undefined;
+    const parts = [
+      `${filtered.length} samples in ${windowHours} h (up to ${telemetryLimitForHours(windowHours)} API records).`,
+    ];
+    if (queueStats) {
+      parts.push(`Pending jobs min ${queueStats.min}, max ${queueStats.max}, mean ${queueStats.mean.toFixed(1)}.`);
+    }
+    if (waitStats) {
+      parts.push(`Wait (s) min ${waitStats.min.toFixed(1)}, max ${waitStats.max.toFixed(1)}, mean ${waitStats.mean.toFixed(1)}.`);
+    }
+    if (asOf) parts.push(`Latest ${asOf}.`);
+    return parts.join(' ');
+  }, [filtered.length, windowHours, queueStats, waitStats, asOf]);
+
   if (loading) return <BoneyardSkeleton layout="grid" />;
   if (!backends.length) {
     return (
@@ -177,8 +193,6 @@ export const HistoricalTrends = () => {
       </div>
     );
   }
-
-  const hasHistory = filtered.length > 0;
 
   return (
     <div className="page-stack">
@@ -193,21 +207,6 @@ export const HistoricalTrends = () => {
           timeRangeAffectsQuery
         />
       </div>
-
-      {hasHistory ? (
-        <p className="page-hint tm-coverage" style={{ margin: 0 }}>
-          Showing {filtered.length} samples in the last {windowHours} h (up to {telemetryLimitForHours(windowHours)} records from API).
-          {asOf ? ` Latest: ${asOf}.` : ''}
-        </p>
-      ) : null}
-
-      {hasHistory && (
-        <div className="tm-kpis">
-          <div className="tm-kpi"><div className="tm-kpi__label">Samples</div><div className="tm-kpi__value">{filtered.length}</div><div className="tm-kpi__sub">in {windowHours}h window</div></div>
-          <div className="tm-kpi"><div className="tm-kpi__label">Latest pending</div><div className="tm-kpi__value">{filtered[filtered.length - 1]?.pending_jobs ?? 'N/A'}</div><div className="tm-kpi__sub">{asOf ? `as of ${asOf}` : 'N/A'}</div></div>
-          <div className="tm-kpi"><div className="tm-kpi__label">Latest wait</div><div className="tm-kpi__value">{filtered[filtered.length - 1]?.estimated_wait_time != null ? `${filtered[filtered.length - 1].estimated_wait_time}s` : 'N/A'}</div><div className="tm-kpi__sub">estimated queue wait</div></div>
-        </div>
-      )}
 
       {hasHistory && (queueStats || waitStats) && (
         <section className="card page-panel">
@@ -230,6 +229,7 @@ export const HistoricalTrends = () => {
           titleTo={selectedBackend ? `/app/execution/queues?backend=${encodeURIComponent(selectedBackend)}` : '/app/execution/queues'}
           sourceKind="cached"
           asOf={asOf}
+          provenanceDetail={coverageDetail}
           state={hasHistory ? 'ready' : 'empty'}
           emptyTitle="No queue history"
           emptyMessage={COPY.telemetry.noStored}
@@ -243,6 +243,7 @@ export const HistoricalTrends = () => {
           titleTo={selectedBackend ? `/app/execution/jobs?backend=${encodeURIComponent(selectedBackend)}` : '/app/execution/jobs'}
           sourceKind="cached"
           asOf={asOf}
+          provenanceDetail={coverageDetail}
           state={hasHistory ? 'ready' : 'empty'}
           emptyTitle="No wait history"
           emptyMessage="Estimated wait time was not recorded in stored samples."

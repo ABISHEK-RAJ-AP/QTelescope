@@ -283,19 +283,16 @@ export const MetricsExplorer = () => {
         </div>
       </section>
 
-      {statsPrimary && (
-        <p className="page-hint" style={{ margin: 0 }}>
-          {filteredA.length} sample{filteredA.length === 1 ? '' : 's'} in {windowHours} h window
-          {statsPrimary ? ` · min ${statsPrimary.min.toFixed(2)} · max ${statsPrimary.max.toFixed(2)} · mean ${statsPrimary.mean.toFixed(2)}` : ''}
-          {asOf ? ` · latest ${asOf}` : ''}
-        </p>
-      )}
-
       <ChartPanel
         title={`${metricDef.label}${compareBackend ? ' · compare' : ''}`}
         titleTo={selectedBackend ? `/app/resources/health?backend=${encodeURIComponent(selectedBackend)}` : '/app/resources/health'}
         sourceKind="cached"
         asOf={asOf}
+        provenanceDetail={
+          statsPrimary
+            ? `${filteredA.length} sample${filteredA.length === 1 ? '' : 's'} in ${windowHours} h (up to ${telemetryLimitForHours(windowHours)} API records). Min ${statsPrimary.min.toFixed(2)}, max ${statsPrimary.max.toFixed(2)}, mean ${statsPrimary.mean.toFixed(2)}.${asOf ? ` Latest ${asOf}.` : ''}`
+            : undefined
+        }
         state={hasPoints ? 'ready' : 'empty'}
         emptyTitle="No samples"
         emptyMessage="Choose another metric or widen the time window."

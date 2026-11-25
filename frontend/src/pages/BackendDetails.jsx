@@ -649,7 +649,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
 
         {activeTab === 'execution' && (
           <>
-            <section className="bk-kpis bk-kpis--balanced" aria-label="Queue">
+            <section className="bk-kpis bk-kpis--balanced bk-kpis--compact" aria-label="Queue">
               <div className="bk-kpi bd-spark-kpi"><div className="bk-kpi__label">Pending jobs</div><div className="bk-kpi__value">{pending ?? '—'}</div><Sparkline values={pendingSeries} label="Pending jobs" /></div>
               <div className="bk-kpi bd-spark-kpi"><div className="bk-kpi__label">Est. wait</div><div className="bk-kpi__value" title={waitFmt.title}>{waitFmt.text}</div><Sparkline values={waitSeries} label="Estimated wait" /></div>
               <div className="bk-kpi"><div className="bk-kpi__label">Queue condition</div><div className="bk-kpi__value" style={{ fontSize: 18 }}>{queue?.queue_condition ? formatEnumLabel(queue.queue_condition) : (secErr('queue') ? 'Unavailable' : '—')}</div><div className="bk-kpi__sub">Trend {queue?.trend ? formatEnumLabel(queue.trend) : '—'}</div></div>

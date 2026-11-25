@@ -39,6 +39,25 @@
 | Browser E2E screenshot pass | Requires live demo + manual capture |
 | Alerts calendar/list-first redesign (P2) | Not in completed file set |
 
+## Wave 3 (screenshot-driven UI / data fixes — 2026-11-25)
+
+| Item | Status | Evidence |
+| --- | --- | --- |
+| P0 `[object Object]` anomaly flags | Fixed | `formatAnomalyFlags.js`, `AnomalyMonitor.jsx` drawer |
+| Historical / Metrics explorer sample stats placement | Fixed | Moved to `ChartPanel` provenance tooltip; removed body hints |
+| Backend execution queue KPI strip (elongated cards) | Fixed | `bk-kpis--compact` in `BackendDetails` |
+| Topology filter labels (Color by / Find qubit) | Fixed | `TopologyExplorer.jsx` |
+| Topology qubit modal (health labels, fidelity %, backend in header, tab min-height) | Partial | Drawer subtitle, `HEALTH_LABEL`, `fmtProb`, history empty copy |
+| Device capabilities duration unit readability | Fixed | `DeviceCapabilities.jsx` tooltip + µs label |
+| Add-backend wizard Continue without provider | Verified existing | `AddBackendWizard.jsx` disables when `!selected` |
+
+## Still requires investigation (not changed in code)
+
+- Fleet 468 vs per-backend alert rollups (aggregation scope — needs API trace)
+- Environment page horizontal compression / sensor channel semantics (larger pass)
+- Rigetti 108Q name vs 107 discovered qubits (data contract)
+- Full WCAG / multi-viewport screenshot matrix (§15 acceptance checklist)
+
 ## Shippable statement
 
-All **code** items listed in the implemented table are present in the working tree, build green, and covered by the automated checks above. Deferred rows remain product/audit follow-ups, not partial skips inside the implemented modules.
+All **code** items listed in the implemented tables are present in the working tree, build green, and covered by the automated checks above. Deferred rows remain product/audit follow-ups, not partial skips inside the implemented modules.

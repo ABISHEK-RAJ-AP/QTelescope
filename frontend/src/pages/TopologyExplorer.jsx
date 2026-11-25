@@ -49,6 +49,13 @@ const fmtUs = (v) => {
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)} ms`;
   return `${n.toFixed(1)} µs`;
 };
+const HEALTH_LABEL = { GREEN: 'Nominal', YELLOW: 'Watch', RED: 'Degraded', UNKNOWN: 'Unscored' };
+const fmtProb = (v, d = 3) => {
+  if (v == null || !Number.isFinite(Number(v))) return 'N/A';
+  const n = Number(v);
+  if (n >= 0 && n <= 1) return `${(n * 100).toFixed(d)}%`;
+  return fmt(n, d);
+};
 
 const COLOR_MODES = [
   { value: 'state', label: 'Health state' },
@@ -294,7 +301,7 @@ function CalibrationCompare({ snapshots, selectedIds, onSelectIds }) {
 }
 
 /** Qubit detail drawer */
-function QubitDetailDrawer({ open, qubit, backendId, neighbors, onClose, onSelectNeighbor }) {
+function QubitDetailDrawer({ open, qubit, backendId, backendLabel, modalityLabel, neighbors, onClose, onSelectNeighbor }) {
   const { resolved } = useTheme();
   const isDark = resolved === 'dark';
   const [histMetric, setHistMetric] = useState('t1');
@@ -328,10 +335,10 @@ function QubitDetailDrawer({ open, qubit, backendId, neighbors, onClose, onSelec
     <DetailDrawer
       open={open}
       title={`Qubit ${qubit.qubit_index}`}
-      subtitle={pretty(qubit.status)}
+      subtitle={[backendLabel, modalityLabel].filter(Boolean).join(' · ') || backendId}
       headerAside={(
         <span className={`badge ${qubit.state === 'GREEN' ? 'badge-healthy' : qubit.state === 'YELLOW' ? 'badge-warning' : qubit.state === 'RED' ? 'badge-critical' : 'badge-info'}`}>
-          {qubit.state || 'Unknown'}
+          {HEALTH_LABEL[qubit.state] || qubit.state || 'Unscored'}
         </span>
       )}
       onClose={onClose}
@@ -358,6 +365,7 @@ function QubitDetailDrawer({ open, qubit, backendId, neighbors, onClose, onSelec
           ))}
         </nav>
 
+        <div className="topo-drawer__tabpanels" data-active={activeTab}>
         {activeTab === 'metrics' && (
           <div role="tabpanel">
             <DetailModalSection title="Coherence">
@@ -370,7 +378,11 @@ function QubitDetailDrawer({ open, qubit, backendId, neighbors, onClose, onSelec
                 </div>
                 <div className="topo-metric-row">
                   <dt>Frequency</dt>
-                  <dd>{qubit.frequency != null ? `${(qubit.frequency / 1e9).toFixed(4)} GHz` : 'N/A'}</dd>
+                  <dd>
+                    {qubit.frequency != null
+                      ? `${(qubit.frequency / 1e9).toFixed(4)} GHz`
+                      : 'Unavailable on this backend'}
+                  </dd>
                 </div>
               </dl>
             </DetailModalSection>
@@ -378,13 +390,13 @@ function QubitDetailDrawer({ open, qubit, backendId, neighbors, onClose, onSelec
             <DetailModalSection title="Fidelity">
               <dl className="topo-metric-grid">
                 <div className="topo-metric-row">
-                  <dt>Readout error</dt><dd>{fmt(qubit.readout_error, 5)}</dd>
+                  <dt>Readout error</dt><dd>{fmtProb(qubit.readout_error, 3)}</dd>
                 </div>
                 <div className="topo-metric-row">
-                  <dt>1Q fidelity (F_1q)</dt><dd>{fmt(qubit.F_1q, 5)}</dd>
+                  <dt>1Q fidelity (F_1q)</dt><dd>{fmtProb(qubit.F_1q, 3)}</dd>
                 </div>
                 <div className="topo-metric-row">
-                  <dt>2Q fidelity (F_2q)</dt><dd>{fmt(qubit.F_2q, 5)}</dd>
+                  <dt>2Q fidelity (F_2q)</dt><dd>{fmtProb(qubit.F_2q, 3)}</dd>
                 </div>
               </dl>
             </DetailModalSection>
@@ -438,8 +450,11 @@ function QubitDetailDrawer({ open, qubit, backendId, neighbors, onClose, onSelec
               </select>
             </label>
             {histState === 'loading' && <BoneyardSkeleton layout="list" />}
-            {histState === 'error' && <p className="page-hint">Could not load qubit history.</p>}
-            {histState === 'ready' && (
+            {histState === 'error' && <p className="page-hint">Could not load qubit history. Check ingestion retention and that this qubit index exists on the backend.</p>}
+            {histState === 'ready' && history.length === 0 && (
+              <p className="page-hint">No stored history for this qubit in the retention window. Current metrics may still come from the live properties feed.</p>
+            )}
+            {histState === 'ready' && history.length > 0 && (
               <QubitHistoryChart history={history} metric={histMetric} isDark={isDark} />
             )}
           </div>
@@ -454,6 +469,7 @@ function QubitDetailDrawer({ open, qubit, backendId, neighbors, onClose, onSelec
             />
           </div>
         )}
+        </div>
       </DetailModalBody>
     </DetailDrawer>
   );
@@ -817,7 +833,9 @@ export const TopologyExplorer = () => {
     return () => clearInterval(id);
   }, [viewMode, loadState, qubits.length, option, selectedId]);
 
-  const backendName = backends.find((b) => b.backend_id === backendId)?.backend_name;
+  const backendMeta = backends.find((b) => b.backend_id === backendId);
+  const backendName = backendMeta?.backend_name;
+  const backendModality = backendMeta?.qpu_modality;
   const hvTime = vector ? 'live health vector applied' : 'health vector unavailable — topology fields only';
 
   if (loadState === 'loading' && !graph?.nodes?.length && backendId) {
@@ -841,12 +859,12 @@ export const TopologyExplorer = () => {
         </label>
 
         <label className="outline-field">
-          <span>Qubit</span>
+          <span>Color by</span>
           <select
             className="input-control"
             value={colorMode}
             onChange={(e) => setColorMode(e.target.value)}
-            aria-label="Qubit metric"
+            aria-label="Color qubits by metric"
           >
             {COLOR_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
           </select>
@@ -869,13 +887,13 @@ export const TopologyExplorer = () => {
         )}
 
         <label className="outline-field topo-search" role="search">
-          <span>Qubit</span>
+          <span>Find qubit</span>
           <input
             className="input-control topo-search__input"
             placeholder="Index or state"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search qubit by index or state"
+            aria-label="Find qubit by index or state"
           />
           {search && (
             <button type="button" className="topo-search__clear" onClick={() => setSearch('')} aria-label="Clear search">
@@ -1033,6 +1051,8 @@ export const TopologyExplorer = () => {
         open={drawerOpen}
         qubit={selectedQubit}
         backendId={backendId}
+        backendLabel={backendName || backendId}
+        modalityLabel={backendModality ? String(backendModality).replace(/_/g, ' ') : null}
         neighbors={neighbors.get(selectedId) || []}
         onClose={() => setDrawerOpen(false)}
         onSelectNeighbor={(id) => setSelectedId(id)}

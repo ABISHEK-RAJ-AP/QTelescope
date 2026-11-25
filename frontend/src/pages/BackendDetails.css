@@ -248,6 +248,26 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
+.bk-kpis--compact .bk-kpi {
+  align-content: start;
+  min-height: unset;
+  padding: 12px 14px;
+}
+.bk-kpis--compact .bk-kpi__value {
+  font-size: 22px;
+  line-height: 1.2;
+}
+.bk-kpis--compact .bk-kpi__sub {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.3;
+}
+.bk-kpis--compact .bd-spark-kpi {
+  min-height: 0;
+}
+.bk-kpis--compact .bd-spark-kpi svg {
+  max-height: 40px;
+}
 @media (max-width: 900px) {
   .bk-kpis--balanced { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

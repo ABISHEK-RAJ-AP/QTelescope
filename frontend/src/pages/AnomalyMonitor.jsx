@@ -14,6 +14,9 @@ import {
   DetailModalSection,
   DetailModalRelated,
   DetailModalCallout,
+  DetailModalHero,
+  DetailModalDl,
+  DetailModalRow,
 } from '../components/observability/DetailModalLayout.jsx';
 import { PageRelatedLink } from '../components/observability/PageRelatedNav.jsx';
 import { ContextBar } from '../components/observability/ContextBar.jsx';
@@ -21,7 +24,8 @@ import { sortCopy } from '../lib/sortCopy.js';
 import { getChartTheme, baseTooltip, getChartSemanticColors, getAnomalySeverityChartColors, getChartInkColor } from '../components/observability/chartTheme.js';
 import { useAppScope } from '../hooks/useAppScope.js';
 import { usePageActions } from '../context/PageActionsContext.jsx';
-import { formatISTTime } from '../utils/time';
+import { formatIST, formatISTTime } from '../utils/time';
+import { describeAnomalyFlag, formatAnomalyFlags } from '../lib/formatAnomalyFlags.js';
 import { buildBackendDetailsPath, buildDriftInvestigationLocation } from '../lib/investigationLinks.js';
 import { METRICS, METRIC_KEYS, normMetric, fmtMetric, fmtNum, isStale, modalityOf, healthLink, timelineLink } from './telemetryPageUtils.js';
 import { DataPanelToolbar, SortableTh } from '../components/observability/DataViewToolbar.jsx';
@@ -85,13 +89,39 @@ function QubitDrawerBody({ hit, metric, modality, nav }) {
   }, [series, cpTs, state.detail, metric, isDark, th]);
 
   const last = series[series.length - 1];
+  const flagLines = formatAnomalyFlags(state.detail?.flags);
+  const devPct = hit.dev ?? (state.detail?.latest_value != null && state.detail?.latest_ewma
+    ? ((state.detail.latest_value - state.detail.latest_ewma) / Math.abs(state.detail.latest_ewma)) * 100
+    : null);
   return (
     <DetailModalBody>
       {modality && modality !== 'superconducting' && (
         <DetailModalCallout>Modality {modality}: values use different scales than superconducting backends. Do not compare across modalities.</DetailModalCallout>
       )}
       {state.err && <ErrorState compact variant="inline" message={unableToLoad('qubit detail')} />}
-      {state.detail?.flags?.length > 0 && <p className="page-hint" style={{ margin: 0 }}>Flags: {state.detail.flags.join(', ')}</p>}
+      <DetailModalHero note="Advisory analysis only — not an execution authorization.">
+        <DetailModalDl>
+          <DetailModalRow label="Latest">{fmtMetric(state.detail?.latest_value ?? hit.latest_value, metric)}</DetailModalRow>
+          <DetailModalRow label="EWMA">{fmtMetric(state.detail?.latest_ewma ?? hit.latest_ewma, metric)}</DetailModalRow>
+          <DetailModalRow label="Deviation vs EWMA">
+            {devPct == null ? '—' : `${devPct >= 0 ? '+' : ''}${fmtNum(devPct, 2)}%`}
+          </DetailModalRow>
+          <DetailModalRow label="Classification">
+            <span className={`badge ${sevOf(state.detail?.status || hit.status).badge}`}>
+              {state.detail?.status || hit.status}
+            </span>
+          </DetailModalRow>
+        </DetailModalDl>
+      </DetailModalHero>
+      {flagLines.length > 0 && (
+        <DetailModalSection title="Detected flags">
+          <ul className="dm-detail__reasons" style={{ margin: 0, paddingLeft: 18 }}>
+            {state.detail.flags.map((f, i) => (
+              <li key={`${describeAnomalyFlag(f)}-${i}`}>{describeAnomalyFlag(f)}</li>
+            ))}
+          </ul>
+        </DetailModalSection>
+      )}
       <DetailModalSection title={`${METRICS[metric].label} history (${series.length} stored samples)`}>
         {state.loading ? <p className="page-hint">Loading…</p> : series.length < 2 ? (
           <p className="page-hint">Not enough stored samples for a chart (gap in data, not a zero value).</p>
@@ -102,8 +132,8 @@ function QubitDrawerBody({ hit, metric, modality, nav }) {
           </>
         )}
         <p className="page-hint" style={{ margin: '10px 0 0' }}>
-          Latest {fmtMetric(state.detail?.latest_value ?? hit.latest_value, metric)} · EWMA {fmtMetric(state.detail?.latest_ewma ?? hit.latest_ewma, metric)}
-          {cpTs ? ` · change point ${formatISTTime(cpTs)}` : ''}. {state.detail?.methodology}
+          {state.detail?.methodology || 'EWMA control chart.'}
+          {cpTs ? ` Change point: ${formatIST(cpTs, false)}.` : ''}
         </p>
       </DetailModalSection>
       <DetailModalRelated>
