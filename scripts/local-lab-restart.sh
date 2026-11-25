@@ -50,7 +50,8 @@ else
   upsert_env_key DEMO_TELEMETRY_CAP_PER_BACKEND 12000
   upsert_env_key DEMO_BACKEND_TELEMETRY_CAP 800
   upsert_env_key LOCAL_DEMO_HISTORY_DAYS "${LOCAL_DEMO_HISTORY_DAYS:-14}"
-  upsert_env_key LOCAL_DEMO_HISTORY_INTERVAL_HOURS "${LOCAL_DEMO_HISTORY_INTERVAL_HOURS:-3}"
+  upsert_env_key LOCAL_DEMO_HISTORY_INTERVAL_HOURS "${LOCAL_DEMO_HISTORY_INTERVAL_HOURS:-2}"
+  upsert_env_key LOCAL_DEMO_ENRICH_MIN_Q0_SAMPLES "${LOCAL_DEMO_ENRICH_MIN_Q0_SAMPLES:-12}"
   upsert_env_key LOCAL_DEMO_HISTORY_QUBIT_CAP "${LOCAL_DEMO_HISTORY_QUBIT_CAP:-10000}"
 fi
 
@@ -81,8 +82,10 @@ if [[ "${SKIP_TRIM:-0}" != "1" ]]; then
 fi
 
 echo "==> Demo fleet refresh (bounded mock telemetry if empty/stale)"
-if ! "$PY" "${ROOT}/scripts/refresh_demo_fleet.py" --force; then
-  echo "WARN: demo refresh incomplete (e.g. optional mock backend missing) — continuing" >&2
+if [[ "${REFRESH_DEMO_FORCE:-0}" == "1" ]]; then
+  "$PY" "${ROOT}/scripts/refresh_demo_fleet.py" --force || echo "WARN: demo refresh incomplete" >&2
+else
+  "$PY" "${ROOT}/scripts/refresh_demo_fleet.py" --if-stale 1 || echo "WARN: demo refresh incomplete" >&2
 fi
 
 if [[ "${SKIP_TELEMETRY_ENRICH:-0}" != "1" && "${LOCAL_TRIM_AGGRESSIVE:-0}" != "1" ]]; then

@@ -54,8 +54,8 @@ def _template_id(backend: BackendModel) -> str:
     return "ibm_brisbane"
 
 
-def _props_for_backend(backend_id: str, template_id: str, n_qubits: int) -> dict:
-    random.seed(hash((backend_id, "props")) % (2**31))
+def _props_for_backend(backend_id: str, template_id: str, n_qubits: int, at: datetime.datetime) -> dict:
+    random.seed(hash((backend_id, int(at.timestamp()))) % (2**31))
     props = get_mock_backend_properties(template_id)
     props["backend_id"] = backend_id
     qubits = props.get("qubits") or []
@@ -106,15 +106,18 @@ def enrich(
     try:
         backends = db.query(BackendModel).all()
         stats["backends"] = len(backends)
-        min_existing = int(os.getenv("LOCAL_DEMO_ENRICH_MIN_EXISTING_QUBIT_ROWS", "2500"))
+        min_series = int(os.getenv("LOCAL_DEMO_ENRICH_MIN_Q0_SAMPLES", "12"))
         for backend in backends:
-            existing_q = int(
+            q0_series = int(
                 db.query(func.count(QubitTelemetryModel.id))
-                .filter(QubitTelemetryModel.backend_id == backend.backend_id)
+                .filter(
+                    QubitTelemetryModel.backend_id == backend.backend_id,
+                    QubitTelemetryModel.qubit_index == 0,
+                )
                 .scalar()
                 or 0
             )
-            if min_existing > 0 and existing_q >= min_existing:
+            if min_series > 0 and q0_series >= min_series:
                 stats["backends_skipped"] += 1
                 continue
             template = _template_id(backend)
@@ -140,7 +143,7 @@ def enrich(
                 db.add(BackendTelemetryModel(**status_norm))
                 stats["backend_rows"] += 1
 
-                props = _props_for_backend(backend.backend_id, template, n_q)
+                props = _props_for_backend(backend.backend_id, template, n_q, at)
                 calib_time = at - datetime.timedelta(hours=random.uniform(0.5, 4.0))
                 props["calibration_timestamp"] = calib_time.isoformat()
 
