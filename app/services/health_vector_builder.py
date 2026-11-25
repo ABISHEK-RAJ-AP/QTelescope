@@ -16,7 +16,12 @@ from app.analytics.health_vector import (
     mean_or_none,
 )
 from app.alerts.rule_eval import load_rules, rule_threshold
-from app.analytics.modality_thresholds import threshold_summary
+from app.alerts.rule_eval import _coherence_rule_usable
+from app.analytics.modality_thresholds import (
+    resolve_coherence_modality,
+    modality_profile,
+    threshold_summary,
+)
 from app.api.environment import env_severity_for
 from app.core.provenance import resolve_backend_data_lineage
 from app.models.entities import (
@@ -29,20 +34,24 @@ from app.models.entities import (
 from datetime import timedelta
 
 
-def _t1_crit_for_backend(db: Session, backend_id: str, modality: str | None) -> float:
-    from app.analytics.modality_thresholds import modality_profile
-
+def _t1_crit_for_backend(
+    db: Session, backend_id: str, modality: str | None, backend_type: str | None = None
+) -> float:
+    mod = resolve_coherence_modality(modality, backend_type)
     rules = load_rules(db, backend_id)
-    floor = float(modality_profile(modality)["t1_crit_us"])
-    return rule_threshold(rules, "T1", floor)
+    floor = float(modality_profile(mod)["t1_crit_us"])
+    raw = rule_threshold(rules, "T1", floor)
+    return _coherence_rule_usable(mod, "T1", raw, floor)
 
 
-def _t2_crit_for_backend(db: Session, backend_id: str, modality: str | None) -> float:
-    from app.analytics.modality_thresholds import modality_profile
-
+def _t2_crit_for_backend(
+    db: Session, backend_id: str, modality: str | None, backend_type: str | None = None
+) -> float:
+    mod = resolve_coherence_modality(modality, backend_type)
     rules = load_rules(db, backend_id)
-    floor = float(modality_profile(modality)["t2_crit_us"])
-    return rule_threshold(rules, "T2", floor)
+    floor = float(modality_profile(mod)["t2_crit_us"])
+    raw = rule_threshold(rules, "T2", floor)
+    return _coherence_rule_usable(mod, "T2", raw, floor)
 
 
 def _latest_gates(db: Session, backend_id: str):
@@ -169,9 +178,10 @@ def build_health_vector_payload(db: Session) -> dict:
     out = []
     for b in backends:
         ensure_backend_rules(db, b.backend_id)
-        t1_crit = _t1_crit_for_backend(db, b.backend_id, b.qpu_modality)
-        t2_crit = _t2_crit_for_backend(db, b.backend_id, b.qpu_modality)
-        thresh = threshold_summary(b.qpu_modality)
+        health_mod = resolve_coherence_modality(b.qpu_modality, b.backend_type)
+        t1_crit = _t1_crit_for_backend(db, b.backend_id, b.qpu_modality, b.backend_type)
+        t2_crit = _t2_crit_for_backend(db, b.backend_id, b.qpu_modality, b.backend_type)
+        thresh = threshold_summary(health_mod)
         thresh["t1_crit_us"] = t1_crit
         thresh["t2_crit_us"] = t2_crit
         thresh["scope"] = "backend_alert_rules"

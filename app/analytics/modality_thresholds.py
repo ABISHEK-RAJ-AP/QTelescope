@@ -19,12 +19,27 @@ _ALIASES = {
     "trapped-ion": "trapped_ion",
     "trappedion": "trapped_ion",
     "neutral-atom": "neutral_atom",
+    "on_prem": "superconducting",
+    "on-prem": "superconducting",
+    "hpc_simulator": "simulator",
+    "quantum_simulator": "simulator",
 }
 
 
 def normalize_modality(modality: Optional[str]) -> str:
     raw = (modality or "superconducting").strip().lower().replace(" ", "_")
     return _ALIASES.get(raw, raw)
+
+
+def resolve_coherence_modality(
+    qpu_modality: Optional[str],
+    backend_type: Optional[str] = None,
+) -> str:
+    """Health and coherence alerts use simulator floors when backend_type is simulator."""
+    bt = (backend_type or "").strip().lower()
+    if bt in ("simulator", "simulation"):
+        return "simulator"
+    return normalize_modality(qpu_modality)
 
 
 def modality_profile(modality: Optional[str]) -> Dict[str, float]:

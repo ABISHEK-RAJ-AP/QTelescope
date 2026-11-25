@@ -66,7 +66,11 @@ def backend_metric_coverage(db: Session, backend_id: str) -> Dict[str, Any]:
         "queue_pending": bt is not None,
         "queue_wait_s": bt is not None and bt.estimated_wait_time is not None,
         "calibration_timestamp": cal is not None,
-        "topology_edges": edges > 0,
+        "topology_edges": edges > 0
+        or (
+            (backend.topology_type or "") == "all_to_all"
+            and (backend.backend_type or "").lower() == "simulator"
+        ),
         "job_status": jobs > 0,
         "t2_echo_us": False,
     }

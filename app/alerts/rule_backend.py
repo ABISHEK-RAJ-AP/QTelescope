@@ -49,7 +49,7 @@ def migrate_legacy_fleet_rules(db: Session) -> None:
     for b in backends:
         if db.query(AlertRuleModel).filter(AlertRuleModel.backend_id == b.backend_id).first():
             continue
-        templates = default_rules_for_backend(b.backend_id, b.qpu_modality)
+        templates = default_rules_for_backend(b.backend_id, b.qpu_modality, b.backend_type)
         for tpl in templates:
             metric = tpl["metric_name"].upper()
             fleet = by_metric.get(metric)
@@ -83,7 +83,7 @@ def ensure_backend_rules(db: Session, backend_id: str) -> None:
     b = db.query(BackendModel).filter(BackendModel.backend_id == backend_id).first()
     if not b:
         return
-    for spec in default_rules_for_backend(backend_id, b.qpu_modality):
+    for spec in default_rules_for_backend(backend_id, b.qpu_modality, b.backend_type):
         db.add(AlertRuleModel(**spec))
     db.commit()
 
@@ -149,7 +149,7 @@ def reset_backend_rules(db: Session, backend_id: str) -> int:
     if not b:
         return 0
     db.query(AlertRuleModel).filter(AlertRuleModel.backend_id == backend_id).delete()
-    specs = default_rules_for_backend(backend_id, b.qpu_modality)
+    specs = default_rules_for_backend(backend_id, b.qpu_modality, b.backend_type)
     for spec in specs:
         db.add(AlertRuleModel(**spec))
     db.commit()

@@ -538,7 +538,7 @@ def get_alert_threshold_preview(
     for b in backends:
         ensure_backend_rules(db, b.backend_id)
         rules = load_rules(db, b.backend_id)
-        eff = effective_thresholds(rules, b.qpu_modality)
+        eff = effective_thresholds(rules, b.qpu_modality, b.backend_type)
         backend_rows.append(
             {
                 "backend_id": b.backend_id,

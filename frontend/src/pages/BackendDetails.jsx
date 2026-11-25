@@ -21,6 +21,7 @@ import { formatEnumLabel } from '../lib/displayLabels.js';
 import { ListPager } from '../components/observability/ListPager.jsx';
 import { unableToLoad, unableToLoadLabel } from '../constants/messages.js';
 import { formatBackendTitle } from '../lib/displayLabels.js';
+import { formatWaitFromResolved, resolveWaitSeconds } from '../lib/queueWaitDisplay.js';
 import './BackendDetails.css';
 
 const TAB_LABEL = { overview: 'Overview', qubits: 'Qubits', calibration: 'Calibration', connectivity: 'Connectivity', execution: 'Execution' };
@@ -192,6 +193,15 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
   const waitSeries = telemetry.slice(-60).map((t) => t.estimated_wait_time);
   const pending = queue?.pending_jobs ?? status?.pending_jobs;
   const wait = queue?.estimated_wait_time ?? status?.estimated_wait_time;
+  const waitResolved = resolveWaitSeconds(pending, wait, null);
+  const waitFmt = formatWaitFromResolved(waitResolved, pending);
+  const demoBenchmark = src === 'simulated' || src === 'mock_catalog' || backend?.benchmark_provenance === 'demonstration_fixture';
+  const logicalAllToAll = (backend.topology_type || '') === 'all_to_all' && backend.backend_type === 'simulator';
+  const alertByType = activeAlerts.reduce((acc, a) => {
+    const k = a.alert_type || 'OTHER';
+    acc[k] = (acc[k] || 0) + 1;
+    return acc;
+  }, {});
   const t1Med = median(d.qubits.map((q) => q.latest_t1));
   const roMed = median(d.qubits.map((q) => q.latest_readout_error));
   const calAgeH = calibration?.calibration_age;
@@ -258,7 +268,16 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
               title={backendRegistryHoverTitle(formatBackendTitle(backend), backend.backend_id)}
             >
               {providerName(backend.provider_id)} · {modalityName(backend.qpu_modality)} · {backend.qubit_count} qubits
-              {backend.quantum_volume ? ` · QV ${backend.quantum_volume}` : ''}{backend.clops ? ` · CLOPS ${backend.clops}` : ''}
+              {backend.quantum_volume ? (
+                <span title={demoBenchmark ? 'Demonstration fixture — not a measured QV benchmark' : 'Reported quantum volume'}>
+                  {' · QV '}{backend.quantum_volume}{demoBenchmark ? ' (demo)' : ''}
+                </span>
+              ) : null}
+              {backend.clops ? (
+                <span title={demoBenchmark ? 'Demonstration fixture — not a measured CLOPS run' : 'Reported CLOPS'}>
+                  {' · CLOPS '}{backend.clops}{demoBenchmark ? ' (demo)' : ''}
+                </span>
+              ) : null}
               {hv?.counts?.UNKNOWN > 0 ? (
                 <TelemetryCoverageHint
                   unknownCount={hv.counts.UNKNOWN}
@@ -334,13 +353,14 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
               </div>
               <div className="bk-kpi bd-spark-kpi">
                 <div className="bk-kpi__label">Est. wait</div>
-                <div className="bk-kpi__value">{wait != null ? `${Math.round(wait)} s` : '—'}</div>
+                <div className="bk-kpi__value" title={waitFmt.title}>{waitFmt.text}</div>
                 <Sparkline values={waitSeries} label="Estimated wait" />
+                <div className="bk-kpi__sub">{waitResolved.inferred ? 'Inferred from history' : 'Queue status snapshot'}</div>
               </div>
               <div className="bk-kpi">
                 <div className="bk-kpi__label">Median T1</div>
                 <div className="bk-kpi__value">{fmtDur(t1Med)}</div>
-                <div className="bk-kpi__sub">Latest snapshot · no stored series</div>
+                <div className="bk-kpi__sub">Latest snapshot{backend.backend_type === 'simulator' ? ' · modeled noise parameter' : ''}</div>
               </div>
               <div className="bk-kpi">
                 <div className="bk-kpi__label">Median readout error</div>
@@ -364,6 +384,14 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
                 <h3>Active alerts <Link className="bd-link" to={link('/app/alerts')}>All alerts</Link></h3>
                 {!d.alertsOk ? <ErrorState variant="inline" message={unableToLoad('alerts for this backend')} onRetry={load} />
                   : activeAlerts.length === 0 ? <p className="page-hint">No active alerts for this backend.</p> : (
+                    <>
+                    {Object.keys(alertByType).length > 1 && (
+                      <ul className="bd-alert-groups" aria-label="Alert summary by type">
+                        {Object.entries(alertByType).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([t, n]) => (
+                          <li key={t}><span className="bd-alert-groups__type">{t.replace(/_/g, ' ')}</span><span className="bd-num">{n}</span></li>
+                        ))}
+                      </ul>
+                    )}
                     <ul className="bd-list">
                       {activeAlerts.slice(0, 6).map((a) => (
                         <li key={a.alert_id}>
@@ -379,6 +407,7 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
                       ))}
                       {activeAlerts.length > 6 && <li><span className="page-hint">+ {activeAlerts.length - 6} more</span></li>}
                     </ul>
+                    </>
                   )}
               </section>
 
@@ -413,7 +442,10 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
                 {infra && (
                   <dl className="bd-props" style={{ marginTop: 14 }}>
                     <dt>CPU</dt><dd>{infra.cpu_util_pct}% · {infra.mpi_ranks_active} MPI ranks</dd>
-                    <dt>Memory</dt><dd>{infra.memory_used_gib} / {infra.memory_cap_gib} GiB</dd>
+                    <dt>Cluster memory</dt><dd>{infra.memory_used_gib} / {infra.memory_cap_gib} GiB allocated</dd>
+                    {infra.statevector_theory_bytes != null && (
+                      <><dt>Statevector (theory)</dt><dd title="Theoretical RAM for a full exact 2^n statevector — not installed cluster memory">{(infra.statevector_theory_bytes / (1024 ** 4)).toExponential(2)} TiB for {infra.qubits_simulated || backend.qubit_count} qubits</dd></>
+                    )}
                     <dt>GPU</dt><dd>{infra.gpu_util_pct}% avg · {infra.gpu_count} devices</dd>
                   </dl>
                 )}
@@ -535,10 +567,19 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
                 <Link className="btn btn-secondary btn--sm" to={link('/app/telemetry/topology')}>Open topology map</Link>
               </div>
               {conn.length === 0 ? (
-                <EmptyState variant="inline" compact title={secErr('connectivity') ? unableToLoadLabel('coupling edges') : 'No coupling edges'} message={backend.topology_type === 'all_to_all' ? 'All-to-all topology: every qubit pair is coupled, edges are not stored.' : 'The registry has no edges for this backend.'} />
+                logicalAllToAll || backend.topology_type === 'all_to_all' ? (
+                  <ul className="bd-connect-kpis" aria-label="Logical connectivity">
+                    <li><span className="bd-connect-kpis__k">Logical connectivity</span><span className="bd-connect-kpis__v">All-to-all</span></li>
+                    <li><span className="bd-connect-kpis__k">Qubits</span><span className="bd-connect-kpis__v bd-num">{backend.qubit_count}</span></li>
+                    <li><span className="bd-connect-kpis__k">Represented edges</span><span className="bd-connect-kpis__v">Not materialized ({(backend.qubit_count || 0) * ((backend.qubit_count || 1) - 1) / 2} logical pairs)</span></li>
+                    <li><span className="bd-connect-kpis__k">Graph view</span><span className="bd-connect-kpis__v">Implicit — use neighborhood inspection in topology map</span></li>
+                  </ul>
+                ) : (
+                  <EmptyState variant="inline" compact title={secErr('connectivity') ? unableToLoadLabel('coupling edges') : 'No coupling edges'} message="The registry has no stored coupling edges for this backend." />
+                )
               ) : (
                 <ul className="bd-connect-kpis" aria-label="Coupling statistics">
-                  <li><span className="bd-connect-kpis__k">Topology</span><span className="bd-connect-kpis__v">{label(backend.topology_type || '—')}</span></li>
+                  <li><span className="bd-connect-kpis__k">Represented graph</span><span className="bd-connect-kpis__v">{backend.topology_type === 'all_to_all' ? 'Partial coupling sample' : label(backend.topology_type || '—')}</span></li>
                   <li><span className="bd-connect-kpis__k">Edges</span><span className="bd-connect-kpis__v bd-num">{conn.length}</span></li>
                   <li><span className="bd-connect-kpis__k">Qubits with links</span><span className="bd-connect-kpis__v bd-num">{degs.length} / {backend.qubit_count}{unlinked ? ` · ${unlinked} unlinked` : ''}</span></li>
                   <li><span className="bd-connect-kpis__k">Degree (avg / max)</span><span className="bd-connect-kpis__v bd-num">{num(degs.reduce((a, b) => a + b, 0) / (degs.length || 1), 2)} / {degs.length ? Math.max(...degs) : 0}</span></li>
@@ -585,9 +626,9 @@ export const BackendDetails = ({ backendId, workspaceTab = 'overview', onWorkspa
 
         {activeTab === 'execution' && (
           <>
-            <section className="bk-kpis" aria-label="Queue">
+            <section className="bk-kpis bk-kpis--balanced" aria-label="Queue">
               <div className="bk-kpi bd-spark-kpi"><div className="bk-kpi__label">Pending jobs</div><div className="bk-kpi__value">{pending ?? '—'}</div><Sparkline values={pendingSeries} label="Pending jobs" /></div>
-              <div className="bk-kpi bd-spark-kpi"><div className="bk-kpi__label">Est. wait</div><div className="bk-kpi__value">{wait != null ? `${Math.round(wait)} s` : '—'}</div><Sparkline values={waitSeries} label="Estimated wait" /></div>
+              <div className="bk-kpi bd-spark-kpi"><div className="bk-kpi__label">Est. wait</div><div className="bk-kpi__value" title={waitFmt.title}>{waitFmt.text}</div><Sparkline values={waitSeries} label="Estimated wait" /></div>
               <div className="bk-kpi"><div className="bk-kpi__label">Queue condition</div><div className="bk-kpi__value" style={{ fontSize: 18 }}>{queue?.queue_condition ? formatEnumLabel(queue.queue_condition) : (secErr('queue') ? 'Unavailable' : '—')}</div><div className="bk-kpi__sub">Trend {queue?.trend ? formatEnumLabel(queue.trend) : '—'}</div></div>
               <div className="bk-kpi"><div className="bk-kpi__label">Recent jobs</div><div className="bk-kpi__value">{jobs.length}</div><div className="bk-kpi__sub">{Object.entries(jobCounts).map(([k, n]) => `${n} ${k.toLowerCase()}`).join(' · ') || 'None'}</div></div>
             </section>

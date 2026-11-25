@@ -32,6 +32,22 @@ function StateMark({ id }) {
   return <Icon size={14} aria-hidden />;
 }
 const ORDER = ['available', 'stale', 'missing', 'unsupported'];
+
+const METRIC_ABBR = {
+  t1_us: 'T1',
+  t2_us: 'T2',
+  t2_echo_us: 'T2ε',
+  readout_error: 'RO',
+  frequency_ghz: 'Freq',
+  gate_error_1q: '1Q',
+  gate_error_2q: '2Q',
+  gate_duration_ns: 'Dur',
+  queue_pending: 'Queue',
+  queue_wait_s: 'Wait',
+  calibration_timestamp: 'Cal',
+  topology_edges: 'Topo',
+  job_status: 'Jobs',
+};
 // scopes whose values come from the calibration snapshot
 const CAL_SCOPES = new Set(['qubit', 'gate', 'edge']);
 
@@ -47,6 +63,7 @@ export const MetricsCoverage = () => {
   const [error, setError] = useState(null);
   const [open, setOpen] = useState(null); // { b, m }
   const [lastRefresh, setLastRefresh] = useState(null);
+  const [backendQuery, setBackendQuery] = useState('');
   const { setActions, clearActions } = usePageActions();
 
   const load = useCallback(() => {
@@ -89,8 +106,51 @@ export const MetricsCoverage = () => {
     const c = { available: 0, stale: 0, missing: 0, unsupported: 0 };
     (coverage || []).forEach((b) => metricCols.forEach((m) => { c[stateOf(b, m)] += 1; }));
     const supported = c.available + c.stale + c.missing;
-    return { ...c, supported, pct: pctText(c.available + c.stale, supported) };
+    const totalCells = supported + c.unsupported;
+    return {
+      ...c,
+      supported,
+      totalCells,
+      pct: pctText(c.available + c.stale, supported),
+      samplePct: pctText(c.available, supported),
+    };
   }, [coverage, metricCols, stateOf]);
+
+  const fleetFindings = useMemo(() => {
+    const items = [];
+    metricCols.forEach((m) => {
+      let withSample = 0;
+      let eligible = 0;
+      (coverage || []).forEach((b) => {
+        const st = stateOf(b, m);
+        if (st === 'unsupported') return;
+        eligible += 1;
+        if (st === 'available' || st === 'stale') withSample += 1;
+      });
+      if (eligible > 0 && withSample === 0) {
+        items.push({ kind: 'fleet_gap', metric: m, eligible });
+      }
+    });
+  const rows = (coverage || []).map((b) => {
+      const sup = b.supported_count || 0;
+      const pct = sup ? (b.present_count ?? 0) / sup : 0;
+      return { b, pct, sup };
+    }).sort((a, b) => a.pct - b.pct);
+    if (rows[0] && rows[0].pct < 0.75) {
+      items.push({ kind: 'low_backend', row: rows[0] });
+    }
+    return items;
+  }, [coverage, metricCols, stateOf]);
+
+  const filteredCoverage = useMemo(() => {
+    const q = backendQuery.trim().toLowerCase();
+    if (!q) return coverage;
+    return coverage.filter((b) => (
+      (b.backend_name || '').toLowerCase().includes(q)
+      || (b.backend_id || '').toLowerCase().includes(q)
+      || (b.provider_id || '').toLowerCase().includes(q)
+    ));
+  }, [coverage, backendQuery]);
 
   if (error && !coverage) return <div className="page-stack"><ErrorState variant="panel" message={error} onRetry={load} /></div>;
   if (!coverage) return <BoneyardSkeleton layout="grid" />;
@@ -103,12 +163,12 @@ export const MetricsCoverage = () => {
   return (
     <div className="page-stack">
       <section className="mc-kpis">
-        <div className="mc-kpi"><div className="mc-kpi__label">Coverage</div><div className="mc-kpi__value">{summary.pct}</div><div className="mc-kpi__sub">{summary.available + summary.stale} of {summary.supported} supported cells have data</div></div>
+        <div className="mc-kpi"><div className="mc-kpi__label">Supported metric coverage</div><div className="mc-kpi__value">{summary.pct}</div><div className="mc-kpi__sub">{summary.available + summary.stale} of {summary.supported} supported combinations have samples · {summary.unsupported} unsupported (excluded)</div></div>
         {ORDER.map((s) => (
           <div className="mc-kpi" key={s}>
             <div className="mc-kpi__label"><StateMark id={s} /> {STATE[s].label}</div>
             <div className="mc-kpi__value">{summary[s]}</div>
-            <div className="mc-kpi__sub">{s === 'unsupported' ? 'excluded from %' : `${pctText(summary[s], coverage.length * metricCols.length)} of matrix`}</div>
+            <div className="mc-kpi__sub">{s === 'unsupported' ? `${summary.unsupported} of ${summary.totalCells} total cells` : s === 'available' ? `${pctText(summary.available, summary.supported)} of supported` : s === 'missing' ? `${pctText(summary.missing, summary.supported)} of supported` : `${pctText(summary.stale, summary.supported)} of supported`}</div>
           </div>
         ))}
       </section>
@@ -118,17 +178,37 @@ export const MetricsCoverage = () => {
           <h3 className="page-section-title" style={{ margin: 0 }}>Backend × metric</h3>
           <span className="mc-legend">{ORDER.map((s) => <span key={s} title={STATE[s].help}><i className={`mc-cell mc-cell--${s}`}><StateMark id={s} /></i>{STATE[s].label}</span>)}</span>
         </div>
+        <div className="mc-toolbar">
+          <label className="mc-search">
+            <span className="sr-only">Search backends</span>
+            <input type="search" value={backendQuery} onChange={(e) => setBackendQuery(e.target.value)} placeholder="Search backends" />
+          </label>
+          {lastRefresh ? <span className="page-hint" style={{ margin: 0 }}>Evaluated {lastRefresh.toLocaleString()}</span> : null}
+        </div>
+        {fleetFindings.length > 0 && (
+          <div className="mc-findings" role="status">
+            <strong>Coverage findings</strong>
+            <ul>
+              {fleetFindings.filter((f) => f.kind === 'fleet_gap').map((f) => (
+                <li key={f.metric.metric_id}>{f.metric.name}: no samples on {f.eligible} eligible backend{f.eligible === 1 ? '' : 's'}.</li>
+              ))}
+              {fleetFindings.filter((f) => f.kind === 'low_backend').map((f) => (
+                <li key={f.row.b.backend_id}>{f.row.b.backend_name || f.row.b.backend_id}: lowest supported coverage ({pctText(f.row.b.present_count ?? 0, f.row.sup)}).</li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div className="mc-scroll">
           <table className="mc-matrix">
             <thead>
               <tr>
                 <th scope="col" className="mc-sticky">Backend</th>
-                <th scope="col">Cov.</th>
-                {metricCols.map((m) => <th scope="col" key={m.metric_id} title={`${m.name} (${m.unit})`}><span className="mc-colhead">{m.name}</span></th>)}
+                <th scope="col" title="Supported metrics with stored samples">Cov.</th>
+                {metricCols.map((m) => <th scope="col" key={m.metric_id} title={`${m.name} (${m.unit})`}><span className="mc-colhead">{METRIC_ABBR[m.metric_id] || m.name}</span></th>)}
               </tr>
             </thead>
             <tbody>
-              {coverage.map((b) => {
+              {filteredCoverage.map((b) => {
                 const sup = (b.supported_count ?? 0);
                 return (
                   <tr key={b.backend_id}>
@@ -186,7 +266,9 @@ export const MetricsCoverage = () => {
                   <DetailModalRow label="Provenance"><LineageBadge lineage="live" /></DetailModalRow>
                 )}
                 <DetailModalRow label="Calibration">{fresh[open.b.backend_id] || 'unknown'}</DetailModalRow>
-                <DetailModalRow label="Provider adapter">{cap ? `${cap.provider_id}: ${cap.adapter}; ${cap.supported_metrics.includes(open.m.metric_id) ? 'declares support' : 'does not declare support'}` : 'No capability record.'}</DetailModalRow>
+                <DetailModalRow label="Adapter mode">{cap ? `${cap.adapter === 'live' ? 'Live connection' : 'Stub'} · ${cap.provider_id}` : 'No capability record.'}</DetailModalRow>
+                <DetailModalRow label="Metric support">{cap ? (cap.supported_metrics.includes(open.m.metric_id) ? 'Declared by capability matrix' : 'Not declared for this provider') : '—'}</DetailModalRow>
+                <DetailModalRow label="Data origin">{lineage?.[open.b.provider_id] === 'live' ? 'Live ingest path' : 'Demonstration or synthetic catalog'}</DetailModalRow>
                 <DetailModalRow label="Backend coverage">{open.b.present_count}/{open.b.supported_count} supported metrics present</DetailModalRow>
               </DetailModalDl>
               {openState === 'unsupported' && <p className="page-hint">Check modality: some metrics (e.g. frequency, gate duration) are not exposed by every adapter.</p>}

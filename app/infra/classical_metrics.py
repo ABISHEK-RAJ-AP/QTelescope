@@ -32,9 +32,10 @@ def sample_classical_metrics(
     mock = get_mock_backend(backend_id) or get_mock_backend(PARAM_DEFAULT_BACKEND) or {}
     ext = mock.get("modality_extensions") or {}
     n = qubit_count or mock.get("qubit_count") or 64
-    statevector_gib = (2**n * 16) / (1024**3)
-    mem_cap = max(256.0, statevector_gib * rng.uniform(1.2, 1.8))
-    mem_used = mem_cap * rng.uniform(0.35, 0.72)
+    # Theoretical exact statevector size — not cluster RAM (grows as 2^n).
+    statevector_theory_bytes = (2**n) * 16
+    mem_cap = round(rng.uniform(512.0, 4096.0), 1)
+    mem_used = round(mem_cap * rng.uniform(0.35, 0.72), 1)
     mpi_ranks = int(rng.choice([64, 128, 256, 512]))
     return {
         "backend_id": backend_id,
@@ -44,12 +45,12 @@ def sample_classical_metrics(
         "acceleration_stack": ext.get("acceleration_stack", "MPI + OpenMP + CUDA"),
         "mpi_ranks_active": mpi_ranks,
         "cpu_util_pct": round(rng.uniform(42.0, 88.0), 1),
-        "memory_used_gib": round(mem_used, 2),
-        "memory_cap_gib": round(mem_cap, 2),
+        "memory_used_gib": mem_used,
+        "memory_cap_gib": mem_cap,
         "gpu_count": int(rng.choice([4, 8, 16])),
         "gpu_util_pct": round(rng.uniform(55.0, 96.0), 1),
         "simulation_queue_depth": int(rng.randint(0, 6)),
-        "statevector_memory_gib": round(statevector_gib, 4),
+        "statevector_theory_bytes": statevector_theory_bytes,
         "qubits_simulated": n,
         "note": "Classical host metrics — not QPU cryo readings.",
     }

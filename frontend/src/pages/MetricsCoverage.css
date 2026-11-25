@@ -28,7 +28,20 @@
 .mc-matrix { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12px; }
 .mc-matrix th, .mc-matrix td { padding: 4px; text-align: center; border-bottom: 1px solid var(--border-color); }
 .mc-matrix thead th { vertical-align: bottom; font-weight: 500; color: var(--text-muted); }
-.mc-colhead { display: block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; max-height: 150px; overflow: hidden; text-overflow: ellipsis; margin: 0 auto; }
+.mc-colhead {
+  display: block;
+  font-size: 10px;
+  line-height: 1.2;
+  max-width: 4.5rem;
+  white-space: normal;
+  text-align: center;
+  margin: 0 auto;
+  hyphens: auto;
+}
+.mc-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+.mc-toolbar input[type="search"] { min-width: 200px; max-width: 320px; flex: 1; }
+.mc-findings { margin-top: 12px; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-subtle, var(--bg-card)); font-size: 13px; }
+.mc-findings ul { margin: 8px 0 0; padding-left: 1.1rem; }
 .mc-sticky { position: sticky; left: 0; background: var(--bg-card); text-align: left !important; min-width: 190px; z-index: 1; }
 .mc-bname { font-weight: 600; font-size: 13px; color: var(--text-primary); }
 .mc-bmeta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 11px; color: var(--text-muted); text-transform: capitalize; margin-top: 2px; }

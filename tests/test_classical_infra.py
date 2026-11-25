@@ -10,6 +10,8 @@ def test_cdac_has_classical_infra():
     assert row is not None
     assert row["telemetry_source"] == "simulated:param_hpc"
     assert row["qubits_simulated"] == 64
+    assert row["memory_cap_gib"] < 10_000
+    assert row["statevector_theory_bytes"] > 10**15
 
 
 def test_deterministic_with_seed():

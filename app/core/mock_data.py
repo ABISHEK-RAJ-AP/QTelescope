@@ -153,6 +153,7 @@ MOCK_HARDWARE_BACKENDS: Dict[str, Dict[str, Any]] = {
         "configuration_version": "3.0.0-cdac",
         "quantum_volume": 4096,
         "clops": 15000,
+        "benchmark_provenance": "demonstration_fixture",
         "basis_gates": ["u1", "u2", "u3", "cx", "cz", "swap", "id"],
         "modality_extensions": {
             "supercomputing_cluster": "PARAM Siddhi-AI / PARAM Brahma HPC",
@@ -303,7 +304,10 @@ def get_mock_connectivity(backend_id: str) -> List[Dict[str, Any]]:
                 edges.append({"edge_id": f"{backend_id}_e_{q1}_{q2}", "qubits": [q1, q2], "directed": False})
 
     elif topology == "all_to_all":
-        # Connect each qubit with adjacent neighbors in optical trap
+        # Simulators: logical all-to-all — materializing N² edges is misleading in the UI.
+        if b.get("backend_type") == "simulator":
+            return []
+        # Trapped-ion demo: partial represented coupling (not full N²).
         for i in range(n_qubits):
             for j in range(i + 1, min(i + 5, n_qubits)):
                 edges.append({"edge_id": f"{backend_id}_e_{i}_{j}", "qubits": [i, j], "directed": False})

@@ -6,7 +6,11 @@ from typing import Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
-from app.analytics.modality_thresholds import modality_profile, normalize_modality
+from app.analytics.modality_thresholds import (
+    modality_profile,
+    normalize_modality,
+    resolve_coherence_modality,
+)
 from app.models.entities import AlertRuleModel
 
 
@@ -37,10 +41,11 @@ def rule_severity(rules: Dict[str, AlertRuleModel], metric: str, default: str) -
 def effective_thresholds(
     rules: Dict[str, AlertRuleModel],
     modality: Optional[str],
+    backend_type: Optional[str] = None,
 ) -> Dict[str, object]:
     """Resolved floors for alerts + health (fleet DB rules + modality defaults)."""
-    coh = coherence_thresholds(rules, modality)
-    mod = normalize_modality(modality)
+    coh = coherence_thresholds(rules, modality, backend_type)
+    mod = resolve_coherence_modality(modality, backend_type)
     return {
         "modality": mod,
         "t1_crit_us": coh["t1_crit_us"],
@@ -76,15 +81,17 @@ def _coherence_rule_usable(modality: Optional[str], metric: str, value: float, d
 def coherence_thresholds(
     rules: Dict[str, AlertRuleModel],
     modality: Optional[str],
+    backend_type: Optional[str] = None,
 ) -> Dict[str, float]:
-    prof = modality_profile(modality)
+    mod = resolve_coherence_modality(modality, backend_type)
+    prof = modality_profile(mod)
     t1_default = float(prof["t1_crit_us"])
     t2_default = float(prof["t2_crit_us"])
     t1_crit = _coherence_rule_usable(
-        modality, "T1", rule_threshold(rules, "T1", t1_default), t1_default
+        mod, "T1", rule_threshold(rules, "T1", t1_default), t1_default
     )
     t2_crit = _coherence_rule_usable(
-        modality, "T2", rule_threshold(rules, "T2", t2_default), t2_default
+        mod, "T2", rule_threshold(rules, "T2", t2_default), t2_default
     )
     return {
         "t1_crit_us": t1_crit,

@@ -3,7 +3,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from app.analytics.modality_thresholds import modality_profile, normalize_modality
+from app.analytics.modality_thresholds import (
+    modality_profile,
+    normalize_modality,
+    resolve_coherence_modality,
+)
 
 _SHARED = [
     {
@@ -62,9 +66,14 @@ def rule_id_for(backend_id: str, metric_name: str) -> str:
     return f"rule_{safe}_{metric_name.lower()}"
 
 
-def default_rules_for_backend(backend_id: str, modality: str | None) -> List[Dict[str, Any]]:
+def default_rules_for_backend(
+    backend_id: str,
+    modality: str | None,
+    backend_type: str | None = None,
+) -> List[Dict[str, Any]]:
+    mod = resolve_coherence_modality(modality, backend_type)
     out: List[Dict[str, Any]] = []
-    for spec in default_rules_for_modality(modality):
+    for spec in default_rules_for_modality(mod):
         out.append(
             {
                 "rule_id": rule_id_for(backend_id, spec["metric_name"]),

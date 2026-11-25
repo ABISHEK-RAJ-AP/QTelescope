@@ -42,6 +42,12 @@ def test_superconducting_alerts_below_fleet_t1():
     assert any(a.alert_type == "LOW_T1" and a.severity == "CRITICAL" for a in created)
 
 
+def test_simulator_backend_type_overrides_wrong_modality():
+    coh = coherence_thresholds({}, "trapped_ion", "simulator")
+    assert coh["t1_crit_us"] == 5.0
+    assert coh["t2_crit_us"] == 5.0
+
+
 def test_effective_thresholds_superconducting_vs_ion():
     eff_sc = effective_thresholds({}, "superconducting")
     eff_ion = effective_thresholds({}, "trapped_ion")

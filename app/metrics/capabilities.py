@@ -24,7 +24,7 @@ PROVIDER_METRICS: Dict[str, Set[str]] = {
     "cdac_quantum": {
         "t1_us", "t2_us", "readout_error",
         "gate_error_1q", "gate_error_2q",
-        "queue_pending", "calibration_timestamp", "topology_edges", "job_status",
+        "queue_pending", "queue_wait_s", "calibration_timestamp", "topology_edges", "job_status",
     },
 }
 
